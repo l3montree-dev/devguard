@@ -244,40 +244,40 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get vuln distribution in org")
+		return echo.NewHTTPError(500, "could not get vuln distribution in org").WithInternal(err)
 	}
 	structure, err := c.statisticsRepository.GetOrgStructureDistribution(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get org structure")
+		return echo.NewHTTPError(500, "could not get org structure").WithInternal(err)
 	}
 
 	// get most vulnerable components of org
 	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get most vulnerable projects in org")
+		return echo.NewHTTPError(500, "could not get most vulnerable projects in org").WithInternal(err)
 	}
 	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get most vulnerable assets in org")
+		return echo.NewHTTPError(500, "could not get most vulnerable assets in org").WithInternal(err)
 	}
 	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(org.ID, orgComponentsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org")
+		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org").WithInternal(err)
 	}
 
 	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(org.ID, topComponentsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get most used components across org")
+		return echo.NewHTTPError(500, "could not get most used components across org").WithInternal(err)
 	}
 
 	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, topCVEsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get most common CVEs across org")
+		return echo.NewHTTPError(500, "could not get most common CVEs across org").WithInternal(err)
 	}
 
 	vulnEventAverages, err := c.statisticsRepository.GetWeeklyAveragePerVulnEventType(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get weekly average for vuln events")
+		return echo.NewHTTPError(500, "could not get weekly average for vuln events").WithInternal(err)
 	}
 
 	vulnEventAverageDistribution := dtos.AverageVulnEventsPerWeek{}
@@ -299,37 +299,54 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	now := time.Now()
 	riskHistory, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(org.ID, now.Add(-30*time.Hour*24), now)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get risk history for org")
+		return echo.NewHTTPError(500, "could not get risk history for org").WithInternal(err)
 	}
 
 	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get average amount of open code risks for org")
+		return echo.NewHTTPError(500, "could not get average amount of open code risks for org").WithInternal(err)
 	}
 
 	openVulnAverage, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get average amount of open vulns for org")
+		return echo.NewHTTPError(500, "could not get average amount of open vulns for org").WithInternal(err)
 	}
 
 	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(org.ID, topEcosystemsLimit)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get top ecosystem for org")
+		return echo.NewHTTPError(500, "could not get top ecosystem for org").WithInternal(err)
 	}
 
 	maliciousPackages, err := c.statisticsRepository.FindMaliciousPackagesInOrg(org.ID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not find malicious packages for org")
+		return echo.NewHTTPError(500, "could not find malicious packages for org").WithInternal(err)
 	}
 
 	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrgs(org.ID)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not get average age of dependencies").WithInternal(err)
 	}
 
 	averageRemediations, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(org.ID)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not get average remediation times").WithInternal(err)
+	}
+
+	remediationTypeDistributionRows, err := c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get percentage distribution for remediation types").WithInternal(err)
+	}
+
+	remediationTypeDistribution := dtos.RemediationTypeDistribution{}
+	for _, row := range remediationTypeDistributionRows {
+		switch row.Type {
+		case string(dtos.EventTypeAccepted):
+			remediationTypeDistribution.AcceptedPercentage = row.Percentage
+		case string(dtos.EventTypeFixed):
+			remediationTypeDistribution.FixedPercentage = row.Percentage
+		case string(dtos.EventTypeFalsePositive):
+			remediationTypeDistribution.FalsePositivePercentage = row.Percentage
+		}
 	}
 
 	orgStatistics := dtos.OrgOverview{
@@ -348,6 +365,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		MaliciousPackages:              maliciousPackages,
 		AverageAgeOfDependencies:       averageAge,
 		AverageRemediationTimes:        averageRemediations,
+		RemediationTypeDistribution:    remediationTypeDistribution,
 	}
 
 	return ctx.JSON(200, orgStatistics)

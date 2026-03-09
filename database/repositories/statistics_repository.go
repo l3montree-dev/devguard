@@ -806,3 +806,24 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UU
 		intervals;`, append(fixedEvents, openEvents...), orgID, openEvents, openEvents, openEvents, openEvents).Find(&averages).Error
 	return averages, err
 }
+
+func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
+	rows := []dtos.RemediationTypeDistributionRow{}
+	err := r.db.Raw(`
+	SELECT 
+		a.type, COUNT(*) * 100 /SUM(COUNT(*)) over() as percentage
+	FROM 
+		vuln_events a
+	LEFT JOIN 
+		dependency_vulns b ON a.vuln_id = b.id
+	LEFT JOIN 
+		assets ON b.asset_id = assets.id
+	LEFT JOIN 
+		projects ON projects.id = assets.project_id
+	WHERE 
+		projects.organization_id = ?
+	AND 
+		a.type IN ?
+	GROUP BY a.type;`, orgID, fixedEvents).Find(&rows).Error
+	return rows, err
+}

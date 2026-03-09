@@ -166,6 +166,17 @@ type MaliciousPackageInOrg struct {
 	MaliciousPackageID string `json:"maliciousPackageID"`
 }
 
+type RemediationTypeDistributionRow struct {
+	Type       string
+	Percentage float64
+}
+
+type RemediationTypeDistribution struct {
+	AcceptedPercentage      float64 `json:"acceptedPercentage" `
+	FalsePositivePercentage float64 `json:"falsePositivePercentage"`
+	FixedPercentage         float64 `json:"fixedPercentage"`
+}
+
 type AverageRemediationTimes struct {
 	LowRiskAverage      float64 `json:"lowRiskAverage" gorm:"column:low_risk_average"`
 	MediumRiskAverage   float64 `json:"mediumRiskAverage" gorm:"column:medium_risk_average"`
@@ -199,4 +210,6 @@ type OrgOverview struct {
 	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
 	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies"`
 	AverageRemediationTimes  AverageRemediationTimes `json:"averageRemediationTimes"`
+
+	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`
 }
