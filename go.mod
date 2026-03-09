@@ -76,7 +76,6 @@ require (
 	gorm.io/gorm v1.31.1
 	gorm.io/plugin/opentelemetry v0.1.16
 	oras.land/oras-go/v2 v2.6.0
-	pault.ag/go/debian v0.19.0
 )
 
 require (
