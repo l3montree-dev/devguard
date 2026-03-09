@@ -71,4 +71,11 @@ func (runner *DaemonRunner) runDaemons() {
 	if err := runner.maybeRunAndMark("vulndb.fixedVersions", runner.UpdateFixedVersions); err != nil {
 		slog.Error("could not update fixed versions", "err", err)
 	}
+
+	if err := runner.maybeRunAndMark("vulndb.directDependencyFixedVersion", func() error {
+		runner.RunResolveFixedVersionsPipeline(false)
+		return nil
+	}); err != nil {
+		slog.Error("could not resolve direct depend	ency fixed versions", "err", err)
+	}
 }

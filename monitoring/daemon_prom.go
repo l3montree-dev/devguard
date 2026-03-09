@@ -14,6 +14,12 @@ var RecalculateRawRiskAssessmentsDuration = promauto.NewHistogram(prometheus.His
 	Buckets: prometheus.DefBuckets,
 })
 
+var ResolveFixedVersionDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "devguard_daemon_resolve_fixed_version_duration_minutes",
+	Help:    "Duration of resolving fixed versions in minutes",
+	Buckets: prometheus.DefBuckets,
+})
+
 var UpstreamSyncDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "devguard_upstream_sync_duration_minutes",
 	Help:    "Duration of upstream sync operations in minutes",
