@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -195,6 +196,80 @@ func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) Return(art
 }
 
 func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRiskHistoryForOrg provides a mock function for the type ArtifactRiskHistoryRepository
+func (_mock *ArtifactRiskHistoryRepository) GetRiskHistoryForOrg(orgID uuid.UUID, start time.Time, end time.Time) ([]dtos.OrgRiskHistory, error) {
+	ret := _mock.Called(orgID, start, end)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRiskHistoryForOrg")
+	}
+
+	var r0 []dtos.OrgRiskHistory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) ([]dtos.OrgRiskHistory, error)); ok {
+		return returnFunc(orgID, start, end)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) []dtos.OrgRiskHistory); ok {
+		r0 = returnFunc(orgID, start, end)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dtos.OrgRiskHistory)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, time.Time, time.Time) error); ok {
+		r1 = returnFunc(orgID, start, end)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRiskHistoryForOrg'
+type ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call struct {
+	*mock.Call
+}
+
+// GetRiskHistoryForOrg is a helper method to define mock.On call
+//   - orgID uuid.UUID
+//   - start time.Time
+//   - end time.Time
+func (_e *ArtifactRiskHistoryRepository_Expecter) GetRiskHistoryForOrg(orgID interface{}, start interface{}, end interface{}) *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call {
+	return &ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call{Call: _e.mock.On("GetRiskHistoryForOrg", orgID, start, end)}
+}
+
+func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call) Run(run func(orgID uuid.UUID, start time.Time, end time.Time)) *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call) Return(orgRiskHistorys []dtos.OrgRiskHistory, err error) *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call {
+	_c.Call.Return(orgRiskHistorys, err)
+	return _c
+}
+
+func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call) RunAndReturn(run func(orgID uuid.UUID, start time.Time, end time.Time) ([]dtos.OrgRiskHistory, error)) *ArtifactRiskHistoryRepository_GetRiskHistoryForOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
