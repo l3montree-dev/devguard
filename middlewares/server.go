@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func registerMiddlewares(e *echo.Echo) {
@@ -25,6 +26,20 @@ func registerMiddlewares(e *echo.Echo) {
 	// This lets DB spans (from gorm.io/plugin/opentelemetry) nest under the HTTP span.
 	e.Use(otelecho.Middleware("devguard"))
 
+	// Expose the trace ID to clients so they can correlate frontend errors / support requests.
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			err := next(c)
+			if spanCtx := trace.SpanFromContext(c.Request().Context()).SpanContext(); spanCtx.IsValid() {
+				c.Response().Header().Set("X-Trace-ID", spanCtx.TraceID().String())
+			}
+			return err
+		}
+	})
+
+	// Expose the trace ID to the client so it can be referenced in Jaeger / GlitchTip.
+	e.Use(traceID())
+
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
@@ -32,6 +47,8 @@ func registerMiddlewares(e *echo.Echo) {
 			AllowHeaders:     middleware.DefaultCORSConfig.AllowHeaders,
 			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
 			AllowCredentials: true,
+			ExposeHeaders:    []string{"X-Trace-ID"},
+			ExposeHeaders:    []string{"X-Trace-ID"},
 		},
 	))
 

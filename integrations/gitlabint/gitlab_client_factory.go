@@ -31,7 +31,7 @@ func NewGitlabClientFactory(gitlabIntegrationRepository shared.GitlabIntegration
 
 func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (shared.GitlabClientFacade, error) {
 	// Use installation transport with client.
-	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabURL))
+	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabURL), gitlab.WithHTTPClient(&utils.EgressClient))
 	if err != nil {
 		return gitlabClient{}, err
 	}

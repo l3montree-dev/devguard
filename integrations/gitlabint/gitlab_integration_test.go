@@ -40,7 +40,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
 
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
 
 		integration := &GitlabIntegration{
 			clientFactory: mockClientFactory,
@@ -65,7 +65,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		client.On("EditIssue", mock.Anything, projectID, 42, mock.Anything).Return(nil, nil, nil)
 
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
 		integration := &GitlabIntegration{
 			clientFactory: mockClientFactory,
 		}
@@ -274,7 +274,7 @@ func TestCreateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock label creation for all risk labels
 		labels := commonint.GetAllRiskLabelsWithColors()
@@ -359,7 +359,7 @@ func TestCreateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Get all labels and set up mocks
 		labels := commonint.GetAllRiskLabelsWithColors()
@@ -439,7 +439,7 @@ func TestCreateLabels(t *testing.T) {
 		ctx := context.Background()
 
 		// Mock client creation failure
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(nil, errors.New("failed to create client"))
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(nil, errors.New("failed to create client"))
 
 		// Execute
 		err := integration.CreateLabels(ctx, asset)
@@ -467,7 +467,7 @@ func TestCreateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock label creation failure
 		labels := commonint.GetAllRiskLabelsWithColors()
@@ -518,7 +518,7 @@ func TestUpdateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock existing labels in project
 		existingLabels := []*gitlab.Label{
@@ -610,7 +610,7 @@ func TestUpdateLabels(t *testing.T) {
 		ctx := context.Background()
 
 		// Mock client creation failure
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(nil, errors.New("failed to create client"))
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(nil, errors.New("failed to create client"))
 
 		// Execute
 		err := integration.UpdateLabels(ctx, asset, labelsToUpdate)
@@ -642,7 +642,7 @@ func TestUpdateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock listing labels failure
 		mockClient.On("ListLabels", ctx, projectID, &gitlab.ListLabelsOptions{}).Return(nil, nil, errors.New("failed to list labels"))
@@ -682,7 +682,7 @@ func TestUpdateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock existing labels in project
 		existingLabels := []*gitlab.Label{
@@ -739,7 +739,7 @@ func TestUpdateLabels(t *testing.T) {
 		projectID := 123
 
 		// Mock client creation
-		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
+		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")).Return(mockClient, nil)
 
 		// Mock existing labels in project (only risk:high exists)
 		existingLabels := []*gitlab.Label{

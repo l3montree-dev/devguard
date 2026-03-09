@@ -233,10 +233,10 @@ func (c *GitlabOauth2Config) client(ctx context.Context, token models.GitLabOaut
 		Expiry:       token.Expiry,
 	})
 
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &utils.EgressClient)
+
 	client := oauth2.NewClient(ctx, newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
-	utils.WrapHTTPClient(client, func(req *http.Request, next http.RoundTripper) (*http.Response, error) {
-		return utils.EgressRoundTripper{R: next}.RoundTrip(req)
-	})
+
 	return client
 }
 

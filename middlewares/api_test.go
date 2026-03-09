@@ -36,7 +36,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", accesscontrol.NoSession.GetUserID()).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, accesscontrol.NoSession.GetUserID()).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -73,7 +73,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", "user-id").Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, "user-id").Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -159,7 +159,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, obj, act).Return(true, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, userID, obj, act).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -193,7 +193,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, userID, obj, act).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -229,7 +229,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, userID, obj, act).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", &mockSession)
@@ -263,7 +263,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, errors.New("error"))
+		mockRBAC.On("IsAllowed", mock.Anything, userID, obj, act).Return(false, errors.New("error"))
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", &mockSession)
