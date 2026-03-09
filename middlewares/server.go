@@ -48,7 +48,6 @@ func registerMiddlewares(e *echo.Echo) {
 			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
 			AllowCredentials: true,
 			ExposeHeaders:    []string{"X-Trace-ID"},
-			ExposeHeaders:    []string{"X-Trace-ID"},
 		},
 	))
 
