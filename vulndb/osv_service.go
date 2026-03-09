@@ -213,7 +213,6 @@ func (s osvService) workerFileFunction(ctx context.Context, waitGroup *sync.Wait
 
 		// first build the CVE based on the OSV and save it to the db
 		tx := s.cveRepository.Begin(ctx)
-		defer tx.Rollback()
 
 		newCVE := transformer.OSVToCVE(&osv)
 

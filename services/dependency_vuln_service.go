@@ -348,14 +348,14 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
 func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
 func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)

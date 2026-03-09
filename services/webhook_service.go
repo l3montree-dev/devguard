@@ -69,7 +69,7 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	// Retry logic with delays: 1s, 5s, 10s

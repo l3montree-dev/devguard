@@ -187,7 +187,7 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 }
 
 func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)

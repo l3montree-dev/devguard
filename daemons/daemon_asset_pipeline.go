@@ -444,7 +444,6 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
-					defer tx.Rollback()
 					bom.ClearScope()
 					_, _, _, err = runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system")
 
@@ -497,7 +496,6 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin()
-					defer tx.Rollback()
 					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system"); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
