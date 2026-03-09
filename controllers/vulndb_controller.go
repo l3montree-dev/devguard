@@ -26,15 +26,19 @@ type VulnDBController struct {
 	affectedComponentRepository shared.AffectedComponentRepository
 	componentRepository         shared.ComponentRepository
 	componentService            shared.ComponentService
+	fixedVersionResolver        shared.FixedVersionResolver
+	dependencyVulnRepository    shared.DependencyVulnRepository
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, fixedVersionResolver shared.FixedVersionResolver, dependencyVulnRepository shared.DependencyVulnRepository) *VulnDBController {
 	return &VulnDBController{
 		cveRepository:               cveRepository,
 		maliciousPackageChecker:     maliciousPackageChecker,
 		affectedComponentRepository: affectedComponentRepository,
 		componentRepository:         componentRepository,
 		componentService:            componentService,
+		fixedVersionResolver:        fixedVersionResolver,
+		dependencyVulnRepository:    dependencyVulnRepository,
 	}
 }
 
@@ -272,4 +276,69 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 
 	// convert the result in a map and return it
 	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
+}
+
+func (c VulnDBController) GetDependencyVulnerabilities(ctx shared.Context) error {
+	type depVulnRow struct {
+		ComponentPurl                string  `json:"componentPurl"`
+		VulnerabilityPath            string  `json:"vulnerabilityPath"`
+		ComponentFixedVersion        *string `json:"componentFixedVersion"`
+		DirectDependencyFixedVersion *string `json:"directDependencyFixedVersion"`
+	}
+
+	type responseDTO struct {
+		Total int          `json:"total"`
+		Data  []depVulnRow `json:"data"`
+	}
+
+	offset := 0
+	offsetParam := ctx.QueryParam("offset")
+	if offsetParam != "" {
+		var err error
+		offset, err = strconv.Atoi(offsetParam)
+		if err != nil || offset < 0 {
+			return echo.NewHTTPError(400, "invalid offset value").WithInternal(err)
+		}
+	}
+
+	limit := 100
+	limitParam := ctx.QueryParam("limit")
+	if limitParam != "" {
+		var err error
+		limit, err = strconv.Atoi(limitParam)
+		if err != nil || limit <= 0 {
+			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
+		}
+	}
+
+	componentPurl := ctx.QueryParam("componentPurl")
+
+	results := make([]depVulnRow, 0, limit)
+	query := c.dependencyVulnRepository.GetDB(nil).
+		Select("component_purl, vulnerability_path, component_fixed_version, direct_dependency_fixed_version").
+		Offset(offset).
+		Limit(limit)
+
+	if componentPurl != "" {
+		query = query.Where("component_purl LIKE ?", "%"+componentPurl+"%")
+	}
+
+	err := query.Find(&results).Error
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch dependency vulnerabilities").WithInternal(err)
+	}
+
+	var totalCount int64
+	countQuery := c.dependencyVulnRepository.GetDB(nil)
+	if componentPurl != "" {
+		countQuery = countQuery.Where("component_purl LIKE ?", "%"+componentPurl+"%")
+	}
+	countQuery.Model(&models.DependencyVuln{}).Count(&totalCount)
+
+	response := responseDTO{
+		Total: int(totalCount),
+		Data:  results,
+	}
+
+	return ctx.JSON(200, response)
 }
