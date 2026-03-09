@@ -30,7 +30,6 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -82,7 +81,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Success 200
 // @Router /vex [post]
 func (s ScanController) UploadVEX(ctx shared.Context) error {
-	reqCtx, span := otel.Tracer("devguard/controllers").Start(ctx.Request().Context(), "ScanController.UploadVEX")
+	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.UploadVEX")
 	defer span.End()
 
 	var bom cdx.BOM
@@ -225,7 +224,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dtos.ScanResponse, error) {
-	scanCtx, span := otel.Tracer("devguard/controllers").Start(c.Request().Context(), "ScanController.DependencyVulnScan")
+	scanCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.DependencyVulnScan")
 	defer span.End()
 
 	scanResults := dtos.ScanResponse{} //Initialize empty struct to return when an error happens
@@ -400,7 +399,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 // @Success 200 {object} dtos.FirstPartyScanResponse
 // @Router /sarif-scan [post]
 func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
-	reqCtx, span := otel.Tracer("devguard/controllers").Start(ctx.Request().Context(), "ScanController.FirstPartyVulnScan")
+	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.FirstPartyVulnScan")
 	defer span.End()
 
 	var sarifScan sarif.SarifSchema210Json
@@ -504,7 +503,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 // @Success 200 {object} dtos.ScanResponse
 // @Router /scan [post]
 func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
-	_, span := otel.Tracer("devguard/controllers").Start(c.Request().Context(), "ScanController.ScanDependencyVulnFromProject")
+	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanDependencyVulnFromProject")
 	defer span.End()
 
 	bom := new(cdx.BOM)
@@ -532,7 +531,7 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 // @Success 200 {object} dtos.ScanResponse
 // @Router /scan-unauthenticated [post]
 func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error {
-	reqCtx, span := otel.Tracer("devguard/controllers").Start(c.Request().Context(), "ScanController.ScanDependencyVulnUnauthenticated")
+	reqCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanDependencyVulnUnauthenticated")
 	defer span.End()
 
 	bom := new(cdx.BOM)
@@ -563,7 +562,7 @@ func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error
 // @Success 200 {object} dtos.ScanResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file [post]
 func (s *ScanController) ScanSbomFile(c shared.Context) error {
-	_, span := otel.Tracer("devguard/controllers").Start(c.Request().Context(), "ScanController.ScanSbomFile")
+	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanSbomFile")
 	defer span.End()
 
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb

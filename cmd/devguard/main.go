@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -189,33 +190,40 @@ func initTracer(sampleRate float64) {
 	//   grpcs://host:port  → gRPC, TLS
 	//   http://host:port   → HTTP, no TLS
 	//   https://host:port  → HTTP, TLS
+	// Optional: OTEL_EXPORTER_BASIC_AUTH_USERNAME / OTEL_EXPORTER_BASIC_AUTH_PASSWORD
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
 		var (
-			exp sdktrace.SpanExporter
-			err error
+			exp     sdktrace.SpanExporter
+			err     error
+			headers map[string]string
 		)
+
+		if user, pass := os.Getenv("OTEL_EXPORTER_BASIC_AUTH_USERNAME"), os.Getenv("OTEL_EXPORTER_BASIC_AUTH_PASSWORD"); user != "" && pass != "" {
+			encoded := base64.StdEncoding.EncodeToString([]byte(user + ":" + pass))
+			headers = map[string]string{"Authorization": "Basic " + encoded}
+		}
+
 		u, parseErr := url.Parse(endpoint)
 		if parseErr != nil {
 			slog.Warn("failed to parse OTEL_EXPORTER_OTLP_ENDPOINT", "err", parseErr, "endpoint", endpoint)
 		} else {
 			switch u.Scheme {
-			case "grpcs":
-				exp, err = otlptracegrpc.New(context.Background(),
-					otlptracegrpc.WithEndpoint(u.Host),
-				)
 			case "grpc":
 				exp, err = otlptracegrpc.New(context.Background(),
 					otlptracegrpc.WithEndpoint(u.Host),
 					otlptracegrpc.WithInsecure(),
+					otlptracegrpc.WithHeaders(headers),
 				)
 			case "https":
 				exp, err = otlptracehttp.New(context.Background(),
 					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithHeaders(headers),
 				)
 			default: // http
 				exp, err = otlptracehttp.New(context.Background(),
 					otlptracehttp.WithEndpointURL(endpoint),
 					otlptracehttp.WithInsecure(),
+					otlptracehttp.WithHeaders(headers),
 				)
 			}
 		}

@@ -31,7 +31,6 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -188,7 +187,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 		}()
 		for assetID := range input {
 			// create a root span per asset that will parent all downstream stage spans
-			assetCtx, span := otel.Tracer("devguard.daemon").Start(pipelineCtx, "pipeline.asset",
+			assetCtx, span := daemonTracer.Start(pipelineCtx, "pipeline.asset",
 				trace.WithAttributes(attribute.String("asset.id", assetID.String())),
 			)
 
@@ -311,7 +310,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 				out <- assetWithDetails
 				continue
 			}
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.sync-tickets")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-tickets")
 			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
 				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion)
@@ -381,7 +380,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 				out <- assetWithDetails
 				continue
 			}
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.resolve-ticket-differences")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.resolve-ticket-differences")
 			depVulns, err := runner.dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(stageCtx, nil, asset.ID)
 			if err != nil {
 				slog.Error("could not get dependency vulns for asset", "assetID", asset.ID, "err", err)
@@ -431,7 +430,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 			project := assetWithDetails.project
 			org := assetWithDetails.org
 
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.scan")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.scan")
 			errs := make([]error, 0)
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
@@ -489,7 +488,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			project := assetWithDetails.project
 			org := assetWithDetails.org
 
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.sync-upstream")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-upstream")
 			errs := make([]error, 0)
 
 			for i := range assetVersions {
@@ -533,7 +532,7 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.collect-stats")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.collect-stats")
 			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
 				for _, artifact := range assetVersion.Artifacts {
@@ -575,7 +574,7 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 
 		for assetWithDetails := range input {
 			assetVersions := assetWithDetails.assetVersions
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.recalculate-risk")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.recalculate-risk")
 			errs := make([]error, 0)
 
 			for _, assetVersion := range assetVersions {
@@ -630,7 +629,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 				out <- assetWithDetails
 				continue
 			}
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.auto-reopen-tickets")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.auto-reopen-tickets")
 			span.SetAttributes(attribute.Int("asset.auto_reopen_after_days", *asset.VulnAutoReopenAfterDays))
 			reopenAfterDuration := time.Duration(*asset.VulnAutoReopenAfterDays) * 24 * time.Hour
 
@@ -685,7 +684,7 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 		}()
 
 		for assetWithDetails := range input {
-			stageCtx, span := otel.Tracer("devguard.daemon").Start(assetWithDetails.ctx, "pipeline.delete-old-versions")
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.delete-old-versions")
 			_, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(stageCtx, nil, assetWithDetails.asset.ID, 7)
 			if err != nil {
 				slog.Error("Failed to delete old asset versions", "err", err)

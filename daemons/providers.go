@@ -21,8 +21,11 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
+
+var daemonTracer = otel.Tracer("devguard.daemon")
 
 type DebugOptions struct {
 	LimitToAssetVersionSlug string

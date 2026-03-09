@@ -9,7 +9,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -50,7 +49,7 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
-	ctx, span := otel.Tracer("devguard.daemon").Start(ctx, "daemon.fixed-versions")
+	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions")
 	defer span.End()
 
 	purlComparer := scan.NewPurlComparer(runner.db)

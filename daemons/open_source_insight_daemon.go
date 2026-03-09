@@ -4,13 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
 func (runner *DaemonRunner) UpdateOpenSourceInsightInformation(ctx context.Context) error {
-	ctx, span := otel.Tracer("devguard.daemon").Start(ctx, "daemon.open-source-insight")
+	ctx, span := daemonTracer.Start(ctx, "daemon.open-source-insight")
 	defer span.End()
 
 	projectsToUpdate, err := runner.componentProjectRepository.FindAllOutdatedProjects(ctx, nil)

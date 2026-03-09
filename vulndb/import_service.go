@@ -30,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -120,7 +119,7 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 // it allows storing the last full vulndb state in tables with the suffix and then comparing them to the current tables
 // if extraTableNameSuffix is not nil, the import will always import from the latest snapshot
 func (service importService) ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error {
-	ctx, span := otel.Tracer("devguard.vulndb").Start(ctx, "vulndb.import-from-diff")
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.import-from-diff")
 	defer span.End()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
@@ -152,7 +151,7 @@ func (service importService) ImportFromDiff(ctx context.Context, extraTableNameS
 	for i, tag := range tags {
 		slog.Info("updating vulndb", "step", tag, "number", i+1, "of", len(tags))
 
-		tagCtx, tagSpan := otel.Tracer("devguard.vulndb").Start(ctx, "vulndb.process-tag",
+		tagCtx, tagSpan := vulndbTracer.Start(ctx, "vulndb.process-tag",
 			trace.WithAttributes(
 				attribute.String("vulndb.tag", tag),
 				attribute.Int("vulndb.tag_index", i),
@@ -362,7 +361,7 @@ FOREIGN KEY (cve_id) REFERENCES cves(cve);
 }
 
 func (service importService) copyCSVToDB(ctx context.Context, csvDir string, extraTableSuffix *string) error {
-	ctx, span := otel.Tracer("devguard.vulndb").Start(ctx, "vulndb.copy-csv-to-db")
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.copy-csv-to-db")
 	defer span.End()
 
 	// Clean up orphaned tables older than 24 hours at the start of import
@@ -501,7 +500,7 @@ func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName string
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
 // This keeps the original table available during most of the import process
 func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
-	ctx, span := otel.Tracer("devguard.vulndb").Start(ctx, "vulndb.import-table",
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.import-table",
 		trace.WithAttributes(attribute.String("db.table", tableName)),
 	)
 	defer span.End()

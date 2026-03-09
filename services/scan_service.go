@@ -39,7 +39,6 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -102,7 +101,7 @@ func NewScanService(
 var _ shared.ScanService = &scanService{}
 
 func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.ScanNormalizedSBOM")
+	ctx, span := servicesTracer.Start(ctx, "scanService.ScanNormalizedSBOM")
 	defer span.End()
 
 	span.SetAttributes(
@@ -126,7 +125,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		return nil, nil, nil, err
 	}
 
-	scanCtx, scanSpan := otel.Tracer("devguard/services").Start(ctx, "SBOMScanner.Scan")
+	scanCtx, scanSpan := servicesTracer.Start(ctx, "SBOMScanner.Scan")
 	vulns, err := s.sbomScanner.Scan(scanCtx, normalizedBom)
 	scanSpan.SetAttributes(attribute.Int("vulns.found", len(vulns)))
 	scanSpan.End()
@@ -139,7 +138,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 	}
 
 	// handle the scan result
-	resultCtx, resultSpan := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleScanResult")
+	resultCtx, resultSpan := servicesTracer.Start(ctx, "scanService.HandleScanResult")
 	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID)
 	resultSpan.End()
 	if err != nil {
@@ -176,7 +175,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 }
 
 func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
-	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleFirstPartyVulnResult")
+	ctx, span := servicesTracer.Start(ctx, "scanService.HandleFirstPartyVulnResult")
 	defer span.End()
 
 	span.SetAttributes(
@@ -402,7 +401,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 }
 
 func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
-	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleScanResult")
+	ctx, span := servicesTracer.Start(ctx, "scanService.HandleScanResult")
 	defer span.End()
 	span.SetAttributes(
 		attribute.String("artifact.name", artifactName),
