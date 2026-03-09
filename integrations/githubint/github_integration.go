@@ -897,7 +897,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	// if an error did happen, delete the issue from github
 	if err != nil {
-		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
+		_, _, err := client.EditIssue(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
 			State: github.String("closed"),
 		})
 		if err != nil {

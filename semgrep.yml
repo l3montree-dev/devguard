@@ -101,10 +101,6 @@ rules:
     patterns:
       - pattern: func ($R $T) $METHOD(ctx context.Context, $A $B, ...) { ... }
       - pattern-not: func ($R $T) $METHOD(ctx context.Context, tx *gorm.DB, ...) { ... }
-    fix-regex:
-      regex: '(ctx context\.Context, )(?!tx \*gorm\.DB)'
-      replacement: '\1tx *gorm.DB, '
-      count: 1
 
   - id: service-method-missing-ctx
     message: Service method should have ctx context.Context as first parameter
@@ -116,10 +112,6 @@ rules:
     patterns:
       - pattern: func ($R $T) $METHOD(...) { ... }
       - pattern-not: func ($R $T) $METHOD(ctx context.Context, ...) { ... }
-    fix-regex:
-      regex: '(\) \w+\()(?!\))'
-      replacement: '\1ctx context.Context, '
-      count: 1
 
   - id: service-method-missing-ctx-empty-params
     message: Service method should have ctx context.Context as first parameter
@@ -130,10 +122,6 @@ rules:
         - "**/services/**"
     patterns:
       - pattern: func ($R $T) $METHOD() { ... }
-    fix-regex:
-      regex: '(\) \w+\()\)'
-      replacement: '\1ctx context.Context)'
-      count: 1
 
   - id: repo-method-missing-tx-only-ctx
     message: Repository method should have tx *gorm.DB as second parameter after ctx
@@ -146,10 +134,6 @@ rules:
         - "**/database/repositories/gorm_repository.go"
     patterns:
       - pattern: func ($R $T) $METHOD(ctx context.Context) { ... }
-    fix-regex:
-      regex: '(ctx context\.Context)\)'
-      replacement: '\1, tx *gorm.DB)'
-      count: 1
 
   - id: tx-begin-without-defer-rollback
     message: |
@@ -182,3 +166,37 @@ rules:
           ...
           $TX.Commit()
           ...
+
+  - id: context-background-when-ctx-available
+    message: |
+      context.Background() / context.TODO() used inside a function that already receives a context parameter.
+      Reuse the passed-in context to propagate tracing and cancellation signals instead of starting a new root context.
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/cmd/**"
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              func $NAME(..., $CTX context.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func ($RECV $TYPE) $NAME(..., $CTX context.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func $NAME(..., $C echo.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func ($RECV $TYPE) $NAME(..., $C echo.Context, ...) $RET {
+                ...
+              }
+      - pattern-not-inside: trace.ContextWithSpan(context.Background(), ...)
+      - pattern-either:
+          - pattern: context.Background()
+          - pattern: context.TODO()

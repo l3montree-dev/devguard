@@ -489,7 +489,7 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 
 		// Fetch asset IDs
 		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs()
+		idsChan := runner.FetchAssetIDs(context.Background())
 
 		// Collect IDs
 		var ids []uuid.UUID
@@ -525,7 +525,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 
 		// Fetch asset IDs
 		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs()
+		idsChan := runner.FetchAssetIDs(context.Background())
 
 		// Collect IDs
 		var fetchedIDs []uuid.UUID

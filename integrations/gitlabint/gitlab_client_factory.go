@@ -40,8 +40,8 @@ func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitL
 	}, nil
 }
 
-func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.GitlabClientFacade, error) {
-	integration, err := factory.gitlabIntegrationRepository.Read(context.Background(), nil, id)
+func (factory SimpleGitlabClientFactory) FromIntegrationUUID(ctx context.Context, id uuid.UUID) (shared.GitlabClientFacade, error) {
+	integration, err := factory.gitlabIntegrationRepository.Read(ctx, nil, id)
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +49,11 @@ func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shar
 	return factory.FromIntegration(integration)
 }
 
-func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromOauth2Token(ctx context.Context, token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
 	// get the correct gitlab oauth2 integration configuration
 	for _, integration := range factory.oauth2GitlabIntegration {
 		if integration.ProviderID == token.ProviderID {
-			oauth2Client := integration.client(token)
+			oauth2Client := integration.client(ctx, token)
 
 			if enableClientCache {
 				utils.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
@@ -82,7 +82,7 @@ func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, bas
 	if baseURL == "" {
 		return nil, errors.New("base URL is empty")
 	}
-	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
+	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL), gitlab.WithHTTPClient(&utils.EgressClient))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create gitlab client")
 	}

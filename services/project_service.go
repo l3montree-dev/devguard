@@ -147,7 +147,7 @@ func (s *projectService) ListProjectsByOrganizationID(ctx context.Context, organ
 	return s.projectRepository.GetByOrgID(ctx, nil, organizationID)
 }
 
-func (s *projectService) projectsForUser(ctx context.Context, c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
+func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
 
 	// extract the project ids from the roles
 	projectIDs := make(map[uuid.UUID]struct{})
@@ -190,7 +190,7 @@ func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) 
 	}
 
 	projectsIdsStr := allowedProjectIDs
-	projectsIdsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectsIdsStr)
+	projectsIdsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
@@ -217,7 +217,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 
 	projectsIdsStr := projectIDs
 
-	projectIDsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectsIdsStr)
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
@@ -238,7 +238,7 @@ func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project
 		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
 	}
 
-	projectIDsSlice, parentID, err := s.projectsForUser(c.Request().Context(), c, projectIDs)
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectIDs)
 	if err != nil {
 		return nil, err
 	}

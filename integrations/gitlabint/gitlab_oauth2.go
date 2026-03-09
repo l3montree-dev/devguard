@@ -226,14 +226,18 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 	return token.(*oauth2.Token), nil
 }
 
-func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client {
-	tokenSource := c.Oauth2Conf.TokenSource(context.TODO(), &oauth2.Token{
+func (c *GitlabOauth2Config) client(ctx context.Context, token models.GitLabOauth2Token) *http.Client {
+	tokenSource := c.Oauth2Conf.TokenSource(ctx, &oauth2.Token{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		Expiry:       token.Expiry,
 	})
 
-	return oauth2.NewClient(context.TODO(), newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
+	client := oauth2.NewClient(ctx, newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
+	utils.WrapHTTPClient(client, func(req *http.Request, next http.RoundTripper) (*http.Response, error) {
+		return utils.EgressRoundTripper{R: next}.RoundTrip(req)
+	})
+	return client
 }
 
 func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository) map[string]*GitlabOauth2Config {
@@ -286,7 +290,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	tokenModel.Expiry = token.Expiry
 	tokenModel.Scopes = strings.Join(c.Oauth2Conf.Scopes, " ")
 	// get the gitlab user id by doing a request to the gitlab api
-	client := c.client(*tokenModel)
+	client := c.client(ctx.Request().Context(), *tokenModel)
 	resp, err := client.Get(fmt.Sprintf("%s/api/v4/user", c.GitlabBaseURL))
 	if err != nil {
 		return ctx.JSON(400, map[string]any{

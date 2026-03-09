@@ -48,36 +48,36 @@ func NewExternalEntityProviderService(
 	}
 }
 
-func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
-	org := shared.GetOrg(c)
+func (s externalEntityProviderService) TriggerSync(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
 	if org.IsExternalEntity() {
 		// Trigger the sync for the external entity provider projects
-		err := s.RefreshExternalEntityProviderProjects(c, org, shared.GetSession(c).GetUserID())
+		err := s.RefreshExternalEntityProviderProjects(ctx, org, shared.GetSession(ctx).GetUserID())
 		if err != nil {
 			return echo.NewHTTPError(500, "could not trigger sync").WithInternal(err)
 		}
-		return c.NoContent(204)
+		return ctx.NoContent(204)
 	}
 	return echo.NewHTTPError(400, "organization is not an external entity provider")
 }
 
-func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
-	orgs, err := s.SyncOrgs(c)
+func (s externalEntityProviderService) TriggerOrgSync(ctx shared.Context) error {
+	orgs, err := s.SyncOrgs(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)
 	}
 
-	return c.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.OrgDTO {
+	return ctx.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.OrgDTO {
 		return transformer.OrgDTOFromModel(*o)
 	}))
 }
 
-func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, error) {
+func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.Org, error) {
 	// return the enabled git providers as well
-	thirdPartyIntegration := shared.GetThirdPartyIntegration(c)
-	userID := shared.GetSession(c).GetUserID()
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
 	orgs, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
-		orgs, err := thirdPartyIntegration.ListOrgs(c)
+		orgs, err := thirdPartyIntegration.ListOrgs(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not list organizations: %w", err)
 		}
@@ -85,7 +85,7 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, 
 		orgsPtr := utils.Map(orgs, utils.Ptr)
 
 		// make sure, that the third party organizations exists inside the database
-		if err := s.organizationRepository.Upsert(c.Request().Context(), nil, &orgsPtr, []clause.Column{
+		if err := s.organizationRepository.Upsert(ctx.Request().Context(), nil, &orgsPtr, []clause.Column{
 			{Name: "external_entity_provider_id"},
 		}, nil); err != nil {
 			return nil, fmt.Errorf("could not upsert organizations: %w", err)
@@ -93,7 +93,7 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, 
 
 		// make sure the user is a member of the organizations
 		for _, org := range orgsPtr {
-			if err := shared.BootstrapOrg(c.Request().Context(), s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, shared.RoleMember); err != nil {
+			if err := shared.BootstrapOrg(ctx.Request().Context(), s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, shared.RoleMember); err != nil {
 				slog.Warn("could not bootstrap organization", "orgID", org.GetID(), "err", err)
 			}
 		}
@@ -295,7 +295,7 @@ func (s externalEntityProviderService) syncProjectAssets(ctx shared.Context, use
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	domainRBAC := shared.GetRBAC(ctx)
 
-	assets, roles, err := thirdPartyIntegration.ListProjects(context.TODO(), user, *project.ExternalEntityProviderID, *project.ExternalEntityID)
+	assets, roles, err := thirdPartyIntegration.ListProjects(ctx.Request().Context(), user, *project.ExternalEntityProviderID, *project.ExternalEntityID)
 	if err != nil {
 		return nil, fmt.Errorf("could not list assets for project %s: %w", project.Slug, err)
 	}
@@ -307,7 +307,7 @@ func (s externalEntityProviderService) syncProjectAssets(ctx shared.Context, use
 		toUpsert = append(toUpsert, &assets[i])
 	}
 
-	if err := s.assetRepository.Upsert(context.Background(), nil, &toUpsert, []clause.Column{
+	if err := s.assetRepository.Upsert(ctx.Request().Context(), nil, &toUpsert, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
 	}, []string{"project_id", "slug", "description", "name", "avatar"}); err != nil {

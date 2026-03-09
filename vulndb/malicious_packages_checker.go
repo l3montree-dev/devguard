@@ -32,6 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
@@ -46,6 +47,7 @@ const (
 type MaliciousPackageChecker struct {
 	repository *repositories.MaliciousPackageRepository
 	repoURL    string
+	httpClient *http.Client
 }
 
 func NewMaliciousPackageChecker(
@@ -54,6 +56,7 @@ func NewMaliciousPackageChecker(
 	return &MaliciousPackageChecker{
 		repository: repository,
 		repoURL:    DefaultMaliciousPackageRepo,
+		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}, nil
 }
 
@@ -73,7 +76,11 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB(ctx context.Context) (out
 
 	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
 	// Download the archive
-	resp, err := http.Get(c.repoURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.repoURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create download request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %w", err)
 	}
