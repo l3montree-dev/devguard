@@ -92,7 +92,7 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
-	return float64(priorVotes)
+	return float64(priorVotes + 1)
 }
 
 func PathPatternMatchesPath(inPath, inPattern []string) bool {
