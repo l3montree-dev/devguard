@@ -16,6 +16,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -39,10 +40,10 @@ func TestGenerateProductTree(t *testing.T) {
 	t.Run("test for trivial product tree consisting of 1 asset -> 1 assetVersion -> 1 artifact", func(t *testing.T) {
 		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
+		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
+		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
 
-		tree, err := generateProductTree(asset1, mockAssetVersionRepository, mockArtifactRepository, vulns)
+		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, vulns)
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
@@ -87,10 +88,10 @@ func TestGenerateProductTree(t *testing.T) {
 		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		mockArtifactRepository := mocks.NewArtifactRepository(t)
 
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
+		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
+		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
 
-		tree, err := generateProductTree(asset1, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
+		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}

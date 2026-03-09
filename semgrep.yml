@@ -35,3 +35,168 @@ rules:
       - pattern: echo.NewHTTPError(500)
       - pattern-not-inside: |
           echo.NewHTTPError(500).WithInternal(...)
+
+  - id: repo-method-missing-ctx
+    message: Repository method should have ctx context.Context as first parameter
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+    patterns:
+      - pattern: func ($R $T) $METHOD(...) { ... }
+      - pattern-not: func ($R $T) $METHOD(ctx context.Context, ...) { ... }
+    fix-regex:
+      regex: '(\) \w+\()(?!\))'
+      replacement: '\1ctx context.Context, '
+      count: 1
+
+  - id: repo-method-missing-ctx-empty-params
+    message: Repository method should have ctx context.Context as first parameter
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+    patterns:
+      - pattern: func ($R $T) $METHOD() { ... }
+    fix-regex:
+      regex: '(\) \w+\()\)'
+      replacement: '\1ctx context.Context)'
+      count: 1
+
+  - id: repo-direct-db-access
+    message: Use GetDB(ctx, tx) instead of accessing the db field directly
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    pattern: $R.db
+    fix: $R.GetDB(ctx, nil)
+
+  - id: repo-getdb-nil-when-tx-available
+    message: tx is available as parameter, use GetDB(ctx, tx) instead of GetDB(ctx, nil)
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+    patterns:
+      - pattern-inside: func ($RECV $TYPE) $METHOD(ctx context.Context, tx *gorm.DB, ...) { ... }
+      - pattern: $R.GetDB(ctx, nil)
+    fix: $R.GetDB(ctx, tx)
+
+  - id: repo-method-missing-tx
+    message: Repository method should have tx *gorm.DB as second parameter after ctx
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern: func ($R $T) $METHOD(ctx context.Context, $A $B, ...) { ... }
+      - pattern-not: func ($R $T) $METHOD(ctx context.Context, tx *gorm.DB, ...) { ... }
+
+  - id: service-method-missing-ctx
+    message: Service method should have ctx context.Context as first parameter
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/services/**"
+    patterns:
+      - pattern: func ($R $T) $METHOD(...) { ... }
+      - pattern-not: func ($R $T) $METHOD(ctx context.Context, ...) { ... }
+
+  - id: service-method-missing-ctx-empty-params
+    message: Service method should have ctx context.Context as first parameter
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/services/**"
+    patterns:
+      - pattern: func ($R $T) $METHOD() { ... }
+
+  - id: repo-method-missing-tx-only-ctx
+    message: Repository method should have tx *gorm.DB as second parameter after ctx
+    severity: WARNING
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern: func ($R $T) $METHOD(ctx context.Context) { ... }
+
+  - id: tx-begin-without-defer-rollback
+    message: |
+      db.Begin() called without defer tx.Rollback(). Leaked transactions hold locks.
+      Use: tx := db.Begin(); defer tx.Rollback(); ... ; tx.Commit()
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern: $TX := $DB.Begin()
+      - pattern-not-inside: |
+          ...
+          defer $TX.Rollback()
+          ...
+    fix: |
+      $TX := $DB.Begin()
+      defer $TX.Rollback()
+
+  - id: tx-begin-without-commit
+    message: |
+      db.Begin() called but tx.Commit() is never called in this function.
+      The transaction will always be rolled back.
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern: |
+          $TX := $DB.Begin()
+          ...
+      - pattern-not: |
+          $TX := $DB.Begin()
+          ...
+          $TX.Commit()
+          ...
+
+  - id: context-background-when-ctx-available
+    message: |
+      context.Background() / context.TODO() used inside a function that already receives a context parameter.
+      Reuse the passed-in context to propagate tracing and cancellation signals instead of starting a new root context.
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/cmd/**"
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              func $NAME(..., $CTX context.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func ($RECV $TYPE) $NAME(..., $CTX context.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func $NAME(..., $C echo.Context, ...) $RET {
+                ...
+              }
+          - pattern-inside: |
+              func ($RECV $TYPE) $NAME(..., $C echo.Context, ...) $RET {
+                ...
+              }
+      - pattern-not-inside: trace.ContextWithSpan(context.Background(), ...)
+      - pattern-either:
+          - pattern: context.Background()
+          - pattern: context.TODO()

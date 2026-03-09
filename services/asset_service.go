@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
+	"gorm.io/gorm"
 )
 
 type assetService struct {
@@ -32,6 +34,8 @@ type assetService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	dependencyVulnService    shared.DependencyVulnService
 }
+
+var _ shared.AssetService = (*assetService)(nil) // Ensure assetService implements shared.AssetService interface
 
 func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService) *assetService {
 	return &assetService{
@@ -41,25 +45,29 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) CreateAsset(rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
+func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
-	err := s.assetRepository.Create(nil, &newAsset)
+
+	tx := s.assetRepository.GetDB(ctx, nil).Begin()
+	defer tx.Rollback()
+
+	err := s.assetRepository.Create(ctx, tx, &newAsset)
 
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 	}
 
 	// bootstrap the asset in the rbac system
-	if err := s.BootstrapAsset(rbac, &newAsset); err != nil {
+	if err := s.BootstrapAsset(ctx, rbac, &newAsset); err != nil {
 		slog.Error("error bootstrapping asset in rbac", "err", err)
 		return nil, err
 	}
 
 	// make the current user the admin of the asset
-	if err := rbac.GrantRoleInAsset(currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
 		slog.Error("error assigning current user as asset admin", "err", err)
 		return nil, err
 	}
@@ -67,47 +75,47 @@ func (s *assetService) CreateAsset(rbac shared.AccessControl, currentUser string
 	return &newAsset, nil
 }
 
-func (s *assetService) BootstrapAsset(rbac shared.AccessControl, asset *models.Asset) error {
+func (s *assetService) BootstrapAsset(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error {
 	// make sure and project admin is an asset admin - Always
-	if err := rbac.LinkProjectAndAssetRole(shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
+	if err := rbac.LinkProjectAndAssetRole(ctx, shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
 		return err
 	}
 
 	// give the admin of an asset all the permissions of a member
-	if err := rbac.InheritAssetRole(shared.RoleAdmin, shared.RoleMember, asset.GetID().String()); err != nil {
+	if err := rbac.InheritAssetRole(ctx, shared.RoleAdmin, shared.RoleMember, asset.GetID().String()); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInAsset(asset.GetID().String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{shared.ActionRead}); err != nil {
+	if err := rbac.AllowRoleInAsset(ctx, asset.GetID().String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{shared.ActionRead}); err != nil {
 		return err
 	}
-	if err := rbac.AllowRoleInAsset(asset.GetID().String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}); err != nil {
+	if err := rbac.AllowRoleInAsset(ctx, asset.GetID().String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *assetService) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	return s.assetRepository.Read(assetID)
+func (s *assetService) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.Asset, error) {
+	return s.assetRepository.Read(ctx, tx, assetID)
 }
 
-func (s *assetService) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
-	err := s.dependencyVulnRepository.Transaction(func(tx shared.DB) error {
+func (s *assetService) UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error {
+	err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
 
-		err := s.assetRepository.Save(tx, &asset)
+		err := s.assetRepository.Save(ctx, tx, &asset)
 		if err != nil {
 			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the dependencyVulns
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.GetID())
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, tx, asset.GetID())
 		if err != nil {
 			slog.Info("error getting dependencyVulns", "err", err)
 			return fmt.Errorf("could not get dependencyVulns: %v", err)
 		}
 
-		_, err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
+		_, err = s.dependencyVulnService.RecalculateRawRiskAssessment(ctx, tx, responsible, dependencyVulns, justification, asset)
 		if err != nil {
 			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)
@@ -122,7 +130,7 @@ func (s *assetService) UpdateAssetRequirements(asset models.Asset, responsible s
 	return nil
 }
 
-func (s *assetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string {
+func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string {
 
 	if len(results) == 0 {
 		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{

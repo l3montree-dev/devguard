@@ -30,6 +30,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
@@ -44,6 +47,8 @@ type importService struct {
 	configService                shared.ConfigService
 	pool                         *pgxpool.Pool
 }
+
+var _ shared.VulnDBImportService = (*importService)(nil)
 
 func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.CweRepository, exploitRepository shared.ExploitRepository, affectedComponentsRepository shared.AffectedComponentRepository, configService shared.ConfigService, pool *pgxpool.Pool) *importService {
 	return &importService{
@@ -62,7 +67,7 @@ var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}, "cve_relationships": {}}
 
-func (service importService) Import(tx shared.DB, tag string) error {
+func (service importService) Import(ctx context.Context, tag string) error {
 	begin := time.Now()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
@@ -76,13 +81,13 @@ func (service importService) Import(tx shared.DB, tag string) error {
 		return fmt.Errorf("could not create temp directory: %w", err)
 	}
 
-	_, err = downloadAndSaveZipToTemp(repo, tag, outpath)
+	_, err = downloadAndSaveZipToTemp(ctx, repo, tag, outpath)
 	if err != nil {
 		return err
 	}
 
 	//copy csv files to database
-	err = service.copyCSVToDB(outpath, nil)
+	err = service.copyCSVToDB(ctx, outpath, nil)
 	if err != nil {
 		return fmt.Errorf("could not copy csv to db: %w", err)
 	}
@@ -93,8 +98,7 @@ func (service importService) Import(tx shared.DB, tag string) error {
 	return nil
 }
 
-func (service importService) CreateTablesWithSuffix(suffix string) error {
-	ctx := context.Background()
+func (service importService) CreateTablesWithSuffix(ctx context.Context, suffix string) error {
 	// create the tables with the suffix
 	return createTablesWithSuffix(ctx, service.pool, suffix)
 }
@@ -114,13 +118,16 @@ func createTablesWithSuffix(ctx context.Context, pool *pgxpool.Pool, suffix stri
 // the extra table name suffix is just used for exporting incremental diffs
 // it allows storing the last full vulndb state in tables with the suffix and then comparing them to the current tables
 // if extraTableNameSuffix is not nil, the import will always import from the latest snapshot
-func (service importService) ImportFromDiff(extraTableNameSuffix *string) error {
-	ctx := context.Background()
+func (service importService) ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error {
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.import-from-diff")
+	defer span.End()
 
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "connect to remote repository failed")
 		return fmt.Errorf("could not connect to remote repository: %w", err)
 	}
 
@@ -133,22 +140,38 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 	}
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "fetch tags failed")
 		return err
 	}
 
+	span.SetAttributes(attribute.Int("vulndb.tag_count", len(tags)))
 	begin := time.Now()
 	slog.Info("start updating vulndb", "steps", len(tags))
 	for i, tag := range tags {
 		slog.Info("updating vulndb", "step", tag, "number", i+1, "of", len(tags))
 
+		tagCtx, tagSpan := vulndbTracer.Start(ctx, "vulndb.process-tag",
+			trace.WithAttributes(
+				attribute.String("vulndb.tag", tag),
+				attribute.Int("vulndb.tag_index", i),
+			),
+		)
+
 		outpath, err := os.MkdirTemp("", "vulndb")
 		if err != nil {
+			tagSpan.RecordError(err)
+			tagSpan.SetStatus(codes.Error, "create temp dir failed")
+			tagSpan.End()
 			return fmt.Errorf("could not create temp directory: %w", err)
 		}
 
 		// if the directory already exists we skip the download and verification
-		_, err = downloadAndSaveZipToTemp(repo, tag, outpath)
+		_, err = downloadAndSaveZipToTemp(tagCtx, repo, tag, outpath)
 		if err != nil {
+			tagSpan.RecordError(err)
+			tagSpan.SetStatus(codes.Error, "download failed")
+			tagSpan.End()
 			return err
 		}
 		defer os.RemoveAll(outpath) //nolint
@@ -156,49 +179,65 @@ func (service importService) ImportFromDiff(extraTableNameSuffix *string) error 
 		// if it is a snapshot tag we load the full state
 		if strings.Contains(tag, "snapshot") {
 			if i != 0 {
-				slog.Warn("snapshot tag in between incremental tags, skipping", "tag", tag) //there is no skipping?
+				slog.Warn("snapshot tag in between incremental tags, skipping", "tag", tag)
 			}
 			slog.Info("no version detected start loading latest vulndb state")
-			err = service.copyCSVToDB(outpath, extraTableNameSuffix)
+			tagSpan.SetAttributes(attribute.Bool("vulndb.is_snapshot", true))
+			err = service.copyCSVToDB(tagCtx, outpath, extraTableNameSuffix)
 			if err != nil {
+				tagSpan.RecordError(err)
+				tagSpan.SetStatus(codes.Error, "copy CSV to DB failed")
+				tagSpan.End()
 				return err
 			}
 
 			slog.Info("finished loading latest snapshot state")
 			if extraTableNameSuffix == nil {
-				err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
+				err = service.configService.SetJSONConfig(tagCtx, "vulndb.lastIncrementalImport", tag)
 				if err != nil {
 					slog.Error("could not save last incremental import version", "err", err)
 				}
 			}
 			slog.Info("finished updating tag", "tag", tag)
+			tagSpan.End()
 			continue
 		}
 
-		tx, err := service.pool.Begin(ctx)
+		tagSpan.SetAttributes(attribute.Bool("vulndb.is_snapshot", false))
+		tx, err := service.pool.Begin(tagCtx)
 		if err != nil {
+			tagSpan.RecordError(err)
+			tagSpan.SetStatus(codes.Error, "begin transaction failed")
+			tagSpan.End()
 			return err
 		}
-		defer tx.Rollback(ctx) // nolint:errcheck // rollback is safe even after commit
+		defer tx.Rollback(tagCtx) // nolint:errcheck // rollback is safe even after commit
 
 		dirPath := fmt.Sprintf("%s/diffs-tmp", outpath)
 
-		err = processDiffCSVs(ctx, dirPath, tx, extraTableNameSuffix)
+		err = processDiffCSVs(tagCtx, dirPath, tx, extraTableNameSuffix)
 		if err != nil {
 			slog.Error("error when trying to update from diff files", "tag", tag, "err", err)
+			tagSpan.RecordError(err)
+			tagSpan.SetStatus(codes.Error, "process diff CSVs failed")
+			tagSpan.End()
 			return err
 		}
-		err = tx.Commit(ctx)
+		err = tx.Commit(tagCtx)
 		if err != nil {
+			tagSpan.RecordError(err)
+			tagSpan.SetStatus(codes.Error, "commit failed")
+			tagSpan.End()
 			return err
 		}
 		if extraTableNameSuffix == nil {
-			err = service.configService.SetJSONConfig("vulndb.lastIncrementalImport", tag)
+			err = service.configService.SetJSONConfig(tagCtx, "vulndb.lastIncrementalImport", tag)
 			if err != nil {
 				slog.Error("could not save last incremental import version", "err", err)
 			}
 		}
 		slog.Info("finished updating tag", "tag", tag)
+		tagSpan.End()
 	}
 	slog.Info("finished updating tags", "duration", time.Since(begin))
 
@@ -321,8 +360,9 @@ FOREIGN KEY (cve_id) REFERENCES cves(cve);
 	return err
 }
 
-func (service importService) copyCSVToDB(csvDir string, extraTableSuffix *string) error {
-	ctx := context.Background()
+func (service importService) copyCSVToDB(ctx context.Context, csvDir string, extraTableSuffix *string) error {
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.copy-csv-to-db")
+	defer span.End()
 
 	// Clean up orphaned tables older than 24 hours at the start of import
 	// This helps prevent accumulation of tables from failed imports
@@ -460,11 +500,16 @@ func createShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName string
 // importWithShadowTable: Create shadow table → Import → Atomic swap → Cleanup
 // This keeps the original table available during most of the import process
 func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath string) (string, error) {
+	ctx, span := vulndbTracer.Start(ctx, "vulndb.import-table",
+		trace.WithAttributes(attribute.String("db.table", tableName)),
+	)
+	defer span.End()
+
 	shadowTable := tableName + "_shadow_" + fmt.Sprintf("%d", time.Now().Unix())
 
 	defer func() {
 		// Clean up shadow table if it still exists (swap failed)
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		cleanupCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		_, err := pool.Exec(cleanupCtx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", shadowTable))
 		if err != nil {
@@ -592,8 +637,7 @@ func cleanupBackupTable(pool *pgxpool.Pool, backupTable string) {
 	slog.Error("Failed to drop backup table after all retry attempts", "table", backupTable)
 }
 
-func (service importService) CleanupOrphanedTables() error {
-	ctx := context.Background()
+func (service importService) CleanupOrphanedTables(ctx context.Context) error {
 	return cleanupOrphanedTables(ctx, service.pool, 24)
 }
 
@@ -706,7 +750,7 @@ func cleanupOrphanedTables(ctx context.Context, pool *pgxpool.Pool, olderThanHou
 	return nil
 }
 
-func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx context.Context) error {
+func verifySignature(ctx context.Context, pubKeyFile string, sigFile string, blobFile string) error {
 	// Load the public key
 	pubKeyData, err := os.ReadFile(pubKeyFile)
 	if err != nil {
@@ -975,44 +1019,35 @@ func processUpdateDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 }
 
 // downloads the fileName with the tag from the devguard package master, verifies the signature and unzips it into tmp Folder
-func downloadAndSaveZipToTemp(repo *remote.Repository, tag string, outpath string) (*file.Store, error) {
+func downloadAndSaveZipToTemp(ctx context.Context, repo *remote.Repository, tag string, outpath string) (*file.Store, error) {
 	slog.Info("importing vulndb started")
 
 	sigFile := outpath + "/vulndb.zip.sig"
 	blobFile := outpath + "/vulndb.zip"
 	pubKeyFile := "cosign.pub"
 
-	ctx := context.Background()
-
 	fs, err := file.New(outpath)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("could not create file store: %w", err)
 	}
 
 	// import the vulndb csv to the file store
 	err = copyCSVFromRemoteToLocal(ctx, repo, tag, fs)
 	if err != nil {
-		return fs, fmt.Errorf("could not copy csv from remote to local: %w", err)
+		return nil, fmt.Errorf("could not copy csv from remote to local: %w", err)
 	}
 
 	// verify the signature of the imported data
-	err = verifySignature(pubKeyFile, sigFile, blobFile, ctx)
+	err = verifySignature(ctx, pubKeyFile, sigFile, blobFile)
 	if err != nil {
-		return fs, fmt.Errorf("could not verify signature: %w", err)
+		return nil, fmt.Errorf("could not verify signature: %w", err)
 	}
 	slog.Info("successfully verified signature")
-
-	// open the blob file
-	f, err := os.Open(blobFile)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close() //nolint
 
 	// unzip the blob file into vulndb-tmp dir
 	err = utils.Unzip(blobFile, outpath+"/")
 	if err != nil {
-		return fs, fmt.Errorf("error when trying to build zip file: %w", err)
+		return nil, fmt.Errorf("error when trying to build zip file: %w", err)
 	}
 	slog.Info("unzipping vulndb completed", "path", outpath+"/")
 	return fs, nil
@@ -1050,7 +1085,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	lastVersion := ""
 	allTags := make([]string, 0, 3000)
 
-	err := service.configService.GetJSONConfig("vulndb.lastIncrementalImport", &lastVersion)
+	err := service.configService.GetJSONConfig(ctx, "vulndb.lastIncrementalImport", &lastVersion)
 	if err != nil {
 		slog.Warn("could not get last incremental import version, assuming no version is set yet", "err", err)
 	}

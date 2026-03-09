@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,9 +22,9 @@ func NewArtifactRiskHistoryRepository(db *gorm.DB) *artifactRiskHistoryRepositor
 	}
 }
 
-func (r *artifactRiskHistoryRepository) GetRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	var assetRisk = []models.ArtifactRiskHistory{}
-	db := r.GetDB(r.db)
+	db := r.GetDB(ctx, tx)
 
 	// base query
 	db = db.Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
@@ -40,16 +41,16 @@ func (r *artifactRiskHistoryRepository) GetRiskHistory(artifactName *string, ass
 	return assetRisk, nil
 }
 
-func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error {
-	return r.Repository.GetDB(r.db).Save(assetRisk).Error
+func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx *gorm.DB, assetRisk *models.ArtifactRiskHistory) error {
+	return r.Repository.GetDB(ctx, tx).Save(assetRisk).Error
 }
 
-func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	var assetRisk = []models.ArtifactRiskHistory{}
 
 	// Use a recursive CTE to collect the release tree (the release and all child releases)
 	// then join release_items to artifact_risk_history to get all matching artifact histories.
-	db := r.GetDB(r.db)
+	db := r.GetDB(ctx, tx)
 
 	query := `
 		WITH RECURSIVE release_tree AS (

@@ -208,7 +208,7 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 			t.currentToken.Expiry = token.Expiry
 			t.currentToken.AccessToken = token.AccessToken
 
-			err := t.gitlabOauth2Repository.Save(nil, &t.currentToken)
+			err := t.gitlabOauth2Repository.Save(context.Background(), nil, &t.currentToken)
 
 			if err != nil {
 				return nil, err
@@ -226,14 +226,18 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 	return token.(*oauth2.Token), nil
 }
 
-func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client {
-	tokenSource := c.Oauth2Conf.TokenSource(context.TODO(), &oauth2.Token{
+func (c *GitlabOauth2Config) client(ctx context.Context, token models.GitLabOauth2Token) *http.Client {
+	tokenSource := c.Oauth2Conf.TokenSource(ctx, &oauth2.Token{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		Expiry:       token.Expiry,
 	})
 
-	return oauth2.NewClient(context.TODO(), newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &utils.EgressClient)
+
+	client := oauth2.NewClient(ctx, newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
+
+	return client
 }
 
 func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository) map[string]*GitlabOauth2Config {
@@ -258,7 +262,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -286,7 +290,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	tokenModel.Expiry = token.Expiry
 	tokenModel.Scopes = strings.Join(c.Oauth2Conf.Scopes, " ")
 	// get the gitlab user id by doing a request to the gitlab api
-	client := c.client(*tokenModel)
+	client := c.client(ctx.Request().Context(), *tokenModel)
 	resp, err := client.Get(fmt.Sprintf("%s/api/v4/user", c.GitlabBaseURL))
 	if err != nil {
 		return ctx.JSON(400, map[string]any{
@@ -319,7 +323,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 
 	tokenModel.GitLabUserID = gitlabUser.ID
 
-	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 	if err != nil {
 		return ctx.JSON(500, map[string]any{
 			"message": "could not save token",
@@ -350,11 +354,11 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	url := c.Oauth2Conf.AuthCodeURL(redirectTo, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)
-		err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+		err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 		if err != nil {
 			return ctx.JSON(500, map[string]any{
 				"message": "could not save token",
@@ -372,7 +376,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 		ProviderID: c.ProviderID,
 	}
 
-	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 
 	if err != nil {
 		return err

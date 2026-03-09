@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -19,36 +21,36 @@ func NewSupplyChainRepository(db *gorm.DB) *supplyChainRepository {
 	}
 }
 
-func (g *supplyChainRepository) FindByDigest(digest string) ([]models.SupplyChain, error) {
+func (g *supplyChainRepository) FindByDigest(ctx context.Context, tx *gorm.DB, digest string) ([]models.SupplyChain, error) {
 	var t []models.SupplyChain
 
-	err := g.db.Model(&models.SupplyChain{}).
+	err := g.GetDB(ctx, tx).Model(&models.SupplyChain{}).
 		Where("supply_chain_output_digest = ?", digest).
 		Find(&t).Error
 
 	return t, err
 }
 
-func (g *supplyChainRepository) FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error) {
+func (g *supplyChainRepository) FindBySupplyChainID(ctx context.Context, tx *gorm.DB, supplyChainID string) ([]models.SupplyChain, error) {
 	var t []models.SupplyChain
 
-	err := g.db.Model(&models.SupplyChain{}).
+	err := g.GetDB(ctx, tx).Model(&models.SupplyChain{}).
 		Where("LEFT(supply_chain_id, 8) = ?", supplyChainID).
 		Find(&t).Error
 
 	return t, err
 }
 
-func (g *supplyChainRepository) Save(tx *gorm.DB, model *models.SupplyChain) error {
-	return g.db.Session(&gorm.Session{
+func (g *supplyChainRepository) Save(ctx context.Context, tx *gorm.DB, model *models.SupplyChain) error {
+	return g.GetDB(ctx, tx).Session(&gorm.Session{
 		FullSaveAssociations: false,
 	}).Save(model).Error
 }
 
-func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error) {
+func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (float64, error) {
 	var count int64
 
-	err := g.db.Model(&models.SupplyChain{}).
+	err := g.GetDB(ctx, tx).Model(&models.SupplyChain{}).
 		Where("asset_id = ?", assetID).
 		Where("verified = true").
 		Count(&count).Error
@@ -58,7 +60,7 @@ func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(assetVersionNam
 	}
 
 	var total int64
-	err = g.db.Model(&models.SupplyChain{}).
+	err = g.GetDB(ctx, tx).Model(&models.SupplyChain{}).
 		Where("asset_id = ?", assetID).
 		Count(&total).Error
 

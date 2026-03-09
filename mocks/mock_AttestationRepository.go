@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *AttestationRepository) EXPECT() *AttestationRepository_Expecter {
 }
 
 // Activate provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Activate(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *AttestationRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type AttestationRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AttestationRepository_Expecter) Activate(tx interface{}, id interface{}) *AttestationRepository_Activate_Call {
-	return &AttestationRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *AttestationRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *AttestationRepository_Activate_Call {
+	return &AttestationRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *AttestationRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *AttestationRepository_Activate_Call {
+func (_c *AttestationRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AttestationRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *AttestationRepository_Activate_Call) Return(err error) *AttestationRep
 	return _c
 }
 
-func (_c *AttestationRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *AttestationRepository_Activate_Call {
+func (_c *AttestationRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *AttestationRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) All() ([]models.Attestation, error) {
-	ret := _mock.Called()
+func (_mock *AttestationRepository) All(ctx context.Context, tx shared.DB) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *AttestationRepository) All() ([]models.Attestation, error) {
 
 	var r0 []models.Attestation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Attestation, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Attestation); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Attestation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type AttestationRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *AttestationRepository_Expecter) All() *AttestationRepository_All_Call {
-	return &AttestationRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *AttestationRepository_Expecter) All(ctx interface{}, tx interface{}) *AttestationRepository_All_Call {
+	return &AttestationRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *AttestationRepository_All_Call) Run(run func()) *AttestationRepository_All_Call {
+func (_c *AttestationRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *AttestationRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *AttestationRepository_All_Call) Return(attestations []models.Attestati
 	return _c
 }
 
-func (_c *AttestationRepository_All_Call) RunAndReturn(run func() ([]models.Attestation, error)) *AttestationRepository_All_Call {
+func (_c *AttestationRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Attestation, error)) *AttestationRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *AttestationRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type AttestationRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *AttestationRepository_Expecter) Begin() *AttestationRepository_Begin_Call {
-	return &AttestationRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *AttestationRepository_Expecter) Begin(ctx interface{}) *AttestationRepository_Begin_Call {
+	return &AttestationRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *AttestationRepository_Begin_Call) Run(run func()) *AttestationRepository_Begin_Call {
+func (_c *AttestationRepository_Begin_Call) Run(run func(ctx context.Context)) *AttestationRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,22 @@ func (_c *AttestationRepository_Begin_Call) Return(v shared.DB) *AttestationRepo
 	return _c
 }
 
-func (_c *AttestationRepository_Begin_Call) RunAndReturn(run func() shared.DB) *AttestationRepository_Begin_Call {
+func (_c *AttestationRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *AttestationRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Create(tx shared.DB, t *models.Attestation) error {
-	ret := _mock.Called(tx, t)
+func (_mock *AttestationRepository) Create(ctx context.Context, tx shared.DB, t *models.Attestation) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Attestation) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,25 +248,31 @@ type AttestationRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Attestation
-func (_e *AttestationRepository_Expecter) Create(tx interface{}, t interface{}) *AttestationRepository_Create_Call {
-	return &AttestationRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *AttestationRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *AttestationRepository_Create_Call {
+	return &AttestationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *AttestationRepository_Create_Call) Run(run func(tx shared.DB, t *models.Attestation)) *AttestationRepository_Create_Call {
+func (_c *AttestationRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Attestation)) *AttestationRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Attestation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Attestation)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].(*models.Attestation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -249,22 +283,22 @@ func (_c *AttestationRepository_Create_Call) Return(err error) *AttestationRepos
 	return _c
 }
 
-func (_c *AttestationRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Attestation) error) *AttestationRepository_Create_Call {
+func (_c *AttestationRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Attestation) error) *AttestationRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) CreateBatch(tx shared.DB, ts []models.Attestation) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *AttestationRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.Attestation) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Attestation) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,25 +311,31 @@ type AttestationRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Attestation
-func (_e *AttestationRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AttestationRepository_CreateBatch_Call {
-	return &AttestationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *AttestationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *AttestationRepository_CreateBatch_Call {
+	return &AttestationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *AttestationRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Attestation)) *AttestationRepository_CreateBatch_Call {
+func (_c *AttestationRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Attestation)) *AttestationRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Attestation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].([]models.Attestation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -306,22 +346,22 @@ func (_c *AttestationRepository_CreateBatch_Call) Return(err error) *Attestation
 	return _c
 }
 
-func (_c *AttestationRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Attestation) error) *AttestationRepository_CreateBatch_Call {
+func (_c *AttestationRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Attestation) error) *AttestationRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Delete(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *AttestationRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -334,25 +374,31 @@ type AttestationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AttestationRepository_Expecter) Delete(tx interface{}, id interface{}) *AttestationRepository_Delete_Call {
-	return &AttestationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *AttestationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AttestationRepository_Delete_Call {
+	return &AttestationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *AttestationRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *AttestationRepository_Delete_Call {
+func (_c *AttestationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AttestationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -363,22 +409,22 @@ func (_c *AttestationRepository_Delete_Call) Return(err error) *AttestationRepos
 	return _c
 }
 
-func (_c *AttestationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *AttestationRepository_Delete_Call {
+func (_c *AttestationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *AttestationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) DeleteBatch(tx shared.DB, ids []models.Attestation) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *AttestationRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.Attestation) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Attestation) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -391,25 +437,31 @@ type AttestationRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Attestation
-func (_e *AttestationRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AttestationRepository_DeleteBatch_Call {
-	return &AttestationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *AttestationRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *AttestationRepository_DeleteBatch_Call {
+	return &AttestationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *AttestationRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Attestation)) *AttestationRepository_DeleteBatch_Call {
+func (_c *AttestationRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.Attestation)) *AttestationRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Attestation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].([]models.Attestation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -420,14 +472,14 @@ func (_c *AttestationRepository_DeleteBatch_Call) Return(err error) *Attestation
 	return _c
 }
 
-func (_c *AttestationRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Attestation) error) *AttestationRepository_DeleteBatch_Call {
+func (_c *AttestationRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Attestation) error) *AttestationRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetID provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error) {
-	ret := _mock.Called(assetID)
+func (_mock *AttestationRepository) GetByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetID")
@@ -435,18 +487,18 @@ func (_mock *AttestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.At
 
 	var r0 []models.Attestation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Attestation, error)); ok {
-		return returnFunc(assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Attestation); ok {
-		r0 = returnFunc(assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Attestation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -459,19 +511,31 @@ type AttestationRepository_GetByAssetID_Call struct {
 }
 
 // GetByAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AttestationRepository_Expecter) GetByAssetID(assetID interface{}) *AttestationRepository_GetByAssetID_Call {
-	return &AttestationRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", assetID)}
+func (_e *AttestationRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AttestationRepository_GetByAssetID_Call {
+	return &AttestationRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
 }
 
-func (_c *AttestationRepository_GetByAssetID_Call) Run(run func(assetID uuid.UUID)) *AttestationRepository_GetByAssetID_Call {
+func (_c *AttestationRepository_GetByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *AttestationRepository_GetByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -482,14 +546,14 @@ func (_c *AttestationRepository_GetByAssetID_Call) Return(attestations []models.
 	return _c
 }
 
-func (_c *AttestationRepository_GetByAssetID_Call) RunAndReturn(run func(assetID uuid.UUID) ([]models.Attestation, error)) *AttestationRepository_GetByAssetID_Call {
+func (_c *AttestationRepository_GetByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.Attestation, error)) *AttestationRepository_GetByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetVersionAndAssetID provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
-	ret := _mock.Called(assetID, assetVersion)
+func (_mock *AttestationRepository) GetByAssetVersionAndAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersion)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetVersionAndAssetID")
@@ -497,18 +561,18 @@ func (_mock *AttestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUI
 
 	var r0 []models.Attestation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.Attestation, error)); ok {
-		return returnFunc(assetID, assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersion)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.Attestation); ok {
-		r0 = returnFunc(assetID, assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersion)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Attestation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetID, assetVersion)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersion)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -521,25 +585,37 @@ type AttestationRepository_GetByAssetVersionAndAssetID_Call struct {
 }
 
 // GetByAssetVersionAndAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersion string
-func (_e *AttestationRepository_Expecter) GetByAssetVersionAndAssetID(assetID interface{}, assetVersion interface{}) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
-	return &AttestationRepository_GetByAssetVersionAndAssetID_Call{Call: _e.mock.On("GetByAssetVersionAndAssetID", assetID, assetVersion)}
+func (_e *AttestationRepository_Expecter) GetByAssetVersionAndAssetID(ctx interface{}, tx interface{}, assetID interface{}, assetVersion interface{}) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+	return &AttestationRepository_GetByAssetVersionAndAssetID_Call{Call: _e.mock.On("GetByAssetVersionAndAssetID", ctx, tx, assetID, assetVersion)}
 }
 
-func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Run(run func(assetID uuid.UUID, assetVersion string)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -550,22 +626,22 @@ func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Return(attesta
 	return _c
 }
 
-func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *AttestationRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -580,19 +656,25 @@ type AttestationRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *AttestationRepository_Expecter) GetDB(tx interface{}) *AttestationRepository_GetDB_Call {
-	return &AttestationRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *AttestationRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *AttestationRepository_GetDB_Call {
+	return &AttestationRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *AttestationRepository_GetDB_Call) Run(run func(tx shared.DB)) *AttestationRepository_GetDB_Call {
+func (_c *AttestationRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *AttestationRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -603,14 +685,14 @@ func (_c *AttestationRepository_GetDB_Call) Return(v shared.DB) *AttestationRepo
 	return _c
 }
 
-func (_c *AttestationRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *AttestationRepository_GetDB_Call {
+func (_c *AttestationRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *AttestationRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) List(ids []string) ([]models.Attestation, error) {
-	ret := _mock.Called(ids)
+func (_mock *AttestationRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -618,18 +700,18 @@ func (_mock *AttestationRepository) List(ids []string) ([]models.Attestation, er
 
 	var r0 []models.Attestation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.Attestation, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []models.Attestation); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Attestation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -642,355 +724,22 @@ type AttestationRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []string
-func (_e *AttestationRepository_Expecter) List(ids interface{}) *AttestationRepository_List_Call {
-	return &AttestationRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *AttestationRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *AttestationRepository_List_Call {
+	return &AttestationRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *AttestationRepository_List_Call) Run(run func(ids []string)) *AttestationRepository_List_Call {
+func (_c *AttestationRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *AttestationRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]string)
+			arg0 = args[0].(context.Context)
 		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_List_Call) Return(attestations []models.Attestation, err error) *AttestationRepository_List_Call {
-	_c.Call.Return(attestations, err)
-	return _c
-}
-
-func (_c *AttestationRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.Attestation, error)) *AttestationRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Read(id string) (models.Attestation, error) {
-	ret := _mock.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.Attestation
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.Attestation, error)); ok {
-		return returnFunc(id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.Attestation); ok {
-		r0 = returnFunc(id)
-	} else {
-		r0 = ret.Get(0).(models.Attestation)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// AttestationRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type AttestationRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - id string
-func (_e *AttestationRepository_Expecter) Read(id interface{}) *AttestationRepository_Read_Call {
-	return &AttestationRepository_Read_Call{Call: _e.mock.On("Read", id)}
-}
-
-func (_c *AttestationRepository_Read_Call) Run(run func(id string)) *AttestationRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_Read_Call) Return(attestation models.Attestation, err error) *AttestationRepository_Read_Call {
-	_c.Call.Return(attestation, err)
-	return _c
-}
-
-func (_c *AttestationRepository_Read_Call) RunAndReturn(run func(id string) (models.Attestation, error)) *AttestationRepository_Read_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Save provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Save(tx shared.DB, t *models.Attestation) error {
-	ret := _mock.Called(tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Save")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Attestation) error); ok {
-		r0 = returnFunc(tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AttestationRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
-type AttestationRepository_Save_Call struct {
-	*mock.Call
-}
-
-// Save is a helper method to define mock.On call
-//   - tx shared.DB
-//   - t *models.Attestation
-func (_e *AttestationRepository_Expecter) Save(tx interface{}, t interface{}) *AttestationRepository_Save_Call {
-	return &AttestationRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
-}
-
-func (_c *AttestationRepository_Save_Call) Run(run func(tx shared.DB, t *models.Attestation)) *AttestationRepository_Save_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.Attestation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_Save_Call) Return(err error) *AttestationRepository_Save_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AttestationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Attestation) error) *AttestationRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatch provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) SaveBatch(tx shared.DB, ts []models.Attestation) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Attestation) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AttestationRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
-type AttestationRepository_SaveBatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.Attestation
-func (_e *AttestationRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *AttestationRepository_SaveBatch_Call {
-	return &AttestationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
-}
-
-func (_c *AttestationRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Attestation)) *AttestationRepository_SaveBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_SaveBatch_Call) Return(err error) *AttestationRepository_SaveBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AttestationRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Attestation) error) *AttestationRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchBestEffort provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Attestation) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Attestation) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AttestationRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type AttestationRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.Attestation
-func (_e *AttestationRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *AttestationRepository_SaveBatchBestEffort_Call {
-	return &AttestationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
-}
-
-func (_c *AttestationRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Attestation)) *AttestationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_SaveBatchBestEffort_Call) Return(err error) *AttestationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AttestationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Attestation) error) *AttestationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AttestationRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type AttestationRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - fn func(tx shared.DB) error
-func (_e *AttestationRepository_Expecter) Transaction(fn interface{}) *AttestationRepository_Transaction_Call {
-	return &AttestationRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
-}
-
-func (_c *AttestationRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *AttestationRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AttestationRepository_Transaction_Call) Return(err error) *AttestationRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AttestationRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *AttestationRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Upsert provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Upsert(t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Attestation, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AttestationRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
-type AttestationRepository_Upsert_Call struct {
-	*mock.Call
-}
-
-// Upsert is a helper method to define mock.On call
-//   - t *[]*models.Attestation
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
-func (_e *AttestationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AttestationRepository_Upsert_Call {
-	return &AttestationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
-}
-
-func (_c *AttestationRepository_Upsert_Call) Run(run func(t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string)) *AttestationRepository_Upsert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Attestation
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Attestation)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 []string
 		if args[2] != nil {
@@ -1005,12 +754,405 @@ func (_c *AttestationRepository_Upsert_Call) Run(run func(t *[]*models.Attestati
 	return _c
 }
 
+func (_c *AttestationRepository_List_Call) Return(attestations []models.Attestation, err error) *AttestationRepository_List_Call {
+	_c.Call.Return(attestations, err)
+	return _c
+}
+
+func (_c *AttestationRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.Attestation, error)) *AttestationRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) Read(ctx context.Context, tx shared.DB, id string) (models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.Attestation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.Attestation)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AttestationRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type AttestationRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *AttestationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *AttestationRepository_Read_Call {
+	return &AttestationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
+}
+
+func (_c *AttestationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AttestationRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_Read_Call) Return(attestation models.Attestation, err error) *AttestationRepository_Read_Call {
+	_c.Call.Return(attestation, err)
+	return _c
+}
+
+func (_c *AttestationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.Attestation, error)) *AttestationRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) Save(ctx context.Context, tx shared.DB, t *models.Attestation) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AttestationRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type AttestationRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.Attestation
+func (_e *AttestationRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *AttestationRepository_Save_Call {
+	return &AttestationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
+}
+
+func (_c *AttestationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Attestation)) *AttestationRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].(*models.Attestation)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_Save_Call) Return(err error) *AttestationRepository_Save_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AttestationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Attestation) error) *AttestationRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.Attestation) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AttestationRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type AttestationRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.Attestation
+func (_e *AttestationRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *AttestationRepository_SaveBatch_Call {
+	return &AttestationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
+}
+
+func (_c *AttestationRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Attestation)) *AttestationRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].([]models.Attestation)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_SaveBatch_Call) Return(err error) *AttestationRepository_SaveBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AttestationRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Attestation) error) *AttestationRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Attestation) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Attestation) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AttestationRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type AttestationRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.Attestation
+func (_e *AttestationRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *AttestationRepository_SaveBatchBestEffort_Call {
+	return &AttestationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
+}
+
+func (_c *AttestationRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Attestation)) *AttestationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].([]models.Attestation)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_SaveBatchBestEffort_Call) Return(err error) *AttestationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AttestationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Attestation) error) *AttestationRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AttestationRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type AttestationRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(tx shared.DB) error
+func (_e *AttestationRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *AttestationRepository_Transaction_Call {
+	return &AttestationRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
+}
+
+func (_c *AttestationRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *AttestationRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_Transaction_Call) Return(err error) *AttestationRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AttestationRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *AttestationRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Attestation, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AttestationRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type AttestationRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *[]*models.Attestation
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *AttestationRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AttestationRepository_Upsert_Call {
+	return &AttestationRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+}
+
+func (_c *AttestationRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string)) *AttestationRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *[]*models.Attestation
+		if args[2] != nil {
+			arg2 = args[2].(*[]*models.Attestation)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
 func (_c *AttestationRepository_Upsert_Call) Return(err error) *AttestationRepository_Upsert_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *AttestationRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string) error) *AttestationRepository_Upsert_Call {
+func (_c *AttestationRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Attestation, conflictingColumns []clause.Column, updateOnly []string) error) *AttestationRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

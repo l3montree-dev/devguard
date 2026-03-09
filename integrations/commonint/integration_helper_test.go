@@ -1,6 +1,7 @@
 package commonint
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -371,7 +372,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		assetVersionName := "TestName"
 		pURL := "pkg:npm:test"
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -388,7 +389,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		assetVersionName := "TestName"
 		pURL := "pkg:npm:test"
 
-		_, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		_, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
 		if err == nil {
 			t.Fail()
 		}
@@ -409,7 +410,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		assetVersionName := "TestName"
 		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -435,7 +436,7 @@ func TestRenderPathToComponent(t *testing.T) {
 
 		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -458,7 +459,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		assetVersionName := "TestName"
 		pURL := "pkg:npm/single@1.0.0"
 
-		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, pURL)
+		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
 		assert.NoError(t, err)
 		// The output should contain the single node mermaid representation
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
@@ -723,7 +724,7 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 		for i := range runs {
 			repo := mocks.NewComponentRepository(t)
 			repo.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-			result, err := RenderPathToComponent(repo, assetID, "v1.0.0", pURL)
+			result, err := RenderPathToComponent(context.Background(), repo, assetID, "v1.0.0", pURL)
 			assert.NoError(t, err)
 			results[i] = result
 		}

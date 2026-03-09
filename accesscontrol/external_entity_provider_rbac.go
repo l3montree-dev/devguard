@@ -1,6 +1,8 @@
 package accesscontrol
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 )
@@ -34,23 +36,23 @@ func (e *externalEntityProviderRBAC) GetAllAssetsForUser(user string) ([]string,
 	return e.rootAccessControl.GetAllAssetsForUser(user)
 }
 
-func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(user string, asset string) error {
-	return e.rootAccessControl.RevokeAllRolesInAssetForUser(user, asset)
+func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error {
+	return e.rootAccessControl.RevokeAllRolesInAssetForUser(ctx, user, asset)
 }
 
-func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
+func (e *externalEntityProviderRBAC) HasAccess(ctx context.Context, userID string) (bool, error) {
 	if e.adminToken != nil && userID == *e.adminToken {
 		return true, nil
 	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 
-func (e *externalEntityProviderRBAC) RevokeAllRolesInProjectForUser(user string, project string) error {
-	return e.rootAccessControl.RevokeAllRolesInProjectForUser(user, project)
+func (e *externalEntityProviderRBAC) RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error {
+	return e.rootAccessControl.RevokeAllRolesInProjectForUser(ctx, user, project)
 }
 
-func (e *externalEntityProviderRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
-	return e.rootAccessControl.InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
+func (e *externalEntityProviderRBAC) InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
+	return e.rootAccessControl.InheritRole(ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 
 func (e *externalEntityProviderRBAC) GetAssetRole(user string, asset string) (shared.Role, error) {
@@ -60,41 +62,48 @@ func (e *externalEntityProviderRBAC) GetAssetRole(user string, asset string) (sh
 func (e *externalEntityProviderRBAC) GetAllRoles(user string) []string {
 	return e.rootAccessControl.GetAllRoles(user)
 }
-func (e *externalEntityProviderRBAC) GrantRole(subject string, role shared.Role) error {
-	return e.rootAccessControl.GrantRole(subject, role)
-}
-func (e *externalEntityProviderRBAC) RevokeRole(subject string, role shared.Role) error {
-	return e.rootAccessControl.RevokeRole(subject, role)
-}
-func (e *externalEntityProviderRBAC) GrantRoleInProject(subject string, role shared.Role, project string) error {
-	return e.rootAccessControl.GrantRoleInProject(subject, role, project)
-}
-func (e *externalEntityProviderRBAC) RevokeRoleInProject(subject string, role shared.Role, project string) error {
-	return e.rootAccessControl.RevokeRoleInProject(subject, role, project)
-}
-func (e *externalEntityProviderRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, project string) error {
-	return e.rootAccessControl.InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
+
+func (e *externalEntityProviderRBAC) GrantRole(ctx context.Context, subject string, role shared.Role) error {
+	return e.rootAccessControl.GrantRole(ctx, subject, role)
 }
 
-func (e *externalEntityProviderRBAC) InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, asset string) error {
-	return e.rootAccessControl.InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
+func (e *externalEntityProviderRBAC) RevokeRole(ctx context.Context, subject string, role shared.Role) error {
+	return e.rootAccessControl.RevokeRole(ctx, subject, role)
 }
 
-func (e *externalEntityProviderRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions shared.ProjectRole) error {
-	return e.rootAccessControl.InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions)
-}
-func (e *externalEntityProviderRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions shared.Role, project string) error {
-	return e.rootAccessControl.LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
+func (e *externalEntityProviderRBAC) GrantRoleInProject(ctx context.Context, subject string, role shared.Role, project string) error {
+	return e.rootAccessControl.GrantRoleInProject(ctx, subject, role, project)
 }
 
-func (e *externalEntityProviderRBAC) LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions shared.Role, project, asset string) error {
-	return e.rootAccessControl.LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
+func (e *externalEntityProviderRBAC) RevokeRoleInProject(ctx context.Context, subject string, role shared.Role, project string) error {
+	return e.rootAccessControl.RevokeRoleInProject(ctx, subject, role, project)
 }
 
-func (e *externalEntityProviderRBAC) AllowRole(role shared.Role, object shared.Object, action []shared.Action) error {
-	return e.rootAccessControl.AllowRole(role, object, action)
+func (e *externalEntityProviderRBAC) InheritProjectRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, project string) error {
+	return e.rootAccessControl.InheritProjectRole(ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
 }
-func (e *externalEntityProviderRBAC) IsAllowed(userID string, object shared.Object, action shared.Action) (bool, error) {
+
+func (e *externalEntityProviderRBAC) InheritAssetRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, asset string) error {
+	return e.rootAccessControl.InheritAssetRole(ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)
+}
+
+func (e *externalEntityProviderRBAC) InheritProjectRolesAcrossProjects(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.ProjectRole) error {
+	return e.rootAccessControl.InheritProjectRolesAcrossProjects(ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions)
+}
+
+func (e *externalEntityProviderRBAC) LinkDomainAndProjectRole(ctx context.Context, domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions shared.Role, project string) error {
+	return e.rootAccessControl.LinkDomainAndProjectRole(ctx, domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
+}
+
+func (e *externalEntityProviderRBAC) LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions shared.Role, project, asset string) error {
+	return e.rootAccessControl.LinkProjectAndAssetRole(ctx, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)
+}
+
+func (e *externalEntityProviderRBAC) AllowRole(ctx context.Context, role shared.Role, object shared.Object, action []shared.Action) error {
+	return e.rootAccessControl.AllowRole(ctx, role, object, action)
+}
+
+func (e *externalEntityProviderRBAC) IsAllowed(ctx context.Context, userID string, object shared.Object, action shared.Action) (bool, error) {
 	if e.adminToken != nil && userID == *e.adminToken {
 		if action == shared.ActionRead {
 			return true, nil
@@ -107,27 +116,24 @@ func (e *externalEntityProviderRBAC) IsAllowed(userID string, object shared.Obje
 		return true, nil
 	}
 
-	return e.rootAccessControl.IsAllowed(userID, object, action)
+	return e.rootAccessControl.IsAllowed(ctx, userID, object, action)
 }
 
-func (e *externalEntityProviderRBAC) IsAllowedInProject(project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
-	// check for external entity provider ids
+func (e *externalEntityProviderRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
 	if project.ExternalEntityProviderID == nil || project.ExternalEntityID == nil {
 		return false, nil
 	}
 	if e.adminToken != nil && user == *e.adminToken && action == shared.ActionRead {
 		return true, nil
 	}
-
-	return e.rootAccessControl.IsAllowedInProject(project, user, object, action)
+	return e.rootAccessControl.IsAllowedInProject(ctx, project, user, object, action)
 }
 
-func (e *externalEntityProviderRBAC) AllowRoleInProject(project string, role shared.Role, object shared.Object, action []shared.Action) error {
-	return e.rootAccessControl.AllowRoleInProject(project, role, object, action)
+func (e *externalEntityProviderRBAC) AllowRoleInProject(ctx context.Context, project string, role shared.Role, object shared.Object, action []shared.Action) error {
+	return e.rootAccessControl.AllowRoleInProject(ctx, project, role, object, action)
 }
 
 func (e *externalEntityProviderRBAC) GetAllProjectsForUser(user string) ([]string, error) {
-	// This method is not applicable for external entity provider RBAC
 	return e.rootAccessControl.GetAllProjectsForUser(user)
 }
 
@@ -155,26 +161,24 @@ func (e *externalEntityProviderRBAC) GetProjectRole(user string, project string)
 	return e.rootAccessControl.GetProjectRole(user, project)
 }
 
-func (e *externalEntityProviderRBAC) GrantRoleInAsset(subject string, role shared.Role, asset string) error {
-	return e.rootAccessControl.GrantRoleInAsset(subject, role, asset)
+func (e *externalEntityProviderRBAC) GrantRoleInAsset(ctx context.Context, subject string, role shared.Role, asset string) error {
+	return e.rootAccessControl.GrantRoleInAsset(ctx, subject, role, asset)
 }
 
-func (e *externalEntityProviderRBAC) RevokeRoleInAsset(subject string, role shared.Role, asset string) error {
-	return e.rootAccessControl.RevokeRoleInAsset(subject, role, asset)
+func (e *externalEntityProviderRBAC) RevokeRoleInAsset(ctx context.Context, subject string, role shared.Role, asset string) error {
+	return e.rootAccessControl.RevokeRoleInAsset(ctx, subject, role, asset)
 }
 
-func (e *externalEntityProviderRBAC) IsAllowedInAsset(asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
-	// check for external entity provider ids
+func (e *externalEntityProviderRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
 	if asset.ExternalEntityProviderID == nil || asset.ExternalEntityID == nil {
 		return false, nil
 	}
 	if e.adminToken != nil && user == *e.adminToken && action == shared.ActionRead {
 		return true, nil
 	}
-
-	return e.rootAccessControl.IsAllowedInAsset(asset, user, object, action)
+	return e.rootAccessControl.IsAllowedInAsset(ctx, asset, user, object, action)
 }
 
-func (e *externalEntityProviderRBAC) AllowRoleInAsset(asset string, role shared.Role, object shared.Object, action []shared.Action) error {
-	return e.rootAccessControl.AllowRoleInAsset(asset, role, object, action)
+func (e *externalEntityProviderRBAC) AllowRoleInAsset(ctx context.Context, asset string, role shared.Role, object shared.Object, action []shared.Action) error {
+	return e.rootAccessControl.AllowRoleInAsset(ctx, asset, role, object, action)
 }

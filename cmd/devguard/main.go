@@ -17,14 +17,15 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	sentryotel "github.com/getsentry/sentry-go/otel"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
@@ -34,8 +35,13 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -143,7 +149,7 @@ func main() {
 		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					go daemonRunner.Start() // start in background
+					go daemonRunner.Start(ctx) // start in background
 					return nil
 				},
 			})
@@ -167,16 +173,87 @@ func tracesSampleRate() float64 {
 }
 
 func initTracer(sampleRate float64) {
-	// Sampling is controlled here at the OTel level — this is what actually gates
-	// GORM/pgx spans. TracesSampleRate in sentry.Init only applies to transactions
-	// started via the Sentry SDK directly, not via the OTel bridge.
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
-		sdktrace.WithSpanProcessor(sentryotel.NewSentrySpanProcessor()),
+	var processors []sdktrace.SpanProcessor
+
+	// When OTEL_TRACES_EXPORTER=stdout, print spans to stderr for local debugging.
+	if os.Getenv("OTEL_TRACES_EXPORTER") == "stdout" {
+		exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		if err != nil {
+			slog.Warn("failed to create stdout trace exporter", "err", err)
+		} else {
+			processors = append(processors, sdktrace.NewSimpleSpanProcessor(exp))
+		}
+	}
+
+	// OTEL_EXPORTER_OTLP_ENDPOINT selects transport by scheme:
+	//   grpc://host:port   → gRPC, no TLS  (e.g. local Jaeger)
+	//   grpcs://host:port  → gRPC, TLS
+	//   http://host:port   → HTTP, no TLS
+	//   https://host:port  → HTTP, TLS
+	// Optional: OTEL_EXPORTER_BASIC_AUTH_USERNAME / OTEL_EXPORTER_BASIC_AUTH_PASSWORD
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		var (
+			exp     sdktrace.SpanExporter
+			err     error
+			headers map[string]string
+		)
+
+		if user, pass := os.Getenv("OTEL_EXPORTER_BASIC_AUTH_USERNAME"), os.Getenv("OTEL_EXPORTER_BASIC_AUTH_PASSWORD"); user != "" && pass != "" {
+			encoded := base64.StdEncoding.EncodeToString([]byte(user + ":" + pass))
+			headers = map[string]string{"Authorization": "Basic " + encoded}
+		}
+
+		u, parseErr := url.Parse(endpoint)
+		if parseErr != nil {
+			slog.Warn("failed to parse OTEL_EXPORTER_OTLP_ENDPOINT", "err", parseErr, "endpoint", endpoint)
+		} else {
+			switch u.Scheme {
+			case "grpc":
+				exp, err = otlptracegrpc.New(context.Background(),
+					otlptracegrpc.WithEndpoint(u.Host),
+					otlptracegrpc.WithInsecure(),
+					otlptracegrpc.WithHeaders(headers),
+				)
+			case "https":
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithHeaders(headers),
+				)
+			default: // http
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithInsecure(),
+					otlptracehttp.WithHeaders(headers),
+				)
+			}
+		}
+		if err != nil {
+			slog.Warn("failed to create OTLP trace exporter", "err", err, "endpoint", endpoint)
+		} else {
+			processors = append(processors, sdktrace.NewBatchSpanProcessor(exp))
+			slog.Info("OTLP trace exporter enabled", "endpoint", endpoint)
+		}
+	}
+
+	res, resErr := resource.New(context.Background(),
+		resource.WithAttributes(semconv.ServiceNameKey.String("devguard")),
 	)
+	if resErr != nil {
+		slog.Warn("failed to create OTel resource", "err", resErr)
+		res = resource.Default()
+	}
+
+	opts := []sdktrace.TracerProviderOption{
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
+		sdktrace.WithResource(res),
+	}
+	for _, p := range processors {
+		opts = append(opts, sdktrace.WithSpanProcessor(p))
+	}
+
+	tp := sdktrace.NewTracerProvider(opts...)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		sentryotel.NewSentryPropagator(),
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
@@ -188,8 +265,6 @@ func initSentry() {
 	if environment == "" {
 		environment = "dev"
 	}
-
-	tracesRate := tracesSampleRate()
 
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
@@ -203,12 +278,6 @@ func initSentry() {
 		// If this flag is enabled, certain personally identifiable information (PII) is added by active integrations.
 		// By default, no such data is sent.
 		SendDefaultPII: false,
-
-		// Required for Sentry to accept performance data forwarded from the OTel bridge
-		// (sentryotel.NewSentrySpanProcessor). Without this, all spans are dropped.
-		// Sampling itself is controlled by the OTel TracerProvider in initTracer.
-		EnableTracing:    tracesRate > 0,
-		TracesSampleRate: tracesRate,
 	})
 
 	if err != nil {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -30,6 +31,8 @@ type InTotoService struct {
 	rbacProvider shared.RBACProvider
 }
 
+var _ shared.InTotoVerifierService = (*InTotoService)(nil) // Ensure InTotoService implements shared.InTotoVerifierService interface
+
 func NewInTotoService(rbacProvider shared.RBACProvider, inTotoLinkRepository shared.InTotoLinkRepository, projectRepository shared.ProjectRepository, patRepository shared.PersonalAccessTokenRepository, supplyChainRepository shared.SupplyChainRepository) *InTotoService {
 	return &InTotoService{
 		rbacProvider:          rbacProvider,
@@ -40,8 +43,8 @@ func NewInTotoService(rbacProvider shared.RBACProvider, inTotoLinkRepository sha
 	}
 }
 
-func (service InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
-	supplyChains, err := service.supplyChainRepository.FindByDigest(digest)
+func (service InTotoService) VerifySupplyChainByDigestOnly(ctx context.Context, digest string) (bool, error) {
+	supplyChains, err := service.supplyChainRepository.FindByDigest(ctx, nil, digest)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain digests")
 	}
@@ -55,7 +58,7 @@ func (service InTotoService) VerifySupplyChainByDigestOnly(digest string) (bool,
 	return false, nil
 }
 
-func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {
+func (service InTotoService) VerifySupplyChainWithOutputDigest(ctx context.Context, imageNameOrSupplyChainID string, digest string) (bool, error) {
 	var supplyChainID string
 	var err error
 	// check if it is a supply chain id already
@@ -70,7 +73,7 @@ func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupply
 		supplyChainID = imageNameOrSupplyChainID
 	}
 
-	supplyChains, err := service.supplyChainRepository.FindBySupplyChainID(supplyChainID)
+	supplyChains, err := service.supplyChainRepository.FindBySupplyChainID(ctx, nil, supplyChainID)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain digests")
 	}
@@ -84,10 +87,10 @@ func (service InTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupply
 	return false, nil
 }
 
-func (service InTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
+func (service InTotoService) VerifySupplyChain(ctx context.Context, supplyChainID string) (bool, error) {
 
 	// get the supply chain links
-	supplyChainLinks, err := service.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
+	supplyChainLinks, err := service.inTotoLinkRepository.FindBySupplyChainID(ctx, nil, supplyChainID)
 	if err != nil {
 		return false, errors.Wrap(err, "could not find supply chain links")
 	}
@@ -99,7 +102,7 @@ func (service InTotoService) VerifySupplyChain(supplyChainID string) (bool, erro
 	}
 
 	//get projectID and organizationID from assetID
-	projectID, organizationID, err := getProjectIDAndOrganizationIDFromAssetID(assetID, service.projectRepository)
+	projectID, organizationID, err := getProjectIDAndOrganizationIDFromAssetID(ctx, assetID, service.projectRepository)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get projectID and organizationID from assetID")
 	}
@@ -114,7 +117,7 @@ func (service InTotoService) VerifySupplyChain(supplyChainID string) (bool, erro
 	}
 
 	// get all pats which are part of the asset
-	pats, err := service.patRepository.FindByUserIDs(userUuids)
+	pats, err := service.patRepository.FindByUserIDs(ctx, nil, userUuids)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get pats")
 	}
@@ -206,8 +209,8 @@ func getAssetIDFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error
 
 }
 
-func getProjectIDAndOrganizationIDFromAssetID(assetID uuid.UUID, projectRepository shared.ProjectRepository) (uuid.UUID, uuid.UUID, error) {
-	project, err := projectRepository.GetProjectByAssetID(assetID)
+func getProjectIDAndOrganizationIDFromAssetID(ctx context.Context, assetID uuid.UUID, projectRepository shared.ProjectRepository) (uuid.UUID, uuid.UUID, error) {
+	project, err := projectRepository.GetProjectByAssetID(ctx, nil, assetID)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, err
 	}

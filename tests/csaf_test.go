@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -78,7 +79,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
 				URL:              csafURL,
 				Type:             models.ExternalReferenceTypeCSAF,
 				CSAFPackageScope: normalize.Purlify(artifact.ArtifactName, assetVersion.Name),
@@ -169,7 +170,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
 
 			// we create a fake VEX report for the same artifact which has the same purl
-			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
 				URL:              testserver.URL + "/provider-metadata.json",
 				Type:             models.ExternalReferenceTypeCSAF,
 				CSAFPackageScope: purl,

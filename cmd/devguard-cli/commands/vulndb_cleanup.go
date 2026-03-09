@@ -31,7 +31,7 @@ func newCleanupCommand() *cobra.Command {
 				fx.Invoke(func(
 					importService shared.VulnDBImportService,
 				) error {
-					if err := importService.CleanupOrphanedTables(); err != nil {
+					if err := importService.CleanupOrphanedTables(context.Background()); err != nil {
 						return err
 					}
 					slog.Info("successfully cleaned up orphaned tables older than 24 hours")

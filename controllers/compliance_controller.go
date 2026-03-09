@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/google/uuid"
@@ -23,14 +24,14 @@ func NewComplianceController(assetVersionRepository shared.AssetVersionRepositor
 	}
 }
 
-func (c *ComplianceController) getAssetVersionCompliance(projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
+func (c *ComplianceController) getAssetVersionCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
 	// get the attestation
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx, nil, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	policies, err := c.policyRepository.FindByProjectID(projectID)
+	policies, err := c.policyRepository.FindByProjectID(ctx, nil, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,12 +67,12 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 		return ctx.JSON(400, nil)
 	}
 	// get all policies
-	policy, err := c.policyRepository.Read(policyID)
+	policy, err := c.policyRepository.Read(ctx.Request().Context(), nil, policyID)
 	if err != nil {
 		return ctx.JSON(404, nil)
 	}
 
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
 
 	if err != nil {
 		return ctx.JSON(500, nil)
@@ -93,7 +94,7 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			return ctx.JSON(404, nil)
 		}
@@ -101,7 +102,7 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 
 	project := shared.GetProject(ctx)
 
-	results, err := c.getAssetVersionCompliance(project.ID, assetVersion)
+	results, err := c.getAssetVersionCompliance(ctx.Request().Context(), project.ID, assetVersion)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -112,7 +113,7 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {
 	// get all default asset version from the project
 	project := shared.GetProject(ctx)
-	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(project.ID)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(ctx.Request().Context(), nil, project.ID)
 
 	if err != nil {
 		return ctx.JSON(500, nil)
@@ -120,7 +121,7 @@ func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {
 
 	results := make([][]compliance.PolicyEvaluation, 0, len(assetVersions))
 	for _, assetVersion := range assetVersions {
-		compliance, err := c.getAssetVersionCompliance(project.ID, assetVersion)
+		compliance, err := c.getAssetVersionCompliance(ctx.Request().Context(), project.ID, assetVersion)
 		if err != nil {
 			return ctx.JSON(500, nil)
 		}

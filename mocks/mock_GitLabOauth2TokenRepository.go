@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -38,16 +40,16 @@ func (_m *GitLabOauth2TokenRepository) EXPECT() *GitLabOauth2TokenRepository_Exp
 }
 
 // CreateIfNotExists provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) CreateIfNotExists(tokens []*models.GitLabOauth2Token) error {
-	ret := _mock.Called(tokens)
+func (_mock *GitLabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx shared.DB, tokens []*models.GitLabOauth2Token) error {
+	ret := _mock.Called(ctx, tx, tokens)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateIfNotExists")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func([]*models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tokens)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []*models.GitLabOauth2Token) error); ok {
+		r0 = returnFunc(ctx, tx, tokens)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -60,19 +62,31 @@ type GitLabOauth2TokenRepository_CreateIfNotExists_Call struct {
 }
 
 // CreateIfNotExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - tokens []*models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(tokens interface{}) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
-	return &GitLabOauth2TokenRepository_CreateIfNotExists_Call{Call: _e.mock.On("CreateIfNotExists", tokens)}
+func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(ctx interface{}, tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+	return &GitLabOauth2TokenRepository_CreateIfNotExists_Call{Call: _e.mock.On("CreateIfNotExists", ctx, tx, tokens)}
 }
 
-func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Run(run func(tokens []*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Run(run func(ctx context.Context, tx shared.DB, tokens []*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []*models.GitLabOauth2Token
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]*models.GitLabOauth2Token)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []*models.GitLabOauth2Token
+		if args[2] != nil {
+			arg2 = args[2].([]*models.GitLabOauth2Token)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -83,22 +97,22 @@ func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Return(err error) 
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) RunAndReturn(run func(tokens []*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, tokens []*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Delete(tx shared.DB, tokens []models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, tokens)
+func (_mock *GitLabOauth2TokenRepository) Delete(ctx context.Context, tx shared.DB, tokens []models.GitLabOauth2Token) error {
+	ret := _mock.Called(ctx, tx, tokens)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, tokens)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.GitLabOauth2Token) error); ok {
+		r0 = returnFunc(ctx, tx, tokens)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -111,25 +125,31 @@ type GitLabOauth2TokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - tokens []models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) Delete(tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_Delete_Call {
-	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, tokens)}
+func (_e *GitLabOauth2TokenRepository_Expecter) Delete(ctx interface{}, tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_Delete_Call {
+	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, tokens)}
 }
 
-func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx shared.DB, tokens []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Delete_Call {
+func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, tokens []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.GitLabOauth2Token
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.GitLabOauth2Token)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.GitLabOauth2Token
+		if args[2] != nil {
+			arg2 = args[2].([]models.GitLabOauth2Token)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -140,22 +160,22 @@ func (_c *GitLabOauth2TokenRepository_Delete_Call) Return(err error) *GitLabOaut
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, tokens []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Delete_Call {
+func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, tokens []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteByUserIDAndProviderID provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) DeleteByUserIDAndProviderID(userID string, providerID string) error {
-	ret := _mock.Called(userID, providerID)
+func (_mock *GitLabOauth2TokenRepository) DeleteByUserIDAndProviderID(ctx context.Context, tx shared.DB, userID string, providerID string) error {
+	ret := _mock.Called(ctx, tx, userID, providerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByUserIDAndProviderID")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = returnFunc(userID, providerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, userID, providerID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -168,25 +188,37 @@ type GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call struct {
 }
 
 // DeleteByUserIDAndProviderID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - userID string
 //   - providerID string
-func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIDAndProviderID(userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
-	return &GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call{Call: _e.mock.On("DeleteByUserIDAndProviderID", userID, providerID)}
+func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIDAndProviderID(ctx interface{}, tx interface{}, userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
+	return &GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call{Call: _e.mock.On("DeleteByUserIDAndProviderID", ctx, tx, userID, providerID)}
 }
 
-func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) Run(run func(userID string, providerID string)) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, providerID string)) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -197,14 +229,14 @@ func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) Return(e
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) RunAndReturn(run func(userID string, providerID string) error) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, providerID string) error) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByUserID provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) FindByUserID(userID string) ([]models.GitLabOauth2Token, error) {
-	ret := _mock.Called(userID)
+func (_mock *GitLabOauth2TokenRepository) FindByUserID(ctx context.Context, tx shared.DB, userID string) ([]models.GitLabOauth2Token, error) {
+	ret := _mock.Called(ctx, tx, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByUserID")
@@ -212,18 +244,18 @@ func (_mock *GitLabOauth2TokenRepository) FindByUserID(userID string) ([]models.
 
 	var r0 []models.GitLabOauth2Token
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]models.GitLabOauth2Token, error)); ok {
-		return returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.GitLabOauth2Token, error)); ok {
+		return returnFunc(ctx, tx, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []models.GitLabOauth2Token); ok {
-		r0 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.GitLabOauth2Token); ok {
+		r0 = returnFunc(ctx, tx, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.GitLabOauth2Token)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -236,19 +268,31 @@ type GitLabOauth2TokenRepository_FindByUserID_Call struct {
 }
 
 // FindByUserID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - userID string
-func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserID(userID interface{}) *GitLabOauth2TokenRepository_FindByUserID_Call {
-	return &GitLabOauth2TokenRepository_FindByUserID_Call{Call: _e.mock.On("FindByUserID", userID)}
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserID(ctx interface{}, tx interface{}, userID interface{}) *GitLabOauth2TokenRepository_FindByUserID_Call {
+	return &GitLabOauth2TokenRepository_FindByUserID_Call{Call: _e.mock.On("FindByUserID", ctx, tx, userID)}
 }
 
-func (_c *GitLabOauth2TokenRepository_FindByUserID_Call) Run(run func(userID string)) *GitLabOauth2TokenRepository_FindByUserID_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserID_Call) Run(run func(ctx context.Context, tx shared.DB, userID string)) *GitLabOauth2TokenRepository_FindByUserID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -259,14 +303,14 @@ func (_c *GitLabOauth2TokenRepository_FindByUserID_Call) Return(gitLabOauth2Toke
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_FindByUserID_Call) RunAndReturn(run func(userID string) ([]models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserID_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string) ([]models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByUserIDAndProviderID provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) FindByUserIDAndProviderID(userID string, providerID string) (*models.GitLabOauth2Token, error) {
-	ret := _mock.Called(userID, providerID)
+func (_mock *GitLabOauth2TokenRepository) FindByUserIDAndProviderID(ctx context.Context, tx shared.DB, userID string, providerID string) (*models.GitLabOauth2Token, error) {
+	ret := _mock.Called(ctx, tx, userID, providerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByUserIDAndProviderID")
@@ -274,18 +318,18 @@ func (_mock *GitLabOauth2TokenRepository) FindByUserIDAndProviderID(userID strin
 
 	var r0 *models.GitLabOauth2Token
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) (*models.GitLabOauth2Token, error)); ok {
-		return returnFunc(userID, providerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string) (*models.GitLabOauth2Token, error)); ok {
+		return returnFunc(ctx, tx, userID, providerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) *models.GitLabOauth2Token); ok {
-		r0 = returnFunc(userID, providerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string) *models.GitLabOauth2Token); ok {
+		r0 = returnFunc(ctx, tx, userID, providerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.GitLabOauth2Token)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = returnFunc(userID, providerID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, string) error); ok {
+		r1 = returnFunc(ctx, tx, userID, providerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -298,25 +342,37 @@ type GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call struct {
 }
 
 // FindByUserIDAndProviderID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - userID string
 //   - providerID string
-func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserIDAndProviderID(userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
-	return &GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call{Call: _e.mock.On("FindByUserIDAndProviderID", userID, providerID)}
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserIDAndProviderID(ctx interface{}, tx interface{}, userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
+	return &GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call{Call: _e.mock.On("FindByUserIDAndProviderID", ctx, tx, userID, providerID)}
 }
 
-func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) Run(run func(userID string, providerID string)) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, providerID string)) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -327,18 +383,18 @@ func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) Return(git
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) RunAndReturn(run func(userID string, providerID string) (*models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, providerID string) (*models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Save(tx shared.DB, model ...*models.GitLabOauth2Token) error {
+func (_mock *GitLabOauth2TokenRepository) Save(ctx context.Context, tx shared.DB, model ...*models.GitLabOauth2Token) error {
 	var tmpRet mock.Arguments
 	if len(model) > 0 {
-		tmpRet = _mock.Called(tx, model)
+		tmpRet = _mock.Called(ctx, tx, model)
 	} else {
-		tmpRet = _mock.Called(tx)
+		tmpRet = _mock.Called(ctx, tx)
 	}
 	ret := tmpRet
 
@@ -347,8 +403,8 @@ func (_mock *GitLabOauth2TokenRepository) Save(tx shared.DB, model ...*models.Gi
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, ...*models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, model...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, ...*models.GitLabOauth2Token) error); ok {
+		r0 = returnFunc(ctx, tx, model...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -361,28 +417,34 @@ type GitLabOauth2TokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - model ...*models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) Save(tx interface{}, model ...interface{}) *GitLabOauth2TokenRepository_Save_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) Save(ctx interface{}, tx interface{}, model ...interface{}) *GitLabOauth2TokenRepository_Save_Call {
 	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save",
-		append([]interface{}{tx}, model...)...)}
+		append([]interface{}{ctx, tx}, model...)...)}
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx shared.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []*models.GitLabOauth2Token
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []*models.GitLabOauth2Token
 		var variadicArgs []*models.GitLabOauth2Token
-		if len(args) > 1 {
-			variadicArgs = args[1].([]*models.GitLabOauth2Token)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]*models.GitLabOauth2Token)
 		}
-		arg1 = variadicArgs
+		arg2 = variadicArgs
 		run(
 			arg0,
-			arg1...,
+			arg1,
+			arg2...,
 		)
 	})
 	return _c
@@ -393,7 +455,7 @@ func (_c *GitLabOauth2TokenRepository_Save_Call) Return(err error) *GitLabOauth2
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model ...*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, model ...*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

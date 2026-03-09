@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *ReleaseService) EXPECT() *ReleaseService_Expecter {
 }
 
 // AddItem provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) AddItem(item *models.ReleaseItem) error {
-	ret := _mock.Called(item)
+func (_mock *ReleaseService) AddItem(ctx context.Context, item *models.ReleaseItem) error {
+	ret := _mock.Called(ctx, item)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddItem")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.ReleaseItem) error); ok {
-		r0 = returnFunc(item)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.ReleaseItem) error); ok {
+		r0 = returnFunc(ctx, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,19 +63,25 @@ type ReleaseService_AddItem_Call struct {
 }
 
 // AddItem is a helper method to define mock.On call
+//   - ctx context.Context
 //   - item *models.ReleaseItem
-func (_e *ReleaseService_Expecter) AddItem(item interface{}) *ReleaseService_AddItem_Call {
-	return &ReleaseService_AddItem_Call{Call: _e.mock.On("AddItem", item)}
+func (_e *ReleaseService_Expecter) AddItem(ctx interface{}, item interface{}) *ReleaseService_AddItem_Call {
+	return &ReleaseService_AddItem_Call{Call: _e.mock.On("AddItem", ctx, item)}
 }
 
-func (_c *ReleaseService_AddItem_Call) Run(run func(item *models.ReleaseItem)) *ReleaseService_AddItem_Call {
+func (_c *ReleaseService_AddItem_Call) Run(run func(ctx context.Context, item *models.ReleaseItem)) *ReleaseService_AddItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.ReleaseItem
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*models.ReleaseItem)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *models.ReleaseItem
+		if args[1] != nil {
+			arg1 = args[1].(*models.ReleaseItem)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -84,22 +92,22 @@ func (_c *ReleaseService_AddItem_Call) Return(err error) *ReleaseService_AddItem
 	return _c
 }
 
-func (_c *ReleaseService_AddItem_Call) RunAndReturn(run func(item *models.ReleaseItem) error) *ReleaseService_AddItem_Call {
+func (_c *ReleaseService_AddItem_Call) RunAndReturn(run func(ctx context.Context, item *models.ReleaseItem) error) *ReleaseService_AddItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) Create(r *models.Release) error {
-	ret := _mock.Called(r)
+func (_mock *ReleaseService) Create(ctx context.Context, r *models.Release) error {
+	ret := _mock.Called(ctx, r)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Release) error); ok {
-		r0 = returnFunc(r)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Release) error); ok {
+		r0 = returnFunc(ctx, r)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -112,19 +120,25 @@ type ReleaseService_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - r *models.Release
-func (_e *ReleaseService_Expecter) Create(r interface{}) *ReleaseService_Create_Call {
-	return &ReleaseService_Create_Call{Call: _e.mock.On("Create", r)}
+func (_e *ReleaseService_Expecter) Create(ctx interface{}, r interface{}) *ReleaseService_Create_Call {
+	return &ReleaseService_Create_Call{Call: _e.mock.On("Create", ctx, r)}
 }
 
-func (_c *ReleaseService_Create_Call) Run(run func(r *models.Release)) *ReleaseService_Create_Call {
+func (_c *ReleaseService_Create_Call) Run(run func(ctx context.Context, r *models.Release)) *ReleaseService_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Release
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*models.Release)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *models.Release
+		if args[1] != nil {
+			arg1 = args[1].(*models.Release)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -135,22 +149,22 @@ func (_c *ReleaseService_Create_Call) Return(err error) *ReleaseService_Create_C
 	return _c
 }
 
-func (_c *ReleaseService_Create_Call) RunAndReturn(run func(r *models.Release) error) *ReleaseService_Create_Call {
+func (_c *ReleaseService_Create_Call) RunAndReturn(run func(ctx context.Context, r *models.Release) error) *ReleaseService_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) Delete(id uuid.UUID) error {
-	ret := _mock.Called(id)
+func (_mock *ReleaseService) Delete(ctx context.Context, id uuid.UUID) error {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -163,19 +177,25 @@ type ReleaseService_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) Delete(id interface{}) *ReleaseService_Delete_Call {
-	return &ReleaseService_Delete_Call{Call: _e.mock.On("Delete", id)}
+func (_e *ReleaseService_Expecter) Delete(ctx interface{}, id interface{}) *ReleaseService_Delete_Call {
+	return &ReleaseService_Delete_Call{Call: _e.mock.On("Delete", ctx, id)}
 }
 
-func (_c *ReleaseService_Delete_Call) Run(run func(id uuid.UUID)) *ReleaseService_Delete_Call {
+func (_c *ReleaseService_Delete_Call) Run(run func(ctx context.Context, id uuid.UUID)) *ReleaseService_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -186,14 +206,14 @@ func (_c *ReleaseService_Delete_Call) Return(err error) *ReleaseService_Delete_C
 	return _c
 }
 
-func (_c *ReleaseService_Delete_Call) RunAndReturn(run func(id uuid.UUID) error) *ReleaseService_Delete_Call {
+func (_c *ReleaseService_Delete_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID) error) *ReleaseService_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListByProject provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) ListByProject(projectID uuid.UUID) ([]models.Release, error) {
-	ret := _mock.Called(projectID)
+func (_mock *ReleaseService) ListByProject(ctx context.Context, projectID uuid.UUID) ([]models.Release, error) {
+	ret := _mock.Called(ctx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByProject")
@@ -201,18 +221,18 @@ func (_mock *ReleaseService) ListByProject(projectID uuid.UUID) ([]models.Releas
 
 	var r0 []models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Release, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Release, error)); ok {
+		return returnFunc(ctx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Release); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Release); ok {
+		r0 = returnFunc(ctx, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -225,19 +245,25 @@ type ReleaseService_ListByProject_Call struct {
 }
 
 // ListByProject is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ReleaseService_Expecter) ListByProject(projectID interface{}) *ReleaseService_ListByProject_Call {
-	return &ReleaseService_ListByProject_Call{Call: _e.mock.On("ListByProject", projectID)}
+func (_e *ReleaseService_Expecter) ListByProject(ctx interface{}, projectID interface{}) *ReleaseService_ListByProject_Call {
+	return &ReleaseService_ListByProject_Call{Call: _e.mock.On("ListByProject", ctx, projectID)}
 }
 
-func (_c *ReleaseService_ListByProject_Call) Run(run func(projectID uuid.UUID)) *ReleaseService_ListByProject_Call {
+func (_c *ReleaseService_ListByProject_Call) Run(run func(ctx context.Context, projectID uuid.UUID)) *ReleaseService_ListByProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -248,14 +274,14 @@ func (_c *ReleaseService_ListByProject_Call) Return(releases []models.Release, e
 	return _c
 }
 
-func (_c *ReleaseService_ListByProject_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Release, error)) *ReleaseService_ListByProject_Call {
+func (_c *ReleaseService_ListByProject_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID) ([]models.Release, error)) *ReleaseService_ListByProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListByProjectPaged provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) ListByProjectPaged(projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
-	ret := _mock.Called(projectID, pageInfo, search, filter, sort)
+func (_mock *ReleaseService) ListByProjectPaged(ctx context.Context, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
+	ret := _mock.Called(ctx, projectID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByProjectPaged")
@@ -263,16 +289,16 @@ func (_mock *ReleaseService) ListByProjectPaged(projectID uuid.UUID, pageInfo sh
 
 	var r0 shared.Paged[models.Release]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.Release], error)); ok {
-		return returnFunc(projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.Release], error)); ok {
+		return returnFunc(ctx, projectID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.Release]); ok {
-		r0 = returnFunc(projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.Release]); ok {
+		r0 = returnFunc(ctx, projectID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[models.Release])
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, projectID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -285,36 +311,41 @@ type ReleaseService_ListByProjectPaged_Call struct {
 }
 
 // ListByProjectPaged is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID uuid.UUID
 //   - pageInfo shared.PageInfo
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ReleaseService_Expecter) ListByProjectPaged(projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseService_ListByProjectPaged_Call {
-	return &ReleaseService_ListByProjectPaged_Call{Call: _e.mock.On("ListByProjectPaged", projectID, pageInfo, search, filter, sort)}
+func (_e *ReleaseService_Expecter) ListByProjectPaged(ctx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseService_ListByProjectPaged_Call {
+	return &ReleaseService_ListByProjectPaged_Call{Call: _e.mock.On("ListByProjectPaged", ctx, projectID, pageInfo, search, filter, sort)}
 }
 
-func (_c *ReleaseService_ListByProjectPaged_Call) Run(run func(projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ReleaseService_ListByProjectPaged_Call {
+func (_c *ReleaseService_ListByProjectPaged_Call) Run(run func(ctx context.Context, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ReleaseService_ListByProjectPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 shared.PageInfo
+		var arg1 uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(shared.PageInfo)
+			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 string
+		var arg2 shared.PageInfo
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(shared.PageInfo)
 		}
-		var arg3 []shared.FilterQuery
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].([]shared.FilterQuery)
+			arg3 = args[3].(string)
 		}
-		var arg4 []shared.SortQuery
+		var arg4 []shared.FilterQuery
 		if args[4] != nil {
-			arg4 = args[4].([]shared.SortQuery)
+			arg4 = args[4].([]shared.FilterQuery)
+		}
+		var arg5 []shared.SortQuery
+		if args[5] != nil {
+			arg5 = args[5].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -322,6 +353,7 @@ func (_c *ReleaseService_ListByProjectPaged_Call) Run(run func(projectID uuid.UU
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -332,14 +364,14 @@ func (_c *ReleaseService_ListByProjectPaged_Call) Return(paged shared.Paged[mode
 	return _c
 }
 
-func (_c *ReleaseService_ListByProjectPaged_Call) RunAndReturn(run func(projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error)) *ReleaseService_ListByProjectPaged_Call {
+func (_c *ReleaseService_ListByProjectPaged_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error)) *ReleaseService_ListByProjectPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListCandidates provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) ListCandidates(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
-	ret := _mock.Called(projectID, releaseID)
+func (_mock *ReleaseService) ListCandidates(ctx context.Context, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
+	ret := _mock.Called(ctx, projectID, releaseID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListCandidates")
@@ -348,25 +380,25 @@ func (_mock *ReleaseService) ListCandidates(projectID uuid.UUID, releaseID *uuid
 	var r0 []models.Artifact
 	var r1 []models.Release
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, *uuid.UUID) ([]models.Artifact, []models.Release, error)); ok {
-		return returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID) ([]models.Artifact, []models.Release, error)); ok {
+		return returnFunc(ctx, projectID, releaseID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, *uuid.UUID) []models.Artifact); ok {
-		r0 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID) []models.Artifact); ok {
+		r0 = returnFunc(ctx, projectID, releaseID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, *uuid.UUID) []models.Release); ok {
-		r1 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, *uuid.UUID) []models.Release); ok {
+		r1 = returnFunc(ctx, projectID, releaseID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(uuid.UUID, *uuid.UUID) error); ok {
-		r2 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uuid.UUID, *uuid.UUID) error); ok {
+		r2 = returnFunc(ctx, projectID, releaseID)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -379,25 +411,31 @@ type ReleaseService_ListCandidates_Call struct {
 }
 
 // ListCandidates is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID uuid.UUID
 //   - releaseID *uuid.UUID
-func (_e *ReleaseService_Expecter) ListCandidates(projectID interface{}, releaseID interface{}) *ReleaseService_ListCandidates_Call {
-	return &ReleaseService_ListCandidates_Call{Call: _e.mock.On("ListCandidates", projectID, releaseID)}
+func (_e *ReleaseService_Expecter) ListCandidates(ctx interface{}, projectID interface{}, releaseID interface{}) *ReleaseService_ListCandidates_Call {
+	return &ReleaseService_ListCandidates_Call{Call: _e.mock.On("ListCandidates", ctx, projectID, releaseID)}
 }
 
-func (_c *ReleaseService_ListCandidates_Call) Run(run func(projectID uuid.UUID, releaseID *uuid.UUID)) *ReleaseService_ListCandidates_Call {
+func (_c *ReleaseService_ListCandidates_Call) Run(run func(ctx context.Context, projectID uuid.UUID, releaseID *uuid.UUID)) *ReleaseService_ListCandidates_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *uuid.UUID
+		var arg1 uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(*uuid.UUID)
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 *uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(*uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -408,14 +446,14 @@ func (_c *ReleaseService_ListCandidates_Call) Return(artifacts []models.Artifact
 	return _c
 }
 
-func (_c *ReleaseService_ListCandidates_Call) RunAndReturn(run func(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)) *ReleaseService_ListCandidates_Call {
+func (_c *ReleaseService_ListCandidates_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)) *ReleaseService_ListCandidates_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) Read(id uuid.UUID) (models.Release, error) {
-	ret := _mock.Called(id)
+func (_mock *ReleaseService) Read(ctx context.Context, id uuid.UUID) (models.Release, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -423,16 +461,16 @@ func (_mock *ReleaseService) Read(id uuid.UUID) (models.Release, error) {
 
 	var r0 models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Release, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (models.Release, error)); ok {
+		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Release); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) models.Release); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		r0 = ret.Get(0).(models.Release)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -445,19 +483,25 @@ type ReleaseService_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) Read(id interface{}) *ReleaseService_Read_Call {
-	return &ReleaseService_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *ReleaseService_Expecter) Read(ctx interface{}, id interface{}) *ReleaseService_Read_Call {
+	return &ReleaseService_Read_Call{Call: _e.mock.On("Read", ctx, id)}
 }
 
-func (_c *ReleaseService_Read_Call) Run(run func(id uuid.UUID)) *ReleaseService_Read_Call {
+func (_c *ReleaseService_Read_Call) Run(run func(ctx context.Context, id uuid.UUID)) *ReleaseService_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -468,14 +512,14 @@ func (_c *ReleaseService_Read_Call) Return(release models.Release, err error) *R
 	return _c
 }
 
-func (_c *ReleaseService_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.Release, error)) *ReleaseService_Read_Call {
+func (_c *ReleaseService_Read_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID) (models.Release, error)) *ReleaseService_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadRecursive provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) ReadRecursive(id uuid.UUID) (models.Release, error) {
-	ret := _mock.Called(id)
+func (_mock *ReleaseService) ReadRecursive(ctx context.Context, id uuid.UUID) (models.Release, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadRecursive")
@@ -483,16 +527,16 @@ func (_mock *ReleaseService) ReadRecursive(id uuid.UUID) (models.Release, error)
 
 	var r0 models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Release, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (models.Release, error)); ok {
+		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Release); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) models.Release); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		r0 = ret.Get(0).(models.Release)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -505,19 +549,25 @@ type ReleaseService_ReadRecursive_Call struct {
 }
 
 // ReadRecursive is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) ReadRecursive(id interface{}) *ReleaseService_ReadRecursive_Call {
-	return &ReleaseService_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", id)}
+func (_e *ReleaseService_Expecter) ReadRecursive(ctx interface{}, id interface{}) *ReleaseService_ReadRecursive_Call {
+	return &ReleaseService_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", ctx, id)}
 }
 
-func (_c *ReleaseService_ReadRecursive_Call) Run(run func(id uuid.UUID)) *ReleaseService_ReadRecursive_Call {
+func (_c *ReleaseService_ReadRecursive_Call) Run(run func(ctx context.Context, id uuid.UUID)) *ReleaseService_ReadRecursive_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -528,22 +578,22 @@ func (_c *ReleaseService_ReadRecursive_Call) Return(release models.Release, err 
 	return _c
 }
 
-func (_c *ReleaseService_ReadRecursive_Call) RunAndReturn(run func(id uuid.UUID) (models.Release, error)) *ReleaseService_ReadRecursive_Call {
+func (_c *ReleaseService_ReadRecursive_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID) (models.Release, error)) *ReleaseService_ReadRecursive_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RemoveItem provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) RemoveItem(id uuid.UUID) error {
-	ret := _mock.Called(id)
+func (_mock *ReleaseService) RemoveItem(ctx context.Context, id uuid.UUID) error {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RemoveItem")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -556,19 +606,25 @@ type ReleaseService_RemoveItem_Call struct {
 }
 
 // RemoveItem is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) RemoveItem(id interface{}) *ReleaseService_RemoveItem_Call {
-	return &ReleaseService_RemoveItem_Call{Call: _e.mock.On("RemoveItem", id)}
+func (_e *ReleaseService_Expecter) RemoveItem(ctx interface{}, id interface{}) *ReleaseService_RemoveItem_Call {
+	return &ReleaseService_RemoveItem_Call{Call: _e.mock.On("RemoveItem", ctx, id)}
 }
 
-func (_c *ReleaseService_RemoveItem_Call) Run(run func(id uuid.UUID)) *ReleaseService_RemoveItem_Call {
+func (_c *ReleaseService_RemoveItem_Call) Run(run func(ctx context.Context, id uuid.UUID)) *ReleaseService_RemoveItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -579,22 +635,22 @@ func (_c *ReleaseService_RemoveItem_Call) Return(err error) *ReleaseService_Remo
 	return _c
 }
 
-func (_c *ReleaseService_RemoveItem_Call) RunAndReturn(run func(id uuid.UUID) error) *ReleaseService_RemoveItem_Call {
+func (_c *ReleaseService_RemoveItem_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID) error) *ReleaseService_RemoveItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Update provides a mock function for the type ReleaseService
-func (_mock *ReleaseService) Update(r *models.Release) error {
-	ret := _mock.Called(r)
+func (_mock *ReleaseService) Update(ctx context.Context, r *models.Release) error {
+	ret := _mock.Called(ctx, r)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.Release) error); ok {
-		r0 = returnFunc(r)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Release) error); ok {
+		r0 = returnFunc(ctx, r)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -607,19 +663,25 @@ type ReleaseService_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
+//   - ctx context.Context
 //   - r *models.Release
-func (_e *ReleaseService_Expecter) Update(r interface{}) *ReleaseService_Update_Call {
-	return &ReleaseService_Update_Call{Call: _e.mock.On("Update", r)}
+func (_e *ReleaseService_Expecter) Update(ctx interface{}, r interface{}) *ReleaseService_Update_Call {
+	return &ReleaseService_Update_Call{Call: _e.mock.On("Update", ctx, r)}
 }
 
-func (_c *ReleaseService_Update_Call) Run(run func(r *models.Release)) *ReleaseService_Update_Call {
+func (_c *ReleaseService_Update_Call) Run(run func(ctx context.Context, r *models.Release)) *ReleaseService_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.Release
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*models.Release)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *models.Release
+		if args[1] != nil {
+			arg1 = args[1].(*models.Release)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -630,7 +692,7 @@ func (_c *ReleaseService_Update_Call) Return(err error) *ReleaseService_Update_C
 	return _c
 }
 
-func (_c *ReleaseService_Update_Call) RunAndReturn(run func(r *models.Release) error) *ReleaseService_Update_Call {
+func (_c *ReleaseService_Update_Call) RunAndReturn(run func(ctx context.Context, r *models.Release) error) *ReleaseService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
