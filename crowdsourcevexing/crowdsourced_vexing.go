@@ -8,9 +8,13 @@ import (
 	"time"
 )
 
-type dependencyNode struct {
-	Dependecy string           // Consists of dependecy name and version
-	Children  []dependencyNode // Will be [] if node is a leaf
+type DependencyNode struct {
+	Dependecy string            // Consists of dependecy name and version
+	Children  []*DependencyNode // Will be [] if node is a leaf
+}
+
+type DependencyTree struct {
+	Nodes map[string]*DependencyNode
 }
 
 type User struct {
@@ -43,6 +47,7 @@ const (
 
 type VexRule struct {
 	PathPattern []string
+	CVE         CVE
 	AssetID     string
 	Reasoning   string
 	Assessment  string // Use assesment constants for options, e.g. "false-positive", "affected"
@@ -88,29 +93,61 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	return 1.0 / float64(1+priorVotes)
 }
 
-func PathExistsInDependecyTree(inTree map[string]dependencyNode, inPath []string) bool {
-
-	var dfs func(node dependencyNode, index int) bool
-	dfs = func(node dependencyNode, index int) bool {
-
-		var pathElement = inPath[index]
-		if pathElement != "*" && pathElement != node.Dependecy {
-			return false
+func PathPatternMatchesPath(inPath, inPattern []string) bool {
+	foundEnd := false
+	endIndex := 0
+	for i, element := range inPath {
+		if element == inPattern[len(inPattern)-1] {
+			foundEnd = true
+			endIndex = i
+			break
 		}
-
-		if index == len(inPath)-1 {
-			return true
-		}
-
-		for _, child := range node.Children {
-			if dfs(child, index+1) {
-				return true
+	}
+	if !foundEnd {
+		return false
+	}
+	if inPattern[0] == "*" {
+		return true
+	} else {
+		for i, element := range inPath {
+			if element == inPattern[0] {
+				if i >= endIndex {
+					return true
+				}
 			}
 		}
 		return false
 	}
+}
 
-	return dfs(inTree[""], 0)
+// If the pattern matches with the path, return the length of how far apart the two critical
+// dependecies are (accounts for wildcards)
+func PathPatternMatchLength(inPath, inPattern []string) (int, error) {
+	foundEnd := false
+	endIndex := 0
+	for i, element := range inPath {
+		if element == inPattern[len(inPattern)-1] {
+			foundEnd = true
+			endIndex = i
+			break
+		}
+	}
+	if !foundEnd {
+		return 0, fmt.Errorf("end of path not found in pattern")
+	}
+	if inPattern[0] == "*" {
+		return endIndex + 1, nil
+	} else {
+		for i, element := range inPath {
+			if element == inPattern[0] {
+				if i >= endIndex {
+					return endIndex - i, nil
+				}
+			}
+		}
+		return 0, fmt.Errorf("no match found")
+	}
+
 }
 
 func PathToString(inVexRule VexRule) string {
@@ -154,7 +191,7 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 // Some more requirements to consider:
 // Application / Creation of vex rules counts as a vote
 
-func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, inVexRules []VexRule, inOrganizations []Organization, inProjects []Project, inAssets []Asset) (VexRule, error) {
+func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRule, inOrganizations []Organization, inProjects []Project, inAssets []Asset) (VexRule, error) {
 	var crowdsourcedVexRule VexRule
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
@@ -165,7 +202,7 @@ func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, i
 	// - The dependency tree is build and passed as parameter
 	// - Dependecy Tree if of form e.g.:
 	//   {
-	//     "": {Dependecy: "", Children: ["packageA@1.0.0", "packageB@2.0.0"]}, <- Root node is empty string and has as children all top level dependecies
+	//     "ROOT": {Dependecy: "ROOT", Children: ["packageA@1.0.0", "packageB@2.0.0"]}, <- Root node is empty string and has as children all top level dependecies
 	//     "packageA@1.0.0": {Dependecy: "packageA@1.0.0", Children: []},
 	//     "packageB@2.0.0": {Dependecy: "packageB@2.0.0", Children: []},
 	//   }
@@ -219,7 +256,7 @@ func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, i
 			continue
 		}
 
-		if PathExistsInDependecyTree(inDependencyTree, rule.PathPattern) {
+		if PathPatternMatchesPath(inDependencyPath, rule.PathPattern) && rule.CVE.CVE == inCVE.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if rule.Assessment == affected || rule.Assessment == falsePositive {
 				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
@@ -275,7 +312,45 @@ func CrowdsourcedVexing(inDependencyTree map[string]dependencyNode, inCVE CVE, i
 		if value.Value > maximumValue {
 			maximumValue = value.Value
 			crowdsourcedVexRulePath = key
+		} else if value.Value == maximumValue {
+			currentCandidateRule, foundCurrentCandidate := findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
+			if !foundCurrentCandidate {
+				slog.Error("failed to find current candidate VEX rule for tie-breaking", "path", crowdsourcedVexRulePath)
+				continue
+			}
+			candidateRule, foundCandidate := findVexRuleFromPath(key, inVexRules)
+			if !foundCandidate {
+				slog.Error("failed to find candidate VEX rule for tie-breaking", "path", key)
+				continue
+			}
+			if candidateRule.Assessment == currentCandidateRule.Assessment {
+				// If the assessment is the same and the path is the same, both have the same security statement so either is fine
+				// We only need to check if the paths are not the same
+				if key != crowdsourcedVexRulePath {
+					candidatePathLength, errCandidate := PathPatternMatchLength(inDependencyPath, candidateRule.PathPattern)
+					currentCandidatePathLength, errCurrentCandidate := PathPatternMatchLength(inDependencyPath, currentCandidateRule.PathPattern)
+					if errCandidate != nil || errCurrentCandidate != nil {
+						slog.Error("failed to calculate path pattern match length for tie-breaking", "candidatePath", candidateRule.PathPattern, "currentCandidatePath", currentCandidateRule.PathPattern, "errCandidate", errCandidate, "errCurrentCandidate", errCurrentCandidate)
+						continue
+					}
+					// We check which path covers more dependencies with its wildcard and use that one
+					if candidatePathLength > currentCandidatePathLength {
+						maximumValue = value.Value
+						crowdsourcedVexRulePath = key
+					}
+				}
+			} else {
+				// If the assessment is not the same, prefer affected over false-positive regardless of the path, since it is the more secure option
+				if candidateRule.Assessment == affected {
+					maximumValue = value.Value
+					crowdsourcedVexRulePath = key
+				}
+			}
 		}
+		// Edge cases:
+		// patterns could be different
+		// assessments could be different
+		//
 	}
 
 	// At this point we have a recommendation for a VexRule and want to return the datastructure of the VexRule to the user
