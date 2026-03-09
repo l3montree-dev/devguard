@@ -779,8 +779,8 @@ func (_c *GitlabClientFacade_EditIssueLabel_Call) RunAndReturn(run func(ctx cont
 }
 
 // FetchGroupAvatarBase64 provides a mock function for the type GitlabClientFacade
-func (_mock *GitlabClientFacade) FetchGroupAvatarBase64(groupID int) (string, error) {
-	ret := _mock.Called(groupID)
+func (_mock *GitlabClientFacade) FetchGroupAvatarBase64(ctx context.Context, groupID int) (string, error) {
+	ret := _mock.Called(ctx, groupID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchGroupAvatarBase64")
@@ -788,16 +788,16 @@ func (_mock *GitlabClientFacade) FetchGroupAvatarBase64(groupID int) (string, er
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int) (string, error)); ok {
-		return returnFunc(groupID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (string, error)); ok {
+		return returnFunc(ctx, groupID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int) string); ok {
-		r0 = returnFunc(groupID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) string); ok {
+		r0 = returnFunc(ctx, groupID)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
-		r1 = returnFunc(groupID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, groupID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -810,19 +810,25 @@ type GitlabClientFacade_FetchGroupAvatarBase64_Call struct {
 }
 
 // FetchGroupAvatarBase64 is a helper method to define mock.On call
+//   - ctx context.Context
 //   - groupID int
-func (_e *GitlabClientFacade_Expecter) FetchGroupAvatarBase64(groupID interface{}) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
-	return &GitlabClientFacade_FetchGroupAvatarBase64_Call{Call: _e.mock.On("FetchGroupAvatarBase64", groupID)}
+func (_e *GitlabClientFacade_Expecter) FetchGroupAvatarBase64(ctx interface{}, groupID interface{}) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+	return &GitlabClientFacade_FetchGroupAvatarBase64_Call{Call: _e.mock.On("FetchGroupAvatarBase64", ctx, groupID)}
 }
 
-func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) Run(run func(groupID int)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) Run(run func(ctx context.Context, groupID int)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -833,14 +839,14 @@ func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) Return(s string, err e
 	return _c
 }
 
-func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) RunAndReturn(run func(groupID int) (string, error)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) RunAndReturn(run func(ctx context.Context, groupID int) (string, error)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FetchProjectAvatarBase64 provides a mock function for the type GitlabClientFacade
-func (_mock *GitlabClientFacade) FetchProjectAvatarBase64(projectID int) (string, error) {
-	ret := _mock.Called(projectID)
+func (_mock *GitlabClientFacade) FetchProjectAvatarBase64(ctx context.Context, projectID int) (string, error) {
+	ret := _mock.Called(ctx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchProjectAvatarBase64")
@@ -848,16 +854,16 @@ func (_mock *GitlabClientFacade) FetchProjectAvatarBase64(projectID int) (string
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int) (string, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) (string, error)); ok {
+		return returnFunc(ctx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int) string); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) string); ok {
+		r0 = returnFunc(ctx, projectID)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -870,19 +876,25 @@ type GitlabClientFacade_FetchProjectAvatarBase64_Call struct {
 }
 
 // FetchProjectAvatarBase64 is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID int
-func (_e *GitlabClientFacade_Expecter) FetchProjectAvatarBase64(projectID interface{}) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
-	return &GitlabClientFacade_FetchProjectAvatarBase64_Call{Call: _e.mock.On("FetchProjectAvatarBase64", projectID)}
+func (_e *GitlabClientFacade_Expecter) FetchProjectAvatarBase64(ctx interface{}, projectID interface{}) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+	return &GitlabClientFacade_FetchProjectAvatarBase64_Call{Call: _e.mock.On("FetchProjectAvatarBase64", ctx, projectID)}
 }
 
-func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) Run(run func(projectID int)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) Run(run func(ctx context.Context, projectID int)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -893,7 +905,7 @@ func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) Return(s string, err
 	return _c
 }
 
-func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) RunAndReturn(run func(projectID int) (string, error)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) RunAndReturn(run func(ctx context.Context, projectID int) (string, error)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1259,8 +1271,8 @@ func (_c *GitlabClientFacade_GetProject_Call) RunAndReturn(run func(ctx context.
 }
 
 // GetProjectIssues provides a mock function for the type GitlabClientFacade
-func (_mock *GitlabClientFacade) GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error) {
-	ret := _mock.Called(projectID, opt)
+func (_mock *GitlabClientFacade) GetProjectIssues(ctx context.Context, projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, opt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProjectIssues")
@@ -1269,25 +1281,25 @@ func (_mock *GitlabClientFacade) GetProjectIssues(projectID int, opt *gitlab.Lis
 	var r0 []*gitlab.Issue
 	var r1 *gitlab.Response
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)); ok {
-		return returnFunc(projectID, opt)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectID, opt)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int, *gitlab.ListProjectIssuesOptions) []*gitlab.Issue); ok {
-		r0 = returnFunc(projectID, opt)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListProjectIssuesOptions) []*gitlab.Issue); ok {
+		r0 = returnFunc(ctx, projectID, opt)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*gitlab.Issue)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(int, *gitlab.ListProjectIssuesOptions) *gitlab.Response); ok {
-		r1 = returnFunc(projectID, opt)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *gitlab.ListProjectIssuesOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectID, opt)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*gitlab.Response)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(int, *gitlab.ListProjectIssuesOptions) error); ok {
-		r2 = returnFunc(projectID, opt)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *gitlab.ListProjectIssuesOptions) error); ok {
+		r2 = returnFunc(ctx, projectID, opt)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -1300,25 +1312,31 @@ type GitlabClientFacade_GetProjectIssues_Call struct {
 }
 
 // GetProjectIssues is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID int
 //   - opt *gitlab.ListProjectIssuesOptions
-func (_e *GitlabClientFacade_Expecter) GetProjectIssues(projectID interface{}, opt interface{}) *GitlabClientFacade_GetProjectIssues_Call {
-	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", projectID, opt)}
+func (_e *GitlabClientFacade_Expecter) GetProjectIssues(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_GetProjectIssues_Call {
+	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", ctx, projectID, opt)}
 }
 
-func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(projectID int, opt *gitlab.ListProjectIssuesOptions)) *GitlabClientFacade_GetProjectIssues_Call {
+func (_c *GitlabClientFacade_GetProjectIssues_Call) Run(run func(ctx context.Context, projectID int, opt *gitlab.ListProjectIssuesOptions)) *GitlabClientFacade_GetProjectIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *gitlab.ListProjectIssuesOptions
+		var arg1 int
 		if args[1] != nil {
-			arg1 = args[1].(*gitlab.ListProjectIssuesOptions)
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.ListProjectIssuesOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.ListProjectIssuesOptions)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1329,7 +1347,7 @@ func (_c *GitlabClientFacade_GetProjectIssues_Call) Return(issues []*gitlab.Issu
 	return _c
 }
 
-func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)) *GitlabClientFacade_GetProjectIssues_Call {
+func (_c *GitlabClientFacade_GetProjectIssues_Call) RunAndReturn(run func(ctx context.Context, projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)) *GitlabClientFacade_GetProjectIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -93,7 +93,7 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, 
 
 		// make sure the user is a member of the organizations
 		for _, org := range orgsPtr {
-			if err := shared.BootstrapOrg(s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, shared.RoleMember); err != nil {
+			if err := shared.BootstrapOrg(c.Request().Context(), s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, shared.RoleMember); err != nil {
 				slog.Warn("could not bootstrap organization", "orgID", org.GetID(), "err", err)
 			}
 		}
@@ -164,7 +164,7 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 
 func (s externalEntityProviderService) fetchExternalProjects(ctx shared.Context, user, providerID string) ([]models.Project, []shared.Role, error) {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	projects, roles, err := thirdPartyIntegration.ListGroups(context.TODO(), user, providerID)
+	projects, roles, err := thirdPartyIntegration.ListGroups(ctx.Request().Context(), user, providerID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not list projects for user %s: %w", user, err)
 	}
@@ -259,12 +259,12 @@ func (s externalEntityProviderService) updateUserRole(ctx context.Context, domai
 		return nil // user already has the correct role
 	}
 
-	if err := domainRBAC.RevokeRoleInProject(user, currentRole, projectID); err != nil {
+	if err := domainRBAC.RevokeRoleInProject(ctx, user, currentRole, projectID); err != nil {
 		slog.Warn("could not revoke role for user", "user", user, "role", currentRole, "projectID", projectID, "err", err)
 		// we don't care if the user does not have the role
 	}
 
-	if err := domainRBAC.GrantRoleInProject(user, userRole, projectID); err != nil {
+	if err := domainRBAC.GrantRoleInProject(ctx, user, userRole, projectID); err != nil {
 		slog.Warn("could not grant role for user", "user", user, "role", userRole, "projectID", projectID, "err", err)
 		// we don't care if the user already has the role
 	}
@@ -278,12 +278,12 @@ func (s externalEntityProviderService) updateUserRoleInAsset(ctx context.Context
 	if currentRole == userRole || userRole == "" {
 		return nil // user already has the correct role
 	}
-	if err := domainRBAC.RevokeRoleInAsset(user, currentRole, assetID); err != nil {
+	if err := domainRBAC.RevokeRoleInAsset(ctx, user, currentRole, assetID); err != nil {
 		slog.Warn("could not revoke role for user", "user", user, "role", currentRole, "assetID", assetID, "err", err)
 		// we don't care if the user does not have the role
 	}
 
-	if err := domainRBAC.GrantRoleInAsset(user, userRole, assetID); err != nil {
+	if err := domainRBAC.GrantRoleInAsset(ctx, user, userRole, assetID); err != nil {
 		slog.Warn("could not grant role for user", "user", user, "role", userRole, "assetID", assetID, "err", err)
 		// we don't care if the user already has the role
 	}
@@ -335,7 +335,7 @@ func (s externalEntityProviderService) revokeAccessForRemovedProjects(ctx contex
 	for _, project := range allowedProjects {
 		if _, ok := projectsMap[project]; !ok {
 			// project no longer exists, revoke access
-			if err := domainRBAC.RevokeAllRolesInProjectForUser(user, project); err != nil {
+			if err := domainRBAC.RevokeAllRolesInProjectForUser(ctx, user, project); err != nil {
 				slog.Warn("could not revoke all roles for user", "user", user, "projectID", project, "err", err)
 			}
 		}
@@ -347,7 +347,7 @@ func (s externalEntityProviderService) revokeAccessForRemovedAssets(ctx context.
 	for _, asset := range allowedAssets {
 		if _, ok := assetsMap[asset]; !ok {
 			// asset no longer exists, revoke access
-			if err := domainRBAC.RevokeAllRolesInAssetForUser(user, asset); err != nil {
+			if err := domainRBAC.RevokeAllRolesInAssetForUser(ctx, user, asset); err != nil {
 				slog.Warn("could not revoke all roles for user", "user", user, "assetID", asset, "err", err)
 			}
 		}

@@ -97,7 +97,7 @@ func (i *JiraIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
-func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	return nil
 }
 

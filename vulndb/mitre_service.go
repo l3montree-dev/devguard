@@ -71,7 +71,7 @@ func NewMitreService(cweRepository shared.CweRepository) mitreService {
 	}
 }
 
-func (mitreService mitreService) Mirror() error {
+func (mitreService mitreService) Mirror(ctx context.Context) error {
 	// parse the CWEs
 	cwes, err := mitreService.fetchCWEXML()
 
@@ -85,5 +85,5 @@ func (mitreService mitreService) Mirror() error {
 		models[i] = cwe.toModel()
 	}
 
-	return mitreService.cweRepository.SaveBatch(context.Background(), nil, models)
+	return mitreService.cweRepository.SaveBatch(ctx, nil, models)
 }

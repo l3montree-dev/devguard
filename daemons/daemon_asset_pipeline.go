@@ -72,9 +72,9 @@ func (runner *DaemonRunner) RunAssetPipeline(ctx context.Context, forceAll bool)
 	runner.collectErrors(errChan)
 	var idsChan <-chan uuid.UUID
 	if forceAll {
-		idsChan = runner.FetchAllAssetIDs()
+		idsChan = runner.FetchAllAssetIDs(ctx)
 	} else {
-		idsChan = runner.FetchAssetIDs()
+		idsChan = runner.FetchAssetIDs(ctx)
 	}
 
 	runner.runPipeline(ctx, idsChan, errChan)
@@ -134,7 +134,7 @@ func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	}()
 }
 
-func (runner *DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
+func (runner *DaemonRunner) FetchAllAssetIDs(ctx context.Context) <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 	go func() {
 		defer func() {
@@ -143,7 +143,7 @@ func (runner *DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
-		err := runner.assetRepository.GetDB(context.Background(), nil).Model(&models.Asset{}).Select("ID").Find(&assets).Error
+		err := runner.assetRepository.GetDB(ctx, nil).Model(&models.Asset{}).Select("ID").Find(&assets).Error
 		if err != nil {
 			monitoring.Alert("could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
@@ -154,7 +154,7 @@ func (runner *DaemonRunner) FetchAllAssetIDs() <-chan uuid.UUID {
 	return out
 }
 
-func (runner *DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
+func (runner *DaemonRunner) FetchAssetIDs(ctx context.Context) <-chan uuid.UUID {
 	out := make(chan uuid.UUID)
 
 	go func() {
@@ -164,7 +164,7 @@ func (runner *DaemonRunner) FetchAssetIDs() <-chan uuid.UUID {
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
-		err := runner.assetRepository.GetDB(context.Background(), nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-12*time.Hour)).Select("ID").Find(&assets).Error
+		err := runner.assetRepository.GetDB(ctx, nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-12*time.Hour)).Select("ID").Find(&assets).Error
 		if err != nil {
 			monitoring.Alert("could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
@@ -393,7 +393,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 			}
 
 			span.SetAttributes(attribute.Int("asset.dep_vulns_with_tickets", len(depVulns)))
-			err = runner.integrationAggregate.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+			err = runner.integrationAggregate.CompareIssueStatesAndResolveDifferences(stageCtx, asset, depVulns)
 			if err != nil {
 				slog.Error("could not compare ticket states", "err", err)
 				failStage(assetWithDetails.ctx, span, err)

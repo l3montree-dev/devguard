@@ -422,7 +422,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.True(t, isAuthorized)
 	})
@@ -433,7 +433,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.False(t, isAuthorized)
 	})
@@ -444,7 +444,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the github api was blown into pieces"))
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "the github api was blown into pieces", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -453,7 +453,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Repo: &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -462,7 +462,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Sender: &github.User{ID: utils.Ptr(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -472,12 +472,12 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Sender: &github.User{ID: utils.Ptr(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
-		isAuthorized, err := isGithubUserAuthorized(nil, nil)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), nil, nil)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})

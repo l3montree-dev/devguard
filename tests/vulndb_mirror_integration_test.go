@@ -51,7 +51,7 @@ func TestEPSSMirrorUpdatesCVE(t *testing.T) {
 			Return([]models.CVERelationship{}, nil)
 
 		epssService := vulndb.NewEPSSService(f.App.CveRepository, relRepo)
-		require.NoError(t, epssService.Mirror())
+		require.NoError(t, epssService.Mirror(context.Background()))
 
 		// Verify the CVE was updated
 		var updated models.CVE
@@ -115,7 +115,7 @@ func TestCISAKEVMirrorUpdatesCVE(t *testing.T) {
 			Return([]models.CVERelationship{}, nil)
 
 		kevService := vulndb.NewCISAKEVService(f.App.CveRepository, relRepo)
-		require.NoError(t, kevService.Mirror())
+		require.NoError(t, kevService.Mirror(context.Background()))
 
 		// Verify the CVE was updated
 		var updated models.CVE

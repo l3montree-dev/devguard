@@ -54,7 +54,7 @@ func (w *WebhookController) Delete(ctx shared.Context) error {
 	return ctx.JSON(200, "Webhook integration deleted successfully")
 }
 
-func (w *WebhookController) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+func (w *WebhookController) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	// Webhook integration does not support issue tracking
 	return nil
 }

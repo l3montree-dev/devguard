@@ -37,7 +37,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		projectID := 69787207
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
-		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
 
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
 		mockClientFactory.On("FromIntegrationUUID", uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
@@ -46,7 +46,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 			clientFactory: mockClientFactory,
 		}
 
-		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		err := integration.CompareIssueStatesAndResolveDifferences(context.Background(), asset, depVulns)
 		assert.Nil(t, err)
 	})
 	t.Run("if we have 2 excess tickets we should close these tickets", func(t *testing.T) {
@@ -60,7 +60,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
 
-		client.On("GetProjectIssues", projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
 		client.On("EditIssue", mock.Anything, projectID, 57, mock.Anything).Return(nil, nil, nil)
 		client.On("EditIssue", mock.Anything, projectID, 42, mock.Anything).Return(nil, nil, nil)
 
@@ -70,7 +70,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 			clientFactory: mockClientFactory,
 		}
 
-		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		err := integration.CompareIssueStatesAndResolveDifferences(context.Background(), asset, depVulns)
 		assert.Nil(t, err)
 
 	})
@@ -86,7 +86,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 			clientFactory: nil,
 		}
 
-		err := integration.CompareIssueStatesAndResolveDifferences(asset, depVulns)
+		err := integration.CompareIssueStatesAndResolveDifferences(context.Background(), asset, depVulns)
 		assert.Nil(t, err)
 	})
 }
@@ -222,7 +222,7 @@ func TestIsGitlabUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 73573, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-		isAuthorized, err := isGitlabUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.True(t, isAuthorized)
 	})
@@ -230,7 +230,7 @@ func TestIsGitlabUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-		isAuthorized, err := isGitlabUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.False(t, isAuthorized)
 	})
@@ -238,19 +238,19 @@ func TestIsGitlabUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the gitlab api was blown up"))
-		isAuthorized, err := isGitlabUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "the gitlab api was blown up", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the provided user is nil we want to abort", func(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353}
 		client := mocks.NewGitlabClientFacade(t)
-		isAuthorized, err := isGitlabUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
-		isAuthorized, err := isGitlabUserAuthorized(nil, nil)
+		isAuthorized, err := isGitlabUserAuthorized(context.Background(), nil, nil)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})

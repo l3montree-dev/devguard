@@ -62,8 +62,8 @@ func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*git
 	}, nil
 }
 
-func fetchAllRepos(client githubClient) ([]*github.Repository, error) {
-	result, _, err := client.Apps.ListRepos(context.Background(), &github.ListOptions{
+func fetchAllRepos(ctx context.Context, client githubClient) ([]*github.Repository, error) {
+	result, _, err := client.Apps.ListRepos(ctx, &github.ListOptions{
 		Page:    1,
 		PerPage: 100,
 	})
@@ -75,7 +75,7 @@ func fetchAllRepos(client githubClient) ([]*github.Repository, error) {
 	repos := result.Repositories
 	// check if there is more to fetch
 	for len(repos) < *result.TotalCount {
-		result, _, err = client.Apps.ListRepos(context.Background(), &github.ListOptions{
+		result, _, err = client.Apps.ListRepos(ctx, &github.ListOptions{
 			Page:    len(repos) / 100,
 			PerPage: 100,
 		})
@@ -89,6 +89,7 @@ func fetchAllRepos(client githubClient) ([]*github.Repository, error) {
 }
 
 func (githubOrgClient *githubBatchClient) ListRepositories(
+	ctx context.Context,
 	search string,
 ) ([]githubRepository, error) {
 	wg := utils.ErrGroup[[]githubRepository](10)
@@ -96,7 +97,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 	for _, client := range githubOrgClient.clients {
 		wg.Go(func() ([]githubRepository, error) {
 
-			result, err := fetchAllRepos(client)
+			result, err := fetchAllRepos(ctx, client)
 			if err != nil {
 				return nil, err
 			}

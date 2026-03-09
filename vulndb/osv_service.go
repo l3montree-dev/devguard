@@ -128,8 +128,7 @@ func (s osvService) getEcosystems() ([]string, error) {
 
 const numOfGoRoutines int = 10
 
-func (s osvService) Mirror() error {
-	ctx := context.Background()
+func (s osvService) Mirror(ctx context.Context) error {
 	zips := make(chan *zip.Reader, 2)
 	jobs := make(chan *zip.File, numOfGoRoutines*20)
 

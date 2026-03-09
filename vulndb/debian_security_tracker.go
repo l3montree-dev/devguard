@@ -192,7 +192,7 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 	})
 }
 
-func (s debianSecurityTracker) Mirror() error {
+func (s debianSecurityTracker) Mirror(ctx context.Context) error {
 	cves, err := s.fetchAllCVEs()
 	if err != nil {
 		return err
@@ -205,14 +205,14 @@ func (s debianSecurityTracker) Mirror() error {
 		}
 	}
 
-	err = s.affectedCmpRepository.GetDB(context.Background(), nil).Transaction(func(tx *gorm.DB) error {
+	err = s.affectedCmpRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
 		// remove all dsa affected components first
 		err = tx.Where("source = ?", "debian-security-tracker").Delete(&models.AffectedComponent{}).Error
 		if err != nil {
 			return err
 		}
 
-		return s.affectedCmpRepository.SaveBatch(context.Background(), tx, affectedComponents)
+		return s.affectedCmpRepository.SaveBatch(ctx, tx, affectedComponents)
 	})
 
 	if err != nil {

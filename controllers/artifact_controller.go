@@ -225,8 +225,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [delete]
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
-
 	asset := shared.GetAsset(ctx)
+	reqCtx := ctx.Request().Context()
 
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -239,7 +239,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	// we need to sync the vulnerabilities after deleting the artifact
 	// maybe we need to close some: https://github.com/l3montree-dev/devguard/issues/1496
 	// fetch all vulnerabilities which ONLY belong to this artifact
-	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(ctx.Request().Context(), nil, artifact)
+	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(reqCtx, nil, artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch vulnerabilities").WithInternal(err)
 	}
@@ -253,7 +253,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 		}
 	}
 
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	if len(syncVulns) > 0 {
 		c.FireAndForget(func() {
 			err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, syncVulns)
@@ -264,7 +264,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	}
 
 	// DeleteArtifact now handles depth recalculation internally
-	err = c.artifactService.DeleteArtifact(ctx.Request().Context(), asset.ID, assetVersion.Name, artifact.ArtifactName)
+	err = c.artifactService.DeleteArtifact(reqCtx, asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err
@@ -296,7 +296,9 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	artifact, err := c.artifactService.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, asset.ID)
+	reqCtx := ctx.Request().Context()
+
+	artifact, err := c.artifactService.ReadArtifact(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -312,7 +314,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	oldSources, err := c.componentService.FetchInformationSources(ctx.Request().Context(), nil, &artifact)
+	oldSources, err := c.componentService.FetchInformationSources(reqCtx, nil, &artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
@@ -325,7 +327,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	toDelete := comparison.OnlyInB
 
 	// we just need to remove those root nodes.
-	if err := c.componentService.RemoveInformationSources(ctx.Request().Context(), nil, &artifact, toDelete); err != nil {
+	if err := c.componentService.RemoveInformationSources(reqCtx, nil, &artifact, toDelete); err != nil {
 		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
 	}
 
@@ -336,7 +338,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	})
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.FetchSbomsFromUpstream(ctx.Request().Context(), artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()
@@ -344,19 +346,19 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		graph.MergeGraph(bom)
 	}
 
-	tx := c.artifactRepository.Begin(ctx.Request().Context())
+	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
 	// make sure that we at least update the sbom once if there were deletions
 	// updating with nil, will just renormalize the sbom and remove all components which are not
 	// reachable anymore from the root nodes - we might have removed some root nodes above
-	sbom, err := c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
+	sbom, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
 
-	_, _, vulns, err = c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
 	if err != nil {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
@@ -364,7 +366,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	tx.Commit()
 
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)

@@ -41,16 +41,16 @@ func (_m *ThirdPartyIntegration) EXPECT() *ThirdPartyIntegration_Expecter {
 }
 
 // CompareIssueStatesAndResolveDifferences provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	ret := _mock.Called(asset, vulnsWithTickets)
+func (_mock *ThirdPartyIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	ret := _mock.Called(ctx, asset, vulnsWithTickets)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CompareIssueStatesAndResolveDifferences")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, []models.DependencyVuln) error); ok {
-		r0 = returnFunc(asset, vulnsWithTickets)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, []models.DependencyVuln) error); ok {
+		r0 = returnFunc(ctx, asset, vulnsWithTickets)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -63,25 +63,31 @@ type ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call struct {
 }
 
 // CompareIssueStatesAndResolveDifferences is a helper method to define mock.On call
+//   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *ThirdPartyIntegration_Expecter) CompareIssueStatesAndResolveDifferences(asset interface{}, vulnsWithTickets interface{}) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
-	return &ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", asset, vulnsWithTickets)}
+func (_e *ThirdPartyIntegration_Expecter) CompareIssueStatesAndResolveDifferences(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
+	return &ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", ctx, asset, vulnsWithTickets)}
 }
 
-func (_c *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call) Run(run func(asset models.Asset, vulnsWithTickets []models.DependencyVuln)) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
+func (_c *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call) Run(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln)) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.DependencyVuln
+		var arg1 models.Asset
 		if args[1] != nil {
-			arg1 = args[1].([]models.DependencyVuln)
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -92,7 +98,7 @@ func (_c *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call) Re
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call) RunAndReturn(run func(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
+func (_c *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
 	_c.Call.Return(run)
 	return _c
 }

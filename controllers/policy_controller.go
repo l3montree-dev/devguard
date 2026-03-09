@@ -31,6 +31,7 @@ func NewPolicyController(policyRepository shared.PolicyRepository, projectReposi
 }
 
 func (c *PolicyController) migratePolicies() error {
+	ctx := context.Background()
 	// we need to migrate the policies from the old format to the new format
 	// this is only needed for the first time we run the application
 	// after that we can remove this function
@@ -41,7 +42,7 @@ func (c *PolicyController) migratePolicies() error {
 	}
 
 	// get all community managed policies from the database
-	dbPolicies, err := c.policyRepository.FindCommunityManagedPolicies(context.Background(), nil)
+	dbPolicies, err := c.policyRepository.FindCommunityManagedPolicies(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -67,14 +68,14 @@ func (c *PolicyController) migratePolicies() error {
 
 	// create the policies
 	if len(toCreate) > 0 {
-		if err := c.policyRepository.CreateBatch(context.Background(), nil, toCreate); err != nil {
+		if err := c.policyRepository.CreateBatch(ctx, nil, toCreate); err != nil {
 			return err
 		}
 	}
 
 	// update the policies
 	if len(toUpdate) > 0 {
-		if err := c.policyRepository.SaveBatch(context.Background(), nil, toUpdate); err != nil {
+		if err := c.policyRepository.SaveBatch(ctx, nil, toUpdate); err != nil {
 			return err
 		}
 	}
@@ -86,7 +87,7 @@ func (c *PolicyController) migratePolicies() error {
 			wg.Add(1)
 			go func(p models.Policy) {
 				defer wg.Done()
-				err := c.policyRepository.GetDB(context.Background(), nil).Model(&p).Association("Projects").Clear()
+				err := c.policyRepository.GetDB(ctx, nil).Model(&p).Association("Projects").Clear()
 				if err != nil {
 					slog.Warn("failed to clear projects association for policy", "policyID", p.ID, "error", err)
 					return
@@ -94,7 +95,7 @@ func (c *PolicyController) migratePolicies() error {
 			}(policy)
 		}
 		wg.Wait()
-		if err := c.policyRepository.DeleteBatch(context.Background(), nil, toDelete); err != nil {
+		if err := c.policyRepository.DeleteBatch(ctx, nil, toDelete); err != nil {
 			return err
 		}
 	}

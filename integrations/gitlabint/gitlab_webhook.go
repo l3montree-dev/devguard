@@ -11,14 +11,15 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
-	asset, err := g.assetRepository.Read(context.Background(), nil, assetID)
+func (g *GitlabIntegration) checkWebhookSecretToken(ctx context.Context, gitlabSecretToken string, assetID uuid.UUID) error {
+	asset, err := g.assetRepository.Read(ctx, nil, assetID)
 	if err != nil {
 		slog.Error("could not read asset", "err", err)
 		return err
@@ -42,6 +43,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	if err != nil {
 		return nil
 	}
+	reqCtx := ctx.Request().Context()
 
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
@@ -67,23 +69,24 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		projectID = int(event.Project.ID)
 
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err = g.aggregatedVulnRepository.FindByTicketID(context.Background(), nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueID))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(reqCtx, nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueID))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketID", issueID)
 			return nil
 		}
 
-		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		err = g.checkWebhookSecretToken(reqCtx, gitlabSecretToken, vuln.GetAssetID())
 		if err != nil {
 			return err
 		}
 
 		action := event.ObjectAttributes.Action
 
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		g.FireAndForget(func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(context.Background(), nil, vuln)
+			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(reqCtx, nil, vuln)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -95,13 +98,13 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				AvatarURL: event.User.AvatarURL,
 			}
 
-			err = g.externalUserRepository.Save(context.Background(), nil, &user)
+			err = g.externalUserRepository.Save(linkedCtx, nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = g.externalUserRepository.GetDB(context.Background(), nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = g.externalUserRepository.GetDB(linkedCtx, nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		})
@@ -114,7 +117,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false)
 
-			err = g.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
+			err = g.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
@@ -127,14 +130,14 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false)
 
-			err := g.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
+			err := g.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 
 			}
 			doUpdateArtifactRiskHistory = true
 		}
-		asset, err := g.assetRepository.Read(context.Background(), nil, vuln.GetAssetID())
+		asset, err := g.assetRepository.Read(reqCtx, nil, vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -150,13 +153,13 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		issueID = int(event.Issue.IID)
 		projectID = int(event.ProjectID)
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err = g.aggregatedVulnRepository.FindByTicketID(context.Background(), nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueID))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(reqCtx, nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueID))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketID", issueID)
 			return nil
 		}
 
-		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		err = g.checkWebhookSecretToken(reqCtx, gitlabSecretToken, vuln.GetAssetID())
 		if err != nil {
 			return err
 		}
@@ -168,13 +171,13 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(context.Background(), nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := g.assetVersionRepository.Read(reqCtx, nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
 		}
 
-		asset, err := g.assetRepository.Read(context.Background(), nil, assetVersion.AssetID)
+		asset, err := g.assetRepository.Read(reqCtx, nil, assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -186,7 +189,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-		isAuthorized, err := isGitlabUserAuthorized(event, client)
+		isAuthorized, err := isGitlabUserAuthorized(reqCtx, event, client)
 		if err != nil {
 			return err
 		}
@@ -196,10 +199,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			return ctx.JSON(200, "ok")
 		}
 
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
+
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		g.FireAndForget(func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(context.Background(), nil, vuln)
+			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(linkedCtx, nil, vuln)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -211,13 +216,13 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				AvatarURL: event.User.AvatarURL,
 			}
 
-			err = g.externalUserRepository.Save(context.Background(), nil, &user)
+			err = g.externalUserRepository.Save(linkedCtx, nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = g.externalUserRepository.GetDB(context.Background(), nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = g.externalUserRepository.GetDB(linkedCtx, nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		})
@@ -228,12 +233,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		statemachine.Apply(vuln, vulnEvent)
 
 		// save the dependencyVuln and the event in a transaction
-		err = g.aggregatedVulnRepository.Transaction(context.Background(), func(tx shared.DB) error {
-			err := g.aggregatedVulnRepository.Save(ctx.Request().Context(), tx, &vuln)
+		err = g.aggregatedVulnRepository.Transaction(reqCtx, func(tx shared.DB) error {
+			err := g.aggregatedVulnRepository.Save(reqCtx, tx, &vuln)
 			if err != nil {
 				return err
 			}
-			err = g.vulnEventRepository.Save(ctx.Request().Context(), tx, &vulnEvent)
+			err = g.vulnEventRepository.Save(reqCtx, tx, &vulnEvent)
 			if err != nil {
 				return err
 			}

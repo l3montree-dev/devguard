@@ -45,7 +45,7 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := shared.GetSession(ctx).GetUserID()
-	if err = shared.BootstrapOrg(rbac, userID, shared.RoleOwner); err != nil {
+	if err = shared.BootstrapOrg(ctx.Request().Context(), rbac, userID, shared.RoleOwner); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization roles").WithInternal(err)
 	}
 	ctx.Set("rbac", rbac)

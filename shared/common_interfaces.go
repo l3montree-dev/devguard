@@ -591,40 +591,40 @@ type VulnDBImportService interface {
 }
 
 type AccessControl interface {
-	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
-	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
+	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(subject string, role Role) error
-	RevokeRole(subject string, role Role) error
+	GrantRole(ctx context.Context, subject string, role Role) error
+	RevokeRole(ctx context.Context, subject string, role Role) error
 
-	GrantRoleInProject(subject string, role Role, project string) error
-	GrantRoleInAsset(subject string, role Role, asset string) error
+	GrantRoleInProject(ctx context.Context, subject string, role Role, project string) error
+	GrantRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
 
-	RevokeRoleInProject(subject string, role Role, project string) error
-	RevokeRoleInAsset(subject string, role Role, asset string) error
+	RevokeRoleInProject(ctx context.Context, subject string, role Role, project string) error
+	RevokeRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
 
-	RevokeAllRolesInProjectForUser(user string, project string) error
-	RevokeAllRolesInAssetForUser(user string, asset string) error
+	RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error
+	RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error
 
-	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
-	InheritAssetRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
+	InheritProjectRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
+	InheritAssetRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
 
-	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
+	InheritProjectRolesAcrossProjects(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
-	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
-	LinkProjectAndAssetRole(projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
+	LinkDomainAndProjectRole(ctx context.Context, domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
+	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
-	AllowRole(role Role, object Object, action []Action) error
-	IsAllowed(subject string, object Object, action Action) (bool, error)
+	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
+	IsAllowed(ctx context.Context, subject string, object Object, action Action) (bool, error)
 
-	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	IsAllowedInAsset(asset *models.Asset, user string, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, user string, object Object, action Action) (bool, error)
+	IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object Object, action Action) (bool, error)
 
-	AllowRoleInProject(project string, role Role, object Object, action []Action) error
-	AllowRoleInAsset(asset string, role Role, object Object, action []Action) error
+	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
+	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
 
 	GetAllProjectsForUser(user string) ([]string, error)
 	GetAllAssetsForUser(user string) ([]string, error)

@@ -164,7 +164,7 @@ func (c *MaliciousPackageChecker) DownloadAndProcessDB(ctx context.Context) (out
 	slog.Info("Processed malicious packages from archive")
 
 	// Log ecosystem counts
-	counts, err := c.repository.CountByEcosystem(context.Background(), nil)
+	counts, err := c.repository.CountByEcosystem(ctx, nil)
 	if err == nil {
 		slog.Info("Malicious package database loaded",
 			"npm", counts["npm"],
@@ -348,7 +348,7 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 	}
 
 	// Query database using purl matching (similar to PurlComparer)
-	components, err := c.repository.GetMaliciousAffectedComponents(context.Background(), nil, parsedPurl)
+	components, err := c.repository.GetMaliciousAffectedComponents(ctx, nil, parsedPurl)
 	if err != nil {
 		slog.Debug("Failed to query malicious packages", "error", err)
 		return false, nil

@@ -67,7 +67,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	}
 
 	// make the current user the admin of the asset
-	if err := rbac.GrantRoleInAsset(currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
 		slog.Error("error assigning current user as asset admin", "err", err)
 		return nil, err
 	}
@@ -75,21 +75,21 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	return &newAsset, nil
 }
 
-func (s *assetService) BootstrapAsset(_ context.Context, rbac shared.AccessControl, asset *models.Asset) error {
+func (s *assetService) BootstrapAsset(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error {
 	// make sure and project admin is an asset admin - Always
-	if err := rbac.LinkProjectAndAssetRole(shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
+	if err := rbac.LinkProjectAndAssetRole(ctx, shared.RoleAdmin, shared.RoleAdmin, asset.ProjectID.String(), asset.GetID().String()); err != nil {
 		return err
 	}
 
 	// give the admin of an asset all the permissions of a member
-	if err := rbac.InheritAssetRole(shared.RoleAdmin, shared.RoleMember, asset.GetID().String()); err != nil {
+	if err := rbac.InheritAssetRole(ctx, shared.RoleAdmin, shared.RoleMember, asset.GetID().String()); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInAsset(asset.GetID().String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{shared.ActionRead}); err != nil {
+	if err := rbac.AllowRoleInAsset(ctx, asset.GetID().String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{shared.ActionRead}); err != nil {
 		return err
 	}
-	if err := rbac.AllowRoleInAsset(asset.GetID().String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}); err != nil {
+	if err := rbac.AllowRoleInAsset(ctx, asset.GetID().String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}); err != nil {
 		return err
 	}
 

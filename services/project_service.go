@@ -82,16 +82,16 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.AccessControl, project *models.Project) error {
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	if err := rbac.LinkDomainAndProjectRole(shared.RoleAdmin, shared.RoleAdmin, project.ID.String()); err != nil {
+	if err := rbac.LinkDomainAndProjectRole(ctx, shared.RoleAdmin, shared.RoleAdmin, project.ID.String()); err != nil {
 		return err
 	}
 
 	// give the admin of a project all member permissions
-	if err := rbac.InheritProjectRole(shared.RoleAdmin, shared.RoleMember, project.ID.String()); err != nil {
+	if err := rbac.InheritProjectRole(ctx, shared.RoleAdmin, shared.RoleMember, project.ID.String()); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectUser, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectUser, []shared.Action{
 		shared.ActionCreate,
 		shared.ActionDelete,
 		shared.ActionUpdate,
@@ -99,7 +99,7 @@ func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.Acces
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
 		shared.ActionCreate,
 		shared.ActionDelete,
 		shared.ActionUpdate,
@@ -107,20 +107,20 @@ func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.Acces
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectProject, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectProject, []shared.Action{
 		shared.ActionDelete,
 		shared.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleMember, shared.ObjectProject, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleMember, shared.ObjectProject, []shared.Action{
 		shared.ActionRead,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{
 		shared.ActionRead,
 	}); err != nil {
 		return err
@@ -129,7 +129,7 @@ func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.Acces
 	// check if there is a parent project - if so, we need to further inherit the roles
 	if project.ParentID != nil {
 		// make a parent project admin an admin of the child project
-		if err := rbac.InheritProjectRolesAcrossProjects(shared.ProjectRole{
+		if err := rbac.InheritProjectRolesAcrossProjects(ctx, shared.ProjectRole{
 			Role:    shared.RoleAdmin,
 			Project: (*project.ParentID).String(),
 		}, shared.ProjectRole{

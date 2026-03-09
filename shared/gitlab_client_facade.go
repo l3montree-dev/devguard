@@ -19,8 +19,8 @@ type GitlabClientFacade interface {
 	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
 
 	GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error)
-	FetchGroupAvatarBase64(groupID int) (string, error)
-	FetchProjectAvatarBase64(projectID int) (string, error)
+	FetchGroupAvatarBase64(ctx context.Context, groupID int) (string, error)
+	FetchProjectAvatarBase64(ctx context.Context, projectID int) (string, error)
 
 	GetClientID() string
 
@@ -30,7 +30,7 @@ type GitlabClientFacade interface {
 	GetMemberInGroup(ctx context.Context, userID int, groupID int) (*gitlab.GroupMember, *gitlab.Response, error)
 	GetMemberInProject(ctx context.Context, userID int, projectID int) (*gitlab.ProjectMember, *gitlab.Response, error)
 	ListProjectsInGroup(ctx context.Context, groupID int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
-	GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)
+	GetProjectIssues(ctx context.Context, projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error)
 
 	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)

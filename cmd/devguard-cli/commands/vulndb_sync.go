@@ -62,7 +62,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "cwe") {
 						now := time.Now()
 						slog.Info("starting cwe database sync")
-						if err := mitreService.Mirror(); err != nil {
+						if err := mitreService.Mirror(context.Background()); err != nil {
 							slog.Error("could not mirror cwe database", "err", err)
 						}
 						slog.Info("finished cwe database sync", "duration", time.Since(now))
@@ -71,7 +71,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "osv") {
 						slog.Info("starting osv database sync")
 						now := time.Now()
-						if err := osvService.Mirror(); err != nil {
+						if err := osvService.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync osv database", "err", err)
 						}
 						slog.Info("finished osv database sync", "duration", time.Since(now))
@@ -81,7 +81,7 @@ Use --databases flag to sync specific sources only.`,
 						slog.Info("starting epss database sync")
 						now := time.Now()
 
-						if err := epssService.Mirror(); err != nil {
+						if err := epssService.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync epss database", "err", err)
 						}
 						slog.Info("finished epss database sync", "duration", time.Since(now))
@@ -91,7 +91,7 @@ Use --databases flag to sync specific sources only.`,
 						slog.Info("starting cisa-kev database sync")
 						now := time.Now()
 
-						if err := cisaKEVService.Mirror(); err != nil {
+						if err := cisaKEVService.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync cisa-kev database", "err", err)
 						}
 						slog.Info("finished cisa-kev database sync", "duration", time.Since(now))
@@ -100,7 +100,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "exploitdb") {
 						slog.Info("starting exploitdb database sync")
 						now := time.Now()
-						if err := expoitDBService.Mirror(); err != nil {
+						if err := expoitDBService.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync exploitdb database", "err", err)
 						}
 						slog.Info("finished exploitdb database sync", "duration", time.Since(now))
@@ -109,7 +109,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "github-poc") {
 						slog.Info("starting github-poc database sync")
 						now := time.Now()
-						if err := githubExploitDBService.Mirror(); err != nil {
+						if err := githubExploitDBService.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync github-poc database", "err", err)
 						}
 						slog.Info("finished github-poc database sync", "duration", time.Since(now))
@@ -118,7 +118,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "dsa") {
 						slog.Info("starting dsa database sync")
 						now := time.Now()
-						if err := debianSecurityTracker.Mirror(); err != nil {
+						if err := debianSecurityTracker.Mirror(context.Background()); err != nil {
 							slog.Error("could not sync dsa database", "err", err)
 						}
 						slog.Info("finished dsa database sync", "duration", time.Since(now))
@@ -136,14 +136,15 @@ Use --databases flag to sync specific sources only.`,
 					return nil
 				}),
 			)
+			ctx := context.Background()
 
-			startCtx, cancel := context.WithTimeout(context.Background(), 120*time.Minute)
+			startCtx, cancel := context.WithTimeout(ctx, 120*time.Minute)
 			defer cancel()
 			if err := app.Start(startCtx); err != nil {
 				return err
 			}
 
-			stopCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 			return app.Stop(stopCtx)
 		},

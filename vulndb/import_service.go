@@ -509,7 +509,7 @@ func importWithShadowTable(ctx context.Context, pool *pgxpool.Pool, tableName, c
 
 	defer func() {
 		// Clean up shadow table if it still exists (swap failed)
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		cleanupCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		_, err := pool.Exec(cleanupCtx, fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", shadowTable))
 		if err != nil {

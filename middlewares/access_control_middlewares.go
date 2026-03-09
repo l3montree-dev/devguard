@@ -38,7 +38,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 			// get the user
 			user := shared.GetSession(ctx).GetUserID()
 
-			allowed, err := rbac.IsAllowed(user, obj, act)
+			allowed, err := rbac.IsAllowed(ctx.Request().Context(), user, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -104,7 +104,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 					}
 				}
 
-				allowed, err := rbac.IsAllowedInAsset(&asset, user, obj, act)
+				allowed, err := rbac.IsAllowedInAsset(ctx.Request().Context(), &asset, user, obj, act)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
 				}
@@ -154,7 +154,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 					return echo.NewHTTPError(404, "could not find project")
 				}
 
-				allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
+				allowed, err := rbac.IsAllowedInProject(ctx.Request().Context(), &project, user, obj, act)
 
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -215,7 +215,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 
 			// check if the user is allowed to access the organization
 			session := shared.GetSession(ctx)
-			allowed, err := domainRBAC.HasAccess(session.GetUserID())
+			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session.GetUserID())
 			if err != nil {
 				if org.IsPublic {
 					shared.SetIsPublicRequest(ctx)
