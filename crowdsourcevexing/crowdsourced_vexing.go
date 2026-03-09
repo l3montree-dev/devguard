@@ -85,12 +85,14 @@ func newUserVoteTracker() *userVoteTracker {
 // recordVoteAndGetFactor increments the vote count for the organization's
 // creator (CreatedBy) and returns a diminishing factor based on how many
 // prior votes that creator already cast.
-// Factor: 1/(1+priorVotes) — 1st vote=1.0, 2nd=0.5, 3rd=0.33, etc.
+// Factor: 1/2^(1+priorVotes) — 1st vote=0.5, 2nd=0.25, 3rd=0.125, etc.
+// The sum of all factors per user converges to 1 and never exceeds it.
+// This prevents a single user from having too much influence by creating many organizations/projects and voting multiple times.
 func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) float64 {
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
-	return 1.0 / float64(1+priorVotes)
+	return 1.0 / math.Pow(2, float64(1+priorVotes))
 }
 
 func PathPatternMatchesPath(inPath, inPattern []string) bool {
