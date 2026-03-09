@@ -92,7 +92,7 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
-	return 1.0 / math.Pow(2, float64(1+priorVotes))
+	return float64(priorVotes)
 }
 
 func PathPatternMatchesPath(inPath, inPattern []string) bool {
@@ -261,11 +261,13 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 		if PathPatternMatchesPath(inDependencyPath, rule.PathPattern) && rule.CVE.CVE == inCVE.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if rule.Assessment == affected || rule.Assessment == falsePositive {
-				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
-				ruleConfidence := math.Max(project.Trustscore, organization.Trustscore)
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
 				diminishingFactor := tracker.recordVoteAndGetFactor(organization)
-				ruleConfidence *= diminishingFactor
+				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
+				// Note to mitigation 8: Using an exponential decay approach allows for
+				// - lower trusted entities to not be able to surpass high trusted entities with many votes
+				// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
+				ruleConfidence := math.Pow(math.Max(project.Trustscore, organization.Trustscore), diminishingFactor)
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
