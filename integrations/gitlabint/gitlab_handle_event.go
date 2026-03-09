@@ -11,11 +11,15 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-func (g *GitlabIntegration) HandleEvent(event any) error {
+func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any) error {
+	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.HandleEvent")
+	defer span.End()
 	switch event := event.(type) {
 	case shared.ManualMitigateEvent:
+		span.SetAttributes(attribute.String("integration.event_type", "ManualMitigateEvent"))
 		asset := shared.GetAsset(event.Ctx)
 
 		assetVersionName := shared.GetAssetVersion(event.Ctx).Name
@@ -35,19 +39,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := g.dependencyVulnRepository.Read(context.Background(), nil, vulnID)
+			v, err := g.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(context.Background(), nil, vulnID)
+			v, err := g.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), nil, vulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -66,19 +70,20 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			asset.Metadata = map[string]any{}
 		}
 		if asset.Metadata["gitlabLabels"] == nil {
-			err = g.CreateLabels(event.Ctx.Request().Context(), asset)
+			err = g.CreateLabels(ctx, asset)
 			if err != nil {
 				return err
 			}
 			asset.Metadata["gitlabLabels"] = true
-			err = g.assetRepository.Update(context.Background(), nil, &asset)
+			err = g.assetRepository.Update(ctx, nil, &asset)
 			if err != nil {
 				return err
 			}
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
+		return g.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case shared.VulnEvent:
+		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event
 
 		vulnType := ev.VulnType
@@ -86,19 +91,19 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(context.Background(), nil, ev.VulnID)
+			v, err := g.dependencyVulnRepository.Read(ctx, nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(context.Background(), nil, ev.VulnID)
+			v, err := g.firstPartyVulnRepository.Read(ctx, nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(context.Background(), nil, ev.VulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(ctx, nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
@@ -149,14 +154,14 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		switch ev.Type {
 		case dtos.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 		case dtos.EventTypeFalsePositive:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -164,7 +169,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			}
 
 		case dtos.EventTypeReopened:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -172,14 +177,14 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			}
 
 		case dtos.EventTypeComment:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			if err != nil {
 				return err
 			}
 		}
-		return g.UpdateIssue(event.Ctx.Request().Context(), asset, assetVersionSlug, vuln)
+		return g.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
 	}
 	return nil
 }

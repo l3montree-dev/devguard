@@ -116,7 +116,7 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
-	if err = thirdPartyIntegrations.HandleEvent(shared.ManualMitigateEvent{
+	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Justification: j.Justification,
 		Ctx:           ctx,
 	}); err != nil {
@@ -195,7 +195,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 		return err
 	}
 
-	err = thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
 	})

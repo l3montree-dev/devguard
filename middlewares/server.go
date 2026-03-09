@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-"github.com/l3montree-dev/devguard/database/models"
+
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"

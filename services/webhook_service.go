@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/l3montree-dev/devguard/utils"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -48,14 +50,16 @@ const (
 )
 
 type webhookClient struct {
-	URL    string
-	Secret *string
+	URL        string
+	Secret     *string
+	httpClient *http.Client
 }
 
 func NewWebhookService(url string, secret *string) *webhookClient {
 	return &webhookClient{
-		URL:    url,
-		Secret: secret,
+		URL:        url,
+		Secret:     secret,
+		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
@@ -85,7 +89,7 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err = http.DefaultClient.Do(req)
+		resp, err = c.httpClient.Do(req)
 
 		if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return resp, nil

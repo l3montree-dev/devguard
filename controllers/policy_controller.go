@@ -112,7 +112,7 @@ func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 	}
 
 	// include the community managed policies
-	communityPolicies, err := c.policyRepository.FindCommunityManagedPolicies(context.Background(), nil)
+	communityPolicies, err := c.policyRepository.FindCommunityManagedPolicies(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}

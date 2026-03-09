@@ -7,6 +7,8 @@ import (
 	"slices"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -228,7 +230,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 
 	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
 
-	if err = thirdPartyIntegrations.HandleEvent(shared.ManualMitigateEvent{
+	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: j.Comment,
 	}); err != nil {
@@ -345,8 +347,9 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 		}
 	}
 
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 	controller.FireAndForget(func() {
-		err := controller.dependencyVulnService.SyncIssues(context.Background(), org, project, asset, assetVersion, vulns)
+		err := controller.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -412,7 +415,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 		}
 	}
 
-	err = thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
 	})
@@ -474,7 +477,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 			}
 		}
 
-		if err := thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+		if err := thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 			Ctx:   ctx,
 			Event: ev,
 		}); err != nil {

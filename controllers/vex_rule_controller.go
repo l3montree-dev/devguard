@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -197,7 +199,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	tx := c.vexRuleService.Begin(ctx.Request().Context())
- defer tx.Rollback()
+	defer tx.Rollback()
 
 	if err := c.vexRuleService.Create(ctx.Request().Context(), tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
@@ -222,12 +224,13 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		count = 0
 	}
 	// Update artifact risk aggregations in background
-	c.updateArtifactRiskAggregation(asset, vulns)
+	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
 
 	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
 }
 
-func (c *VEXRuleController) updateArtifactRiskAggregation(asset models.Asset, vulns []models.DependencyVuln) {
+func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, asset models.Asset, vulns []models.DependencyVuln) {
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
 	c.FireAndForget(func() {
 		artifacts := map[string]models.Artifact{}
 		for _, vuln := range vulns {
@@ -236,7 +239,7 @@ func (c *VEXRuleController) updateArtifactRiskAggregation(asset models.Asset, vu
 			}
 		}
 		for _, artifact := range artifacts {
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
 			}
 		}
@@ -312,7 +315,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 		}
 
 		// Update artifact risk aggregations in background
-		c.updateArtifactRiskAggregation(asset, vulns)
+		c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
 
 		// Log if rule was just enabled
 		if !wasEnabled {
@@ -366,7 +369,7 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 	}
 
 	// Update artifact risk aggregations in background
-	c.updateArtifactRiskAggregation(asset, vulns)
+	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
 
 	// Count matching vulnerabilities for the response
 	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)

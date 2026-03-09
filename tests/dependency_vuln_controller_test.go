@@ -133,8 +133,8 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			shared.SetAuthAdminClient(ctx, adminClient)
 			shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-			client.On("CreateIssueComment", ctx.Request().Context(), 123, 123, mock.Anything).Return(nil, nil, nil)
-			client.On("EditIssue", ctx.Request().Context(), mock.Anything, mock.Anything, mock.Anything).Return(nil, nil, nil)
+			client.On("CreateIssueComment", mock.Anything, 123, 123, mock.Anything).Return(nil, nil, nil)
+			client.On("EditIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil, nil)
 			// now reopen the dependency vuln
 			err = f.App.DependencyVulnController.CreateEvent(ctx)
 			assert.Nil(t, err)

@@ -67,7 +67,7 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 func NewMitreService(cweRepository shared.CweRepository) mitreService {
 	return mitreService{
 		cweRepository: cweRepository,
-		httpClient:    &http.Client{},
+		httpClient:    &http.Client{Transport: utils.EgressTransport},
 	}
 }
 

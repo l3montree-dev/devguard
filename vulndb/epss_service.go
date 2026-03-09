@@ -12,6 +12,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +26,7 @@ func NewEPSSService(cveRepository shared.CveRepository, cveRelationshipRepositor
 	return epssService{
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		httpClient:                &http.Client{},
+		httpClient:                &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
@@ -148,7 +149,7 @@ func (s epssService) Mirror() error {
 	i := 0
 	for {
 		if i+epssBatchSize < len(cves) {
-			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx,cves[i:i+epssBatchSize])
+			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx, cves[i:i+epssBatchSize])
 			if err != nil {
 				slog.Error("error when trying to save epss information batch")
 				return err
@@ -156,7 +157,7 @@ func (s epssService) Mirror() error {
 			i += epssBatchSize
 		} else {
 			// not enough cves for a whole batch so we just save the rest
-			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx,cves[i:])
+			err := s.cveRepository.UpdateEpssBatch(context.Background(), tx, cves[i:])
 			if err != nil {
 				slog.Error("error when trying to save epss information batch")
 				return err

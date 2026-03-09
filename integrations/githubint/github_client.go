@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type githubClient struct {
@@ -158,7 +159,7 @@ func NewGithubClient(installationID int) (githubClient, error) {
 	}
 
 	// Use installation transport with client.
-	client := github.NewClient(&http.Client{Transport: itr})
+	client := github.NewClient(&http.Client{Transport: otelhttp.NewTransport(utils.EgressRoundTripper{R: itr})})
 
 	return githubClient{
 		Client:                  client,

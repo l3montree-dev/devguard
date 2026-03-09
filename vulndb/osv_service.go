@@ -43,7 +43,7 @@ type osvService struct {
 
 func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository) osvService {
 	return osvService{
-		httpClient:                &http.Client{},
+		httpClient:                &http.Client{Transport: utils.EgressTransport},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,

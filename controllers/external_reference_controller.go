@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -194,7 +196,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 
 	for _, artifact := range artifacts {
 		tx := c.artifactRepository.Begin(ctx.Request().Context())
-  defer tx.Rollback()
+		defer tx.Rollback()
 
 		_, _, vulns, err := c.RunArtifactSecurityLifecycle(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, userID)
 		if err != nil {
@@ -209,15 +211,16 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 			return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
 		}
 
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 		c.FireAndForget(func() {
-			if err := c.dependencyVulnService.SyncIssues(context.Background(), org, project, asset, assetVersion, vulns); err != nil {
+			if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns); err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
 			}
 		})
 
 		c.FireAndForget(func() {
 			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		})

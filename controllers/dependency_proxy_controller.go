@@ -20,7 +20,12 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -28,6 +33,8 @@ const (
 	goProxyURL   = "https://proxy.golang.org"
 	pypiRegistry = "https://pypi.org"
 )
+
+var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
 
 type ProxyType string
 
@@ -55,7 +62,8 @@ func NewDependencyProxyController(
 		maliciousChecker: maliciousChecker,
 		cacheDir:         config.CacheDir,
 		client: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout:   60 * time.Second,
+			Transport: utils.EgressTransport,
 		},
 	}
 }
@@ -63,6 +71,16 @@ func NewDependencyProxyController(
 func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/npm")
+
+	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm",
+		trace.WithAttributes(
+			attribute.String("proxy.ecosystem", "npm"),
+			attribute.String("proxy.path", requestPath),
+			attribute.String("http.method", c.Request().Method),
+		),
+	)
+	defer span.End()
+	c.SetRequest(c.Request().WithContext(ctx))
 
 	// Only allow GET and HEAD for regular npm requests
 	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
@@ -97,6 +115,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 				return d.writeNPMResponse(c, data, requestPath, true)
 			}
 			slog.Warn("Cache integrity verification failed, refetching", "proxy", "npm", "path", requestPath)
@@ -107,9 +126,13 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		slog.Warn("Cache read error", "proxy", "npm", "error", err)
 	}
 
+	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
+
 	// Fetch from upstream
 	data, headers, statusCode, err := d.fetchFromUpstream(NPMProxy, npmRegistry, requestPath, c.Request().Header, nil)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Error fetching from upstream", "proxy", "npm", "error", err)
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
@@ -158,6 +181,15 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/npm")
 
+	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm-audit",
+		trace.WithAttributes(
+			attribute.String("proxy.ecosystem", "npm-audit"),
+			attribute.String("proxy.path", requestPath),
+		),
+	)
+	defer span.End()
+	c.SetRequest(c.Request().WithContext(ctx))
+
 	slog.Info("Proxy npm audit request", "method", c.Request().Method, "path", requestPath, "contentType", c.Request().Header.Get("Content-Type"))
 
 	// Read the request body
@@ -172,6 +204,8 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 	// Fetch and forward directly without caching
 	data, headers, statusCode, err := d.fetchNPMAuditFromUpstream(requestPath, c.Request().Header, bodyBytes)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Error fetching from upstream", "proxy", "npm-audit", "error", err)
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
@@ -191,6 +225,16 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/go")
+
+	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.go",
+		trace.WithAttributes(
+			attribute.String("proxy.ecosystem", "go"),
+			attribute.String("proxy.path", requestPath),
+			attribute.String("http.method", c.Request().Method),
+		),
+	)
+	defer span.End()
+	c.SetRequest(c.Request().WithContext(ctx))
 
 	// Only allow GET and HEAD for Go proxy
 	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
@@ -221,6 +265,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 				return d.writeGoResponse(c, data, requestPath, true)
 			}
 			slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
@@ -231,9 +276,13 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		slog.Warn("Cache read error", "proxy", "go", "error", err)
 	}
 
+	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
+
 	// Fetch from upstream
 	data, headers, statusCode, err := d.fetchFromUpstream(GoProxy, goProxyURL, requestPath, c.Request().Header, nil)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Error fetching from upstream", "proxy", "go", "error", err)
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
@@ -269,6 +318,16 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 	// Get the full path after the prefix
 	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/pypi")
 
+	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.pypi",
+		trace.WithAttributes(
+			attribute.String("proxy.ecosystem", "pypi"),
+			attribute.String("proxy.path", requestPath),
+			attribute.String("http.method", c.Request().Method),
+		),
+	)
+	defer span.End()
+	c.SetRequest(c.Request().WithContext(ctx))
+
 	// Only allow GET and HEAD for PyPI proxy
 	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
@@ -298,6 +357,7 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 				return d.writePyPIResponse(c, data, requestPath, true)
 			}
 			slog.Warn("Cache integrity verification failed, refetching", "proxy", "pypi", "path", requestPath)
@@ -308,9 +368,13 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		slog.Warn("Cache read error", "proxy", "pypi", "error", err)
 	}
 
+	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
+
 	// Fetch from upstream (forward User-Agent and Accept headers for PyPI)
 	data, headers, statusCode, err := d.fetchPyPIFromUpstream(requestPath, c.Request().Header)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		slog.Error("Error fetching from upstream", "proxy", "pypi", "error", err)
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
@@ -758,15 +822,23 @@ func (d *DependencyProxyController) ExtractNPMVersionFromMetadata(data []byte) s
 }
 
 func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
+	span := trace.SpanFromContext(c.Request().Context())
+	span.SetAttributes(
+		attribute.Bool("proxy.malicious_blocked", true),
+		attribute.String("proxy.block_reason", reason),
+	)
+	span.SetStatus(codes.Error, "malicious package blocked")
+
 	c.Response().Header().Set("X-Malicious-Package", "blocked")
 
 	slog.Warn("BLOCKED MALICIOUS PACKAGE", "path", path, "reason", reason)
 
-	// Extract package name from path for metrics
+	// Extract package name from path
 	packageName, _ := d.ParsePackageFromPath(proxyType, path)
 	if packageName == "" {
 		packageName = "unknown"
 	}
+	span.SetAttributes(attribute.String("proxy.package", packageName))
 
 	response := map[string]any{
 		"error":   "Forbidden",

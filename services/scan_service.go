@@ -39,6 +39,10 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
 
@@ -98,6 +102,15 @@ func NewScanService(
 var _ shared.ScanService = &scanService{}
 
 func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.ScanNormalizedSBOM")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("artifact.name", artifact.ArtifactName),
+		attribute.String("asset.slug", asset.Slug),
+		attribute.String("assetVersion.name", assetVersion.Name),
+	)
+
 	// remove all other artifacts from the bom
 	err := normalizedBom.ScopeToArtifact(artifact.ArtifactName)
 	if err != nil {
@@ -108,25 +121,39 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 			return nil, nil, nil, nil
 		}
 		slog.Error("could not scope bom to artifact", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, err
 	}
-	vulns, err := s.sbomScanner.Scan(ctx, normalizedBom)
+
+	scanCtx, scanSpan := otel.Tracer("devguard/services").Start(ctx, "SBOMScanner.Scan")
+	vulns, err := s.sbomScanner.Scan(scanCtx, normalizedBom)
+	scanSpan.SetAttributes(attribute.Int("vulns.found", len(vulns)))
+	scanSpan.End()
 
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, err
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.HandleScanResult(ctx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID)
+	resultCtx, resultSpan := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleScanResult")
+	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID)
+	resultSpan.End()
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, err
 	}
 
 	rules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, asset.ID, assetVersion.Name)
 	if err != nil {
 		slog.Error("failed to fetch VEX rules for asset version", "error", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, fmt.Errorf("failed to fetch VEX rules for asset version: %w", err)
 	}
 
@@ -134,13 +161,29 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 	newState, err = s.vexRuleService.ApplyRulesToExisting(ctx, tx, rules, newState)
 	if err != nil {
 		slog.Error("failed to apply VEX rules to new state", "error", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, fmt.Errorf("failed to apply VEX rules to new state: %w", err)
 	}
+
+	span.SetAttributes(
+		attribute.Int("scan.opened", len(opened)),
+		attribute.Int("scan.closed", len(closed)),
+		attribute.Int("scan.total", len(newState)),
+	)
 
 	return opened, closed, newState, nil
 }
 
 func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleFirstPartyVulnResult")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("scanner.id", scannerID),
+		attribute.String("asset.slug", asset.Slug),
+		attribute.String("assetVersion.name", assetVersion.Name),
+	)
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
@@ -241,6 +284,8 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, nil, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
@@ -250,6 +295,11 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
+	span.SetAttributes(
+		attribute.Int("scan.opened", len(opened)),
+		attribute.Int("scan.closed", len(closed)),
+		attribute.Int("scan.total", len(newState)),
+	)
 	return opened, closed, newState, nil
 }
 
@@ -327,8 +377,10 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 	}
 
 	if len(branchDiff.NewToAllBranches) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
+		// detach from request context but keep the trace for background integration work
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
 		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(shared.FirstPartyVulnsDetectedEvent{
+			if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.FirstPartyVulnsDetectedEvent{
 				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
 				Asset:        shared.ToAssetObject(asset),
 				Project:      shared.ToProjectObject(project),
@@ -350,9 +402,20 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 }
 
 func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+	ctx, span := otel.Tracer("devguard/services").Start(ctx, "scanService.HandleScanResult")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("artifact.name", artifactName),
+		attribute.String("asset.slug", asset.Slug),
+		attribute.String("assetVersion.name", assetVersion.Name),
+		attribute.Int("scan.input_vuln_count", len(vulns)),
+	)
+
 	// scope the sbom to the current artifact only
 	err = sbom.ScopeToArtifact(artifactName)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not scope sbom to artifact")
 	}
 	// create dependencyVulns out of those vulnerabilities - one per unique path
@@ -385,15 +448,25 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(ctx, tx, "system", newState, "", asset)
-
 	if err != nil {
 		slog.Error("could not recalculate raw risk assessment", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return opened, closed, newState, errors.Wrap(err, "could not recalculate raw risk assessment")
 	}
 
+	span.SetAttributes(
+		attribute.Int("scan.opened", len(opened)),
+		attribute.Int("scan.closed", len(closed)),
+		attribute.Int("scan.total", len(newState)),
+	)
+
+	// detach from request context (avoids cancellation on response) but keep the trace
+	linkedCtx := trace.ContextWithSpan(context.Background(), span)
+
 	if len(opened) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
 		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(shared.DependencyVulnsDetectedEvent{
+			if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.DependencyVulnsDetectedEvent{
 				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
 				Asset:        shared.ToAssetObject(asset),
 				Project:      shared.ToProjectObject(project),
@@ -407,7 +480,6 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 			}
 		})
 	}
-
 	return opened, closed, newState, nil
 }
 
@@ -485,7 +557,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 }
 
 func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
-	client := &http.Client{}
+	client := &http.Client{Transport: utils.EgressTransport}
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
 		url = normalize.SanitizeExternalReferencesURL(url)
@@ -567,7 +639,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 }
 
 func (s *scanService) FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) (vexReports []*normalize.VexReport, valid []models.ExternalReference, invalid []models.ExternalReference) {
-	client := &http.Client{}
+	client := &http.Client{Transport: utils.EgressTransport}
 	//check if the upstream urls are valid urls
 	for _, ref := range upstreamURLs {
 		switch ref.Type {

@@ -398,16 +398,16 @@ func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.O
 }
 
 // HandleEvent provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HandleEvent(event any) error {
-	ret := _mock.Called(event)
+func (_mock *IntegrationAggregate) HandleEvent(ctx context.Context, event any) error {
+	ret := _mock.Called(ctx, event)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleEvent")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(any) error); ok {
-		r0 = returnFunc(event)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, any) error); ok {
+		r0 = returnFunc(ctx, event)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -420,19 +420,25 @@ type IntegrationAggregate_HandleEvent_Call struct {
 }
 
 // HandleEvent is a helper method to define mock.On call
+//   - ctx context.Context
 //   - event any
-func (_e *IntegrationAggregate_Expecter) HandleEvent(event interface{}) *IntegrationAggregate_HandleEvent_Call {
-	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", event)}
+func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx interface{}, event interface{}) *IntegrationAggregate_HandleEvent_Call {
+	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event)}
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(event any)) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(ctx context.Context, event any)) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 any
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(any)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 any
+		if args[1] != nil {
+			arg1 = args[1].(any)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -443,7 +449,7 @@ func (_c *IntegrationAggregate_HandleEvent_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(event any) error) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(ctx context.Context, event any) error) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Return(run)
 	return _c
 }

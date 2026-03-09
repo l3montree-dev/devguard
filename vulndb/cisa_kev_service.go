@@ -11,6 +11,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
 
@@ -24,7 +25,7 @@ func NewCISAKEVService(cveRepository shared.CveRepository, cveRelationshipReposi
 	return cisaKEVService{
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		httpClient:                &http.Client{},
+		httpClient:                &http.Client{Transport: utils.EgressTransport},
 	}
 }
 

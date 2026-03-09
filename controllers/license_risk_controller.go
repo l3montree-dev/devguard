@@ -175,7 +175,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 
 	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
 
-	err = thirdPartyIntegrations.HandleEvent(shared.ManualMitigateEvent{
+	err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: justification.Comment,
 	})
@@ -221,7 +221,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
-	err = thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: event,
 	})

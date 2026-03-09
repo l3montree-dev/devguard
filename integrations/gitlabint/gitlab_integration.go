@@ -26,7 +26,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
+
+var gitlabTracer = otel.Tracer("devguard/integrations/gitlab")
 
 type gitlabRepository struct {
 	*gitlab.Project
@@ -1229,18 +1233,24 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 }
 
 func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.UpdateIssue")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("asset.slug", asset.Slug),
+		attribute.String("vuln.type", string(vuln.GetType())),
+	)
 	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		return err
 	}
 
-	project, err := g.projectRepository.GetProjectByAssetID(context.Background(), nil, asset.ID)
+	project, err := g.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
 
-	org, err := g.orgRepository.GetOrgByID(context.Background(), nil, project.OrganizationID)
+	org, err := g.orgRepository.GetOrgByID(ctx, nil, project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
@@ -1365,6 +1375,14 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(asset models.Asset) (shared.Gi
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.CreateIssue")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("asset.slug", asset.Slug),
+		attribute.String("vuln.type", string(vuln.GetType())),
+		attribute.String("project.slug", projectSlug),
+		attribute.String("org.slug", orgSlug),
+	)
 	client, projectID, err := g.GetClientBasedOnAsset(asset)
 	if err != nil {
 		if errors.Is(err, notConnectedError) {

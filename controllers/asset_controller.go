@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -339,14 +341,15 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			}
 		}
 
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 		a.FireAndForget(func() {
-			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
+			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(linkedCtx, nil, asset.ID)
 			if err != nil {
 				slog.Error("could not get default asset version", "err", err)
 				return
 			}
 
-			if err := a.dependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, defaultAssetVersion); err != nil {
+			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		})

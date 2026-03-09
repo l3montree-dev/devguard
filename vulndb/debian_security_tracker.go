@@ -72,7 +72,7 @@ type debianJSONResponse = map[string]map[string]debianCVE
 
 func NewDebianSecurityTracker(affectedCmpRepository shared.AffectedComponentRepository) debianSecurityTracker {
 	return debianSecurityTracker{
-		httpClient:            &http.Client{},
+		httpClient:            &http.Client{Transport: utils.EgressTransport},
 		affectedCmpRepository: affectedCmpRepository,
 	}
 }

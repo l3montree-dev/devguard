@@ -122,6 +122,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})
 }
+
 // @Summary Create webhook integration
 // @Tags Webhooks
 // @Security CookieAuth
@@ -286,11 +287,11 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 	})
 }
 
-func (w *WebhookController) HandleEvent(event any) error {
+func (w *WebhookController) HandleEvent(ctx context.Context, event any) error {
 
 	switch event := event.(type) {
 	case shared.SBOMCreatedEvent:
-		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(context.Background(), nil, event.Org.ID, event.Project.ID)
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(ctx, nil, event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
 			return err
@@ -300,7 +301,7 @@ func (w *WebhookController) HandleEvent(event any) error {
 			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.SbomEnabled {
 				//send sbom
-				if err := client.SendSBOM(context.Background(), *event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
+				if err := client.SendSBOM(ctx, *event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send SBOM to webhook", "webhookID", webhook.ID, "err", err)
 				}
 				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
@@ -310,7 +311,7 @@ func (w *WebhookController) HandleEvent(event any) error {
 
 		vulns := event.Vulns.([]dtos.FirstPartyVulnDTO)
 
-		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(context.Background(), nil, event.Org.ID, event.Project.ID)
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(ctx, nil, event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
 			return err
@@ -320,7 +321,7 @@ func (w *WebhookController) HandleEvent(event any) error {
 			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.VulnEnabled {
 				//send vulnerability
-				if err := client.SendFirstPartyVulnerabilities(context.Background(), vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
+				if err := client.SendFirstPartyVulnerabilities(ctx, vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
 					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
 				}
 				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)
@@ -331,7 +332,7 @@ func (w *WebhookController) HandleEvent(event any) error {
 
 		vulns := event.Vulns.([]dtos.DependencyVulnDTO)
 
-		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(context.Background(), nil, event.Org.ID, event.Project.ID)
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(ctx, nil, event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
 			return err
@@ -341,7 +342,7 @@ func (w *WebhookController) HandleEvent(event any) error {
 			client := services.NewWebhookService(webhook.URL, webhook.Secret)
 			if webhook.VulnEnabled {
 				//send vulnerability
-				if err := client.SendDependencyVulnerabilities(context.Background(), vulns, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
+				if err := client.SendDependencyVulnerabilities(ctx, vulns, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
 				}
 				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)

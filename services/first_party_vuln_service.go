@@ -8,7 +8,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -195,6 +194,5 @@ func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.As
 	if err != nil {
 		return err
 	}
-	monitoring.TicketUpdatedAmount.Inc()
 	return nil
 }

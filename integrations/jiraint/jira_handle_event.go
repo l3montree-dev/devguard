@@ -16,7 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func (i *JiraIntegration) HandleEvent(event any) error {
+func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 	switch event := event.(type) {
 	case shared.ManualMitigateEvent:
 		asset := shared.GetAsset(event.Ctx)
@@ -47,13 +47,13 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := i.dependencyVulnRepository.Read(context.Background(), nil, vulnID)
+			v, err := i.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(context.Background(), nil, vulnID)
+			v, err := i.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -80,13 +80,13 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		case dtos.VulnTypeLicenseRisk:
 			return nil
 		case dtos.VulnTypeDependencyVuln:
-			v, err := i.dependencyVulnRepository.Read(context.Background(), nil, ev.VulnID)
+			v, err := i.dependencyVulnRepository.Read(ctx, nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(context.Background(), nil, ev.VulnID)
+			v, err := i.firstPartyVulnRepository.Read(ctx, nil, ev.VulnID)
 			if err != nil {
 				return err
 			}
@@ -212,7 +212,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 
 		}
-		return i.UpdateIssue(context.Background(), asset, assetVersionSlug, vuln)
+		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
 	}
 	return nil
 

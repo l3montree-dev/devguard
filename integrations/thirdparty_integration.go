@@ -216,11 +216,11 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
 	})
 }
 
-func (t *thirdPartyIntegrations) HandleEvent(event any) error {
+func (t *thirdPartyIntegrations) HandleEvent(ctx context.Context, event any) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.HandleEvent(event)
+			return struct{}{}, i.HandleEvent(ctx, event)
 		})
 	}
 

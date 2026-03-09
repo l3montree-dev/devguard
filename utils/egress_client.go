@@ -20,21 +20,26 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/config"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
+// EgressTransport is the shared RoundTripper for all outgoing HTTP calls.
+// It adds User-Agent and OpenTelemetry trace propagation headers.
+var EgressTransport http.RoundTripper = otelhttp.NewTransport(EgressRoundTripper{
+	R: http.DefaultTransport,
+})
+
 var EgressClient = http.Client{
-	Timeout: 30 * time.Second,
-	Transport: EgressRoundTripper{
-		r: http.DefaultTransport,
-	},
+	Timeout:   30 * time.Second,
+	Transport: EgressTransport,
 }
 
 type EgressRoundTripper struct {
-	r http.RoundTripper
+	R http.RoundTripper
 }
 
 func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("User-Agent", config.UserAgent)
 
-	return mrt.r.RoundTrip(r)
+	return mrt.R.RoundTrip(r)
 }

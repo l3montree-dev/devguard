@@ -8,7 +8,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/licenses"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -50,8 +49,7 @@ func combineNamespaceAndName(namespace, name string) string {
 
 func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject) {
 	projectKey := project.ProjectKey
-	projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
-
+	projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
 	if err != nil {
 		slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 		return
@@ -80,7 +78,6 @@ func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Contex
 		slog.Warn("could not save project", "err", err)
 	} else {
 		slog.Info("updated project", "projectKey", projectKey)
-		monitoring.OpenSourceInsightProjectUpdatedAmount.Inc()
 	}
 }
 
@@ -113,7 +110,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 		}
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
-			context.Background(),
+			ctx,
 			parsedPurl.Type,
 			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
 			parsedPurl.Version,
@@ -143,7 +140,7 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 	}
 
 	resp, err := s.openSourceInsightsService.GetVersion(
-		context.Background(),
+		ctx,
 		parsedPurl.Type,
 		combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
 		parsedPurl.Version,
@@ -157,7 +154,7 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 		if project.RelationType == "SOURCE_REPO" {
 			projectKey := project.ProjectKey.ID
 
-			projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
+			projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
 			if err != nil {
 				slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 				return component, nil

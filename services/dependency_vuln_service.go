@@ -24,7 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -363,6 +362,5 @@ func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.As
 	if err != nil {
 		return err
 	}
-	monitoring.TicketUpdatedAmount.Inc()
 	return nil
 }
