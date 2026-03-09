@@ -544,6 +544,7 @@ type StatisticsRepository interface {
 	GetComponentDistribututionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
 	FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)
 	GetAverageAgeOfDependenciesAcrossOrgs(orgID uuid.UUID) (time.Duration, error)
+	GetAverageRemediationTimesAcrossOrg(orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
 }
 
 type ArtifactRiskHistoryRepository interface {

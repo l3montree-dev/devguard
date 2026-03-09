@@ -166,6 +166,18 @@ type MaliciousPackageInOrg struct {
 	MaliciousPackageID string `json:"maliciousPackageID"`
 }
 
+type AverageRemediationTimes struct {
+	LowRiskAverage      float64 `json:"lowRiskAverage" gorm:"column:low_risk_average"`
+	MediumRiskAverage   float64 `json:"mediumRiskAverage" gorm:"column:medium_risk_average"`
+	HighRiskAverage     float64 `json:"highRiskAverage" gorm:"column:high_risk_average"`
+	CriticalRiskAverage float64 `json:"criticalRiskAverage" gorm:"column:critical_risk_average"`
+
+	LowCVSSAverage      float64 `json:"lowCVSSAverage" gorm:"column:low_cvss_average"`
+	MediumCVSSAverage   float64 `json:"mediumCVSSAverage" gorm:"column:medium_cvss_average"`
+	HighCVSSAverage     float64 `json:"highCVSSAverage" gorm:"column:high_cvss_average"`
+	CriticalCVSSAverage float64 `json:"criticalCVSSAverage" gorm:"column:critical_cvss_average"`
+}
+
 type OrgOverview struct {
 	VulnDistribution VulnDistribution `json:"vulnDistribution"`
 
@@ -186,4 +198,5 @@ type OrgOverview struct {
 
 	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
 	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies"`
+	AverageRemediationTimes  AverageRemediationTimes `json:"averageRemediationTimes"`
 }

@@ -327,6 +327,11 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return err
 	}
 
+	averageRemediations, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(org.ID)
+	if err != nil {
+		return err
+	}
+
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage:               vulnEventAverageDistribution,
 		VulnDistribution:               distribution,
@@ -342,6 +347,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		TopEcosystems:                  topEcosystems,
 		MaliciousPackages:              maliciousPackages,
 		AverageAgeOfDependencies:       averageAge,
+		AverageRemediationTimes:        averageRemediations,
 	}
 
 	return ctx.JSON(200, orgStatistics)

@@ -740,3 +740,65 @@ func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrgs(orgID uuid.
 		);`, orgID).Find(&seconds).Error
 	return time.Duration(seconds), err
 }
+
+func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
+	averages := dtos.AverageRemediationTimes{}
+	err := r.db.Raw(`
+	WITH events AS (
+    	SELECT
+			dependency_vulns.id,
+			dependency_vulns.component_purl,
+			dependency_vulns.raw_risk_assessment,
+			c.cvss,                                     
+			fe.type,
+			fe.created_at,
+			LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
+			LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
+			LEAD(fe.type)      OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
+		FROM
+			dependency_vulns
+		JOIN
+			vuln_events fe ON dependency_vulns.id = fe.vuln_id
+		LEFT JOIN                                        
+			cves c ON dependency_vulns.cve_id = c.cve   
+		LEFT JOIN 
+			assets ON assets.id = dependency_vulns.asset_id
+  		LEFT JOIN 
+			projects ON assets.project_id = projects.id
+		WHERE 
+			fe.type IN ?
+		AND 
+			projects.organization_id = ?
+	),
+	intervals AS (
+		SELECT
+			id,
+			component_purl,
+			raw_risk_assessment,
+			cvss,
+			COALESCE(next_type, type) AS type,
+			prev_type,
+			prev_created_at,
+			CASE
+				WHEN next_type IS NULL THEN NOW() - prev_created_at
+				ELSE created_at - prev_created_at
+			END AS fixing_time
+		FROM
+			events
+		WHERE
+			prev_type IN ?
+	)
+	SELECT
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4))  AS low_risk_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7))  AS medium_risk_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9))  AS high_risk_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)) AS critical_risk_average,
+
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4))  AS low_cvss_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7))  AS medium_cvss_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9))  AS high_cvss_average,
+		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)) AS critical_cvss_average
+	FROM
+		intervals;`, append(fixedEvents, openEvents...), orgID, openEvents).Find(&averages).Error
+	return averages, err
+}
