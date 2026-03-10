@@ -72,6 +72,10 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 		return nil, err
 	}
 
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
 	return &newAsset, nil
 }
 

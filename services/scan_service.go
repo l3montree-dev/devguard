@@ -574,7 +574,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 		}
 
 		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 		defer cancel()
 		// fetch the file from the url
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -676,7 +676,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, upstreamURLs []m
 			}
 
 			var bom cyclonedx.BOM
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 			defer cancel()
 			// fetch the file from the url
 			req, err := http.NewRequestWithContext(ctx, "GET", ref.URL, nil)

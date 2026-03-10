@@ -103,7 +103,7 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 			return nil
 		}
 
-		client, projectID, err := i.getClientBasedOnAsset(asset)
+		client, projectID, err := i.getClientBasedOnAsset(ctx, asset)
 		if err != nil {
 			return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 		}

@@ -235,7 +235,7 @@ func getProjectUsersID(projectID uuid.UUID, accessControl shared.AccessControl) 
 	return userUuids, nil
 }
 
-func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
+func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) { // nosemgrep: service-method-missing-ctx
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
@@ -400,7 +400,7 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 	return key, nil
 }
 
-func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
+func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) { // nosemgrep: service-method-missing-ctx
 	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }

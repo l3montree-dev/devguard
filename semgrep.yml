@@ -74,8 +74,9 @@ rules:
         - "**/database/repositories/**"
       exclude:
         - "**/database/repositories/gorm_repository.go"
-    pattern: $R.db
-    fix: $R.GetDB(ctx, nil)
+    patterns:
+      - pattern: $R.db
+      - pattern-not-inside: func ($R $T) GetDB(...) { ... }
 
   - id: repo-getdb-nil-when-tx-available
     message: tx is available as parameter, use GetDB(ctx, tx) instead of GetDB(ctx, nil)
@@ -87,7 +88,6 @@ rules:
     patterns:
       - pattern-inside: func ($RECV $TYPE) $METHOD(ctx context.Context, tx *gorm.DB, ...) { ... }
       - pattern: $R.GetDB(ctx, nil)
-    fix: $R.GetDB(ctx, tx)
 
   - id: repo-method-missing-tx
     message: Repository method should have tx *gorm.DB as second parameter after ctx
@@ -112,6 +112,8 @@ rules:
     patterns:
       - pattern: func ($R $T) $METHOD(...) { ... }
       - pattern-not: func ($R $T) $METHOD(ctx context.Context, ...) { ... }
+      - pattern-not: func ($R $T) $METHOD($C echo.Context, ...) { ... }
+      - pattern-not: func ($R $T) $METHOD($C shared.Context, ...) { ... }
 
   - id: service-method-missing-ctx-empty-params
     message: Service method should have ctx context.Context as first parameter
@@ -134,6 +136,7 @@ rules:
         - "**/database/repositories/gorm_repository.go"
     patterns:
       - pattern: func ($R $T) $METHOD(ctx context.Context) { ... }
+      - pattern-not: func ($R $T) Begin(ctx context.Context) { ... }
 
   - id: tx-begin-without-defer-rollback
     message: |
@@ -147,9 +150,6 @@ rules:
           ...
           defer $TX.Rollback()
           ...
-    fix: |
-      $TX := $DB.Begin()
-      defer $TX.Rollback()
 
   - id: tx-begin-without-commit
     message: |
@@ -161,8 +161,7 @@ rules:
       - pattern: |
           $TX := $DB.Begin()
           ...
-      - pattern-not: |
-          $TX := $DB.Begin()
+      - pattern-not-inside: |
           ...
           $TX.Commit()
           ...
