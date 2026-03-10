@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -24,35 +25,35 @@ func NewCVERepository(db *gorm.DB) *cveRepository {
 	}
 }
 
-func (g *cveRepository) GetLastModDate() (time.Time, error) {
+func (g *cveRepository) GetLastModDate(ctx context.Context, tx *gorm.DB) (time.Time, error) {
 	var cve models.CVE
-	err := g.db.Order("date_last_modified desc").First(&cve).Error
+	err := g.GetDB(ctx, tx).Order("date_last_modified desc").First(&cve).Error
 
 	return cve.DateLastModified, err
 }
 
-func (g *cveRepository) FindByID(id string) (models.CVE, error) {
+func (g *cveRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.CVE, error) {
 	var t models.CVE
-	err := g.db.First(&t, "cve = ?", id).Error
+	err := g.GetDB(ctx, tx).First(&t, "cve = ?", id).Error
 
 	return t, err
 }
 
-func (g *cveRepository) GetAllCVEsID() ([]string, error) {
+func (g *cveRepository) GetAllCVEsID(ctx context.Context, tx *gorm.DB) ([]string, error) {
 	var cvesID []string
-	err := g.db.Model(&models.CVE{}).
+	err := g.GetDB(ctx, tx).Model(&models.CVE{}).
 		Pluck("cve", &cvesID).
 		Error
 	return cvesID, err
 }
 
-func (g *cveRepository) FindAll(cveIDs []string) ([]models.CVE, error) {
+func (g *cveRepository) FindAll(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
-	err := g.db.Find(&cves, "cve IN ?", cveIDs).Error
+	err := g.GetDB(ctx, tx).Find(&cves, "cve IN ?", cveIDs).Error
 	return cves, err
 }
 
-func (g *cveRepository) SaveCveAffectedComponents(tx *gorm.DB, cveID string, affectedComponentHashes []string) error {
+func (g *cveRepository) SaveCveAffectedComponents(ctx context.Context, tx *gorm.DB, cveID string, affectedComponentHashes []string) error {
 
 	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c string) string {
 		return c
@@ -63,7 +64,7 @@ func (g *cveRepository) SaveCveAffectedComponents(tx *gorm.DB, cveID string, aff
 	})
 
 	// add cpeCveMatches to the cve
-	m := g.GetDB(tx).Session(&gorm.Session{
+	m := g.GetDB(ctx, tx).Session(&gorm.Session{
 		// disable logging
 		// it might log slow queries or a missing cve.
 		Logger:               logger.Default.LogMode(logger.Silent),
@@ -75,8 +76,8 @@ func (g *cveRepository) SaveCveAffectedComponents(tx *gorm.DB, cveID string, aff
 	return assoc.Append(&affectedComponents)
 }
 
-func (g *cveRepository) createInBatches(tx *gorm.DB, cves []models.CVE, batchSize int) error {
-	err := g.GetDB(tx).Session(
+func (g *cveRepository) createInBatches(ctx context.Context, tx *gorm.DB, cves []models.CVE, batchSize int) error {
+	err := g.GetDB(ctx, tx).Session(
 		&gorm.Session{
 			Logger:               logger.Default.LogMode(logger.Silent),
 			FullSaveAssociations: true,
@@ -94,7 +95,7 @@ func (g *cveRepository) createInBatches(tx *gorm.DB, cves []models.CVE, batchSiz
 			// this will be slow but it will work
 			for _, cve := range cves {
 				tmpCVE := cve
-				if err := g.GetDB(tx).Session(
+				if err := g.GetDB(ctx, tx).Session(
 					&gorm.Session{
 						Logger:               logger.Default.LogMode(logger.Silent),
 						FullSaveAssociations: true,
@@ -110,44 +111,42 @@ func (g *cveRepository) createInBatches(tx *gorm.DB, cves []models.CVE, batchSiz
 			return nil
 		}
 		slog.Warn("protocol error, trying to reduce batch size", "newBatchSize", newBatchSize, "oldBatchSize", batchSize, "err", err)
-		return g.createInBatches(tx, cves, newBatchSize)
+		return g.createInBatches(ctx, tx, cves, newBatchSize)
 	}
 	return err
 }
 
-func (g *cveRepository) SaveBatch(tx *gorm.DB, cves []models.CVE) error {
-	return g.createInBatches(tx, cves, 1000)
+func (g *cveRepository) SaveBatch(ctx context.Context, tx *gorm.DB, cves []models.CVE) error {
+	return g.createInBatches(ctx, tx, cves, 1000)
 }
 
-func (g *cveRepository) Save(tx *gorm.DB, cve *models.CVE) error {
-	return g.GetDB(tx).Clauses(
+func (g *cveRepository) Save(ctx context.Context, tx *gorm.DB, cve *models.CVE) error {
+	return g.GetDB(ctx, tx).Clauses(
 		clause.OnConflict{
 			UpdateAll: true,
 		},
 	).Save(cve).Error
 }
 
-func (g *cveRepository) FindAllListPaged(tx *gorm.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
+func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	var count int64
 	var cves = []models.CVE{}
 
-	q := g.GetDB(tx).Model(&models.CVE{})
+	q := g.GetDB(ctx, tx).Model(&models.CVE{})
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
-	q = q.Where("cvss > 0")
 	q.Count(&count)
 
 	// get all cves
-	q = pageInfo.ApplyOnDB(g.GetDB(tx))
+	q = pageInfo.ApplyOnDB(g.GetDB(ctx, tx))
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
-	q = q.Where("cvss > 0")
 
 	// apply sorting
 	if len(sort) > 0 {
@@ -166,11 +165,11 @@ func (g *cveRepository) FindAllListPaged(tx *gorm.DB, pageInfo shared.PageInfo, 
 	return shared.NewPaged(pageInfo, count, cves), nil
 }
 
-func (g *cveRepository) FindCVE(tx *gorm.DB, cveID string) (models.CVE, error) {
+func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) (models.CVE, error) {
 
 	var cves models.CVE
 
-	q := g.GetDB(tx).Model(&models.CVE{})
+	q := g.GetDB(ctx, tx).Model(&models.CVE{})
 
 	q = q.Where("cve = ?", cveID)
 
@@ -185,21 +184,21 @@ func (g *cveRepository) FindCVE(tx *gorm.DB, cveID string) (models.CVE, error) {
 // this method is used inside the risk_daemon to get all cves.
 // we need this to run FAST. Do not add any preloading here (except exploits). We do not need it in the risk_daemons.
 // create your own method if you need preloading.
-func (g *cveRepository) FindCVEs(tx *gorm.DB, cveIds []string) ([]models.CVE, error) {
+func (g *cveRepository) FindCVEs(ctx context.Context, tx *gorm.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
 
-	err := g.GetDB(tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
+	err := g.GetDB(ctx, tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
 
-func (g *cveRepository) CreateCVEWithConflictHandling(tx *gorm.DB, cve *models.CVE) error {
-	return g.GetDB(tx).Clauses(clause.OnConflict{
+func (g *cveRepository) CreateCVEWithConflictHandling(ctx context.Context, tx *gorm.DB, cve *models.CVE) error {
+	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "cve"}},
 		UpdateAll: true,
 	}).Create(cve).Error
 }
 
-func (g *cveRepository) CreateCVEAffectedComponentsEntries(tx *gorm.DB, cve *models.CVE, components []models.AffectedComponent) error {
+func (g *cveRepository) CreateCVEAffectedComponentsEntries(ctx context.Context, tx *gorm.DB, cve *models.CVE, components []models.AffectedComponent) error {
 	cves := make([]string, len(components))
 	affectedComponents := make([]string, len(components))
 
@@ -214,11 +213,11 @@ func (g *cveRepository) CreateCVEAffectedComponentsEntries(tx *gorm.DB, cve *mod
 	unnest($2::text[])
 	ON CONFLICT DO NOTHING`
 
-	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, affectedComponents, cves).Error
+	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, affectedComponents, cves).Error
 }
 
 // this function is used by the epss mirror function to update the epss information for all cves
-func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
+func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch []models.CVE) error {
 	ids := make([]string, len(batch))
 	epss := make([]float64, len(batch))
 	percentiles := make([]float32, len(batch))
@@ -243,11 +242,11 @@ func (g *cveRepository) UpdateEpssBatch(tx *gorm.DB, batch []models.CVE) error {
 	) as new
 	WHERE cves.cve = new.cve;`
 	// avoid slow sql log
-	return g.GetDB(tx).Exec(sql, ids, epss, percentiles).Error
+	return g.GetDB(ctx, tx).Exec(sql, ids, epss, percentiles).Error
 }
 
 // this function is used by the CISA KEV mirror function to update the KEV information for all cves
-func (g *cveRepository) UpdateCISAKEVBatch(tx *gorm.DB, batch []models.CVE) error {
+func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, batch []models.CVE) error {
 	ids := make([]string, len(batch))
 	exploitAdds := make([]any, len(batch))
 	actionDues := make([]any, len(batch))
@@ -280,5 +279,5 @@ func (g *cveRepository) UpdateCISAKEVBatch(tx *gorm.DB, batch []models.CVE) erro
 	) as new
 	WHERE cves.cve = new.cve;`
 
-	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, exploitAdds, actionDues, requiredActions, vulnNames).Error
+	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, exploitAdds, actionDues, requiredActions, vulnNames).Error
 }

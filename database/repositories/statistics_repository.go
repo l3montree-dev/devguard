@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,26 +22,33 @@ func NewStatisticsRepository(db *gorm.DB) *statisticsRepository {
 	}
 }
 
+func (r *statisticsRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
+	}
+	return r.db.WithContext(ctx)
+}
+
 // returns all dependencyVulns for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
+func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
 	dependencyVulns := []models.DependencyVuln{}
 	var err error
 	if artifactName == nil && assetVersionName == nil {
-		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
 			Where("dependency_vulns.asset_id = ?", assetID).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	} else if artifactName != nil {
-		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
 			Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	} else {
-		err = r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
@@ -49,18 +57,23 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(artifactName *strin
 		return nil, err
 	}
 
-	// now remove all events of the dependencyVulns, which were created after the given time
-	for _, dependencyVuln := range dependencyVulns {
-		// get the last event of the dependencyVuln based on the created_at timestamp.
-		tmpDependencyVuln := dependencyVuln
+	return replayHistoricalEvents(dependencyVulns), nil
+}
 
-		events := dependencyVuln.Events
-		// iterate through all events and apply them
-		for _, event := range events {
-			statemachine.Apply(&tmpDependencyVuln, event)
+// replayHistoricalEvents reconstructs the historical state of each
+// DependencyVuln by replaying its (already time-filtered) Events in order.
+// The State field is reset to the zero value before replay so that
+// EventTypeDetected can correctly set state to "open" even when the current
+// persisted state is "fixed" (the statemachine guard that protects fixed /
+// accepted vulns from being re-opened by detected events must not apply here).
+func replayHistoricalEvents(dependencyVulns []models.DependencyVuln) []models.DependencyVuln {
+	for i := range dependencyVulns {
+		dependencyVulns[i].State = "" // start from neutral state for correct replay
+		for _, event := range dependencyVulns[i].Events {
+			statemachine.Apply(&dependencyVulns[i], event)
 		}
 	}
-	return dependencyVulns, nil
+	return dependencyVulns
 }
 
 var fixedEvents = []dtos.VulnEventType{
@@ -74,7 +87,7 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTime(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
@@ -82,7 +95,7 @@ func (r *statisticsRepository) AverageFixingTime(artifactName *string, assetVers
 	var err error
 
 	if artifactName == nil {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -96,7 +109,6 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
         fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
@@ -121,7 +133,7 @@ SELECT
 FROM
     intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
 	} else {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -135,9 +147,13 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
+	JOIN (
+		SELECT DISTINCT dependency_vuln_id
+		FROM artifact_dependency_vulns 
+		WHERE artifact_artifact_name = ? 
+		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment < ?
 ),
 intervals AS (
    SELECT
@@ -158,7 +174,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
 	}
 
 	if err != nil {
@@ -182,14 +198,14 @@ FROM
 	return fixingTime, nil
 }
 
-func (r *statisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTimeForRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
 
 	// This query mirrors AverageFixingTime but limits dependency_vulns to those matching artifacts
 	// that are part of the release tree (release_items), using a recursive CTE to collect child releases.
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 WITH RECURSIVE release_tree AS (
 	SELECT id FROM releases WHERE id = ?
 	UNION ALL
@@ -249,7 +265,7 @@ FROM
 	return fixingTime, nil
 }
 
-func (r *statisticsRepository) AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTimeByCvss(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
@@ -257,7 +273,7 @@ func (r *statisticsRepository) AverageFixingTimeByCvss(artifactName *string, ass
 	var err error
 
 	if artifactName == nil {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -271,7 +287,6 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
         fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
@@ -297,7 +312,7 @@ SELECT
 FROM
     intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
 	} else {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -311,10 +326,14 @@ WITH events AS (
         dependency_vulns
     JOIN
         vuln_events fe ON dependency_vulns.id = fe.vuln_id
-	JOIN artifact_dependency_vulns adv ON dependency_vulns.id = adv.dependency_vuln_id
+	JOIN (
+		SELECT DISTINCT dependency_vuln_id
+		FROM artifact_dependency_vulns 
+		WHERE artifact_artifact_name = ? 
+		) as adv ON dependency_vulns.id = adv.dependency_vuln_id
 	JOIN cves c ON dependency_vulns.cve_id = c.cve
     WHERE
-        fe.type IN ? AND adv.artifact_artifact_name = ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND c.cvss >= ? AND c.cvss < ?
 ),
 intervals AS (
    SELECT
@@ -335,7 +354,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
+    intervals`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd, openEvents).Find(&results).Error
 	}
 
 	if err != nil {
@@ -359,14 +378,14 @@ FROM
 	return fixingTime, nil
 }
 
-func (r *statisticsRepository) AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTimeByCvssForRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
 
 	// This query mirrors AverageFixingTimeByCvss but limits dependency_vulns to those matching artifacts
 	// that are part of the release tree (release_items), using a recursive CTE to collect child releases.
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 WITH RECURSIVE release_tree AS (
 	SELECT id FROM releases WHERE id = ?
 	UNION ALL
@@ -427,11 +446,11 @@ FROM
 	return fixingTime, nil
 }
 
-func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error) {
+func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion) ([]models.CVE, error) {
 	var cves []models.CVE
 
 	//Query to find all CVE in the vulnerabilities for which an exploit exists
-	err := r.db.Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
+	err := r.GetDB(ctx, tx).Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
 	if err != nil {
 		return cves, err
 	}
@@ -442,9 +461,9 @@ func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion 
 
 // TO-DO refactor to dtos
 
-func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.VulnDistribution, error) {
+func (r *statisticsRepository) VulnClassificationByOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.VulnDistribution, error) {
 	distribution := dtos.VulnDistribution{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 		COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
@@ -466,9 +485,9 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Vu
 	return distribution, nil
 }
 
-func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
+func (r *statisticsRepository) GetOrgStructureDistribution(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
 	structure := dtos.OrgStructureDistribution{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 			SELECT 
 				COUNT(DISTINCT(p.id)) as num_projects, 
 				COUNT(DISTINCT(a.id)) as num_assets, 
@@ -484,9 +503,9 @@ func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dto
 	return structure, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
 	projects := []dtos.VulnDistributionInStructure{}
-	err := r.db.Raw(`SELECT c.name, c.slug,
+	err := r.GetDB(ctx, tx).Raw(`SELECT c.name, c.slug,
 			 COUNT(*) as total,
 			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
@@ -507,9 +526,9 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, l
 	return projects, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
 	assets := []dtos.VulnDistributionInStructure{}
-	err := r.db.Raw(`SELECT b.name, b.slug, c.slug as project_slug,
+	err := r.GetDB(ctx, tx).Raw(`SELECT b.name, b.slug, c.slug as project_slug,
 			 COUNT(*) as total,
 			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
@@ -530,9 +549,9 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, lim
 	return assets, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
 	artifacts := []dtos.VulnDistributionInStructure{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		art.artifact_artifact_name as name, 
 		art.artifact_artifact_name as slug, 
@@ -569,9 +588,9 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, 
 	return artifacts, err
 }
 
-func (r *statisticsRepository) GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
+func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
 	components := []dtos.ComponentUsageAcrossOrg{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.dependency_id as purl, 
 	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
 	FROM component_dependencies a
@@ -584,9 +603,9 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(orgID uuid.UUID, limit
 	return components, err
 }
 
-func (r *statisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
+func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
 	topCVEs := []dtos.CVEOccurrencesAcrossOrg{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.cve_id, 
 	cves.cvss,
 	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
@@ -627,9 +646,9 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID)
 	return averageByType, err
 }
 
-func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(orgID uuid.UUID) (float32, error) {
+func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (float32, error) {
 	var average float32
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		AVG(count) 
 	FROM 
@@ -650,9 +669,9 @@ func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(o
 	return average, err
 }
 
-func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
+func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
 	projectAverage := dtos.ProjectVulnCountAverageBySeverity{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 		SELECT 
 			AVG(sub.risk_low) risk_low_average, 
 			AVG(sub.risk_medium) risk_medium_average, 
@@ -691,9 +710,9 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 	return projectAverage, err
 }
 
-func (r *statisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+func (r *statisticsRepository) GetComponentDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
 	distribution := []dtos.ComponentOccurrenceCount{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
     	a.dependency_id,
     	COUNT(DISTINCT (a.asset_id, a.asset_version_name))
@@ -712,9 +731,9 @@ func (r *statisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID) ([
 	return distribution, err
 }
 
-func (r *statisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
+func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
 	packages := []dtos.MaliciousPackageInOrg{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		a.malicious_package_id,
 		b.dependency_id as component,
@@ -735,9 +754,9 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dt
 	return packages, err
 }
 
-func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.UUID) (time.Duration, error) {
+func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (time.Duration, error) {
 	var seconds float64
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		COALESCE(EXTRACT(EPOCH FROM (AVG(NOW() - published))),0) as seconds
 	FROM (
@@ -758,9 +777,9 @@ func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.U
 	return time.Duration(seconds), err
 }
 
-func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
+func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
 	averages := dtos.AverageRemediationTimes{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	WITH events AS (
     SELECT
         dependency_vulns.id,
@@ -824,9 +843,9 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UU
 	return averages, err
 }
 
-func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
+func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
 	rows := []dtos.RemediationTypeDistributionRow{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		a.type, 
 		COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage

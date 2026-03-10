@@ -27,7 +27,7 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "vulnID is required").WithInternal(err)
 	}
 
-	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(vulnID, vulnType)
+	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(ctx.Request().Context(), nil, vulnID, vulnType)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
@@ -41,14 +41,14 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
 			return ctx.JSON(404, nil)
 		}
 	}
 
-	events, err := c.vulnEventRepository.ReadEventsByAssetIDAndAssetVersionName(asset.ID, assetVersion.Name, shared.GetPageInfo(ctx),
+	events, err := c.vulnEventRepository.ReadEventsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, shared.GetPageInfo(ctx),
 		shared.GetFilterQuery(ctx),
 	)
 	if err != nil {
@@ -65,7 +65,7 @@ func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "eventID is required").WithInternal(err)
 	}
 
-	err = c.vulnEventRepository.DeleteEventByID(nil, eventID)
+	err = c.vulnEventRepository.DeleteEventByID(ctx.Request().Context(), nil, eventID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete event").WithInternal(err)
 	}

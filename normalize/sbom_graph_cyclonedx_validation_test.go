@@ -3,6 +3,7 @@ package normalize
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -326,7 +327,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 
 // TestSchemaBreakers tests various ways to break CycloneDX 1.6 schema validation
 func TestSchemaBreakers(t *testing.T) {
-	t.Run("missing required component name returns error when trying to construct sbom graph", func(t *testing.T) {
+	t.Run("missing component name defaults to bomRef and does not break graph construction", func(t *testing.T) {
 		bom := &cdx.BOM{
 			SpecVersion: cdx.SpecVersion1_6,
 			BOMFormat:   "CycloneDX",
@@ -341,16 +342,29 @@ func TestSchemaBreakers(t *testing.T) {
 			Components: &[]cdx.Component{
 				{
 					BOMRef: "pkg:npm/test@1.0.0",
-					// Name field is empty - should cause error in graph construction
-					Type: cdx.ComponentTypeLibrary,
+					// Name field is empty, so 	name would be bomRef
+					Type:       cdx.ComponentTypeLibrary,
+					Version:    "1.0.0",
+					PackageURL: "pkg:npm/test@1.0.0",
+				},
+			},
+			Dependencies: &[]cdx.Dependency{
+				{
+					Ref:          "root",
+					Dependencies: &[]string{"pkg:npm/test@1.0.0"},
 				},
 			},
 		}
 
-		// SBOMGraphFromCycloneDX should return error for missing component name
+		// SBOMGraphFromCycloneDX should handle this gracefully by using bomRef as the name if name is missing
 		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
-		assert.NotNil(t, err, "Should return error for component with missing name")
-		assert.Nil(t, graph, "Graph should be nil when error occurs")
+		assert.NoError(t, err)
+
+		component := slices.Collect(graph.Components())[0]
+		assert.Equal(t, "pkg:npm/test@1.0.0", component.Component.Name, "Component name should default to bomRef when name is missing")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, graph, "Graph should be created even with missing component name (bomRef will be used as name)")
 	})
 
 	t.Run("invalid scope value returns error when building sbom graph", func(t *testing.T) {

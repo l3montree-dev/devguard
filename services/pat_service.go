@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
@@ -23,13 +24,15 @@ type PatService struct {
 	patRepository shared.PersonalAccessTokenRepository
 }
 
+var _ shared.Verifier = (*PatService)(nil) // Ensure PatService implements shared.PatService interface
+
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
 	return &PatService{
 		patRepository: repository,
 	}
 }
 
-func (p *PatService) ToModel(request dtos.PatCreateRequest, userID string) models.PAT {
+func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT {
 	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
 	fingerprint, err := pubKeyToFingerprint(request.PubKey)
 	if err != nil {
@@ -165,8 +168,8 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	return nil
 }
 
-func (p *PatService) getPubKeyAndUserIDUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
-	pat, err := p.patRepository.GetByFingerprint(fingerprint)
+func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
+	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
 	if err != nil {
 		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
@@ -185,16 +188,16 @@ func (p *PatService) getPubKeyAndUserIDUsingFingerprint(fingerprint string) (ecd
 	return pubKeyECDSA, pat.UserID, pat.Scopes, nil
 }
 
-func (p *PatService) markAsLastUsedNow(fingerprint string) error {
-	return p.patRepository.MarkAsLastUsedNow(fingerprint)
+func (p *PatService) markAsLastUsedNow(ctx context.Context, fingerprint string) error {
+	return p.patRepository.MarkAsLastUsedNow(ctx, nil, fingerprint)
 }
 
-func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
+func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
 	if fingerprint == "" {
 		return "", "", fmt.Errorf("no fingerprint provided")
 	}
-	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
+	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(ctx, fingerprint)
 
 	if err != nil {
 		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
@@ -209,12 +212,12 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, 
 		return "", "", fmt.Errorf("could not verify request: %v", err)
 	}
 
-	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
+	p.markAsLastUsedNow(ctx, fingerprint) //nolint:errcheck// we don't care if this fails
 
 	return userID.String(), scopes, nil
 }
 
-func (p *PatService) RevokeByPrivateKey(privKey string) error {
+func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) error {
 	pubKey, _, err := HexTokenToECDSA(privKey)
 	if err != nil {
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
@@ -227,5 +230,5 @@ func (p *PatService) RevokeByPrivateKey(privKey string) error {
 		return err
 	}
 
-	return p.patRepository.DeleteByFingerprint(fingerprint)
+	return p.patRepository.DeleteByFingerprint(ctx, nil, fingerprint)
 }

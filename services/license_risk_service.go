@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"log/slog"
 	"slices"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	component "github.com/l3montree-dev/devguard/licenses"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -21,6 +23,8 @@ type LicenseRiskService struct {
 	licenseRiskRepository shared.LicenseRiskRepository
 	vulnEventRepository   shared.VulnEventRepository
 }
+
+var _ shared.LicenseRiskService = (*LicenseRiskService)(nil) // Ensure LicenseRiskService implements shared.LicenseRiskService interface
 
 func NewLicenseRiskService(licenseRiskRepository shared.LicenseRiskRepository, vulnEventRepository shared.VulnEventRepository) *LicenseRiskService {
 	return &LicenseRiskService{
@@ -36,9 +40,9 @@ type licenseRiskWithNewLicense struct {
 
 var _ shared.LicenseRiskService = (*LicenseRiskService)(nil)
 
-func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
+func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
 	// get all license risks for the assetVersion (across artifacts) so we can deduplicate
-	existingLicenseRisks, err := s.licenseRiskRepository.GetAllLicenseRisksForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	existingLicenseRisks, err := s.licenseRiskRepository.GetAllLicenseRisksForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -113,7 +117,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 	inBoth := comparison.InBoth
 
 	// get all license risks from other branches
-	existingRisksOnOtherBranch, err := s.licenseRiskRepository.GetLicenseRisksByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID)
+	existingRisksOnOtherBranch, err := s.licenseRiskRepository.GetLicenseRisksByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing license risks on other branches", "err", err)
 		return err
@@ -167,40 +171,40 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 		}
 	}
 
-	return s.licenseRiskRepository.Transaction(func(db shared.DB) error {
+	return s.licenseRiskRepository.Transaction(ctx, func(db shared.DB) error {
 		// Process new license risks that exist on other branches with lifecycle management
-		if err := s.UserDetectedExistingLicenseRiskOnDifferentBranch(db, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, assetVersion, models.Asset{Model: models.Model{ID: assetVersion.AssetID}}); err != nil {
+		if err := s.UserDetectedExistingLicenseRiskOnDifferentBranch(ctx, db, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, assetVersion, models.Asset{Model: models.Model{ID: assetVersion.AssetID}}); err != nil {
 			slog.Error("error when trying to add events for existing license risk on different branch", "err", err)
 			return err
 		}
 
 		// Process new license risks that don't exist on other branches
 		if len(newDetectedRisksNotOnOtherBranch) > 0 {
-			if err := s.UserDetectedLicenseRisks(db, assetVersion.AssetID, assetVersion.Name, artifactName, newDetectedRisksNotOnOtherBranch); err != nil {
+			if err := s.UserDetectedLicenseRisks(ctx, db, assetVersion.AssetID, assetVersion.Name, artifactName, newDetectedRisksNotOnOtherBranch); err != nil {
 				return err
 			}
 		}
 
 		if len(finallyFixed) > 0 {
-			if err := s.UserFixedLicenseRisks(db, "system", finallyFixed); err != nil {
+			if err := s.UserFixedLicenseRisks(ctx, db, "system", finallyFixed); err != nil {
 				return err
 			}
 		}
 
 		if len(existingNeedsAssoc) > 0 {
-			if err := s.UserDetectedLicenseRiskInAnotherArtifact(db, existingNeedsAssoc, artifactName); err != nil {
+			if err := s.UserDetectedLicenseRiskInAnotherArtifact(ctx, db, existingNeedsAssoc, artifactName); err != nil {
 				return err
 			}
 		}
 
 		if len(existingNeedsDissoc) > 0 {
-			if err := s.UserDidNotDetectLicenseRiskInArtifactAnymore(db, existingNeedsDissoc, artifactName); err != nil {
+			if err := s.UserDidNotDetectLicenseRiskInArtifactAnymore(ctx, db, existingNeedsDissoc, artifactName); err != nil {
 				return err
 			}
 		}
 
 		if len(validLicenseFixed) > 0 {
-			if err := s.UserFixedLicenseRisksByAutomaticRefresh(db, "system", validLicenseFixed, artifactName); err != nil {
+			if err := s.UserFixedLicenseRisksByAutomaticRefresh(ctx, db, "system", validLicenseFixed, artifactName); err != nil {
 				return err
 			}
 		}
@@ -210,7 +214,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.As
 }
 
 // the license risks were fixes BY REMOVING the component
-func (s *LicenseRiskService) UserFixedLicenseRisks(tx shared.DB, userID string, licenseRisks []models.LicenseRisk) error {
+func (s *LicenseRiskService) UserFixedLicenseRisks(ctx context.Context, tx shared.DB, userID string, licenseRisks []models.LicenseRisk) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -220,14 +224,14 @@ func (s *LicenseRiskService) UserFixedLicenseRisks(tx shared.DB, userID string, 
 		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
-	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisks); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks); err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
 // Helper: create detected events for newly opened license risks and save them
-func (s *LicenseRiskService) UserDetectedLicenseRisks(tx shared.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk) error {
+func (s *LicenseRiskService) UserDetectedLicenseRisks(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName, artifactName string, licenseRisks []models.LicenseRisk) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -239,14 +243,14 @@ func (s *LicenseRiskService) UserDetectedLicenseRisks(tx shared.DB, assetID uuid
 		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
-	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisks); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks); err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
 // Helper: ensure existing license risks are associated with another artifact (insert join rows)
-func (s *LicenseRiskService) UserDetectedLicenseRiskInAnotherArtifact(tx shared.DB, licenseRisks []models.LicenseRisk, artifactName string) error {
+func (s *LicenseRiskService) UserDetectedLicenseRiskInAnotherArtifact(ctx context.Context, tx shared.DB, licenseRisks []models.LicenseRisk, artifactName string) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -259,7 +263,7 @@ func (s *LicenseRiskService) UserDetectedLicenseRiskInAnotherArtifact(tx shared.
 	return nil
 }
 
-func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(tx shared.DB, artifactName string, licenseRisks []models.LicenseRisk, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(ctx context.Context, tx shared.DB, artifactName string, licenseRisks []models.LicenseRisk, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -290,12 +294,12 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(tx
 		}
 	}
 
-	err := s.licenseRiskRepository.SaveBatch(tx, licenseRisks)
+	err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks)
 	if err != nil {
 		return err
 	}
 
-	return s.vulnEventRepository.SaveBatch(tx, utils.Flat(events))
+	return s.vulnEventRepository.SaveBatch(ctx, tx, utils.Flat(events))
 }
 
 // diffLicenseRisksBetweenBranches compares found license risks with existing ones on other branches
@@ -338,7 +342,7 @@ func diffLicenseRisksBetweenBranches(foundLicenseRisks []models.LicenseRisk, exi
 	return newDetectedRisksNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(tx shared.DB, userID string, licenseRisks []licenseRiskWithNewLicense, artifactName string) error {
+func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(ctx context.Context, tx shared.DB, userID string, licenseRisks []licenseRiskWithNewLicense, artifactName string) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -350,18 +354,18 @@ func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(tx shared.D
 		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
 		statemachine.Apply(&licenseRisks[i].LicenseRisk, ev)
 	}
-	if err := s.licenseRiskRepository.SaveBatch(tx, licenseRisksToSave); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisksToSave); err != nil {
 		return err
 	}
 
-	if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
+	if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *LicenseRiskService) UserDidNotDetectLicenseRiskInArtifactAnymore(tx shared.DB, licenseRisks []models.LicenseRisk, artifactName string) error {
+func (s *LicenseRiskService) UserDidNotDetectLicenseRiskInArtifactAnymore(ctx context.Context, tx shared.DB, licenseRisks []models.LicenseRisk, artifactName string) error {
 	if len(licenseRisks) == 0 {
 		return nil
 	}
@@ -374,21 +378,21 @@ func (s *LicenseRiskService) UserDidNotDetectLicenseRiskInArtifactAnymore(tx sha
 	return nil
 }
 
-func (s *LicenseRiskService) UpdateLicenseRiskState(tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *LicenseRiskService) UpdateLicenseRiskState(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
-		err = s.licenseRiskRepository.Transaction(func(d shared.DB) error {
-			ev, err = s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+		err = s.licenseRiskRepository.Transaction(ctx, func(d shared.DB) error {
+			ev, err = s.updateLicenseRiskState(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateLicenseRiskState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+	return s.updateLicenseRiskState(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 }
 
-func (s *LicenseRiskService) updateLicenseRiskState(tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *LicenseRiskService) updateLicenseRiskState(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch dtos.VulnEventType(statusType) {
 	case dtos.EventTypeAccepted:
@@ -401,12 +405,12 @@ func (s *LicenseRiskService) updateLicenseRiskState(tx shared.DB, userID string,
 		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, false)
 	}
 
-	err := s.licenseRiskRepository.ApplyAndSave(tx, licenseRisk, &ev)
+	err := s.licenseRiskRepository.ApplyAndSave(ctx, tx, licenseRisk, &ev)
 	return ev, err
 }
 
-func (s *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error {
-	licenseRisk, err := s.licenseRiskRepository.Read(vulnID)
+func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *gorm.DB, vulnID, finalLicense, justification, userID string) error {
+	licenseRisk, err := s.licenseRiskRepository.Read(ctx, tx, vulnID)
 	if err != nil {
 		return err
 	}
@@ -417,5 +421,5 @@ func (s *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, just
 	}
 
 	ev := models.NewLicenseDecisionEvent(vulnID, dtos.VulnTypeLicenseRisk, userID, justification, licenseRisk.GetArtifactNames(), finalLicense)
-	return s.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
+	return s.licenseRiskRepository.ApplyAndSave(ctx, nil, &licenseRisk, &ev)
 }

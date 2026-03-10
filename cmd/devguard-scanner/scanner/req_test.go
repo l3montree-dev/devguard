@@ -244,4 +244,128 @@ func TestUploadBOM(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 	})
+
+	t.Run("should use unauthenticated endpoint when no token is set", func(t *testing.T) {
+		var capturedPath string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			capturedPath = r.URL.Path
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		config.RuntimeBaseConfig.APIURL = server.URL
+		config.RuntimeBaseConfig.Token = ""
+		config.RuntimeBaseConfig.AssetName = ""
+		config.RuntimeBaseConfig.ScannerID = "test-scanner"
+		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
+		config.RuntimeBaseConfig.Origin = "test-origin"
+		config.RuntimeBaseConfig.Timeout = 5
+		config.RuntimeBaseConfig.IgnoreExternalReferences = false
+
+		bom := &cyclonedx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cyclonedx.SpecVersion1_4,
+			Version:     1,
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{
+					Name:    "test-component",
+					Version: "1.0.0",
+					Type:    cyclonedx.ComponentTypeApplication,
+				},
+			},
+		}
+
+		bomBytes, err := json.Marshal(bom)
+		require.NoError(t, err)
+
+		resp, cancel, err := UploadBOM(bytes.NewReader(bomBytes))
+		defer cancel()
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		assert.Equal(t, "/api/v1/scan-unauthenticated", capturedPath)
+	})
+
+	t.Run("should use authenticated endpoint when token is set", func(t *testing.T) {
+		var capturedPath string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			capturedPath = r.URL.Path
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		config.RuntimeBaseConfig.APIURL = server.URL
+		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.ScannerID = "test-scanner"
+		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
+		config.RuntimeBaseConfig.Origin = "test-origin"
+		config.RuntimeBaseConfig.Timeout = 5
+		config.RuntimeBaseConfig.IgnoreExternalReferences = false
+
+		bom := &cyclonedx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cyclonedx.SpecVersion1_4,
+			Version:     1,
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{
+					Name:    "test-component",
+					Version: "1.0.0",
+					Type:    cyclonedx.ComponentTypeApplication,
+				},
+			},
+		}
+
+		bomBytes, err := json.Marshal(bom)
+		require.NoError(t, err)
+
+		resp, cancel, err := UploadBOM(bytes.NewReader(bomBytes))
+		defer cancel()
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		assert.Equal(t, "/api/v1/scan", capturedPath)
+	})
+
+	t.Run("should not include auth headers when no token is set", func(t *testing.T) {
+		var capturedRequest *http.Request
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			capturedRequest = r
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		config.RuntimeBaseConfig.APIURL = server.URL
+		config.RuntimeBaseConfig.Token = ""
+		config.RuntimeBaseConfig.AssetName = ""
+		config.RuntimeBaseConfig.ScannerID = "test-scanner"
+		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
+		config.RuntimeBaseConfig.Origin = "test-origin"
+		config.RuntimeBaseConfig.Timeout = 5
+		config.RuntimeBaseConfig.IgnoreExternalReferences = false
+
+		bom := &cyclonedx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cyclonedx.SpecVersion1_4,
+			Version:     1,
+			Metadata: &cyclonedx.Metadata{
+				Component: &cyclonedx.Component{
+					Name:    "test-component",
+					Version: "1.0.0",
+					Type:    cyclonedx.ComponentTypeApplication,
+				},
+			},
+		}
+
+		bomBytes, err := json.Marshal(bom)
+		require.NoError(t, err)
+
+		resp, cancel, err := UploadBOM(bytes.NewReader(bomBytes))
+		defer cancel()
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		assert.Empty(t, capturedRequest.Header.Get("X-Fingerprint"), "X-Fingerprint should not be set without a token")
+		assert.Empty(t, capturedRequest.Header.Get("Signature"), "Signature should not be set without a token")
+		assert.Empty(t, capturedRequest.Header.Get("X-Asset-Name"), "X-Asset-Name should not be set without a token")
+	})
 }

@@ -58,6 +58,11 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 		externalEntityParentID = utils.Ptr(fmt.Sprintf("%d", group.ParentID))
 	}
 
+	state := models.ProjectStateActive
+	if utils.CheckIfDeleted(group.Name) {
+		state = models.ProjectStateDeleted
+	}
+
 	return models.Project{
 		Name:                     group.FullName,
 		Description:              group.Description,
@@ -66,10 +71,18 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityParentID:   externalEntityParentID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", group.ID)),
+		State:                    state,
 	}
 }
 
 func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID string) models.Asset {
+	state := models.AssetStateActive
+	if utils.CheckIfDeleted(project.Name) {
+		state = models.AssetStateDeleted
+	} else if project.Archived {
+		state = models.AssetStateArchived
+	}
+
 	return models.Asset{
 		Name:                     project.Name,
 		Avatar:                   avatarBase64,
@@ -77,10 +90,11 @@ func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID st
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", project.ID)),
+		State:                    state,
 	}
 }
 
-func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]gitlabRepository, error) {
+func (gitlabOrgClient *gitlabBatchClient) ListRepositories(ctx context.Context, search string) ([]gitlabRepository, error) {
 	wg := utils.ErrGroup[[]gitlabRepository](10)
 	options := &gitlab.ListProjectsOptions{
 		MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
@@ -93,7 +107,7 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 
 	for _, client := range gitlabOrgClient.clients {
 		wg.Go(func() ([]gitlabRepository, error) {
-			result, _, err := client.ListProjects(context.TODO(), options)
+			result, _, err := client.ListProjects(ctx, options)
 			if err != nil {
 				slog.Warn("failed to list projects from gitlab client", "err", err, "clientID", client.GetClientID())
 				return nil, nil
@@ -119,8 +133,8 @@ func (client gitlabClient) GetGroup(ctx context.Context, groupID int) (*gitlab.G
 	return client.Groups.GetGroup(groupID, nil, gitlab.WithContext(ctx))
 }
 
-func (client gitlabClient) GetProjectIssues(projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error) {
-	return client.Issues.ListProjectIssues(projectID, opt, nil)
+func (client gitlabClient) GetProjectIssues(ctx context.Context, projectID int, opt *gitlab.ListProjectIssuesOptions) ([]*gitlab.Issue, *gitlab.Response, error) {
+	return client.Issues.ListProjectIssues(projectID, opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) CreateNewLabel(ctx context.Context, projectID int, label *gitlab.CreateLabelOptions) (*gitlab.Label, *gitlab.Response, error) {
@@ -136,11 +150,11 @@ func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Re
 }
 
 func (client gitlabClient) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
-	return client.Version.GetVersion()
+	return client.Version.GetVersion(gitlab.WithContext(ctx))
 }
 
-func (client gitlabClient) FetchProjectAvatarBase64(projectID int) (string, error) {
-	b, _, err := client.Projects.DownloadAvatar(projectID, nil)
+func (client gitlabClient) FetchProjectAvatarBase64(ctx context.Context, projectID int) (string, error) {
+	b, _, err := client.Projects.DownloadAvatar(projectID, nil, gitlab.WithContext(ctx))
 
 	if err != nil {
 		return "", fmt.Errorf("failed to download avatar: %w", err)
@@ -159,8 +173,8 @@ func (client gitlabClient) FetchProjectAvatarBase64(projectID int) (string, erro
 	return base64Encoded, nil
 }
 
-func (client gitlabClient) FetchGroupAvatarBase64(groupID int) (string, error) {
-	b, _, err := client.Groups.DownloadAvatar(groupID, nil)
+func (client gitlabClient) FetchGroupAvatarBase64(ctx context.Context, groupID int) (string, error) {
+	b, _, err := client.Groups.DownloadAvatar(groupID, nil, gitlab.WithContext(ctx))
 	if err != nil {
 		return "", fmt.Errorf("failed to download avatar: %w", err)
 	}
@@ -226,7 +240,7 @@ func (client gitlabClient) ListProjects(ctx context.Context, opt *gitlab.ListPro
 }
 
 func (client gitlabClient) ListProjectMembers(ctx context.Context, projectID int, memberOptions *gitlab.ListProjectMembersOptions, requestOptions ...gitlab.RequestOptionFunc) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
-	return client.ProjectMembers.ListAllProjectMembers(projectID, memberOptions, requestOptions...)
+	return client.ProjectMembers.ListAllProjectMembers(projectID, memberOptions, append(requestOptions, gitlab.WithContext(ctx))...)
 }
 
 func (client gitlabClient) IsProjectMember(ctx context.Context, projectID int, userID int, options *gitlab.ListProjectMembersOptions) (bool, error) {
@@ -308,7 +322,7 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, is
 	// make sure each label exists
 	for _, label := range labels {
 		// make sure to create the label beforehand
-		_, _, err := client.Labels.CreateLabel(int64(projectID), label)
+		_, _, err := client.Labels.CreateLabel(int64(projectID), label, gitlab.WithContext(ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -316,7 +330,7 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, is
 
 	_, _, err = client.Issues.UpdateIssue(int64(projectID), int64(issueID), &gitlab.UpdateIssueOptions{
 		Labels: gitlab.Ptr(gitlab.LabelOptions(issueLabels)),
-	})
+	}, gitlab.WithContext(ctx))
 
 	return nil, err
 }

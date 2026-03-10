@@ -4,6 +4,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -22,18 +24,18 @@ func NewExternalReferenceRepository(db *gorm.DB) shared.ExternalReferenceReposit
 	}
 }
 
-func (r *externalReferenceRepository) FindByAssetID(db *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error) {
+func (r *externalReferenceRepository) FindByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error) {
 	var refs []models.ExternalReference
-	err := r.GetDB(db).Where("asset_id = ?", assetID).Find(&refs).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&refs).Error
 	return refs, err
 }
 
-func (r *externalReferenceRepository) FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error) {
+func (r *externalReferenceRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error) {
 	var refs []models.ExternalReference
-	err := r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&refs).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&refs).Error
 	return refs, err
 }
 
-func (r *externalReferenceRepository) DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
-	return r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.ExternalReference{}).Error
+func (r *externalReferenceRepository) DeleteByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
+	return r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.ExternalReference{}).Error
 }

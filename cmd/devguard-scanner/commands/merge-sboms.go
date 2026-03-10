@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/spf13/cobra"
 )
 
@@ -68,6 +70,15 @@ func runMergeSBOMs(cmd *cobra.Command, args []string) error {
 	var config MergeSBOMsConfigFile
 	if err := json.Unmarshal(fileContent, &config); err != nil {
 		return err
+	}
+
+	// the config file might contain relative paths
+	// they should be resolved relative to the config file location, not the current working directory
+	for i, sbom := range config.SBOMs {
+		// check if relative path
+		if !os.IsPathSeparator(sbom[0]) {
+			config.SBOMs[i] = filepath.Join(filepath.Dir(filePath), sbom)
+		}
 	}
 
 	return mergeSBOMs(cmd.Context(), config.Purl, config.SBOMs)
@@ -121,9 +132,25 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 		if bom.Dependencies != nil {
 			*result.Dependencies = append(*result.Dependencies, *bom.Dependencies...)
 		}
+
+		// make sure to add the metadata.component (the root component) to the components list, if it's not already there
+		found := false
+		for _, c := range *result.Components {
+			if c.BOMRef == bom.Metadata.Component.BOMRef {
+				found = true
+				break
+			}
+		}
+		if !found {
+			*result.Components = append(*result.Components, *bom.Metadata.Component)
+		}
 	}
 
 	*result.Dependencies = append(*result.Dependencies, rootDependencies)
+	// validate against sbom_graph.go
+	if _, err := normalize.SBOMGraphFromCycloneDX(result, "", "", false); err != nil {
+		return err
+	}
 	// print the sbom to stdout
 	encoder := cyclonedx.NewBOMEncoder(os.Stdout, cyclonedx.BOMFileFormatJSON)
 	encoder.SetPretty(true)

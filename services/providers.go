@@ -5,8 +5,11 @@ import (
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
+
+var servicesTracer = otel.Tracer("devguard/services")
 
 // ServiceModule provides all service-layer constructors as their interfaces
 var ServiceModule = fx.Options(

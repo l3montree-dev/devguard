@@ -4,6 +4,7 @@
 package repositories
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -26,9 +27,9 @@ func NewArtifactRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchron
 	}
 }
 
-func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetByAssetIDAndAssetVersionName(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
-	err := r.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +37,10 @@ func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, 
 	return artifacts, nil
 }
 
-func (r *artifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetByAssetVersions(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 
-	err := r.db.Where("asset_id = ? AND asset_version_name IN ?", assetID, assetVersionNames).Find(&artifacts).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name IN ?", assetID, assetVersionNames).Find(&artifacts).Error
 
 	if err != nil {
 		return nil, err
@@ -48,21 +49,21 @@ func (r *artifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVersionN
 	return artifacts, nil
 }
 
-func (r *artifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+func (r *artifactRepository) ReadArtifact(ctx context.Context, tx *gorm.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	var artifact models.Artifact
-	err := r.db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
+	err := r.GetDB(ctx, tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", name, assetVersionName, assetID).First(&artifact).Error
 	return artifact, err
 }
 
-func (r *artifactRepository) DeleteArtifact(tx *gorm.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
+func (r *artifactRepository) DeleteArtifact(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
 
-	err := r.GetDB(tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
+	err := r.GetDB(ctx, tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
 	if err != nil {
 		return err
 	}
 
 	sql := CleanupOrphanedRecordsSQL
-	err = r.GetDB(tx).Exec(sql).Error
+	err = r.GetDB(ctx, tx).Exec(sql).Error
 	if err != nil {
 		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 	}
@@ -70,9 +71,9 @@ func (r *artifactRepository) DeleteArtifact(tx *gorm.DB, assetID uuid.UUID, asse
 	return err
 }
 
-func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(tx *gorm.DB, vulnID string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
-	err := r.Repository.GetDB(tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
+	err := r.Repository.GetDB(ctx, tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 
 		AND adv.artifact_asset_version_name = a.asset_version_name
 		AND adv.artifact_asset_id = a.asset_id

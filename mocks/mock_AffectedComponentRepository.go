@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -39,16 +41,16 @@ func (_m *AffectedComponentRepository) EXPECT() *AffectedComponentRepository_Exp
 }
 
 // Activate provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Activate(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *AffectedComponentRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type AffectedComponentRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AffectedComponentRepository_Expecter) Activate(tx interface{}, id interface{}) *AffectedComponentRepository_Activate_Call {
-	return &AffectedComponentRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *AffectedComponentRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Activate_Call {
+	return &AffectedComponentRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *AffectedComponentRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *AffectedComponentRepository_Activate_Call {
+func (_c *AffectedComponentRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AffectedComponentRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *AffectedComponentRepository_Activate_Call) Return(err error) *Affected
 	return _c
 }
 
-func (_c *AffectedComponentRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *AffectedComponentRepository_Activate_Call {
+func (_c *AffectedComponentRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *AffectedComponentRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) All() ([]models.AffectedComponent, error) {
-	ret := _mock.Called()
+func (_mock *AffectedComponentRepository) All(ctx context.Context, tx shared.DB) ([]models.AffectedComponent, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -105,18 +113,18 @@ func (_mock *AffectedComponentRepository) All() ([]models.AffectedComponent, err
 
 	var r0 []models.AffectedComponent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.AffectedComponent, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.AffectedComponent, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.AffectedComponent); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.AffectedComponent); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.AffectedComponent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,13 +137,26 @@ type AffectedComponentRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *AffectedComponentRepository_Expecter) All() *AffectedComponentRepository_All_Call {
-	return &AffectedComponentRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *AffectedComponentRepository_Expecter) All(ctx interface{}, tx interface{}) *AffectedComponentRepository_All_Call {
+	return &AffectedComponentRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *AffectedComponentRepository_All_Call) Run(run func()) *AffectedComponentRepository_All_Call {
+func (_c *AffectedComponentRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *AffectedComponentRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -145,22 +166,22 @@ func (_c *AffectedComponentRepository_All_Call) Return(affectedComponents []mode
 	return _c
 }
 
-func (_c *AffectedComponentRepository_All_Call) RunAndReturn(run func() ([]models.AffectedComponent, error)) *AffectedComponentRepository_All_Call {
+func (_c *AffectedComponentRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.AffectedComponent, error)) *AffectedComponentRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *AffectedComponentRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -175,13 +196,20 @@ type AffectedComponentRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *AffectedComponentRepository_Expecter) Begin() *AffectedComponentRepository_Begin_Call {
-	return &AffectedComponentRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *AffectedComponentRepository_Expecter) Begin(ctx interface{}) *AffectedComponentRepository_Begin_Call {
+	return &AffectedComponentRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *AffectedComponentRepository_Begin_Call) Run(run func()) *AffectedComponentRepository_Begin_Call {
+func (_c *AffectedComponentRepository_Begin_Call) Run(run func(ctx context.Context)) *AffectedComponentRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -191,22 +219,22 @@ func (_c *AffectedComponentRepository_Begin_Call) Return(v shared.DB) *AffectedC
 	return _c
 }
 
-func (_c *AffectedComponentRepository_Begin_Call) RunAndReturn(run func() shared.DB) *AffectedComponentRepository_Begin_Call {
+func (_c *AffectedComponentRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *AffectedComponentRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Create(tx shared.DB, t *models.AffectedComponent) error {
-	ret := _mock.Called(tx, t)
+func (_mock *AffectedComponentRepository) Create(ctx context.Context, tx shared.DB, t *models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -219,25 +247,31 @@ type AffectedComponentRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) Create(tx interface{}, t interface{}) *AffectedComponentRepository_Create_Call {
-	return &AffectedComponentRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *AffectedComponentRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *AffectedComponentRepository_Create_Call {
+	return &AffectedComponentRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *AffectedComponentRepository_Create_Call) Run(run func(tx shared.DB, t *models.AffectedComponent)) *AffectedComponentRepository_Create_Call {
+func (_c *AffectedComponentRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.AffectedComponent)) *AffectedComponentRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.AffectedComponent
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.AffectedComponent)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].(*models.AffectedComponent)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -248,22 +282,22 @@ func (_c *AffectedComponentRepository_Create_Call) Return(err error) *AffectedCo
 	return _c
 }
 
-func (_c *AffectedComponentRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.AffectedComponent) error) *AffectedComponentRepository_Create_Call {
+func (_c *AffectedComponentRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.AffectedComponent) error) *AffectedComponentRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateAffectedComponentsUsingUnnest provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) CreateAffectedComponentsUsingUnnest(tx shared.DB, components []models.AffectedComponent) error {
-	ret := _mock.Called(tx, components)
+func (_mock *AffectedComponentRepository) CreateAffectedComponentsUsingUnnest(ctx context.Context, tx shared.DB, components []models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, components)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAffectedComponentsUsingUnnest")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, components)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, components)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -276,25 +310,31 @@ type AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call struct
 }
 
 // CreateAffectedComponentsUsingUnnest is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - components []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) CreateAffectedComponentsUsingUnnest(tx interface{}, components interface{}) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
-	return &AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call{Call: _e.mock.On("CreateAffectedComponentsUsingUnnest", tx, components)}
+func (_e *AffectedComponentRepository_Expecter) CreateAffectedComponentsUsingUnnest(ctx interface{}, tx interface{}, components interface{}) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+	return &AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call{Call: _e.mock.On("CreateAffectedComponentsUsingUnnest", ctx, tx, components)}
 }
 
-func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) Run(run func(tx shared.DB, components []models.AffectedComponent)) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) Run(run func(ctx context.Context, tx shared.DB, components []models.AffectedComponent)) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.AffectedComponent
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -305,22 +345,22 @@ func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) 
 	return _c
 }
 
-func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) RunAndReturn(run func(tx shared.DB, components []models.AffectedComponent) error) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+func (_c *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, components []models.AffectedComponent) error) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) CreateBatch(tx shared.DB, ts []models.AffectedComponent) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *AffectedComponentRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -333,25 +373,31 @@ type AffectedComponentRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AffectedComponentRepository_CreateBatch_Call {
-	return &AffectedComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *AffectedComponentRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *AffectedComponentRepository_CreateBatch_Call {
+	return &AffectedComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *AffectedComponentRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_CreateBatch_Call {
+func (_c *AffectedComponentRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.AffectedComponent
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -362,22 +408,22 @@ func (_c *AffectedComponentRepository_CreateBatch_Call) Return(err error) *Affec
 	return _c
 }
 
-func (_c *AffectedComponentRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_CreateBatch_Call {
+func (_c *AffectedComponentRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Delete(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *AffectedComponentRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -390,25 +436,31 @@ type AffectedComponentRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AffectedComponentRepository_Expecter) Delete(tx interface{}, id interface{}) *AffectedComponentRepository_Delete_Call {
-	return &AffectedComponentRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *AffectedComponentRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Delete_Call {
+	return &AffectedComponentRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *AffectedComponentRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *AffectedComponentRepository_Delete_Call {
+func (_c *AffectedComponentRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AffectedComponentRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -419,22 +471,22 @@ func (_c *AffectedComponentRepository_Delete_Call) Return(err error) *AffectedCo
 	return _c
 }
 
-func (_c *AffectedComponentRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *AffectedComponentRepository_Delete_Call {
+func (_c *AffectedComponentRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *AffectedComponentRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteAll provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) DeleteAll(tx shared.DB, ecosystem string) error {
-	ret := _mock.Called(tx, ecosystem)
+func (_mock *AffectedComponentRepository) DeleteAll(ctx context.Context, tx shared.DB, ecosystem string) error {
+	ret := _mock.Called(ctx, tx, ecosystem)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteAll")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, ecosystem)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, ecosystem)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -447,25 +499,31 @@ type AffectedComponentRepository_DeleteAll_Call struct {
 }
 
 // DeleteAll is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ecosystem string
-func (_e *AffectedComponentRepository_Expecter) DeleteAll(tx interface{}, ecosystem interface{}) *AffectedComponentRepository_DeleteAll_Call {
-	return &AffectedComponentRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", tx, ecosystem)}
+func (_e *AffectedComponentRepository_Expecter) DeleteAll(ctx interface{}, tx interface{}, ecosystem interface{}) *AffectedComponentRepository_DeleteAll_Call {
+	return &AffectedComponentRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", ctx, tx, ecosystem)}
 }
 
-func (_c *AffectedComponentRepository_DeleteAll_Call) Run(run func(tx shared.DB, ecosystem string)) *AffectedComponentRepository_DeleteAll_Call {
+func (_c *AffectedComponentRepository_DeleteAll_Call) Run(run func(ctx context.Context, tx shared.DB, ecosystem string)) *AffectedComponentRepository_DeleteAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -476,22 +534,22 @@ func (_c *AffectedComponentRepository_DeleteAll_Call) Return(err error) *Affecte
 	return _c
 }
 
-func (_c *AffectedComponentRepository_DeleteAll_Call) RunAndReturn(run func(tx shared.DB, ecosystem string) error) *AffectedComponentRepository_DeleteAll_Call {
+func (_c *AffectedComponentRepository_DeleteAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ecosystem string) error) *AffectedComponentRepository_DeleteAll_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) DeleteBatch(tx shared.DB, ids []models.AffectedComponent) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *AffectedComponentRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -504,25 +562,31 @@ type AffectedComponentRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AffectedComponentRepository_DeleteBatch_Call {
-	return &AffectedComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *AffectedComponentRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *AffectedComponentRepository_DeleteBatch_Call {
+	return &AffectedComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *AffectedComponentRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.AffectedComponent)) *AffectedComponentRepository_DeleteBatch_Call {
+func (_c *AffectedComponentRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.AffectedComponent)) *AffectedComponentRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.AffectedComponent
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -533,14 +597,14 @@ func (_c *AffectedComponentRepository_DeleteBatch_Call) Return(err error) *Affec
 	return _c
 }
 
-func (_c *AffectedComponentRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.AffectedComponent) error) *AffectedComponentRepository_DeleteBatch_Call {
+func (_c *AffectedComponentRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.AffectedComponent) error) *AffectedComponentRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllAffectedComponentsID provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) GetAllAffectedComponentsID() ([]string, error) {
-	ret := _mock.Called()
+func (_mock *AffectedComponentRepository) GetAllAffectedComponentsID(ctx context.Context, tx shared.DB) ([]string, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllAffectedComponentsID")
@@ -548,18 +612,18 @@ func (_mock *AffectedComponentRepository) GetAllAffectedComponentsID() ([]string
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]string, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]string, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []string); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []string); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -572,13 +636,26 @@ type AffectedComponentRepository_GetAllAffectedComponentsID_Call struct {
 }
 
 // GetAllAffectedComponentsID is a helper method to define mock.On call
-func (_e *AffectedComponentRepository_Expecter) GetAllAffectedComponentsID() *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
-	return &AffectedComponentRepository_GetAllAffectedComponentsID_Call{Call: _e.mock.On("GetAllAffectedComponentsID")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *AffectedComponentRepository_Expecter) GetAllAffectedComponentsID(ctx interface{}, tx interface{}) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
+	return &AffectedComponentRepository_GetAllAffectedComponentsID_Call{Call: _e.mock.On("GetAllAffectedComponentsID", ctx, tx)}
 }
 
-func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) Run(run func()) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
+func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) Run(run func(ctx context.Context, tx shared.DB)) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -588,22 +665,22 @@ func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) Return(st
 	return _c
 }
 
-func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) RunAndReturn(run func() ([]string, error)) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
+func (_c *AffectedComponentRepository_GetAllAffectedComponentsID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]string, error)) *AffectedComponentRepository_GetAllAffectedComponentsID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *AffectedComponentRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -618,19 +695,25 @@ type AffectedComponentRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *AffectedComponentRepository_Expecter) GetDB(tx interface{}) *AffectedComponentRepository_GetDB_Call {
-	return &AffectedComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *AffectedComponentRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *AffectedComponentRepository_GetDB_Call {
+	return &AffectedComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *AffectedComponentRepository_GetDB_Call) Run(run func(tx shared.DB)) *AffectedComponentRepository_GetDB_Call {
+func (_c *AffectedComponentRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *AffectedComponentRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -641,14 +724,14 @@ func (_c *AffectedComponentRepository_GetDB_Call) Return(v shared.DB) *AffectedC
 	return _c
 }
 
-func (_c *AffectedComponentRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *AffectedComponentRepository_GetDB_Call {
+func (_c *AffectedComponentRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *AffectedComponentRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) List(ids []string) ([]models.AffectedComponent, error) {
-	ret := _mock.Called(ids)
+func (_mock *AffectedComponentRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.AffectedComponent, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -656,18 +739,18 @@ func (_mock *AffectedComponentRepository) List(ids []string) ([]models.AffectedC
 
 	var r0 []models.AffectedComponent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.AffectedComponent, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.AffectedComponent, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []models.AffectedComponent); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.AffectedComponent); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.AffectedComponent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -680,355 +763,22 @@ type AffectedComponentRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []string
-func (_e *AffectedComponentRepository_Expecter) List(ids interface{}) *AffectedComponentRepository_List_Call {
-	return &AffectedComponentRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *AffectedComponentRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *AffectedComponentRepository_List_Call {
+	return &AffectedComponentRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *AffectedComponentRepository_List_Call) Run(run func(ids []string)) *AffectedComponentRepository_List_Call {
+func (_c *AffectedComponentRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *AffectedComponentRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]string)
+			arg0 = args[0].(context.Context)
 		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_List_Call) Return(affectedComponents []models.AffectedComponent, err error) *AffectedComponentRepository_List_Call {
-	_c.Call.Return(affectedComponents, err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.AffectedComponent, error)) *AffectedComponentRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Read(id string) (models.AffectedComponent, error) {
-	ret := _mock.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.AffectedComponent
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.AffectedComponent, error)); ok {
-		return returnFunc(id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.AffectedComponent); ok {
-		r0 = returnFunc(id)
-	} else {
-		r0 = ret.Get(0).(models.AffectedComponent)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// AffectedComponentRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type AffectedComponentRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - id string
-func (_e *AffectedComponentRepository_Expecter) Read(id interface{}) *AffectedComponentRepository_Read_Call {
-	return &AffectedComponentRepository_Read_Call{Call: _e.mock.On("Read", id)}
-}
-
-func (_c *AffectedComponentRepository_Read_Call) Run(run func(id string)) *AffectedComponentRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Read_Call) Return(affectedComponent models.AffectedComponent, err error) *AffectedComponentRepository_Read_Call {
-	_c.Call.Return(affectedComponent, err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Read_Call) RunAndReturn(run func(id string) (models.AffectedComponent, error)) *AffectedComponentRepository_Read_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Save provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Save(tx shared.DB, affectedComponent *models.AffectedComponent) error {
-	ret := _mock.Called(tx, affectedComponent)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Save")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, affectedComponent)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
-type AffectedComponentRepository_Save_Call struct {
-	*mock.Call
-}
-
-// Save is a helper method to define mock.On call
-//   - tx shared.DB
-//   - affectedComponent *models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) Save(tx interface{}, affectedComponent interface{}) *AffectedComponentRepository_Save_Call {
-	return &AffectedComponentRepository_Save_Call{Call: _e.mock.On("Save", tx, affectedComponent)}
-}
-
-func (_c *AffectedComponentRepository_Save_Call) Run(run func(tx shared.DB, affectedComponent *models.AffectedComponent)) *AffectedComponentRepository_Save_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.AffectedComponent
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Save_Call) Return(err error) *AffectedComponentRepository_Save_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Save_Call) RunAndReturn(run func(tx shared.DB, affectedComponent *models.AffectedComponent) error) *AffectedComponentRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatch provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) SaveBatch(tx shared.DB, affectedPkgs []models.AffectedComponent) error {
-	ret := _mock.Called(tx, affectedPkgs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, affectedPkgs)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
-type AffectedComponentRepository_SaveBatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - affectedPkgs []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) SaveBatch(tx interface{}, affectedPkgs interface{}) *AffectedComponentRepository_SaveBatch_Call {
-	return &AffectedComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, affectedPkgs)}
-}
-
-func (_c *AffectedComponentRepository_SaveBatch_Call) Run(run func(tx shared.DB, affectedPkgs []models.AffectedComponent)) *AffectedComponentRepository_SaveBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatch_Call) Return(err error) *AffectedComponentRepository_SaveBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, affectedPkgs []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchBestEffort provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) SaveBatchBestEffort(tx shared.DB, ts []models.AffectedComponent) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type AffectedComponentRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	return &AffectedComponentRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.AffectedComponent
-		if args[1] != nil {
-			arg1 = args[1].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Return(err error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type AffectedComponentRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - fn func(tx shared.DB) error
-func (_e *AffectedComponentRepository_Expecter) Transaction(fn interface{}) *AffectedComponentRepository_Transaction_Call {
-	return &AffectedComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
-}
-
-func (_c *AffectedComponentRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *AffectedComponentRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Transaction_Call) Return(err error) *AffectedComponentRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *AffectedComponentRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Upsert provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) Upsert(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.AffectedComponent, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
-type AffectedComponentRepository_Upsert_Call struct {
-	*mock.Call
-}
-
-// Upsert is a helper method to define mock.On call
-//   - t *[]*models.AffectedComponent
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
-func (_e *AffectedComponentRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AffectedComponentRepository_Upsert_Call {
-	return &AffectedComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
-}
-
-func (_c *AffectedComponentRepository_Upsert_Call) Run(run func(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string)) *AffectedComponentRepository_Upsert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.AffectedComponent
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.AffectedComponent)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 []string
 		if args[2] != nil {
@@ -1043,12 +793,405 @@ func (_c *AffectedComponentRepository_Upsert_Call) Run(run func(t *[]*models.Aff
 	return _c
 }
 
+func (_c *AffectedComponentRepository_List_Call) Return(affectedComponents []models.AffectedComponent, err error) *AffectedComponentRepository_List_Call {
+	_c.Call.Return(affectedComponents, err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.AffectedComponent, error)) *AffectedComponentRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Read(ctx context.Context, tx shared.DB, id string) (models.AffectedComponent, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.AffectedComponent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.AffectedComponent, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.AffectedComponent); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.AffectedComponent)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AffectedComponentRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type AffectedComponentRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *AffectedComponentRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Read_Call {
+	return &AffectedComponentRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
+}
+
+func (_c *AffectedComponentRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *AffectedComponentRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Read_Call) Return(affectedComponent models.AffectedComponent, err error) *AffectedComponentRepository_Read_Call {
+	_c.Call.Return(affectedComponent, err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.AffectedComponent, error)) *AffectedComponentRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Save(ctx context.Context, tx shared.DB, t *models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type AffectedComponentRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *AffectedComponentRepository_Save_Call {
+	return &AffectedComponentRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
+}
+
+func (_c *AffectedComponentRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.AffectedComponent)) *AffectedComponentRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].(*models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Save_Call) Return(err error) *AffectedComponentRepository_Save_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.AffectedComponent) error) *AffectedComponentRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type AffectedComponentRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *AffectedComponentRepository_SaveBatch_Call {
+	return &AffectedComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
+}
+
+func (_c *AffectedComponentRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_SaveBatch_Call) Return(err error) *AffectedComponentRepository_SaveBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type AffectedComponentRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.AffectedComponent
+func (_e *AffectedComponentRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *AffectedComponentRepository_SaveBatchBestEffort_Call {
+	return &AffectedComponentRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
+}
+
+func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Return(err error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type AffectedComponentRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(tx shared.DB) error
+func (_e *AffectedComponentRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *AffectedComponentRepository_Transaction_Call {
+	return &AffectedComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) Return(err error) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AffectedComponentRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *AffectedComponentRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type AffectedComponentRepository
+func (_mock *AffectedComponentRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.AffectedComponent, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AffectedComponentRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type AffectedComponentRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *[]*models.AffectedComponent
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *AffectedComponentRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AffectedComponentRepository_Upsert_Call {
+	return &AffectedComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+}
+
+func (_c *AffectedComponentRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string)) *AffectedComponentRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *[]*models.AffectedComponent
+		if args[2] != nil {
+			arg2 = args[2].(*[]*models.AffectedComponent)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
 func (_c *AffectedComponentRepository_Upsert_Call) Return(err error) *AffectedComponentRepository_Upsert_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *AffectedComponentRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error) *AffectedComponentRepository_Upsert_Call {
+func (_c *AffectedComponentRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.AffectedComponent, conflictingColumns []clause.Column, updateOnly []string) error) *AffectedComponentRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

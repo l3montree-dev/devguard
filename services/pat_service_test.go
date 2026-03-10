@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"net/http/httptest"
 	"strings"
@@ -20,7 +21,7 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
-		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
 		patService := NewPatService(patMock)
 
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
@@ -29,7 +30,7 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 
 		fingerprint := "fffdeb60-7eb8-45a5-aaaa-35e051c2eeb6"
 
-		pubKeyCheck, _, _, err := patService.getPubKeyAndUserIDUsingFingerprint(fingerprint)
+		pubKeyCheck, _, _, err := patService.getPubKeyAndUserIDUsingFingerprint(context.Background(), fingerprint)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,8 +83,8 @@ func TestSignRequest(t *testing.T) {
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
-		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
-		patMock.On("MarkAsLastUsedNow", mock.Anything).Return(nil)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		patService := NewPatService(patMock)
 
@@ -101,7 +102,7 @@ func TestSignRequest(t *testing.T) {
 		//privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -113,8 +114,8 @@ func TestSignRequest(t *testing.T) {
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
-		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
-		patMock.On("MarkAsLastUsedNow", mock.Anything).Return(nil)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 		patService := NewPatService(patMock)
 
 		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
@@ -129,7 +130,7 @@ func TestSignRequest(t *testing.T) {
 		}
 		req.Header.Set("Content-Digest", "POST")
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -142,7 +143,7 @@ func TestSignRequest(t *testing.T) {
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
-		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
 		patService := NewPatService(patMock)
 
 		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
@@ -165,7 +166,7 @@ func TestSignRequest(t *testing.T) {
 
 		req.Method = "POST"
 
-		_, _, err = patService.VerifyRequestSignature(req)
+		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}

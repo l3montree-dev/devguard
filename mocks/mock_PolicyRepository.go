@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *PolicyRepository) EXPECT() *PolicyRepository_Expecter {
 }
 
 // Activate provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Activate(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *PolicyRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type PolicyRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Activate(tx interface{}, id interface{}) *PolicyRepository_Activate_Call {
-	return &PolicyRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *PolicyRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Activate_Call {
+	return &PolicyRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *PolicyRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PolicyRepository_Activate_Call {
+func (_c *PolicyRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PolicyRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *PolicyRepository_Activate_Call) Return(err error) *PolicyRepository_Ac
 	return _c
 }
 
-func (_c *PolicyRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PolicyRepository_Activate_Call {
+func (_c *PolicyRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *PolicyRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) All() ([]models.Policy, error) {
-	ret := _mock.Called()
+func (_mock *PolicyRepository) All(ctx context.Context, tx shared.DB) ([]models.Policy, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *PolicyRepository) All() ([]models.Policy, error) {
 
 	var r0 []models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Policy, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Policy, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Policy); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Policy); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Policy)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type PolicyRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *PolicyRepository_Expecter) All() *PolicyRepository_All_Call {
-	return &PolicyRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *PolicyRepository_Expecter) All(ctx interface{}, tx interface{}) *PolicyRepository_All_Call {
+	return &PolicyRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *PolicyRepository_All_Call) Run(run func()) *PolicyRepository_All_Call {
+func (_c *PolicyRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *PolicyRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *PolicyRepository_All_Call) Return(policys []models.Policy, err error) 
 	return _c
 }
 
-func (_c *PolicyRepository_All_Call) RunAndReturn(run func() ([]models.Policy, error)) *PolicyRepository_All_Call {
+func (_c *PolicyRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Policy, error)) *PolicyRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *PolicyRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type PolicyRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *PolicyRepository_Expecter) Begin() *PolicyRepository_Begin_Call {
-	return &PolicyRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *PolicyRepository_Expecter) Begin(ctx interface{}) *PolicyRepository_Begin_Call {
+	return &PolicyRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *PolicyRepository_Begin_Call) Run(run func()) *PolicyRepository_Begin_Call {
+func (_c *PolicyRepository_Begin_Call) Run(run func(ctx context.Context)) *PolicyRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,22 @@ func (_c *PolicyRepository_Begin_Call) Return(v shared.DB) *PolicyRepository_Beg
 	return _c
 }
 
-func (_c *PolicyRepository_Begin_Call) RunAndReturn(run func() shared.DB) *PolicyRepository_Begin_Call {
+func (_c *PolicyRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *PolicyRepository_Begin_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Create(tx shared.DB, t *models.Policy) error {
-	ret := _mock.Called(tx, t)
+func (_mock *PolicyRepository) Create(ctx context.Context, tx shared.DB, t *models.Policy) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Policy) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,25 +248,31 @@ type PolicyRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Policy
-func (_e *PolicyRepository_Expecter) Create(tx interface{}, t interface{}) *PolicyRepository_Create_Call {
-	return &PolicyRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *PolicyRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *PolicyRepository_Create_Call {
+	return &PolicyRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *PolicyRepository_Create_Call) Run(run func(tx shared.DB, t *models.Policy)) *PolicyRepository_Create_Call {
+func (_c *PolicyRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Policy)) *PolicyRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Policy
+		if args[2] != nil {
+			arg2 = args[2].(*models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -249,22 +283,22 @@ func (_c *PolicyRepository_Create_Call) Return(err error) *PolicyRepository_Crea
 	return _c
 }
 
-func (_c *PolicyRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Policy) error) *PolicyRepository_Create_Call {
+func (_c *PolicyRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Policy) error) *PolicyRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) CreateBatch(tx shared.DB, ts []models.Policy) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PolicyRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.Policy) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Policy) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,25 +311,31 @@ type PolicyRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Policy
-func (_e *PolicyRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *PolicyRepository_CreateBatch_Call {
-	return &PolicyRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *PolicyRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *PolicyRepository_CreateBatch_Call {
+	return &PolicyRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *PolicyRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Policy)) *PolicyRepository_CreateBatch_Call {
+func (_c *PolicyRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Policy)) *PolicyRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Policy
+		if args[2] != nil {
+			arg2 = args[2].([]models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -306,22 +346,22 @@ func (_c *PolicyRepository_CreateBatch_Call) Return(err error) *PolicyRepository
 	return _c
 }
 
-func (_c *PolicyRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Policy) error) *PolicyRepository_CreateBatch_Call {
+func (_c *PolicyRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Policy) error) *PolicyRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *PolicyRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -334,25 +374,31 @@ type PolicyRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Delete(tx interface{}, id interface{}) *PolicyRepository_Delete_Call {
-	return &PolicyRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *PolicyRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Delete_Call {
+	return &PolicyRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *PolicyRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PolicyRepository_Delete_Call {
+func (_c *PolicyRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PolicyRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -363,22 +409,22 @@ func (_c *PolicyRepository_Delete_Call) Return(err error) *PolicyRepository_Dele
 	return _c
 }
 
-func (_c *PolicyRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PolicyRepository_Delete_Call {
+func (_c *PolicyRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *PolicyRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) DeleteBatch(tx shared.DB, ids []models.Policy) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *PolicyRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.Policy) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Policy) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -391,25 +437,31 @@ type PolicyRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Policy
-func (_e *PolicyRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PolicyRepository_DeleteBatch_Call {
-	return &PolicyRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *PolicyRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *PolicyRepository_DeleteBatch_Call {
+	return &PolicyRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *PolicyRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Policy)) *PolicyRepository_DeleteBatch_Call {
+func (_c *PolicyRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.Policy)) *PolicyRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Policy
+		if args[2] != nil {
+			arg2 = args[2].([]models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -420,14 +472,14 @@ func (_c *PolicyRepository_DeleteBatch_Call) Return(err error) *PolicyRepository
 	return _c
 }
 
-func (_c *PolicyRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Policy) error) *PolicyRepository_DeleteBatch_Call {
+func (_c *PolicyRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Policy) error) *PolicyRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByOrganizationID provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) FindByOrganizationID(organizationID uuid.UUID) ([]models.Policy, error) {
-	ret := _mock.Called(organizationID)
+func (_mock *PolicyRepository) FindByOrganizationID(ctx context.Context, tx shared.DB, organizationID uuid.UUID) ([]models.Policy, error) {
+	ret := _mock.Called(ctx, tx, organizationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByOrganizationID")
@@ -435,18 +487,18 @@ func (_mock *PolicyRepository) FindByOrganizationID(organizationID uuid.UUID) ([
 
 	var r0 []models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Policy, error)); ok {
-		return returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Policy, error)); ok {
+		return returnFunc(ctx, tx, organizationID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Policy); ok {
-		r0 = returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Policy); ok {
+		r0 = returnFunc(ctx, tx, organizationID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Policy)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, organizationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -459,19 +511,31 @@ type PolicyRepository_FindByOrganizationID_Call struct {
 }
 
 // FindByOrganizationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *PolicyRepository_Expecter) FindByOrganizationID(organizationID interface{}) *PolicyRepository_FindByOrganizationID_Call {
-	return &PolicyRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", organizationID)}
+func (_e *PolicyRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, organizationID interface{}) *PolicyRepository_FindByOrganizationID_Call {
+	return &PolicyRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, organizationID)}
 }
 
-func (_c *PolicyRepository_FindByOrganizationID_Call) Run(run func(organizationID uuid.UUID)) *PolicyRepository_FindByOrganizationID_Call {
+func (_c *PolicyRepository_FindByOrganizationID_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID)) *PolicyRepository_FindByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -482,14 +546,14 @@ func (_c *PolicyRepository_FindByOrganizationID_Call) Return(policys []models.Po
 	return _c
 }
 
-func (_c *PolicyRepository_FindByOrganizationID_Call) RunAndReturn(run func(organizationID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByOrganizationID_Call {
+func (_c *PolicyRepository_FindByOrganizationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByProjectID provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) FindByProjectID(projectID uuid.UUID) ([]models.Policy, error) {
-	ret := _mock.Called(projectID)
+func (_mock *PolicyRepository) FindByProjectID(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Policy, error) {
+	ret := _mock.Called(ctx, tx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByProjectID")
@@ -497,18 +561,18 @@ func (_mock *PolicyRepository) FindByProjectID(projectID uuid.UUID) ([]models.Po
 
 	var r0 []models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Policy, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Policy, error)); ok {
+		return returnFunc(ctx, tx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Policy); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Policy); ok {
+		r0 = returnFunc(ctx, tx, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Policy)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -521,19 +585,31 @@ type PolicyRepository_FindByProjectID_Call struct {
 }
 
 // FindByProjectID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *PolicyRepository_Expecter) FindByProjectID(projectID interface{}) *PolicyRepository_FindByProjectID_Call {
-	return &PolicyRepository_FindByProjectID_Call{Call: _e.mock.On("FindByProjectID", projectID)}
+func (_e *PolicyRepository_Expecter) FindByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *PolicyRepository_FindByProjectID_Call {
+	return &PolicyRepository_FindByProjectID_Call{Call: _e.mock.On("FindByProjectID", ctx, tx, projectID)}
 }
 
-func (_c *PolicyRepository_FindByProjectID_Call) Run(run func(projectID uuid.UUID)) *PolicyRepository_FindByProjectID_Call {
+func (_c *PolicyRepository_FindByProjectID_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID)) *PolicyRepository_FindByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -544,14 +620,14 @@ func (_c *PolicyRepository_FindByProjectID_Call) Return(policys []models.Policy,
 	return _c
 }
 
-func (_c *PolicyRepository_FindByProjectID_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByProjectID_Call {
+func (_c *PolicyRepository_FindByProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByProjectID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindCommunityManagedPolicies provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) FindCommunityManagedPolicies() ([]models.Policy, error) {
-	ret := _mock.Called()
+func (_mock *PolicyRepository) FindCommunityManagedPolicies(ctx context.Context, tx shared.DB) ([]models.Policy, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindCommunityManagedPolicies")
@@ -559,18 +635,18 @@ func (_mock *PolicyRepository) FindCommunityManagedPolicies() ([]models.Policy, 
 
 	var r0 []models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Policy, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Policy, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Policy); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Policy); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Policy)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -583,13 +659,26 @@ type PolicyRepository_FindCommunityManagedPolicies_Call struct {
 }
 
 // FindCommunityManagedPolicies is a helper method to define mock.On call
-func (_e *PolicyRepository_Expecter) FindCommunityManagedPolicies() *PolicyRepository_FindCommunityManagedPolicies_Call {
-	return &PolicyRepository_FindCommunityManagedPolicies_Call{Call: _e.mock.On("FindCommunityManagedPolicies")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *PolicyRepository_Expecter) FindCommunityManagedPolicies(ctx interface{}, tx interface{}) *PolicyRepository_FindCommunityManagedPolicies_Call {
+	return &PolicyRepository_FindCommunityManagedPolicies_Call{Call: _e.mock.On("FindCommunityManagedPolicies", ctx, tx)}
 }
 
-func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) Run(run func()) *PolicyRepository_FindCommunityManagedPolicies_Call {
+func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) Run(run func(ctx context.Context, tx shared.DB)) *PolicyRepository_FindCommunityManagedPolicies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -599,22 +688,22 @@ func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) Return(policys []m
 	return _c
 }
 
-func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) RunAndReturn(run func() ([]models.Policy, error)) *PolicyRepository_FindCommunityManagedPolicies_Call {
+func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Policy, error)) *PolicyRepository_FindCommunityManagedPolicies_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *PolicyRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -629,19 +718,25 @@ type PolicyRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *PolicyRepository_Expecter) GetDB(tx interface{}) *PolicyRepository_GetDB_Call {
-	return &PolicyRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *PolicyRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *PolicyRepository_GetDB_Call {
+	return &PolicyRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *PolicyRepository_GetDB_Call) Run(run func(tx shared.DB)) *PolicyRepository_GetDB_Call {
+func (_c *PolicyRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *PolicyRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -652,14 +747,14 @@ func (_c *PolicyRepository_GetDB_Call) Return(v shared.DB) *PolicyRepository_Get
 	return _c
 }
 
-func (_c *PolicyRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *PolicyRepository_GetDB_Call {
+func (_c *PolicyRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *PolicyRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) List(ids []uuid.UUID) ([]models.Policy, error) {
-	ret := _mock.Called(ids)
+func (_mock *PolicyRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Policy, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -667,18 +762,18 @@ func (_mock *PolicyRepository) List(ids []uuid.UUID) ([]models.Policy, error) {
 
 	var r0 []models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.Policy, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.Policy, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.Policy); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.Policy); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Policy)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -691,19 +786,31 @@ type PolicyRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *PolicyRepository_Expecter) List(ids interface{}) *PolicyRepository_List_Call {
-	return &PolicyRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *PolicyRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *PolicyRepository_List_Call {
+	return &PolicyRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *PolicyRepository_List_Call) Run(run func(ids []uuid.UUID)) *PolicyRepository_List_Call {
+func (_c *PolicyRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *PolicyRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -714,14 +821,14 @@ func (_c *PolicyRepository_List_Call) Return(policys []models.Policy, err error)
 	return _c
 }
 
-func (_c *PolicyRepository_List_Call) RunAndReturn(run func(ids []uuid.UUID) ([]models.Policy, error)) *PolicyRepository_List_Call {
+func (_c *PolicyRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Policy, error)) *PolicyRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Read(id uuid.UUID) (models.Policy, error) {
-	ret := _mock.Called(id)
+func (_mock *PolicyRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Policy, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -729,16 +836,16 @@ func (_mock *PolicyRepository) Read(id uuid.UUID) (models.Policy, error) {
 
 	var r0 models.Policy
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Policy, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Policy, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Policy); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Policy); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Policy)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -751,19 +858,31 @@ type PolicyRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Read(id interface{}) *PolicyRepository_Read_Call {
-	return &PolicyRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *PolicyRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Read_Call {
+	return &PolicyRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *PolicyRepository_Read_Call) Run(run func(id uuid.UUID)) *PolicyRepository_Read_Call {
+func (_c *PolicyRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PolicyRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -774,22 +893,22 @@ func (_c *PolicyRepository_Read_Call) Return(policy models.Policy, err error) *P
 	return _c
 }
 
-func (_c *PolicyRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.Policy, error)) *PolicyRepository_Read_Call {
+func (_c *PolicyRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Policy, error)) *PolicyRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Save(tx shared.DB, t *models.Policy) error {
-	ret := _mock.Called(tx, t)
+func (_mock *PolicyRepository) Save(ctx context.Context, tx shared.DB, t *models.Policy) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Policy) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -802,25 +921,31 @@ type PolicyRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Policy
-func (_e *PolicyRepository_Expecter) Save(tx interface{}, t interface{}) *PolicyRepository_Save_Call {
-	return &PolicyRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+func (_e *PolicyRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *PolicyRepository_Save_Call {
+	return &PolicyRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *PolicyRepository_Save_Call) Run(run func(tx shared.DB, t *models.Policy)) *PolicyRepository_Save_Call {
+func (_c *PolicyRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Policy)) *PolicyRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Policy
+		if args[2] != nil {
+			arg2 = args[2].(*models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -831,22 +956,22 @@ func (_c *PolicyRepository_Save_Call) Return(err error) *PolicyRepository_Save_C
 	return _c
 }
 
-func (_c *PolicyRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Policy) error) *PolicyRepository_Save_Call {
+func (_c *PolicyRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Policy) error) *PolicyRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) SaveBatch(tx shared.DB, ts []models.Policy) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PolicyRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.Policy) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Policy) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -859,25 +984,31 @@ type PolicyRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Policy
-func (_e *PolicyRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *PolicyRepository_SaveBatch_Call {
-	return &PolicyRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *PolicyRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *PolicyRepository_SaveBatch_Call {
+	return &PolicyRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *PolicyRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Policy)) *PolicyRepository_SaveBatch_Call {
+func (_c *PolicyRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Policy)) *PolicyRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Policy
+		if args[2] != nil {
+			arg2 = args[2].([]models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -888,22 +1019,22 @@ func (_c *PolicyRepository_SaveBatch_Call) Return(err error) *PolicyRepository_S
 	return _c
 }
 
-func (_c *PolicyRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Policy) error) *PolicyRepository_SaveBatch_Call {
+func (_c *PolicyRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Policy) error) *PolicyRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Policy) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PolicyRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Policy) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Policy) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Policy) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -916,25 +1047,31 @@ type PolicyRepository_SaveBatchBestEffort_Call struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Policy
-func (_e *PolicyRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *PolicyRepository_SaveBatchBestEffort_Call {
-	return &PolicyRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *PolicyRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *PolicyRepository_SaveBatchBestEffort_Call {
+	return &PolicyRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *PolicyRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Policy)) *PolicyRepository_SaveBatchBestEffort_Call {
+func (_c *PolicyRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Policy)) *PolicyRepository_SaveBatchBestEffort_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Policy
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Policy)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Policy
+		if args[2] != nil {
+			arg2 = args[2].([]models.Policy)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -945,22 +1082,22 @@ func (_c *PolicyRepository_SaveBatchBestEffort_Call) Return(err error) *PolicyRe
 	return _c
 }
 
-func (_c *PolicyRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Policy) error) *PolicyRepository_SaveBatchBestEffort_Call {
+func (_c *PolicyRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Policy) error) *PolicyRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *PolicyRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -973,19 +1110,25 @@ type PolicyRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *PolicyRepository_Expecter) Transaction(fn interface{}) *PolicyRepository_Transaction_Call {
-	return &PolicyRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *PolicyRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *PolicyRepository_Transaction_Call {
+	return &PolicyRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *PolicyRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *PolicyRepository_Transaction_Call {
+func (_c *PolicyRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *PolicyRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -996,22 +1139,22 @@ func (_c *PolicyRepository_Transaction_Call) Return(err error) *PolicyRepository
 	return _c
 }
 
-func (_c *PolicyRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *PolicyRepository_Transaction_Call {
+func (_c *PolicyRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *PolicyRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Upsert(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *PolicyRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Policy, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Policy, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1024,31 +1167,43 @@ type PolicyRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - t *[]*models.Policy
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *PolicyRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PolicyRepository_Upsert_Call {
-	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *PolicyRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PolicyRepository_Upsert_Call {
+	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *PolicyRepository_Upsert_Call) Run(run func(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string)) *PolicyRepository_Upsert_Call {
+func (_c *PolicyRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string)) *PolicyRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Policy
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Policy)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 *[]*models.Policy
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*models.Policy)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1059,7 +1214,7 @@ func (_c *PolicyRepository_Upsert_Call) Return(err error) *PolicyRepository_Upse
 	return _c
 }
 
-func (_c *PolicyRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error) *PolicyRepository_Upsert_Call {
+func (_c *PolicyRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error) *PolicyRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

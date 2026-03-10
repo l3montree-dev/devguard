@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *InvitationRepository) EXPECT() *InvitationRepository_Expecter {
 }
 
 // Delete provides a mock function for the type InvitationRepository
-func (_mock *InvitationRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *InvitationRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type InvitationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *InvitationRepository_Expecter) Delete(tx interface{}, id interface{}) *InvitationRepository_Delete_Call {
-	return &InvitationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *InvitationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *InvitationRepository_Delete_Call {
+	return &InvitationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *InvitationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *InvitationRepository_Delete_Call {
+func (_c *InvitationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *InvitationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *InvitationRepository_Delete_Call) Return(err error) *InvitationReposit
 	return _c
 }
 
-func (_c *InvitationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *InvitationRepository_Delete_Call {
+func (_c *InvitationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *InvitationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByCode provides a mock function for the type InvitationRepository
-func (_mock *InvitationRepository) FindByCode(code string) (models.Invitation, error) {
-	ret := _mock.Called(code)
+func (_mock *InvitationRepository) FindByCode(ctx context.Context, tx shared.DB, code string) (models.Invitation, error) {
+	ret := _mock.Called(ctx, tx, code)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByCode")
@@ -105,16 +113,16 @@ func (_mock *InvitationRepository) FindByCode(code string) (models.Invitation, e
 
 	var r0 models.Invitation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.Invitation, error)); ok {
-		return returnFunc(code)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.Invitation, error)); ok {
+		return returnFunc(ctx, tx, code)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.Invitation); ok {
-		r0 = returnFunc(code)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.Invitation); ok {
+		r0 = returnFunc(ctx, tx, code)
 	} else {
 		r0 = ret.Get(0).(models.Invitation)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(code)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, code)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -127,19 +135,31 @@ type InvitationRepository_FindByCode_Call struct {
 }
 
 // FindByCode is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - code string
-func (_e *InvitationRepository_Expecter) FindByCode(code interface{}) *InvitationRepository_FindByCode_Call {
-	return &InvitationRepository_FindByCode_Call{Call: _e.mock.On("FindByCode", code)}
+func (_e *InvitationRepository_Expecter) FindByCode(ctx interface{}, tx interface{}, code interface{}) *InvitationRepository_FindByCode_Call {
+	return &InvitationRepository_FindByCode_Call{Call: _e.mock.On("FindByCode", ctx, tx, code)}
 }
 
-func (_c *InvitationRepository_FindByCode_Call) Run(run func(code string)) *InvitationRepository_FindByCode_Call {
+func (_c *InvitationRepository_FindByCode_Call) Run(run func(ctx context.Context, tx shared.DB, code string)) *InvitationRepository_FindByCode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -150,22 +170,22 @@ func (_c *InvitationRepository_FindByCode_Call) Return(invitation models.Invitat
 	return _c
 }
 
-func (_c *InvitationRepository_FindByCode_Call) RunAndReturn(run func(code string) (models.Invitation, error)) *InvitationRepository_FindByCode_Call {
+func (_c *InvitationRepository_FindByCode_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, code string) (models.Invitation, error)) *InvitationRepository_FindByCode_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type InvitationRepository
-func (_mock *InvitationRepository) Save(tx shared.DB, invitation *models.Invitation) error {
-	ret := _mock.Called(tx, invitation)
+func (_mock *InvitationRepository) Save(ctx context.Context, tx shared.DB, invitation *models.Invitation) error {
+	ret := _mock.Called(ctx, tx, invitation)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Invitation) error); ok {
-		r0 = returnFunc(tx, invitation)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Invitation) error); ok {
+		r0 = returnFunc(ctx, tx, invitation)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -178,25 +198,31 @@ type InvitationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - invitation *models.Invitation
-func (_e *InvitationRepository_Expecter) Save(tx interface{}, invitation interface{}) *InvitationRepository_Save_Call {
-	return &InvitationRepository_Save_Call{Call: _e.mock.On("Save", tx, invitation)}
+func (_e *InvitationRepository_Expecter) Save(ctx interface{}, tx interface{}, invitation interface{}) *InvitationRepository_Save_Call {
+	return &InvitationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, invitation)}
 }
 
-func (_c *InvitationRepository_Save_Call) Run(run func(tx shared.DB, invitation *models.Invitation)) *InvitationRepository_Save_Call {
+func (_c *InvitationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, invitation *models.Invitation)) *InvitationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Invitation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Invitation)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Invitation
+		if args[2] != nil {
+			arg2 = args[2].(*models.Invitation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -207,7 +233,7 @@ func (_c *InvitationRepository_Save_Call) Return(err error) *InvitationRepositor
 	return _c
 }
 
-func (_c *InvitationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, invitation *models.Invitation) error) *InvitationRepository_Save_Call {
+func (_c *InvitationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, invitation *models.Invitation) error) *InvitationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

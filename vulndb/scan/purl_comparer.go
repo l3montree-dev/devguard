@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -38,22 +39,24 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 	}
 }
 
-// GetAffectedComponents finds security vulnerabilities for a software package
-func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
-	ctx := normalize.ParsePurlForMatching(purl)
+var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer interface
 
-	if ctx.HowToInterpretVersionString == normalize.EmptyVersion {
+// GetAffectedComponents finds security vulnerabilities for a software package
+func (comparer *PurlComparer) GetAffectedComponents(ctx context.Context, purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
+	matchCtx := normalize.ParsePurlForMatching(purl)
+
+	if matchCtx.HowToInterpretVersionString == normalize.EmptyVersion {
 		return []models.AffectedComponent{}, nil // No version = no results
 	}
 
 	var affectedComponents []models.AffectedComponent
 
 	// Build the base query
-	query := comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", ctx.SearchPurl)
-	query = repositories.BuildQualifierQuery(query, ctx.Qualifiers, ctx.Namespace)
+	query := comparer.db.WithContext(ctx).Model(&models.AffectedComponent{}).Where("purl = ?", matchCtx.SearchPurl)
+	query = repositories.BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
 
 	// build the query
-	query = repositories.BuildQueryBasedOnMatchContext(query, ctx)
+	query = repositories.BuildQueryBasedOnMatchContext(query, matchCtx)
 	err := query.
 		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
 		Find(&affectedComponents).Error
@@ -62,17 +65,17 @@ func (comparer *PurlComparer) GetAffectedComponents(purl packageurl.PackageURL) 
 		return nil, err
 	}
 
-	if ctx.HowToInterpretVersionString == normalize.EcosystemSpecificVersion {
+	if matchCtx.HowToInterpretVersionString == normalize.EcosystemSpecificVersion {
 		// Filter the results based on introduced/fixed versions or exact match
-		affectedComponents = filterMatchingComponentsByVersion(affectedComponents, ctx.NormalizedVersion)
+		affectedComponents = filterMatchingComponentsByVersion(affectedComponents, matchCtx.NormalizedVersion)
 	}
 
 	return affectedComponents, err
 }
 
-func (comparer *PurlComparer) GetVulns(purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
+func (comparer *PurlComparer) GetVulns(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
 	// get the affected components
-	affectedComponents, err := comparer.GetAffectedComponents(purl)
+	affectedComponents, err := comparer.GetAffectedComponents(ctx, purl)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get affected components")
 	}

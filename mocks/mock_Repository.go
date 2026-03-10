@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/utils"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
@@ -38,16 +40,16 @@ func (_m *Repository[ID, T, Tx]) EXPECT() *Repository_Expecter[ID, T, Tx] {
 }
 
 // Activate provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Activate(tx Tx, id ID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *Repository[ID, T, Tx]) Activate(ctx context.Context, tx Tx, id ID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, ID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -60,25 +62,31 @@ type Repository_Activate_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Activate(tx interface{}, id interface{}) *Repository_Activate_Call[ID, T, Tx] {
-	return &Repository_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", tx, id)}
+func (_e *Repository_Expecter[ID, T, Tx]) Activate(ctx interface{}, tx interface{}, id interface{}) *Repository_Activate_Call[ID, T, Tx] {
+	return &Repository_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *Repository_Activate_Call[ID, T, Tx]) Run(run func(tx Tx, id ID)) *Repository_Activate_Call[ID, T, Tx] {
+func (_c *Repository_Activate_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, id ID)) *Repository_Activate_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 ID
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(ID)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 ID
+		if args[2] != nil {
+			arg2 = args[2].(ID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -89,14 +97,14 @@ func (_c *Repository_Activate_Call[ID, T, Tx]) Return(err error) *Repository_Act
 	return _c
 }
 
-func (_c *Repository_Activate_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, id ID) error) *Repository_Activate_Call[ID, T, Tx] {
+func (_c *Repository_Activate_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, id ID) error) *Repository_Activate_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) All() ([]T, error) {
-	ret := _mock.Called()
+func (_mock *Repository[ID, T, Tx]) All(ctx context.Context, tx Tx) ([]T, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -104,18 +112,18 @@ func (_mock *Repository[ID, T, Tx]) All() ([]T, error) {
 
 	var r0 []T
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]T, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx) ([]T, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []T); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx) []T); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]T)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, Tx) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -128,13 +136,26 @@ type Repository_All_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *Repository_Expecter[ID, T, Tx]) All() *Repository_All_Call[ID, T, Tx] {
-	return &Repository_All_Call[ID, T, Tx]{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx Tx
+func (_e *Repository_Expecter[ID, T, Tx]) All(ctx interface{}, tx interface{}) *Repository_All_Call[ID, T, Tx] {
+	return &Repository_All_Call[ID, T, Tx]{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *Repository_All_Call[ID, T, Tx]) Run(run func()) *Repository_All_Call[ID, T, Tx] {
+func (_c *Repository_All_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx)) *Repository_All_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -144,22 +165,22 @@ func (_c *Repository_All_Call[ID, T, Tx]) Return(vs []T, err error) *Repository_
 	return _c
 }
 
-func (_c *Repository_All_Call[ID, T, Tx]) RunAndReturn(run func() ([]T, error)) *Repository_All_Call[ID, T, Tx] {
+func (_c *Repository_All_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx) ([]T, error)) *Repository_All_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Begin() Tx {
-	ret := _mock.Called()
+func (_mock *Repository[ID, T, Tx]) Begin(ctx context.Context) Tx {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 Tx
-	if returnFunc, ok := ret.Get(0).(func() Tx); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) Tx); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Tx)
@@ -174,13 +195,20 @@ type Repository_Begin_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *Repository_Expecter[ID, T, Tx]) Begin() *Repository_Begin_Call[ID, T, Tx] {
-	return &Repository_Begin_Call[ID, T, Tx]{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *Repository_Expecter[ID, T, Tx]) Begin(ctx interface{}) *Repository_Begin_Call[ID, T, Tx] {
+	return &Repository_Begin_Call[ID, T, Tx]{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *Repository_Begin_Call[ID, T, Tx]) Run(run func()) *Repository_Begin_Call[ID, T, Tx] {
+func (_c *Repository_Begin_Call[ID, T, Tx]) Run(run func(ctx context.Context)) *Repository_Begin_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -190,22 +218,22 @@ func (_c *Repository_Begin_Call[ID, T, Tx]) Return(v Tx) *Repository_Begin_Call[
 	return _c
 }
 
-func (_c *Repository_Begin_Call[ID, T, Tx]) RunAndReturn(run func() Tx) *Repository_Begin_Call[ID, T, Tx] {
+func (_c *Repository_Begin_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context) Tx) *Repository_Begin_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Create(tx Tx, t *T) error {
-	ret := _mock.Called(tx, t)
+func (_mock *Repository[ID, T, Tx]) Create(ctx context.Context, tx Tx, t *T) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, *T) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, *T) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -218,25 +246,31 @@ type Repository_Create_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *Repository_Expecter[ID, T, Tx]) Create(tx interface{}, t interface{}) *Repository_Create_Call[ID, T, Tx] {
-	return &Repository_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", tx, t)}
+func (_e *Repository_Expecter[ID, T, Tx]) Create(ctx interface{}, tx interface{}, t interface{}) *Repository_Create_Call[ID, T, Tx] {
+	return &Repository_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *Repository_Create_Call[ID, T, Tx]) Run(run func(tx Tx, t *T)) *Repository_Create_Call[ID, T, Tx] {
+func (_c *Repository_Create_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, t *T)) *Repository_Create_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(*T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 *T
+		if args[2] != nil {
+			arg2 = args[2].(*T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -247,22 +281,22 @@ func (_c *Repository_Create_Call[ID, T, Tx]) Return(err error) *Repository_Creat
 	return _c
 }
 
-func (_c *Repository_Create_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, t *T) error) *Repository_Create_Call[ID, T, Tx] {
+func (_c *Repository_Create_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, t *T) error) *Repository_Create_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) CreateBatch(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *Repository[ID, T, Tx]) CreateBatch(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -275,25 +309,31 @@ type Repository_CreateBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) CreateBatch(tx interface{}, ts interface{}) *Repository_CreateBatch_Call[ID, T, Tx] {
-	return &Repository_CreateBatch_Call[ID, T, Tx]{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *Repository_Expecter[ID, T, Tx]) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *Repository_CreateBatch_Call[ID, T, Tx] {
+	return &Repository_CreateBatch_Call[ID, T, Tx]{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *Repository_CreateBatch_Call[ID, T, Tx]) Run(run func(tx Tx, ts []T)) *Repository_CreateBatch_Call[ID, T, Tx] {
+func (_c *Repository_CreateBatch_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *Repository_CreateBatch_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -304,22 +344,22 @@ func (_c *Repository_CreateBatch_Call[ID, T, Tx]) Return(err error) *Repository_
 	return _c
 }
 
-func (_c *Repository_CreateBatch_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *Repository_CreateBatch_Call[ID, T, Tx] {
+func (_c *Repository_CreateBatch_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *Repository_CreateBatch_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Delete(tx Tx, id ID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *Repository[ID, T, Tx]) Delete(ctx context.Context, tx Tx, id ID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, ID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -332,25 +372,31 @@ type Repository_Delete_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Delete(tx interface{}, id interface{}) *Repository_Delete_Call[ID, T, Tx] {
-	return &Repository_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", tx, id)}
+func (_e *Repository_Expecter[ID, T, Tx]) Delete(ctx interface{}, tx interface{}, id interface{}) *Repository_Delete_Call[ID, T, Tx] {
+	return &Repository_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *Repository_Delete_Call[ID, T, Tx]) Run(run func(tx Tx, id ID)) *Repository_Delete_Call[ID, T, Tx] {
+func (_c *Repository_Delete_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, id ID)) *Repository_Delete_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 ID
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(ID)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 ID
+		if args[2] != nil {
+			arg2 = args[2].(ID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -361,22 +407,22 @@ func (_c *Repository_Delete_Call[ID, T, Tx]) Return(err error) *Repository_Delet
 	return _c
 }
 
-func (_c *Repository_Delete_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, id ID) error) *Repository_Delete_Call[ID, T, Tx] {
+func (_c *Repository_Delete_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, id ID) error) *Repository_Delete_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) DeleteBatch(tx Tx, ids []T) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *Repository[ID, T, Tx]) DeleteBatch(ctx context.Context, tx Tx, ids []T) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -389,25 +435,31 @@ type Repository_DeleteBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ids []T
-func (_e *Repository_Expecter[ID, T, Tx]) DeleteBatch(tx interface{}, ids interface{}) *Repository_DeleteBatch_Call[ID, T, Tx] {
-	return &Repository_DeleteBatch_Call[ID, T, Tx]{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *Repository_Expecter[ID, T, Tx]) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *Repository_DeleteBatch_Call[ID, T, Tx] {
+	return &Repository_DeleteBatch_Call[ID, T, Tx]{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *Repository_DeleteBatch_Call[ID, T, Tx]) Run(run func(tx Tx, ids []T)) *Repository_DeleteBatch_Call[ID, T, Tx] {
+func (_c *Repository_DeleteBatch_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ids []T)) *Repository_DeleteBatch_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -418,22 +470,22 @@ func (_c *Repository_DeleteBatch_Call[ID, T, Tx]) Return(err error) *Repository_
 	return _c
 }
 
-func (_c *Repository_DeleteBatch_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ids []T) error) *Repository_DeleteBatch_Call[ID, T, Tx] {
+func (_c *Repository_DeleteBatch_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ids []T) error) *Repository_DeleteBatch_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) GetDB(tx Tx) Tx {
-	ret := _mock.Called(tx)
+func (_mock *Repository[ID, T, Tx]) GetDB(ctx context.Context, tx Tx) Tx {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 Tx
-	if returnFunc, ok := ret.Get(0).(func(Tx) Tx); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx) Tx); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Tx)
@@ -448,19 +500,25 @@ type Repository_GetDB_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
-func (_e *Repository_Expecter[ID, T, Tx]) GetDB(tx interface{}) *Repository_GetDB_Call[ID, T, Tx] {
-	return &Repository_GetDB_Call[ID, T, Tx]{Call: _e.mock.On("GetDB", tx)}
+func (_e *Repository_Expecter[ID, T, Tx]) GetDB(ctx interface{}, tx interface{}) *Repository_GetDB_Call[ID, T, Tx] {
+	return &Repository_GetDB_Call[ID, T, Tx]{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *Repository_GetDB_Call[ID, T, Tx]) Run(run func(tx Tx)) *Repository_GetDB_Call[ID, T, Tx] {
+func (_c *Repository_GetDB_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx)) *Repository_GetDB_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -471,14 +529,14 @@ func (_c *Repository_GetDB_Call[ID, T, Tx]) Return(v Tx) *Repository_GetDB_Call[
 	return _c
 }
 
-func (_c *Repository_GetDB_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx) Tx) *Repository_GetDB_Call[ID, T, Tx] {
+func (_c *Repository_GetDB_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx) Tx) *Repository_GetDB_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) List(ids []ID) ([]T, error) {
-	ret := _mock.Called(ids)
+func (_mock *Repository[ID, T, Tx]) List(ctx context.Context, tx Tx, ids []ID) ([]T, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -486,18 +544,18 @@ func (_mock *Repository[ID, T, Tx]) List(ids []ID) ([]T, error) {
 
 	var r0 []T
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]ID) ([]T, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []ID) ([]T, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]ID) []T); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []ID) []T); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]T)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]ID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, Tx, []ID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -510,19 +568,31 @@ type Repository_List_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx Tx
 //   - ids []ID
-func (_e *Repository_Expecter[ID, T, Tx]) List(ids interface{}) *Repository_List_Call[ID, T, Tx] {
-	return &Repository_List_Call[ID, T, Tx]{Call: _e.mock.On("List", ids)}
+func (_e *Repository_Expecter[ID, T, Tx]) List(ctx interface{}, tx interface{}, ids interface{}) *Repository_List_Call[ID, T, Tx] {
+	return &Repository_List_Call[ID, T, Tx]{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *Repository_List_Call[ID, T, Tx]) Run(run func(ids []ID)) *Repository_List_Call[ID, T, Tx] {
+func (_c *Repository_List_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ids []ID)) *Repository_List_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []ID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]ID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []ID
+		if args[2] != nil {
+			arg2 = args[2].([]ID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -533,14 +603,14 @@ func (_c *Repository_List_Call[ID, T, Tx]) Return(vs []T, err error) *Repository
 	return _c
 }
 
-func (_c *Repository_List_Call[ID, T, Tx]) RunAndReturn(run func(ids []ID) ([]T, error)) *Repository_List_Call[ID, T, Tx] {
+func (_c *Repository_List_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ids []ID) ([]T, error)) *Repository_List_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Read(id ID) (T, error) {
-	ret := _mock.Called(id)
+func (_mock *Repository[ID, T, Tx]) Read(ctx context.Context, tx Tx, id ID) (T, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -548,18 +618,18 @@ func (_mock *Repository[ID, T, Tx]) Read(id ID) (T, error) {
 
 	var r0 T
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(ID) (T, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) (T, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(ID) T); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) T); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(T)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(ID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, Tx, ID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -572,19 +642,31 @@ type Repository_Read_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Read(id interface{}) *Repository_Read_Call[ID, T, Tx] {
-	return &Repository_Read_Call[ID, T, Tx]{Call: _e.mock.On("Read", id)}
+func (_e *Repository_Expecter[ID, T, Tx]) Read(ctx interface{}, tx interface{}, id interface{}) *Repository_Read_Call[ID, T, Tx] {
+	return &Repository_Read_Call[ID, T, Tx]{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *Repository_Read_Call[ID, T, Tx]) Run(run func(id ID)) *Repository_Read_Call[ID, T, Tx] {
+func (_c *Repository_Read_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, id ID)) *Repository_Read_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 ID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(ID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
+		}
+		var arg2 ID
+		if args[2] != nil {
+			arg2 = args[2].(ID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -595,22 +677,22 @@ func (_c *Repository_Read_Call[ID, T, Tx]) Return(v T, err error) *Repository_Re
 	return _c
 }
 
-func (_c *Repository_Read_Call[ID, T, Tx]) RunAndReturn(run func(id ID) (T, error)) *Repository_Read_Call[ID, T, Tx] {
+func (_c *Repository_Read_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, id ID) (T, error)) *Repository_Read_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Save(tx Tx, t *T) error {
-	ret := _mock.Called(tx, t)
+func (_mock *Repository[ID, T, Tx]) Save(ctx context.Context, tx Tx, t *T) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, *T) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, *T) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -623,25 +705,31 @@ type Repository_Save_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *Repository_Expecter[ID, T, Tx]) Save(tx interface{}, t interface{}) *Repository_Save_Call[ID, T, Tx] {
-	return &Repository_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", tx, t)}
+func (_e *Repository_Expecter[ID, T, Tx]) Save(ctx interface{}, tx interface{}, t interface{}) *Repository_Save_Call[ID, T, Tx] {
+	return &Repository_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *Repository_Save_Call[ID, T, Tx]) Run(run func(tx Tx, t *T)) *Repository_Save_Call[ID, T, Tx] {
+func (_c *Repository_Save_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, t *T)) *Repository_Save_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(*T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 *T
+		if args[2] != nil {
+			arg2 = args[2].(*T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -652,22 +740,22 @@ func (_c *Repository_Save_Call[ID, T, Tx]) Return(err error) *Repository_Save_Ca
 	return _c
 }
 
-func (_c *Repository_Save_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, t *T) error) *Repository_Save_Call[ID, T, Tx] {
+func (_c *Repository_Save_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, t *T) error) *Repository_Save_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) SaveBatch(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *Repository[ID, T, Tx]) SaveBatch(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -680,25 +768,31 @@ type Repository_SaveBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) SaveBatch(tx interface{}, ts interface{}) *Repository_SaveBatch_Call[ID, T, Tx] {
-	return &Repository_SaveBatch_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *Repository_Expecter[ID, T, Tx]) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *Repository_SaveBatch_Call[ID, T, Tx] {
+	return &Repository_SaveBatch_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *Repository_SaveBatch_Call[ID, T, Tx]) Run(run func(tx Tx, ts []T)) *Repository_SaveBatch_Call[ID, T, Tx] {
+func (_c *Repository_SaveBatch_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *Repository_SaveBatch_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -709,22 +803,22 @@ func (_c *Repository_SaveBatch_Call[ID, T, Tx]) Return(err error) *Repository_Sa
 	return _c
 }
 
-func (_c *Repository_SaveBatch_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *Repository_SaveBatch_Call[ID, T, Tx] {
+func (_c *Repository_SaveBatch_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *Repository_SaveBatch_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) SaveBatchBestEffort(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *Repository[ID, T, Tx]) SaveBatchBestEffort(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -737,25 +831,31 @@ type Repository_SaveBatchBestEffort_Call[ID any, T utils.Tabler, Tx any] struct 
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) SaveBatchBestEffort(tx interface{}, ts interface{}) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
-	return &Repository_SaveBatchBestEffort_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *Repository_Expecter[ID, T, Tx]) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+	return &Repository_SaveBatchBestEffort_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Run(run func(tx Tx, ts []T)) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -766,22 +866,22 @@ func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Return(err error) *Rep
 	return _c
 }
 
-func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
+func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Transaction(fn func(tx Tx) error) error {
-	ret := _mock.Called(fn)
+func (_mock *Repository[ID, T, Tx]) Transaction(ctx context.Context, fn func(tx Tx) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx Tx) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx Tx) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -794,19 +894,25 @@ type Repository_Transaction_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx Tx) error
-func (_e *Repository_Expecter[ID, T, Tx]) Transaction(fn interface{}) *Repository_Transaction_Call[ID, T, Tx] {
-	return &Repository_Transaction_Call[ID, T, Tx]{Call: _e.mock.On("Transaction", fn)}
+func (_e *Repository_Expecter[ID, T, Tx]) Transaction(ctx interface{}, fn interface{}) *Repository_Transaction_Call[ID, T, Tx] {
+	return &Repository_Transaction_Call[ID, T, Tx]{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *Repository_Transaction_Call[ID, T, Tx]) Run(run func(fn func(tx Tx) error)) *Repository_Transaction_Call[ID, T, Tx] {
+func (_c *Repository_Transaction_Call[ID, T, Tx]) Run(run func(ctx context.Context, fn func(tx Tx) error)) *Repository_Transaction_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx Tx) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx Tx) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx Tx) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx Tx) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -817,22 +923,22 @@ func (_c *Repository_Transaction_Call[ID, T, Tx]) Return(err error) *Repository_
 	return _c
 }
 
-func (_c *Repository_Transaction_Call[ID, T, Tx]) RunAndReturn(run func(fn func(tx Tx) error) error) *Repository_Transaction_Call[ID, T, Tx] {
+func (_c *Repository_Transaction_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, fn func(tx Tx) error) error) *Repository_Transaction_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) Upsert(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *Repository[ID, T, Tx]) Upsert(ctx context.Context, tx Tx, t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*T, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, *[]*T, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -845,31 +951,43 @@ type Repository_Upsert_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx Tx
 //   - t *[]*T
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *Repository_Expecter[ID, T, Tx]) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *Repository_Upsert_Call[ID, T, Tx] {
-	return &Repository_Upsert_Call[ID, T, Tx]{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *Repository_Expecter[ID, T, Tx]) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *Repository_Upsert_Call[ID, T, Tx] {
+	return &Repository_Upsert_Call[ID, T, Tx]{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *Repository_Upsert_Call[ID, T, Tx]) Run(run func(t *[]*T, conflictingColumns []clause.Column, updateOnly []string)) *Repository_Upsert_Call[ID, T, Tx] {
+func (_c *Repository_Upsert_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, t *[]*T, conflictingColumns []clause.Column, updateOnly []string)) *Repository_Upsert_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*T
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*T)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(Tx)
 		}
-		var arg2 []string
+		var arg2 *[]*T
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*T)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -880,7 +998,7 @@ func (_c *Repository_Upsert_Call[ID, T, Tx]) Return(err error) *Repository_Upser
 	return _c
 }
 
-func (_c *Repository_Upsert_Call[ID, T, Tx]) RunAndReturn(run func(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error) *Repository_Upsert_Call[ID, T, Tx] {
+func (_c *Repository_Upsert_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error) *Repository_Upsert_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }

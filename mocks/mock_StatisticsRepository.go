@@ -5,11 +5,13 @@
 package mocks
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -41,8 +43,8 @@ func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 }
 
 // AverageFixingTime provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTime(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+func (_mock *StatisticsRepository) AverageFixingTime(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTime")
@@ -50,16 +52,16 @@ func (_mock *StatisticsRepository) AverageFixingTime(artifactNam *string, assetV
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,36 +74,46 @@ type StatisticsRepository_AverageFixingTime_Call struct {
 }
 
 // AverageFixingTime is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - artifactNam *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - riskIntervalStart float64
 //   - riskIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTime(artifactNam interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
-	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTime(ctx interface{}, tx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
+	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *string
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*string)
 		}
-		var arg3 float64
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(float64)
+			arg3 = args[3].(string)
 		}
-		var arg4 float64
+		var arg4 uuid.UUID
 		if args[4] != nil {
-			arg4 = args[4].(float64)
+			arg4 = args[4].(uuid.UUID)
+		}
+		var arg5 float64
+		if args[5] != nil {
+			arg5 = args[5].(float64)
+		}
+		var arg6 float64
+		if args[6] != nil {
+			arg6 = args[6].(float64)
 		}
 		run(
 			arg0,
@@ -109,6 +121,8 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(artifactNam 
 			arg2,
 			arg3,
 			arg4,
+			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -119,14 +133,14 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) Return(duration time.Dura
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
+func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // AverageFixingTimeByCvss provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
+func (_mock *StatisticsRepository) AverageFixingTimeByCvss(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTimeByCvss")
@@ -134,16 +148,16 @@ func (_mock *StatisticsRepository) AverageFixingTimeByCvss(artifactName *string,
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*string, string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*string, string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -156,24 +170,120 @@ type StatisticsRepository_AverageFixingTimeByCvss_Call struct {
 }
 
 // AverageFixingTimeByCvss is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - cvssIntervalStart float64
 //   - cvssIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvss(artifactName interface{}, assetVersionName interface{}, assetID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	return &StatisticsRepository_AverageFixingTimeByCvss_Call{Call: _e.mock.On("AverageFixingTimeByCvss", artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvss(ctx interface{}, tx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvss_Call {
+	return &StatisticsRepository_AverageFixingTimeByCvss_Call{Call: _e.mock.On("AverageFixingTimeByCvss", ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Run(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
+func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Run(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *string
+		if args[2] != nil {
+			arg2 = args[2].(*string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
+		}
+		var arg5 float64
+		if args[5] != nil {
+			arg5 = args[5].(float64)
+		}
+		var arg6 float64
+		if args[6] != nil {
+			arg6 = args[6].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTimeByCvss_Call {
+	_c.Call.Return(duration, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AverageFixingTimeByCvssForRelease provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) AverageFixingTimeByCvssForRelease(ctx context.Context, tx shared.DB, releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(ctx, tx, releaseID, cvssIntervalStart, cvssIntervalEnd)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AverageFixingTimeByCvssForRelease")
+	}
+
+	var r0 time.Duration
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(ctx, tx, releaseID, cvssIntervalStart, cvssIntervalEnd)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(ctx, tx, releaseID, cvssIntervalStart, cvssIntervalEnd)
+	} else {
+		r0 = ret.Get(0).(time.Duration)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(ctx, tx, releaseID, cvssIntervalStart, cvssIntervalEnd)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_AverageFixingTimeByCvssForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTimeByCvssForRelease'
+type StatisticsRepository_AverageFixingTimeByCvssForRelease_Call struct {
+	*mock.Call
+}
+
+// AverageFixingTimeByCvssForRelease is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - releaseID uuid.UUID
+//   - cvssIntervalStart float64
+//   - cvssIntervalEnd float64
+func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvssForRelease(ctx interface{}, tx interface{}, releaseID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
+	return &StatisticsRepository_AverageFixingTimeByCvssForRelease_Call{Call: _e.mock.On("AverageFixingTimeByCvssForRelease", ctx, tx, releaseID, cvssIntervalStart, cvssIntervalEnd)}
+}
+
+func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) Run(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 uuid.UUID
 		if args[2] != nil {
@@ -198,91 +308,19 @@ func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Run(run func(artifa
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	_c.Call.Return(duration, err)
-	return _c
-}
-
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) RunAndReturn(run func(artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// AverageFixingTimeByCvssForRelease provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimeByCvssForRelease(releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(releaseID, cvssIntervalStart, cvssIntervalEnd)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AverageFixingTimeByCvssForRelease")
-	}
-
-	var r0 time.Duration
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(releaseID, cvssIntervalStart, cvssIntervalEnd)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(releaseID, cvssIntervalStart, cvssIntervalEnd)
-	} else {
-		r0 = ret.Get(0).(time.Duration)
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(releaseID, cvssIntervalStart, cvssIntervalEnd)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsRepository_AverageFixingTimeByCvssForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTimeByCvssForRelease'
-type StatisticsRepository_AverageFixingTimeByCvssForRelease_Call struct {
-	*mock.Call
-}
-
-// AverageFixingTimeByCvssForRelease is a helper method to define mock.On call
-//   - releaseID uuid.UUID
-//   - cvssIntervalStart float64
-//   - cvssIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvssForRelease(releaseID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
-	return &StatisticsRepository_AverageFixingTimeByCvssForRelease_Call{Call: _e.mock.On("AverageFixingTimeByCvssForRelease", releaseID, cvssIntervalStart, cvssIntervalEnd)}
-}
-
-func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) Run(run func(releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 float64
-		if args[1] != nil {
-			arg1 = args[1].(float64)
-		}
-		var arg2 float64
-		if args[2] != nil {
-			arg2 = args[2].(float64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
 func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
 	_c.Call.Return(duration, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
+func (_c *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeByCvssForRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // AverageFixingTimeForRelease provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(releaseID, riskIntervalStart, riskIntervalEnd)
+func (_mock *StatisticsRepository) AverageFixingTimeForRelease(ctx context.Context, tx shared.DB, releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
+	ret := _mock.Called(ctx, tx, releaseID, riskIntervalStart, riskIntervalEnd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTimeForRelease")
@@ -290,16 +328,16 @@ func (_mock *StatisticsRepository) AverageFixingTimeForRelease(releaseID uuid.UU
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, float64, float64) (time.Duration, error)); ok {
+		return returnFunc(ctx, tx, releaseID, riskIntervalStart, riskIntervalEnd)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, float64, float64) time.Duration); ok {
+		r0 = returnFunc(ctx, tx, releaseID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(releaseID, riskIntervalStart, riskIntervalEnd)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, float64, float64) error); ok {
+		r1 = returnFunc(ctx, tx, releaseID, riskIntervalStart, riskIntervalEnd)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -312,31 +350,43 @@ type StatisticsRepository_AverageFixingTimeForRelease_Call struct {
 }
 
 // AverageFixingTimeForRelease is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - releaseID uuid.UUID
 //   - riskIntervalStart float64
 //   - riskIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTimeForRelease(releaseID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeForRelease_Call {
-	return &StatisticsRepository_AverageFixingTimeForRelease_Call{Call: _e.mock.On("AverageFixingTimeForRelease", releaseID, riskIntervalStart, riskIntervalEnd)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTimeForRelease(ctx interface{}, tx interface{}, releaseID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+	return &StatisticsRepository_AverageFixingTimeForRelease_Call{Call: _e.mock.On("AverageFixingTimeForRelease", ctx, tx, releaseID, riskIntervalStart, riskIntervalEnd)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Run(run func(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Run(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 float64
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(float64)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 float64
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(float64)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 float64
+		if args[3] != nil {
+			arg3 = args[3].(float64)
+		}
+		var arg4 float64
+		if args[4] != nil {
+			arg4 = args[4].(float64)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -347,14 +397,14 @@ func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Return(duration
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) RunAndReturn(run func(releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CVESWithKnownExploitsInAssetVersion provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error) {
-	ret := _mock.Called(assetVersion)
+func (_mock *StatisticsRepository) CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) ([]models.CVE, error) {
+	ret := _mock.Called(ctx, tx, assetVersion)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CVESWithKnownExploitsInAssetVersion")
@@ -362,18 +412,18 @@ func (_mock *StatisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVers
 
 	var r0 []models.CVE
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion) ([]models.CVE, error)); ok {
-		return returnFunc(assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) ([]models.CVE, error)); ok {
+		return returnFunc(ctx, tx, assetVersion)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion) []models.CVE); ok {
-		r0 = returnFunc(assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) []models.CVE); ok {
+		r0 = returnFunc(ctx, tx, assetVersion)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.CVE)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion) error); ok {
-		r1 = returnFunc(assetVersion)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersion)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -386,19 +436,31 @@ type StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call struct {
 }
 
 // CVESWithKnownExploitsInAssetVersion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetVersion models.AssetVersion
-func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
-	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", assetVersion)}
+func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(ctx interface{}, tx interface{}, assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", ctx, tx, assetVersion)}
 }
 
-func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Run(run func(assetVersion models.AssetVersion)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetVersion
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.AssetVersion)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -409,14 +471,14 @@ func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Return(
 	return _c
 }
 
-func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndReturn(run func(assetVersion models.AssetVersion) ([]models.CVE, error)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) ([]models.CVE, error)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindMaliciousPackagesInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindMaliciousPackagesInOrg")
@@ -424,18 +486,18 @@ func (_mock *StatisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) (
 
 	var r0 []dtos.MaliciousPackageInOrg
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []dtos.MaliciousPackageInOrg); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.MaliciousPackageInOrg); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.MaliciousPackageInOrg)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -448,19 +510,31 @@ type StatisticsRepository_FindMaliciousPackagesInOrg_Call struct {
 }
 
 // FindMaliciousPackagesInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesInOrg(orgID interface{}) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
-	return &StatisticsRepository_FindMaliciousPackagesInOrg_Call{Call: _e.mock.On("FindMaliciousPackagesInOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
+	return &StatisticsRepository_FindMaliciousPackagesInOrg_Call{Call: _e.mock.On("FindMaliciousPackagesInOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
+func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -471,14 +545,14 @@ func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) Return(malicious
 	return _c
 }
 
-func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
+func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAverageAgeOfDependenciesAcrossOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.UUID) (time.Duration, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (time.Duration, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageAgeOfDependenciesAcrossOrg")
@@ -486,16 +560,16 @@ func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uu
 
 	var r0 time.Duration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (time.Duration, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (time.Duration, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) time.Duration); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) time.Duration); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -508,19 +582,31 @@ type StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call struct {
 }
 
 // GetAverageAgeOfDependenciesAcrossOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrg(orgID interface{}) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
-	return &StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call{Call: _e.mock.On("GetAverageAgeOfDependenciesAcrossOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
+	return &StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call{Call: _e.mock.On("GetAverageAgeOfDependenciesAcrossOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
+func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -531,14 +617,14 @@ func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) Return
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (time.Duration, error)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
+func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (time.Duration, error)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAverageAmountOfOpenCodeRisksForProjectsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(orgID uuid.UUID) (float32, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (float32, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageAmountOfOpenCodeRisksForProjectsInOrg")
@@ -546,16 +632,16 @@ func (_mock *StatisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInO
 
 	var r0 float32
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (float32, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (float32, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) float32); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) float32); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(float32)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -568,19 +654,31 @@ type StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call s
 }
 
 // GetAverageAmountOfOpenCodeRisksForProjectsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
-	return &StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenCodeRisksForProjectsInOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
+	return &StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenCodeRisksForProjectsInOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
+func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -591,14 +689,14 @@ func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_C
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (float32, error)) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
+func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (float32, error)) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg")
@@ -606,16 +704,16 @@ func (_mock *StatisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeveri
 
 	var r0 dtos.ProjectVulnCountAverageBySeverity
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) dtos.ProjectVulnCountAverageBySeverity); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.ProjectVulnCountAverageBySeverity); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(dtos.ProjectVulnCountAverageBySeverity)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -628,19 +726,31 @@ type StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_C
 }
 
 // GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
-	return &StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
+	return &StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
+func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -651,14 +761,14 @@ func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
+func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAverageRemediationTimesAcrossOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageRemediationTimesAcrossOrg")
@@ -666,16 +776,16 @@ func (_mock *StatisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uui
 
 	var r0 dtos.AverageRemediationTimes
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (dtos.AverageRemediationTimes, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.AverageRemediationTimes, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) dtos.AverageRemediationTimes); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.AverageRemediationTimes); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(dtos.AverageRemediationTimes)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -688,19 +798,31 @@ type StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call struct {
 }
 
 // GetAverageRemediationTimesAcrossOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageRemediationTimesAcrossOrg(orgID interface{}) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
-	return &StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call{Call: _e.mock.On("GetAverageRemediationTimesAcrossOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageRemediationTimesAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
+	return &StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call{Call: _e.mock.On("GetAverageRemediationTimesAcrossOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
+func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -711,14 +833,14 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) Return(
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (dtos.AverageRemediationTimes, error)) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
+func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetComponentDistributionInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetComponentDistributionInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetComponentDistributionInOrg")
@@ -726,18 +848,18 @@ func (_mock *StatisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID
 
 	var r0 []dtos.ComponentOccurrenceCount
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []dtos.ComponentOccurrenceCount); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.ComponentOccurrenceCount); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.ComponentOccurrenceCount)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -750,19 +872,31 @@ type StatisticsRepository_GetComponentDistributionInOrg_Call struct {
 }
 
 // GetComponentDistributionInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetComponentDistributionInOrg(orgID interface{}) *StatisticsRepository_GetComponentDistributionInOrg_Call {
-	return &StatisticsRepository_GetComponentDistributionInOrg_Call{Call: _e.mock.On("GetComponentDistributionInOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetComponentDistributionInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+	return &StatisticsRepository_GetComponentDistributionInOrg_Call{Call: _e.mock.On("GetComponentDistributionInOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -773,14 +907,14 @@ func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Return(compon
 	return _c
 }
 
-func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostCommonCVEsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
-	ret := _mock.Called(orgID, limit)
+func (_mock *StatisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
+	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostCommonCVEsInOrg")
@@ -788,18 +922,18 @@ func (_mock *StatisticsRepository) GetMostCommonCVEsInOrg(orgID uuid.UUID, limit
 
 	var r0 []dtos.CVEOccurrencesAcrossOrg
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) ([]dtos.CVEOccurrencesAcrossOrg, error)); ok {
-		return returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.CVEOccurrencesAcrossOrg, error)); ok {
+		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) []dtos.CVEOccurrencesAcrossOrg); ok {
-		r0 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.CVEOccurrencesAcrossOrg); ok {
+		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.CVEOccurrencesAcrossOrg)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
-		r1 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -812,25 +946,37 @@ type StatisticsRepository_GetMostCommonCVEsInOrg_Call struct {
 }
 
 // GetMostCommonCVEsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostCommonCVEsInOrg(orgID interface{}, limit interface{}) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
-	return &StatisticsRepository_GetMostCommonCVEsInOrg_Call{Call: _e.mock.On("GetMostCommonCVEsInOrg", orgID, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostCommonCVEsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+	return &StatisticsRepository_GetMostCommonCVEsInOrg_Call{Call: _e.mock.On("GetMostCommonCVEsInOrg", ctx, tx, orgID, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Run(run func(orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -841,14 +987,14 @@ func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Return(cVEOccurrence
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostUsedComponentsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostUsedComponentsInOrg(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
-	ret := _mock.Called(orgID, limit)
+func (_mock *StatisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
+	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostUsedComponentsInOrg")
@@ -856,18 +1002,18 @@ func (_mock *StatisticsRepository) GetMostUsedComponentsInOrg(orgID uuid.UUID, l
 
 	var r0 []dtos.ComponentUsageAcrossOrg
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) ([]dtos.ComponentUsageAcrossOrg, error)); ok {
-		return returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.ComponentUsageAcrossOrg, error)); ok {
+		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) []dtos.ComponentUsageAcrossOrg); ok {
-		r0 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.ComponentUsageAcrossOrg); ok {
+		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.ComponentUsageAcrossOrg)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
-		r1 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -880,25 +1026,37 @@ type StatisticsRepository_GetMostUsedComponentsInOrg_Call struct {
 }
 
 // GetMostUsedComponentsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostUsedComponentsInOrg(orgID interface{}, limit interface{}) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
-	return &StatisticsRepository_GetMostUsedComponentsInOrg_Call{Call: _e.mock.On("GetMostUsedComponentsInOrg", orgID, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostUsedComponentsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+	return &StatisticsRepository_GetMostUsedComponentsInOrg_Call{Call: _e.mock.On("GetMostUsedComponentsInOrg", ctx, tx, orgID, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Run(run func(orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -909,14 +1067,14 @@ func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Return(component
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostVulnerableArtifactsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	ret := _mock.Called(orgID, limit)
+func (_mock *StatisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableArtifactsInOrg")
@@ -924,18 +1082,18 @@ func (_mock *StatisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UU
 
 	var r0 []dtos.VulnDistributionInStructure
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
-		return returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
-		r0 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
-		r1 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -948,25 +1106,37 @@ type StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call struct {
 }
 
 // GetMostVulnerableArtifactsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableArtifactsInOrg(orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
-	return &StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call{Call: _e.mock.On("GetMostVulnerableArtifactsInOrg", orgID, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableArtifactsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+	return &StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call{Call: _e.mock.On("GetMostVulnerableArtifactsInOrg", ctx, tx, orgID, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Run(run func(orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -977,14 +1147,14 @@ func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Return(vuln
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostVulnerableAssetsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	ret := _mock.Called(orgID, limit)
+func (_mock *StatisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableAssetsInOrg")
@@ -992,18 +1162,18 @@ func (_mock *StatisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID,
 
 	var r0 []dtos.VulnDistributionInStructure
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
-		return returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
-		r0 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
-		r1 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1016,25 +1186,37 @@ type StatisticsRepository_GetMostVulnerableAssetsInOrg_Call struct {
 }
 
 // GetMostVulnerableAssetsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableAssetsInOrg(orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
-	return &StatisticsRepository_GetMostVulnerableAssetsInOrg_Call{Call: _e.mock.On("GetMostVulnerableAssetsInOrg", orgID, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableAssetsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+	return &StatisticsRepository_GetMostVulnerableAssetsInOrg_Call{Call: _e.mock.On("GetMostVulnerableAssetsInOrg", ctx, tx, orgID, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Run(run func(orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -1045,14 +1227,14 @@ func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Return(vulnDis
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostVulnerableProjectsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	ret := _mock.Called(orgID, limit)
+func (_mock *StatisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableProjectsInOrg")
@@ -1060,18 +1242,18 @@ func (_mock *StatisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUI
 
 	var r0 []dtos.VulnDistributionInStructure
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
-		return returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
-		r0 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, int) error); ok {
-		r1 = returnFunc(orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1084,25 +1266,37 @@ type StatisticsRepository_GetMostVulnerableProjectsInOrg_Call struct {
 }
 
 // GetMostVulnerableProjectsInOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsInOrg(orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
-	return &StatisticsRepository_GetMostVulnerableProjectsInOrg_Call{Call: _e.mock.On("GetMostVulnerableProjectsInOrg", orgID, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+	return &StatisticsRepository_GetMostVulnerableProjectsInOrg_Call{Call: _e.mock.On("GetMostVulnerableProjectsInOrg", ctx, tx, orgID, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Run(run func(orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -1113,14 +1307,14 @@ func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Return(vulnD
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) RunAndReturn(run func(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetOrgStructureDistribution provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetOrgStructureDistribution(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetOrgStructureDistribution")
@@ -1128,16 +1322,16 @@ func (_mock *StatisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) 
 
 	var r0 dtos.OrgStructureDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (dtos.OrgStructureDistribution, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.OrgStructureDistribution, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) dtos.OrgStructureDistribution); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.OrgStructureDistribution); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(dtos.OrgStructureDistribution)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1150,19 +1344,31 @@ type StatisticsRepository_GetOrgStructureDistribution_Call struct {
 }
 
 // GetOrgStructureDistribution is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetOrgStructureDistribution(orgID interface{}) *StatisticsRepository_GetOrgStructureDistribution_Call {
-	return &StatisticsRepository_GetOrgStructureDistribution_Call{Call: _e.mock.On("GetOrgStructureDistribution", orgID)}
+func (_e *StatisticsRepository_Expecter) GetOrgStructureDistribution(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetOrgStructureDistribution_Call {
+	return &StatisticsRepository_GetOrgStructureDistribution_Call{Call: _e.mock.On("GetOrgStructureDistribution", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetOrgStructureDistribution_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetOrgStructureDistribution_Call {
+func (_c *StatisticsRepository_GetOrgStructureDistribution_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetOrgStructureDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1173,14 +1379,14 @@ func (_c *StatisticsRepository_GetOrgStructureDistribution_Call) Return(orgStruc
 	return _c
 }
 
-func (_c *StatisticsRepository_GetOrgStructureDistribution_Call) RunAndReturn(run func(orgID uuid.UUID) (dtos.OrgStructureDistribution, error)) *StatisticsRepository_GetOrgStructureDistribution_Call {
+func (_c *StatisticsRepository_GetOrgStructureDistribution_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error)) *StatisticsRepository_GetOrgStructureDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetRemediationTypeDistributionAcrossOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetRemediationTypeDistributionAcrossOrg(orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRemediationTypeDistributionAcrossOrg")
@@ -1188,18 +1394,18 @@ func (_mock *StatisticsRepository) GetRemediationTypeDistributionAcrossOrg(orgID
 
 	var r0 []dtos.RemediationTypeDistributionRow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []dtos.RemediationTypeDistributionRow); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.RemediationTypeDistributionRow); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.RemediationTypeDistributionRow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1212,19 +1418,31 @@ type StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call struct {
 }
 
 // GetRemediationTypeDistributionAcrossOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetRemediationTypeDistributionAcrossOrg(orgID interface{}) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
-	return &StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call{Call: _e.mock.On("GetRemediationTypeDistributionAcrossOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetRemediationTypeDistributionAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
+	return &StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call{Call: _e.mock.On("GetRemediationTypeDistributionAcrossOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
+func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1235,14 +1453,14 @@ func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) Ret
 	return _c
 }
 
-func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
+func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetWeeklyAveragePerVulnEventType provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetWeeklyAveragePerVulnEventType")
@@ -1250,18 +1468,18 @@ func (_mock *StatisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.U
 
 	var r0 []dtos.VulnEventAverage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]dtos.VulnEventAverage, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.VulnEventAverage, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []dtos.VulnEventAverage); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.VulnEventAverage); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.VulnEventAverage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1274,19 +1492,31 @@ type StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call struct {
 }
 
 // GetWeeklyAveragePerVulnEventType is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetWeeklyAveragePerVulnEventType(orgID interface{}) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
-	return &StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call{Call: _e.mock.On("GetWeeklyAveragePerVulnEventType", orgID)}
+func (_e *StatisticsRepository_Expecter) GetWeeklyAveragePerVulnEventType(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
+	return &StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call{Call: _e.mock.On("GetWeeklyAveragePerVulnEventType", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
+func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1297,14 +1527,14 @@ func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) Return(vul
 	return _c
 }
 
-func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.VulnEventAverage, error)) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
+func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error)) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // TimeTravelDependencyVulnState provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(artifactName, assetVersionName, assetID, time1)
+func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, artifactName, assetVersionName, assetID, time1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TimeTravelDependencyVulnState")
@@ -1312,18 +1542,18 @@ func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(artifactName *s
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(*string, *string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*string, *string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
-		r0 = returnFunc(artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(*string, *string, uuid.UUID, time.Time) error); ok {
-		r1 = returnFunc(artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) error); ok {
+		r1 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1336,37 +1566,49 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 }
 
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - artifactName *string
 //   - assetVersionName *string
 //   - assetID uuid.UUID
 //   - time1 time.Time
-func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
-	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", artifactName, assetVersionName, assetID, time1)}
+func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(ctx interface{}, tx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", ctx, tx, artifactName, assetVersionName, assetID, time1)}
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*string)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *string
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*string)
 		}
-		var arg3 time.Time
+		var arg3 *string
 		if args[3] != nil {
-			arg3 = args[3].(time.Time)
+			arg3 = args[3].(*string)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
+		}
+		var arg5 time.Time
+		if args[5] != nil {
+			arg5 = args[5].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -1377,14 +1619,14 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Return(depend
 	return _c
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // VulnClassificationByOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.VulnDistribution, error) {
-	ret := _mock.Called(orgID)
+func (_mock *StatisticsRepository) VulnClassificationByOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnDistribution, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VulnClassificationByOrg")
@@ -1392,16 +1634,16 @@ func (_mock *StatisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dto
 
 	var r0 dtos.VulnDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (dtos.VulnDistribution, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.VulnDistribution, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) dtos.VulnDistribution); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.VulnDistribution); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		r0 = ret.Get(0).(dtos.VulnDistribution)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1414,19 +1656,31 @@ type StatisticsRepository_VulnClassificationByOrg_Call struct {
 }
 
 // VulnClassificationByOrg is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) VulnClassificationByOrg(orgID interface{}) *StatisticsRepository_VulnClassificationByOrg_Call {
-	return &StatisticsRepository_VulnClassificationByOrg_Call{Call: _e.mock.On("VulnClassificationByOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) VulnClassificationByOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_VulnClassificationByOrg_Call {
+	return &StatisticsRepository_VulnClassificationByOrg_Call{Call: _e.mock.On("VulnClassificationByOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_VulnClassificationByOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1437,7 +1691,7 @@ func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Return(vulnDistribu
 	return _c
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (dtos.VulnDistribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnDistribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

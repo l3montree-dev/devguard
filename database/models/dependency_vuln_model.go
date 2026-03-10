@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,13 +38,14 @@ type DependencyVuln struct {
 var _ Vuln = &DependencyVuln{}
 
 func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
-	artifactNames := ""
+	names := make([]string, 0, len(vuln.Artifacts))
 	for _, artifact := range vuln.Artifacts {
 		if artifact.ArtifactName != "" {
-			artifactNames += artifact.ArtifactName + " "
+			names = append(names, artifact.ArtifactName)
 		}
 	}
-	return artifactNames
+	slices.Sort(names)
+	return strings.Join(names, " ")
 }
 
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {

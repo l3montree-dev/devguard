@@ -97,16 +97,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 	}
 
 	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
-		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-		var name string
-		if nameMap != nil {
-			if nameMap["first"] != nil {
-				name += nameMap["first"].(string)
-			}
-			if nameMap["last"] != nil {
-				name += " " + nameMap["last"].(string)
-			}
-		}
+		name := shared.IdentityName(i.Traits)
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
 			return dtos.UserDTO{
@@ -175,7 +166,7 @@ func (ProjectController *ProjectController) InviteMembers(c shared.Context) erro
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(newMemberID, shared.RoleMember, project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(c.Request().Context(), newMemberID, shared.RoleMember, project.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -183,6 +174,7 @@ func (ProjectController *ProjectController) InviteMembers(c shared.Context) erro
 }
 
 func (ProjectController *ProjectController) RemoveMember(c shared.Context) error {
+	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -194,13 +186,14 @@ func (ProjectController *ProjectController) RemoveMember(c shared.Context) error
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(userID, shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
 
 func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
+	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -239,11 +232,11 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(userID, shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(userID, shared.Role(req.Role), project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(reqCtx, userID, shared.Role(req.Role), project.ID.String()); err != nil {
 		return err
 	}
 
@@ -261,7 +254,7 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
 
-	err := ProjectController.projectRepository.Delete(nil, project.ID)
+	err := ProjectController.projectRepository.Delete(c.Request().Context(), nil, project.ID)
 	if err != nil {
 		return err
 	}
@@ -286,7 +279,7 @@ func (ProjectController *ProjectController) Read(c shared.Context) error {
 		return err
 	}
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(c.Request().Context(), nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -319,7 +312,7 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
 
-	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(orgID, projectID)
+	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(c.Request().Context(), nil, orgID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
@@ -334,6 +327,26 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 			VulnEnabled: w.VulnEnabled,
 		}
 	}), nil
+}
+
+// @Summary List sub-projects and assets
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search query for filtering sub-projects and assets"
+// @Success 200 {array} dtos.ProjectAssetDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
+
+func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
+
+	results, err := ProjectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, results)
 }
 
 // @Summary List projects
@@ -364,6 +377,7 @@ func (ProjectController *ProjectController) List(c shared.Context) error {
 // @Success 200 {object} dtos.ProjectDetailsDTO
 // @Router /organizations/{organization}/projects/{projectSlug} [patch]
 func (ProjectController *ProjectController) Update(c shared.Context) error {
+	reqCtx := c.Request().Context()
 	req := c.Request().Body
 	defer req.Close()
 	var patchRequest dtos.ProjectPatchRequest
@@ -381,7 +395,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	if updated {
-		err = ProjectController.projectRepository.Update(nil, &project)
+		err = ProjectController.projectRepository.Update(reqCtx, nil, &project)
 		if err != nil {
 			return fmt.Errorf("could not update project: %w", err)
 		}
@@ -394,7 +408,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.ID)
+	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(reqCtx, nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -52,10 +53,10 @@ func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
 
 	res := utils.Concurrently(
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+			return c.statisticsService.GetAverageFixingTime(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
 		},
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvss(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
+			return c.statisticsService.GetAverageFixingTimeByCvss(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
 		},
 	)
 
@@ -94,7 +95,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 
-	results, err := c.getArtifactRiskHistory(utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
+	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
@@ -109,7 +110,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *StatisticsController) getArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
+func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -126,7 +127,7 @@ func (c *StatisticsController) getArtifactRiskHistory(artifactName *string, asse
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetArtifactRiskHistory(artifactName, assetVersionName, assetID, beginTime, endTime)
+	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
 func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
@@ -135,14 +136,14 @@ func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
 			return ctx.JSON(404, nil)
 		}
 	}
 
-	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(assetVersion)
+	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return ctx.NoContent(500)
 	}
@@ -174,7 +175,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	}
 
 	// delegate to service
-	res, err := c.statisticsService.GetReleaseRiskHistory(releaseID, beginTime, endTime)
+	res, err := c.statisticsService.GetReleaseRiskHistory(ctx.Request().Context(), releaseID, beginTime, endTime)
 	if err != nil {
 		slog.Error("could not get release risk history", "err", err)
 		return ctx.JSON(500, nil)
@@ -192,7 +193,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
-	results, err := c.statisticsService.GetComponentRisk(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	results, err := c.statisticsService.GetComponentRisk(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -219,10 +220,10 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 
 	res := utils.Concurrently(
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
+			return c.statisticsService.GetAverageFixingTimeForRelease(ctx.Request().Context(), releaseID, severity)
 		},
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(releaseID, severity)
+			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(ctx.Request().Context(), releaseID, severity)
 		},
 	)
 
@@ -242,40 +243,40 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
 
-	distribution, err := c.statisticsRepository.VulnClassificationByOrg(org.ID)
+	distribution, err := c.statisticsRepository.VulnClassificationByOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vuln distribution in org").WithInternal(err)
 	}
-	structure, err := c.statisticsRepository.GetOrgStructureDistribution(org.ID)
+	structure, err := c.statisticsRepository.GetOrgStructureDistribution(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get org structure").WithInternal(err)
 	}
 
 	// get most vulnerable components of org
-	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(org.ID, orgComponentsLimit)
+	projects, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(ctx.Request().Context(), nil, org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable projects in org").WithInternal(err)
 	}
-	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(org.ID, orgComponentsLimit)
+	assets, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(ctx.Request().Context(), nil, org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable assets in org").WithInternal(err)
 	}
-	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(org.ID, orgComponentsLimit)
+	artifacts, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(ctx.Request().Context(), nil, org.ID, orgComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most vulnerable artifacts in org").WithInternal(err)
 	}
 
-	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(org.ID, topComponentsLimit)
+	topComponents, err := c.statisticsRepository.GetMostUsedComponentsInOrg(ctx.Request().Context(), nil, org.ID, topComponentsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most used components across org").WithInternal(err)
 	}
 
-	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(org.ID, topCVEsLimit)
+	topCVEs, err := c.statisticsRepository.GetMostCommonCVEsInOrg(ctx.Request().Context(), nil, org.ID, topCVEsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get most common CVEs across org").WithInternal(err)
 	}
 
-	vulnEventAverages, err := c.statisticsRepository.GetWeeklyAveragePerVulnEventType(org.ID)
+	vulnEventAverages, err := c.statisticsRepository.GetWeeklyAveragePerVulnEventType(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get weekly average for vuln events").WithInternal(err)
 	}
@@ -297,17 +298,17 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	}
 
 	now := time.Now()
-	riskHistory, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(org.ID, now.Add(-30*time.Hour*24), now)
+	riskHistory, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(ctx.Request().Context(), nil, org.ID, now.Add(-30*time.Hour*24), now)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get risk history for org").WithInternal(err)
 	}
 
-	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(org.ID)
+	openCodeRiskAverage, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average amount of open code risks for org").WithInternal(err)
 	}
 
-	openVulnAverage, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(org.ID)
+	openVulnAverage, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average amount of open vulns for org").WithInternal(err)
 	}
@@ -317,22 +318,22 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get top ecosystem for org").WithInternal(err)
 	}
 
-	maliciousPackages, err := c.statisticsRepository.FindMaliciousPackagesInOrg(org.ID)
+	maliciousPackages, err := c.statisticsRepository.FindMaliciousPackagesInOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find malicious packages for org").WithInternal(err)
 	}
 
-	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(org.ID)
+	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average age of dependencies").WithInternal(err)
 	}
 
-	averageRemediations, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(org.ID)
+	averageRemediations, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average remediation times").WithInternal(err)
 	}
 
-	remediationTypeDistributionRows, err := c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(org.ID)
+	remediationTypeDistributionRows, err := c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get percentage distribution for remediation types").WithInternal(err)
 	}

@@ -15,7 +15,6 @@ import (
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Copyright (C) 2025 l3montree GmbH
@@ -45,6 +44,7 @@ func NewAPIV1Router(srv api.Server,
 	assetController *controllers.AssetController,
 	intotoController *controllers.InToToController,
 	csafController *controllers.CSAFController,
+	scanController *controllers.ScanController,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
 	assetRepository shared.AssetRepository,
@@ -174,7 +174,6 @@ func NewAPIV1Router(srv api.Server,
 		return c.JSON(200, resp)
 	})
 
-	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 	apiV1Router.GET("/health/", func(ctx echo.Context) error {
 		// Check database connectivity
 		sqlDB, err := db.DB()
@@ -199,6 +198,7 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
+	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
 
 	// csaf routes
 	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)

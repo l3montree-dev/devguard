@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"net/http/httptest"
 	"testing"
@@ -95,7 +96,7 @@ func TestTriggerSync(t *testing.T) {
 					// RefreshExternalEntityProviderProjects also calls GetAllAssetsForUser
 					domainRBAC.On("GetAllAssetsForUser", "user123").Return([]string{}, nil)
 					thirdPartyIntegration.On("ListGroups", mock.Anything, "user123", "gitlab").Return([]models.Project{}, []shared.Role{}, nil)
-					projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{}, []*models.Project{}, nil)
+					projectRepo.On("UpsertSplit", mock.Anything, mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{}, []*models.Project{}, nil)
 				}
 			}
 
@@ -161,9 +162,9 @@ func TestUpsertProjects(t *testing.T) {
 		createdPtr := &models.Project{Model: models.Model{ID: uuid.New()}, Slug: "project1"}
 		updatedPtr := &models.Project{Model: models.Model{ID: uuid.New()}, Slug: "project2"}
 
-		projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{createdPtr}, []*models.Project{updatedPtr}, nil)
+		projectRepo.On("UpsertSplit", mock.Anything, mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{createdPtr}, []*models.Project{updatedPtr}, nil)
 
-		created, updated, err := service.upsertProjects(org, projects, "gitlab")
+		created, updated, err := service.upsertProjects(context.Background(), org, projects, "gitlab")
 
 		assert.NoError(t, err)
 		assert.Len(t, created, 1)
@@ -179,9 +180,9 @@ func TestUpsertProjects(t *testing.T) {
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		projects := []models.Project{{Slug: "project1"}}
 
-		projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.Anything).Return(nil, nil, errors.New("db error"))
+		projectRepo.On("UpsertSplit", mock.Anything, mock.Anything, "gitlab", mock.Anything).Return(nil, nil, errors.New("db error"))
 
-		created, updated, err := service.upsertProjects(org, projects, "gitlab")
+		created, updated, err := service.upsertProjects(context.Background(), org, projects, "gitlab")
 
 		assert.Error(t, err)
 		assert.Nil(t, created)
@@ -201,10 +202,10 @@ func TestEnableCommunityPoliciesForNewProjects(t *testing.T) {
 		}
 
 		for _, project := range projects {
-			projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, project.ID).Return(nil)
+			projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, mock.Anything, project.ID).Return(nil)
 		}
 
-		err := service.enableCommunityPoliciesForNewProjects(projects)
+		err := service.enableCommunityPoliciesForNewProjects(context.Background(), projects)
 
 		assert.NoError(t, err)
 		projectRepo.AssertExpectations(t)
@@ -216,9 +217,9 @@ func TestEnableCommunityPoliciesForNewProjects(t *testing.T) {
 
 		projects := []models.Project{{Model: models.Model{ID: uuid.New()}, Slug: "project1"}}
 
-		projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, projects[0].ID).Return(errors.New("policy error"))
+		projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, mock.Anything, projects[0].ID).Return(errors.New("policy error"))
 
-		err := service.enableCommunityPoliciesForNewProjects(projects)
+		err := service.enableCommunityPoliciesForNewProjects(context.Background(), projects)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not enable community managed policies for project project1")
@@ -256,7 +257,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock organization repository
 		orgRepo := mocks.NewOrganizationRepository(t)
-		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		// Mock RBAC provider - should call GetDomainRBAC for each org
 		rbacProvider := mocks.NewRBACProvider(t)
@@ -266,26 +267,26 @@ func TestSyncOrgs(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", orgs[0].GetID().String()).Return(domainRBAC1)
 		rbacProvider.On("GetDomainRBAC", orgs[1].GetID().String()).Return(domainRBAC2)
 
-		domainRBAC1.On("GrantRole", "user123", shared.RoleMember).Return(nil)
-		domainRBAC2.On("GrantRole", "user123", shared.RoleMember).Return(nil)
+		domainRBAC1.On("GrantRole", mock.Anything, "user123", shared.RoleMember).Return(nil)
+		domainRBAC2.On("GrantRole", mock.Anything, "user123", shared.RoleMember).Return(nil)
 
 		// those orgs have to get bootstrapped - thus mock those function
-		domainRBAC1.On("InheritRole", shared.RoleOwner, shared.RoleAdmin).Return(nil)
-		domainRBAC2.On("InheritRole", shared.RoleOwner, shared.RoleAdmin).Return(nil)
-		domainRBAC1.On("InheritRole", shared.RoleAdmin, shared.RoleMember).Return(nil)
-		domainRBAC2.On("InheritRole", shared.RoleAdmin, shared.RoleMember).Return(nil)
+		domainRBAC1.On("InheritRole", mock.Anything, shared.RoleOwner, shared.RoleAdmin).Return(nil)
+		domainRBAC2.On("InheritRole", mock.Anything, shared.RoleOwner, shared.RoleAdmin).Return(nil)
+		domainRBAC1.On("InheritRole", mock.Anything, shared.RoleAdmin, shared.RoleMember).Return(nil)
+		domainRBAC2.On("InheritRole", mock.Anything, shared.RoleAdmin, shared.RoleMember).Return(nil)
 
-		domainRBAC1.On("AllowRole", shared.RoleOwner, shared.ObjectOrganization, []shared.Action{shared.ActionDelete}).Return(nil)
-		domainRBAC2.On("AllowRole", shared.RoleOwner, shared.ObjectOrganization, []shared.Action{shared.ActionDelete}).Return(nil)
+		domainRBAC1.On("AllowRole", mock.Anything, shared.RoleOwner, shared.ObjectOrganization, []shared.Action{shared.ActionDelete}).Return(nil)
+		domainRBAC2.On("AllowRole", mock.Anything, shared.RoleOwner, shared.ObjectOrganization, []shared.Action{shared.ActionDelete}).Return(nil)
 
-		domainRBAC1.On("AllowRole", shared.RoleAdmin, shared.ObjectOrganization, []shared.Action{shared.ActionUpdate}).Return(nil)
-		domainRBAC2.On("AllowRole", shared.RoleAdmin, shared.ObjectOrganization, []shared.Action{shared.ActionUpdate}).Return(nil)
+		domainRBAC1.On("AllowRole", mock.Anything, shared.RoleAdmin, shared.ObjectOrganization, []shared.Action{shared.ActionUpdate}).Return(nil)
+		domainRBAC2.On("AllowRole", mock.Anything, shared.RoleAdmin, shared.ObjectOrganization, []shared.Action{shared.ActionUpdate}).Return(nil)
 
-		domainRBAC1.On("AllowRole", shared.RoleAdmin, shared.ObjectProject, []shared.Action{shared.ActionCreate, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}).Return(nil)
-		domainRBAC2.On("AllowRole", shared.RoleAdmin, shared.ObjectProject, []shared.Action{shared.ActionCreate, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}).Return(nil)
+		domainRBAC1.On("AllowRole", mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{shared.ActionCreate, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}).Return(nil)
+		domainRBAC2.On("AllowRole", mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{shared.ActionCreate, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete}).Return(nil)
 
-		domainRBAC1.On("AllowRole", shared.RoleMember, shared.ObjectOrganization, []shared.Action{shared.ActionRead}).Return(nil)
-		domainRBAC2.On("AllowRole", shared.RoleMember, shared.ObjectOrganization, []shared.Action{shared.ActionRead}).Return(nil)
+		domainRBAC1.On("AllowRole", mock.Anything, shared.RoleMember, shared.ObjectOrganization, []shared.Action{shared.ActionRead}).Return(nil)
+		domainRBAC2.On("AllowRole", mock.Anything, shared.RoleMember, shared.ObjectOrganization, []shared.Action{shared.ActionRead}).Return(nil)
 
 		// Create service with mocked org repo
 		serviceWithOrgRepo := NewExternalEntityProviderService(
@@ -352,7 +353,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock organization repository with error
 		orgRepo := mocks.NewOrganizationRepository(t)
-		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("database error"))
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("database error"))
 
 		// Create service with mocked org repo
 		serviceWithOrgRepo := NewExternalEntityProviderService(
@@ -396,13 +397,13 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock organization repository
 		orgRepo := mocks.NewOrganizationRepository(t)
-		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		// Mock RBAC provider with error
 		rbacProvider := mocks.NewRBACProvider(t)
 		domainRBAC := mocks.NewAccessControl(t)
 		rbacProvider.On("GetDomainRBAC", mock.AnythingOfType("string")).Return(domainRBAC)
-		domainRBAC.On("GrantRole", "user123", shared.RoleMember).Return(errors.New("rbac error"))
+		domainRBAC.On("GrantRole", mock.Anything, "user123", shared.RoleMember).Return(errors.New("rbac error"))
 
 		// Create service with mocked dependencies
 		serviceWithMocks := NewExternalEntityProviderService(
@@ -439,7 +440,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock organization repository - even with empty list, Upsert is still called
 		orgRepo := mocks.NewOrganizationRepository(t)
-		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		// Create service with mocked org repo
 		serviceWithOrgRepo := NewExternalEntityProviderService(
@@ -470,7 +471,7 @@ func TestCreateProjectsMap(t *testing.T) {
 		{Model: models.Model{ID: uuid.New()}, Slug: "updated1"},
 	}
 
-	projectsMap := service.createProjectsMap(created, updated)
+	projectsMap := service.createProjectsMap(context.Background(), created, updated)
 
 	assert.Len(t, projectsMap, 3)
 	for _, project := range append(created, updated...) {
@@ -486,7 +487,7 @@ func TestUpdateUserRole(t *testing.T) {
 		domainRBAC := mocks.NewAccessControl(t)
 		domainRBAC.On("GetProjectRole", "user123", "project1").Return(shared.RoleAdmin, nil)
 
-		err := service.updateUserRole(domainRBAC, "user123", shared.RoleAdmin, "project1")
+		err := service.updateUserRole(context.Background(), domainRBAC, "user123", shared.RoleAdmin, "project1")
 
 		assert.NoError(t, err)
 		// Should not call revoke or grant
@@ -497,10 +498,10 @@ func TestUpdateUserRole(t *testing.T) {
 	t.Run("role change needed", func(t *testing.T) {
 		domainRBAC := mocks.NewAccessControl(t)
 		domainRBAC.On("GetProjectRole", "user123", "project1").Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInProject", "user123", shared.RoleMember, "project1").Return(nil)
-		domainRBAC.On("GrantRoleInProject", "user123", shared.RoleAdmin, "project1").Return(nil)
+		domainRBAC.On("RevokeRoleInProject", mock.Anything, "user123", shared.RoleMember, "project1").Return(nil)
+		domainRBAC.On("GrantRoleInProject", mock.Anything, "user123", shared.RoleAdmin, "project1").Return(nil)
 
-		err := service.updateUserRole(domainRBAC, "user123", shared.RoleAdmin, "project1")
+		err := service.updateUserRole(context.Background(), domainRBAC, "user123", shared.RoleAdmin, "project1")
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -509,10 +510,10 @@ func TestUpdateUserRole(t *testing.T) {
 	t.Run("revoke fails but continues", func(t *testing.T) {
 		domainRBAC := mocks.NewAccessControl(t)
 		domainRBAC.On("GetProjectRole", "user123", "project1").Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInProject", "user123", shared.RoleMember, "project1").Return(errors.New("revoke failed"))
-		domainRBAC.On("GrantRoleInProject", "user123", shared.RoleAdmin, "project1").Return(nil)
+		domainRBAC.On("RevokeRoleInProject", mock.Anything, "user123", shared.RoleMember, "project1").Return(errors.New("revoke failed"))
+		domainRBAC.On("GrantRoleInProject", mock.Anything, "user123", shared.RoleAdmin, "project1").Return(nil)
 
-		err := service.updateUserRole(domainRBAC, "user123", shared.RoleAdmin, "project1")
+		err := service.updateUserRole(context.Background(), domainRBAC, "user123", shared.RoleAdmin, "project1")
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -556,22 +557,22 @@ func TestSyncProjectAssets(t *testing.T) {
 		thirdPartyIntegration.On("ListProjects", mock.Anything, "user123", "gitlab", "123").Return(assets, roles, nil)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		assetRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		assetRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		// Mock asset bootstrap and permission management
 		domainRBAC := mocks.NewAccessControl(t)
 		shared.SetRBAC(ctx, domainRBAC)
 
-		assetService.On("BootstrapAsset", domainRBAC, mock.Anything).Return(nil)
+		assetService.On("BootstrapAsset", mock.Anything, domainRBAC, mock.Anything).Return(nil)
 
 		// Mock asset role updates for each asset
 		domainRBAC.On("GetAssetRole", "user123", asset1ID.String()).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleUnknown, asset1ID.String()).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleMember, asset1ID.String()).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleUnknown, asset1ID.String()).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleMember, asset1ID.String()).Return(nil)
 
 		domainRBAC.On("GetAssetRole", "user123", asset2ID.String()).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleUnknown, asset2ID.String()).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleAdmin, asset2ID.String()).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleUnknown, asset2ID.String()).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleAdmin, asset2ID.String()).Return(nil)
 
 		result, err := service.syncProjectAssets(ctx, "user123", project)
 
@@ -620,9 +621,9 @@ func TestRevokeAccessForRemovedProjects(t *testing.T) {
 			"project3": {},
 		}
 
-		domainRBAC.On("RevokeAllRolesInProjectForUser", "user123", "project2").Return(nil)
+		domainRBAC.On("RevokeAllRolesInProjectForUser", mock.Anything, "user123", "project2").Return(nil)
 
-		service.revokeAccessForRemovedProjects(domainRBAC, "user123", allowedProjects, projectsMap)
+		service.revokeAccessForRemovedProjects(context.Background(), domainRBAC, "user123", allowedProjects, projectsMap)
 
 		domainRBAC.AssertExpectations(t)
 		// Should not call revoke for project1 and project3 as they still exist
@@ -636,10 +637,10 @@ func TestRevokeAccessForRemovedProjects(t *testing.T) {
 		allowedProjects := []string{"project1"}
 		projectsMap := map[string]struct{}{}
 
-		domainRBAC.On("RevokeAllRolesInProjectForUser", "user123", "project1").Return(errors.New("revoke failed"))
+		domainRBAC.On("RevokeAllRolesInProjectForUser", mock.Anything, "user123", "project1").Return(errors.New("revoke failed"))
 
 		// Should not panic
-		service.revokeAccessForRemovedProjects(domainRBAC, "user123", allowedProjects, projectsMap)
+		service.revokeAccessForRemovedProjects(context.Background(), domainRBAC, "user123", allowedProjects, projectsMap)
 
 		domainRBAC.AssertExpectations(t)
 	})
@@ -684,10 +685,10 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 
 		// User has no current role (returns RoleUnknown with error)
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleUnknown, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleUnknown, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleMember, assetID).Return(nil)
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", shared.RoleMember, assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleMember, assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -699,10 +700,10 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 
 		// User currently has RoleMember, should be upgraded to RoleAdmin
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleMember, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleAdmin, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleAdmin, assetID).Return(nil)
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", shared.RoleAdmin, assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -715,7 +716,7 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		// User already has RoleMember
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", shared.RoleMember, assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleMember, assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -731,7 +732,7 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		// User has some role but we're not changing it
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", "", assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", "", assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -745,10 +746,10 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		assetID := uuid.New().String()
 
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleMember, assetID).Return(errors.New("revoke failed"))
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleAdmin, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleMember, assetID).Return(errors.New("revoke failed"))
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleAdmin, assetID).Return(nil)
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", shared.RoleAdmin, assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -759,10 +760,10 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		assetID := uuid.New().String()
 
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", "user123", shared.RoleMember, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", "user123", shared.RoleAdmin, assetID).Return(errors.New("grant failed"))
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, "user123", shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, "user123", shared.RoleAdmin, assetID).Return(errors.New("grant failed"))
 
-		err := service.updateUserRoleInAsset(domainRBAC, "user123", shared.RoleAdmin, assetID)
+		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 
 		assert.NoError(t, err)
 		domainRBAC.AssertExpectations(t)
@@ -782,14 +783,14 @@ func TestRevokeAccessForRemovedAssets(t *testing.T) {
 		}
 
 		// asset2 no longer exists, should revoke
-		domainRBAC.On("RevokeAllRolesInAssetForUser", "user123", "asset2").Return(nil)
+		domainRBAC.On("RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset2").Return(nil)
 
-		service.revokeAccessForRemovedAssets(domainRBAC, "user123", allowedAssets, assetsMap)
+		service.revokeAccessForRemovedAssets(context.Background(), domainRBAC, "user123", allowedAssets, assetsMap)
 
 		domainRBAC.AssertExpectations(t)
 		// Should not call revoke for asset1 and asset3 as they still exist
-		domainRBAC.AssertNotCalled(t, "RevokeAllRolesInAssetForUser", "user123", "asset1")
-		domainRBAC.AssertNotCalled(t, "RevokeAllRolesInAssetForUser", "user123", "asset3")
+		domainRBAC.AssertNotCalled(t, "RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset1")
+		domainRBAC.AssertNotCalled(t, "RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset3")
 	})
 
 	t.Run("revoke fails but continues", func(t *testing.T) {
@@ -798,10 +799,10 @@ func TestRevokeAccessForRemovedAssets(t *testing.T) {
 		allowedAssets := []string{"asset1"}
 		assetsMap := map[string]struct{}{}
 
-		domainRBAC.On("RevokeAllRolesInAssetForUser", "user123", "asset1").Return(errors.New("revoke failed"))
+		domainRBAC.On("RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset1").Return(errors.New("revoke failed"))
 
 		// Should not panic
-		service.revokeAccessForRemovedAssets(domainRBAC, "user123", allowedAssets, assetsMap)
+		service.revokeAccessForRemovedAssets(context.Background(), domainRBAC, "user123", allowedAssets, assetsMap)
 
 		domainRBAC.AssertExpectations(t)
 	})
@@ -815,7 +816,7 @@ func TestRevokeAccessForRemovedAssets(t *testing.T) {
 		}
 
 		// Should not panic and not call anything
-		service.revokeAccessForRemovedAssets(domainRBAC, "user123", allowedAssets, assetsMap)
+		service.revokeAccessForRemovedAssets(context.Background(), domainRBAC, "user123", allowedAssets, assetsMap)
 
 		domainRBAC.AssertExpectations(t)
 		domainRBAC.AssertNotCalled(t, "RevokeAllRolesInAssetForUser")
@@ -828,10 +829,10 @@ func TestRevokeAccessForRemovedAssets(t *testing.T) {
 		assetsMap := map[string]struct{}{}
 
 		// All assets removed, should revoke all
-		domainRBAC.On("RevokeAllRolesInAssetForUser", "user123", "asset1").Return(nil)
-		domainRBAC.On("RevokeAllRolesInAssetForUser", "user123", "asset2").Return(nil)
+		domainRBAC.On("RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset1").Return(nil)
+		domainRBAC.On("RevokeAllRolesInAssetForUser", mock.Anything, "user123", "asset2").Return(nil)
 
-		service.revokeAccessForRemovedAssets(domainRBAC, "user123", allowedAssets, assetsMap)
+		service.revokeAccessForRemovedAssets(context.Background(), domainRBAC, "user123", allowedAssets, assetsMap)
 
 		domainRBAC.AssertExpectations(t)
 	})

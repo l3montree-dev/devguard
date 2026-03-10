@@ -1,10 +1,12 @@
 package repositories
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
@@ -17,6 +19,8 @@ type projectRepository struct {
 	utils.Repository[uuid.UUID, models.Project, *gorm.DB]
 }
 
+var _ shared.ProjectRepository = (*projectRepository)(nil) // Ensure projectRepository implements shared.ProjectRepository interface
+
 func NewProjectRepository(db *gorm.DB) *projectRepository {
 	return &projectRepository{
 		db:         db,
@@ -24,27 +28,27 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 	}
 }
 
-func (g *projectRepository) GetByOrgID(organizationID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) GetByOrgID(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.db.Where("organization_id = ?", organizationID).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Where("organization_id = ?", organizationID).Find(&projects).Error
 	return projects, err
 }
 
-func (g *projectRepository) GetProjectByAssetVersionID(assetVersionName string, assetID uuid.UUID) (models.Project, error) {
+func (g *projectRepository) GetProjectByAssetVersionID(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.Project, error) {
 	var project models.Project
-	err := g.db.Model(&models.AssetVersion{}).Select("assets.*").Joins("JOIN assets ON assets.id = asset_versions.asset_id").Joins("JOIN projects ON projects.id = assets.project_id").Where("asset_versions.name = ? AND asset_versions.asset_id = ?", assetVersionName, assetID).First(&project).Error
+	err := g.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("assets.*").Joins("JOIN assets ON assets.id = asset_versions.asset_id").Joins("JOIN projects ON projects.id = assets.project_id").Where("asset_versions.name = ? AND asset_versions.asset_id = ?", assetVersionName, assetID).First(&project).Error
 	return project, err
 }
 
-func (g *projectRepository) GetProjectByAssetID(assetID uuid.UUID) (models.Project, error) {
+func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.Project, error) {
 	var project models.Project
-	err := g.db.Model(&models.Asset{}).Select("projects.*").Joins("JOIN projects ON projects.id = assets.project_id").Where("assets.id = ?", assetID).First(&project).Error
+	err := g.GetDB(ctx, tx).Model(&models.Asset{}).Select("projects.*").Joins("JOIN projects ON projects.id = assets.project_id").Where("assets.id = ?", assetID).First(&project).Error
 	return project, err
 }
 
-func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Project, error) {
+func (g *projectRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, slug string) (models.Project, error) {
 	var flatProjects []models.Project
-	err := g.db.Raw(`
+	err := g.GetDB(ctx, tx).Raw(`
         WITH RECURSIVE parents AS (
             SELECT *
             FROM projects
@@ -70,9 +74,9 @@ func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Pro
 	return nested, nil
 }
 
-func (g *projectRepository) ReadBySlugUnscoped(orgID uuid.UUID, slug string) (models.Project, error) {
+func (g *projectRepository) ReadBySlugUnscoped(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, slug string) (models.Project, error) {
 	var project models.Project
-	err := g.db.Unscoped().Where("slug = ? AND organization_id = ?", slug, orgID).First(&project).Error
+	err := g.GetDB(ctx, tx).Unscoped().Where("slug = ? AND organization_id = ?", slug, orgID).First(&project).Error
 	return project, err
 }
 
@@ -104,22 +108,97 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 	return root
 }
 
-func (g *projectRepository) Update(tx *gorm.DB, project *models.Project) error {
-	return g.db.Save(project).Error
+func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *models.Project) error {
+	return g.GetDB(ctx, tx).Save(project).Error
 }
 
-func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.Project], error) {
+func (g *projectRepository) ListSubProjectsAndAssets(
+	ctx context.Context,
+	tx *gorm.DB,
+	allowedAssetIDs []string,
+	allowedProjectIDs []uuid.UUID,
+	parentID *uuid.UUID,
+	orgID uuid.UUID,
+	pageInfo shared.PageInfo,
+	search string,
+	filter []shared.FilterQuery,
+	sort []shared.SortQuery,
+) (shared.Paged[dtos.ProjectAssetDTO], error) {
+
+	var results []dtos.ProjectAssetDTO
+	var q *gorm.DB
+
+	assetQuery := g.GetDB(ctx, tx).Model(&models.Asset{}).
+		Select("'asset' AS type, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
+		Where("project_id = ?", parentID)
+
+	if len(allowedAssetIDs) > 0 {
+		assetQuery = assetQuery.Where("id IN ? OR is_public = true", allowedAssetIDs)
+	} else {
+		assetQuery = assetQuery.Where("is_public = true")
+	}
+
+	projectQuery := g.GetDB(ctx, tx).Model(&models.Project{}).
+		Select("'project' AS type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
+		Where("parent_id = ?", parentID)
+
+	if len(allowedProjectIDs) > 0 {
+		projectQuery = projectQuery.Where("id IN ? OR (organization_id = ? AND is_public = true)", allowedProjectIDs, orgID)
+	} else {
+		projectQuery = projectQuery.Where("organization_id = ? AND is_public = true", orgID)
+	}
+
+	q = g.GetDB(ctx, tx).Table("(?) AS combined", g.GetDB(ctx, tx).Raw("? UNION ALL ?", assetQuery, projectQuery))
+
+	//add sort by name as default if no other sorting is provided, to ensure consistent pagination
+	if len(sort) == 0 {
+		q = q.Order("name ASC")
+	}
+
+	// apply search
+	if search != "" {
+		q = q.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// Sorting
+	for _, s := range sort {
+		q = q.Order(s.SQL())
+	}
+
+	// Count
+	var count int64
+	if err := q.Count(&count).Error; err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	// Pagination
+	err := q.
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&results).Error
+
+	if err != nil {
+		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, count, results), nil
+}
+
+func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Project], error) {
 	var projects []models.Project
 
 	var q *gorm.DB
 	if parentID != nil {
-		q = g.db.Model(&models.Project{}).Where(
-			g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentID).
+		q = g.GetDB(ctx, tx).Model(&models.Project{}).Where(
+			g.GetDB(ctx, tx).Where("id IN ? AND parent_id = ?", projectIDs, parentID).
 				Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID),
 		)
 	} else {
-		q = g.db.Model(&models.Project{}).Where(
-			g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).
+		q = g.GetDB(ctx, tx).Model(&models.Project{}).Where(
+			g.GetDB(ctx, tx).Where("id IN ? AND parent_id IS NULL", projectIDs).
 				Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID),
 		)
 	}
@@ -127,6 +206,18 @@ func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUI
 	// apply search
 	if search != "" {
 		q = q.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
 	}
 
 	var count int64
@@ -141,19 +232,19 @@ func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUI
 	return shared.NewPaged(pageInfo, count, projects), nil
 }
 
-func (g *projectRepository) List(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) List(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	if parentID != nil {
-		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentID).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID).Find(&projects).Error
+		err := g.GetDB(ctx, tx).Where("id IN ? AND parent_id = ?", projectIDs, parentID).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID).Find(&projects).Error
 		return projects, err
 	}
-	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
 	return projects, err
 }
 
-func (g *projectRepository) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) RecursivelyGetChildProjects(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.db.Raw(`
+	err := g.GetDB(ctx, tx).Raw(`
 		WITH RECURSIVE children AS (
 			SELECT *
 			FROM projects
@@ -168,30 +259,30 @@ func (g *projectRepository) RecursivelyGetChildProjects(projectID uuid.UUID) ([]
 	return projects, err
 }
 
-func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.db.Where("parent_id = ?", projectID).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Where("parent_id = ?", projectID).Find(&projects).Error
 	return projects, err
 }
 
-func (g *projectRepository) EnablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
-	return g.db.Model(&models.Project{
+func (g *projectRepository) EnablePolicyForProject(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	return g.GetDB(ctx, tx).Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
 		},
 	}).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
 }
-func (g *projectRepository) DisablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
-	return g.db.Model(&models.Project{
+func (g *projectRepository) DisablePolicyForProject(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	return g.GetDB(ctx, tx).Model(&models.Project{
 		Model: models.Model{
 			ID: projectID,
 		},
 	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
 }
 
-func (g *projectRepository) EnableCommunityManagedPolicies(tx *gorm.DB, projectID uuid.UUID) error {
+func (g *projectRepository) EnableCommunityManagedPolicies(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) error {
 	// community policies can be identified by their "organization_id" being nil
-	return g.GetDB(tx).Exec(`
+	return g.GetDB(ctx, tx).Exec(`
 		INSERT INTO project_enabled_policies (project_id, policy_id)
 		SELECT ?, id
 		FROM policies
@@ -199,21 +290,21 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx *gorm.DB, projectI
 	`, projectID).Error
 }
 
-func (g *projectRepository) Create(tx *gorm.DB, project *models.Project) error {
+func (g *projectRepository) Create(ctx context.Context, tx *gorm.DB, project *models.Project) error {
 	// set the slug if not set
-	slug, err := g.firstFreeSlug(project.OrganizationID, project.Slug)
+	slug, err := g.firstFreeSlug(ctx, tx, project.OrganizationID, project.Slug)
 	if err != nil {
 		return err
 	}
 	project.Slug = slug
 
-	return g.GetDB(tx).Create(project).Error
+	return g.GetDB(ctx, tx).Create(project).Error
 }
 
-func (g *projectRepository) UpsertSplit(tx *gorm.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
 	var existingProjects []models.Project
-	err := g.db.Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error
+	err := g.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error
 	if err != nil {
 		return nil, nil, err
 	}
@@ -223,7 +314,7 @@ func (g *projectRepository) UpsertSplit(tx *gorm.DB, externalProviderID string, 
 		existingMap[*p.ExternalEntityID] = true
 	}
 
-	err = g.Upsert(&projects, []clause.Column{
+	err = g.Upsert(ctx, tx, &projects, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
 	}, []string{"name", "description", "organization_id", "external_entity_parent_id", "avatar"})
@@ -242,7 +333,7 @@ func (g *projectRepository) UpsertSplit(tx *gorm.DB, externalProviderID string, 
 	}
 
 	// make sure to set the correct parent ids for the projects. Maybe there is an externalEntityProviderParentID set
-	err = g.GetDB(tx).Exec(`
+	err = g.GetDB(ctx, tx).Exec(`
 	UPDATE projects p
 	SET parent_id = parent.id
 	FROM projects parent
@@ -256,9 +347,9 @@ func (g *projectRepository) UpsertSplit(tx *gorm.DB, externalProviderID string, 
 	return newProjects, updatedProjects, nil
 }
 
-func (g *projectRepository) firstFreeSlug(orgID uuid.UUID, projectSlug string) (string, error) {
+func (g *projectRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectSlug string) (string, error) {
 	var slugs []string
-	err := g.db.Model(&models.Project{}).
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).
 		Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").
 		Pluck("slug", &slugs).Error
 	if err != nil {
@@ -286,7 +377,7 @@ func (g *projectRepository) firstFreeSlug(orgID uuid.UUID, projectSlug string) (
 	}
 }
 
-func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*models.Project) error {
+func (g *projectRepository) prepareUniqueSlugs(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projects []*models.Project) error {
 	if len(projects) == 0 {
 		return nil
 	}
@@ -300,7 +391,7 @@ func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*mode
 
 	// Fetch existing slugs safely using ANY()
 	var existing []*models.Project
-	err := g.db.Model(&models.Project{}).
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).
 		Where("organization_id = ? AND slug LIKE ANY(?)", orgID, pq.Array(patterns)).Find(&existing).Error
 	if err != nil {
 		return err
@@ -313,29 +404,29 @@ func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*mode
 	return nil
 }
 
-func (g *projectRepository) Upsert(t *[]*models.Project, conflictingColumns []clause.Column, updateOnly []string) error {
+func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*models.Project, conflictingColumns []clause.Column, updateOnly []string) error {
 	if len(*t) == 0 {
 		return nil
 	}
 
-	err := g.prepareUniqueSlugs((*t)[0].OrganizationID, *t)
+	err := g.prepareUniqueSlugs(ctx, tx, (*t)[0].OrganizationID, *t)
 	if err != nil {
 		return fmt.Errorf("failed to prepare unique slugs: %w", err)
 	}
 
 	if len(conflictingColumns) == 0 {
 		if len(updateOnly) > 0 {
-			return g.db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
+			return g.GetDB(ctx, tx).Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
 		}
-		return g.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
+		return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
 	}
 
 	if len(updateOnly) > 0 {
-		return g.db.Clauses(clause.OnConflict{
+		return g.GetDB(ctx, tx).Clauses(clause.OnConflict{
 			DoUpdates: clause.AssignmentColumns(updateOnly),
 			Columns:   conflictingColumns,
 		}).Create(t).Error
 	}
 
-	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
+	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }

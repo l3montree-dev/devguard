@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -144,7 +145,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			asset := f.CreateAsset(project.ID, "test-asset-e2e")
 			assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
 			asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-			err := f.App.AssetRepository.Save(nil, &asset)
+			err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
 			assert.NoError(t, err)
 
 			// Create a CVE and affected component
@@ -207,7 +208,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 			// Run the daemon pipeline for this specific asset
 			runner := f.CreateDaemonRunner()
-			err = runner.RunDaemonPipelineForAsset(asset.ID)
+			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
 
 			// Verify asset was updated with pipeline run time
@@ -244,7 +245,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 		autoReopenDays := 1
 		asset.VulnAutoReopenAfterDays = &autoReopenDays
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err := f.App.AssetRepository.Save(nil, &asset)
+		err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
 		// Create a CVE
@@ -315,7 +316,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 
 		// Run the full pipeline
 		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(asset.ID)
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
 		// Verify vulnerability was reopened
@@ -349,7 +350,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 		autoReopenDays := 7
 		asset.VulnAutoReopenAfterDays = &autoReopenDays
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err := f.App.AssetRepository.Save(nil, &asset)
+		err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
 		// Create a CVE
@@ -408,7 +409,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 
 		// Run the full pipeline
 		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(asset.ID)
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
 		// Verify vulnerability is still accepted
@@ -425,7 +426,7 @@ func TestDaemonPipelineErrorHandlingMissingAsset(t *testing.T) {
 		runner := f.CreateDaemonRunner()
 		nonExistentID := uuid.New()
 
-		err := runner.RunDaemonPipelineForAsset(nonExistentID)
+		err := runner.RunDaemonPipelineForAsset(context.Background(), nonExistentID)
 		assert.Error(t, err, "Should return error for non-existent asset")
 		assert.Contains(t, err.Error(), "could not fetch asset", "Error should indicate asset fetch failure")
 	})
@@ -447,7 +448,7 @@ func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
 		assert.NoError(t, err)
 
 		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(asset.ID)
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err, "Pipeline should complete even with errors")
 		// The pipeline should complete but may record errors
 		var updatedAsset models.Asset
@@ -488,7 +489,7 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 
 		// Fetch asset IDs
 		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs()
+		idsChan := runner.FetchAssetIDs(context.Background())
 
 		// Collect IDs
 		var ids []uuid.UUID
@@ -524,7 +525,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 
 		// Fetch asset IDs
 		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs()
+		idsChan := runner.FetchAssetIDs(context.Background())
 
 		// Collect IDs
 		var fetchedIDs []uuid.UUID
@@ -607,12 +608,12 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 
 		// Mark asset for processing
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err = f.App.AssetRepository.Save(nil, &asset)
+		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(asset.ID)
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
 		// Verify vulnerability was detected
@@ -643,12 +644,12 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 		assert.NoError(t, err)
 
 		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err = f.App.AssetRepository.Save(nil, &asset)
+		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(asset.ID)
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err, "Should handle empty artifacts without error")
 
 		// Verify no vulnerabilities were created
@@ -656,6 +657,75 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 		err = f.DB.Find(&vulnerabilities, "asset_id = ?", asset.ID).Error
 		assert.NoError(t, err)
 		assert.Len(t, vulnerabilities, 0, "Should not create vulnerabilities for empty artifacts")
+	})
+}
+
+// TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation verifies that
+// when DeleteOldAssetVersions removes a stale branch version (and its artifacts), the
+// downstream CollectStats stage does not attempt to insert artifact_risk_history rows
+// for those now-deleted artifacts, which would violate the fk_artifact constraint.
+func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		org := f.CreateOrg("test-org-fk-violation")
+		project := f.CreateProject(org.ID, "test-project-fk-violation")
+		asset := f.CreateAsset(project.ID, "test-asset-fk-violation")
+
+		// Main branch: survives DeleteOldAssetVersions
+		mainVersion := f.CreateAssetVersion(asset.ID, "main", true)
+
+		// Stale branch: last_accessed_at is 10 days ago → qualifies for deletion
+		staleVersion := models.AssetVersion{
+			Name:           "stale-branch",
+			AssetID:        asset.ID,
+			DefaultBranch:  false,
+			Slug:           "stale-branch",
+			Type:           models.AssetVersionBranch,
+			LastAccessedAt: time.Now().AddDate(0, 0, -10),
+		}
+		err := f.DB.Create(&staleVersion).Error
+		assert.NoError(t, err)
+
+		// Give the stale branch an artifact so CollectStats has something to iterate
+		staleArtifact := models.Artifact{
+			ArtifactName:     "stale-artifact",
+			AssetVersionName: staleVersion.Name,
+			AssetID:          asset.ID,
+		}
+		err = f.DB.Create(&staleArtifact).Error
+		assert.NoError(t, err)
+
+		// Give the main branch an artifact too (to confirm it still works after the fix)
+		mainArtifact := models.Artifact{
+			ArtifactName:     "main-artifact",
+			AssetVersionName: mainVersion.Name,
+			AssetID:          asset.ID,
+		}
+		err = f.DB.Create(&mainArtifact).Error
+		assert.NoError(t, err)
+
+		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
+		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
+		assert.NoError(t, err)
+
+		// Running the pipeline must not error with:
+		// "insert or update on table artifact_risk_history violates foreign key
+		// constraint fk_artifact (SQLSTATE 23503)"
+		runner := f.CreateDaemonRunner()
+		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
+		assert.NoError(t, err)
+
+		// The stale version and its artifact must have been removed
+		var remainingArtifacts []models.Artifact
+		err = f.DB.Find(&remainingArtifacts, "asset_version_name = ? AND asset_id = ?", staleVersion.Name, asset.ID).Error
+		assert.NoError(t, err)
+		assert.Empty(t, remainingArtifacts, "stale branch artifacts must be deleted")
+
+		// No orphaned risk history rows must exist for the deleted artifact
+		var orphanedHistory []models.ArtifactRiskHistory
+		err = f.DB.Find(&orphanedHistory, "artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
+			staleArtifact.ArtifactName, staleVersion.Name, asset.ID).Error
+		assert.NoError(t, err)
+		assert.Empty(t, orphanedHistory, "must not have risk history for deleted artifact")
 	})
 }
 
@@ -728,12 +798,12 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			err = f.DB.Create(&componentDependency).Error
 			assert.NoError(t, err)
 
-			err = f.App.AssetRepository.Save(nil, &asset)
+			err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 			assert.NoError(t, err)
 
 			// Run the pipeline
 			runner := f.CreateDaemonRunner()
-			err = runner.RunDaemonPipelineForAsset(asset.ID)
+			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
 
 			// Verify vulnerability was detected and risk was calculated

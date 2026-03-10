@@ -5,8 +5,11 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,16 +42,16 @@ func (_m *ProjectService) EXPECT() *ProjectService_Expecter {
 }
 
 // BootstrapProject provides a mock function for the type ProjectService
-func (_mock *ProjectService) BootstrapProject(rbac shared.AccessControl, project *models.Project) error {
-	ret := _mock.Called(rbac, project)
+func (_mock *ProjectService) BootstrapProject(ctx context.Context, rbac shared.AccessControl, project *models.Project) error {
+	ret := _mock.Called(ctx, rbac, project)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BootstrapProject")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.AccessControl, *models.Project) error); ok {
-		r0 = returnFunc(rbac, project)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, *models.Project) error); ok {
+		r0 = returnFunc(ctx, rbac, project)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +64,31 @@ type ProjectService_BootstrapProject_Call struct {
 }
 
 // BootstrapProject is a helper method to define mock.On call
+//   - ctx context.Context
 //   - rbac shared.AccessControl
 //   - project *models.Project
-func (_e *ProjectService_Expecter) BootstrapProject(rbac interface{}, project interface{}) *ProjectService_BootstrapProject_Call {
-	return &ProjectService_BootstrapProject_Call{Call: _e.mock.On("BootstrapProject", rbac, project)}
+func (_e *ProjectService_Expecter) BootstrapProject(ctx interface{}, rbac interface{}, project interface{}) *ProjectService_BootstrapProject_Call {
+	return &ProjectService_BootstrapProject_Call{Call: _e.mock.On("BootstrapProject", ctx, rbac, project)}
 }
 
-func (_c *ProjectService_BootstrapProject_Call) Run(run func(rbac shared.AccessControl, project *models.Project)) *ProjectService_BootstrapProject_Call {
+func (_c *ProjectService_BootstrapProject_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, project *models.Project)) *ProjectService_BootstrapProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.AccessControl
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.AccessControl)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Project
+		var arg1 shared.AccessControl
 		if args[1] != nil {
-			arg1 = args[1].(*models.Project)
+			arg1 = args[1].(shared.AccessControl)
+		}
+		var arg2 *models.Project
+		if args[2] != nil {
+			arg2 = args[2].(*models.Project)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,7 +99,7 @@ func (_c *ProjectService_BootstrapProject_Call) Return(err error) *ProjectServic
 	return _c
 }
 
-func (_c *ProjectService_BootstrapProject_Call) RunAndReturn(run func(rbac shared.AccessControl, project *models.Project) error) *ProjectService_BootstrapProject_Call {
+func (_c *ProjectService_BootstrapProject_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, project *models.Project) error) *ProjectService_BootstrapProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -153,8 +162,8 @@ func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx shared.Co
 }
 
 // GetDirectChildProjects provides a mock function for the type ProjectService
-func (_mock *ProjectService) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
-	ret := _mock.Called(projectID)
+func (_mock *ProjectService) GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
+	ret := _mock.Called(ctx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDirectChildProjects")
@@ -162,18 +171,18 @@ func (_mock *ProjectService) GetDirectChildProjects(projectID uuid.UUID) ([]mode
 
 	var r0 []models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Project, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Project, error)); ok {
+		return returnFunc(ctx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Project); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Project); ok {
+		r0 = returnFunc(ctx, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -186,19 +195,25 @@ type ProjectService_GetDirectChildProjects_Call struct {
 }
 
 // GetDirectChildProjects is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ProjectService_Expecter) GetDirectChildProjects(projectID interface{}) *ProjectService_GetDirectChildProjects_Call {
-	return &ProjectService_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", projectID)}
+func (_e *ProjectService_Expecter) GetDirectChildProjects(ctx interface{}, projectID interface{}) *ProjectService_GetDirectChildProjects_Call {
+	return &ProjectService_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", ctx, projectID)}
 }
 
-func (_c *ProjectService_GetDirectChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectService_GetDirectChildProjects_Call {
+func (_c *ProjectService_GetDirectChildProjects_Call) Run(run func(ctx context.Context, projectID uuid.UUID)) *ProjectService_GetDirectChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -209,7 +224,7 @@ func (_c *ProjectService_GetDirectChildProjects_Call) Return(projects []models.P
 	return _c
 }
 
-func (_c *ProjectService_GetDirectChildProjects_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Project, error)) *ProjectService_GetDirectChildProjects_Call {
+func (_c *ProjectService_GetDirectChildProjects_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)) *ProjectService_GetDirectChildProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -336,9 +351,69 @@ func (_c *ProjectService_ListAllowedProjectsPaged_Call) RunAndReturn(run func(c 
 	return _c
 }
 
+// ListAllowedSubProjectsAndAssetsPaged provides a mock function for the type ProjectService
+func (_mock *ProjectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAllowedSubProjectsAndAssetsPaged")
+	}
+
+	var r0 shared.Paged[dtos.ProjectAssetDTO]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error)); ok {
+		return returnFunc(c)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) shared.Paged[dtos.ProjectAssetDTO]); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[dtos.ProjectAssetDTO])
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
+		r1 = returnFunc(c)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAllowedSubProjectsAndAssetsPaged'
+type ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call struct {
+	*mock.Call
+}
+
+// ListAllowedSubProjectsAndAssetsPaged is a helper method to define mock.On call
+//   - c shared.Context
+func (_e *ProjectService_Expecter) ListAllowedSubProjectsAndAssetsPaged(c interface{}) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	return &ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("ListAllowedSubProjectsAndAssetsPaged", c)}
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) Run(run func(c shared.Context)) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.ProjectAssetDTO], err error) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error)) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListProjectsByOrganizationID provides a mock function for the type ProjectService
-func (_mock *ProjectService) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error) {
-	ret := _mock.Called(organizationID)
+func (_mock *ProjectService) ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error) {
+	ret := _mock.Called(ctx, organizationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListProjectsByOrganizationID")
@@ -346,18 +421,18 @@ func (_mock *ProjectService) ListProjectsByOrganizationID(organizationID uuid.UU
 
 	var r0 []models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Project, error)); ok {
-		return returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Project, error)); ok {
+		return returnFunc(ctx, organizationID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Project); ok {
-		r0 = returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Project); ok {
+		r0 = returnFunc(ctx, organizationID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(organizationID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, organizationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -370,19 +445,25 @@ type ProjectService_ListProjectsByOrganizationID_Call struct {
 }
 
 // ListProjectsByOrganizationID is a helper method to define mock.On call
+//   - ctx context.Context
 //   - organizationID uuid.UUID
-func (_e *ProjectService_Expecter) ListProjectsByOrganizationID(organizationID interface{}) *ProjectService_ListProjectsByOrganizationID_Call {
-	return &ProjectService_ListProjectsByOrganizationID_Call{Call: _e.mock.On("ListProjectsByOrganizationID", organizationID)}
+func (_e *ProjectService_Expecter) ListProjectsByOrganizationID(ctx interface{}, organizationID interface{}) *ProjectService_ListProjectsByOrganizationID_Call {
+	return &ProjectService_ListProjectsByOrganizationID_Call{Call: _e.mock.On("ListProjectsByOrganizationID", ctx, organizationID)}
 }
 
-func (_c *ProjectService_ListProjectsByOrganizationID_Call) Run(run func(organizationID uuid.UUID)) *ProjectService_ListProjectsByOrganizationID_Call {
+func (_c *ProjectService_ListProjectsByOrganizationID_Call) Run(run func(ctx context.Context, organizationID uuid.UUID)) *ProjectService_ListProjectsByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -393,7 +474,7 @@ func (_c *ProjectService_ListProjectsByOrganizationID_Call) Return(projects []mo
 	return _c
 }
 
-func (_c *ProjectService_ListProjectsByOrganizationID_Call) RunAndReturn(run func(organizationID uuid.UUID) ([]models.Project, error)) *ProjectService_ListProjectsByOrganizationID_Call {
+func (_c *ProjectService_ListProjectsByOrganizationID_Call) RunAndReturn(run func(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error)) *ProjectService_ListProjectsByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -471,8 +552,8 @@ func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx shared.Conte
 }
 
 // RecursivelyGetChildProjects provides a mock function for the type ProjectService
-func (_mock *ProjectService) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
-	ret := _mock.Called(projectID)
+func (_mock *ProjectService) RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
+	ret := _mock.Called(ctx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RecursivelyGetChildProjects")
@@ -480,18 +561,18 @@ func (_mock *ProjectService) RecursivelyGetChildProjects(projectID uuid.UUID) ([
 
 	var r0 []models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Project, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Project, error)); ok {
+		return returnFunc(ctx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Project); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Project); ok {
+		r0 = returnFunc(ctx, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -504,19 +585,25 @@ type ProjectService_RecursivelyGetChildProjects_Call struct {
 }
 
 // RecursivelyGetChildProjects is a helper method to define mock.On call
+//   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ProjectService_Expecter) RecursivelyGetChildProjects(projectID interface{}) *ProjectService_RecursivelyGetChildProjects_Call {
-	return &ProjectService_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", projectID)}
+func (_e *ProjectService_Expecter) RecursivelyGetChildProjects(ctx interface{}, projectID interface{}) *ProjectService_RecursivelyGetChildProjects_Call {
+	return &ProjectService_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", ctx, projectID)}
 }
 
-func (_c *ProjectService_RecursivelyGetChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectService_RecursivelyGetChildProjects_Call {
+func (_c *ProjectService_RecursivelyGetChildProjects_Call) Run(run func(ctx context.Context, projectID uuid.UUID)) *ProjectService_RecursivelyGetChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -527,7 +614,7 @@ func (_c *ProjectService_RecursivelyGetChildProjects_Call) Return(projects []mod
 	return _c
 }
 
-func (_c *ProjectService_RecursivelyGetChildProjects_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Project, error)) *ProjectService_RecursivelyGetChildProjects_Call {
+func (_c *ProjectService_RecursivelyGetChildProjects_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)) *ProjectService_RecursivelyGetChildProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

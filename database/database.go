@@ -8,12 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 // create a logger to log any errors to the error tracking
@@ -85,6 +87,7 @@ func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	config.MaxConnLifetime = cfg.ConnMaxLifetime
 	config.MaxConns = cfg.MaxOpenConns
 	config.MinConns = cfg.MinConns
+	config.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	ctx := context.Background()
 
@@ -116,6 +119,10 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 	})
 
 	if err != nil {
+		panic(err)
+	}
+
+	if err := gormDB.Use(tracing.NewPlugin()); err != nil {
 		panic(err)
 	}
 

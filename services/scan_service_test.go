@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestFirstPartyVulnHash(t *testing.T) {
@@ -166,6 +168,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 
 		// set up the mock expectation
 		scanService.On("HandleFirstPartyVulnResult",
+			mock.Anything,
 			models.Org{},
 			models.Project{},
 			models.Asset{},
@@ -175,6 +178,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			"userID").Return([]models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{expectedVuln}, nil)
 
 		_, _, r, err := scanService.HandleFirstPartyVulnResult(
+			context.Background(),
 			models.Org{},
 			models.Project{},
 			models.Asset{},
@@ -227,7 +231,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL}, false)
 
 		// Verify the SBOM was processed successfully with the correct URL
 		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
@@ -253,7 +257,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(artifactName, ref, invalidURLs, false)
+		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, invalidURLs, false)
 
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
@@ -275,7 +279,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL}, false)
 
 		// HTTP errors should result in invalid URLs
 		assert.Equal(t, 0, len(boms))
