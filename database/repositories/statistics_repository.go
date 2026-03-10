@@ -674,7 +674,7 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 	return projectAverage, err
 }
 
-func (r *statisticsRepository) GetComponentDistribututionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+func (r *statisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
 	distribution := []dtos.ComponentOccurrenceCount{}
 	err := r.db.Raw(`
 	SELECT 
@@ -718,7 +718,7 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(orgID uuid.UUID) ([]dt
 	return packages, err
 }
 
-func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrgs(orgID uuid.UUID) (time.Duration, error) {
+func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.UUID) (time.Duration, error) {
 	var seconds float64
 	err := r.db.Raw(`
 	SELECT 

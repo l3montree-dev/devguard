@@ -322,7 +322,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not find malicious packages for org").WithInternal(err)
 	}
 
-	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrgs(org.ID)
+	averageAge, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average age of dependencies").WithInternal(err)
 	}

@@ -417,7 +417,11 @@ func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low
 
 // calculate the most popular component ecosystems in org and return up to limit entries sorted by total count
 func (s *statisticsService) GetTopEcosystemsInOrg(orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error) {
-	distribution, err := s.statisticsRepository.GetComponentDistribututionInOrg(orgID)
+	if limit <= 0 {
+		return []dtos.EcosystemUsage{}, nil
+	}
+
+	distribution, err := s.statisticsRepository.GetComponentDistributionInOrg(orgID)
 	if err != nil {
 		return nil, err
 	}
