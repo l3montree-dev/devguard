@@ -372,6 +372,8 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 }
 
 func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit int) {
+	// currently we use the same default value for all query params, if we want to specify the default for each param we can do that with a map
+	defaultValue := 5
 	queryParams := []string{"orgComponentsLimit", "topCVEsLimit", "topComponentsLimit", "topEcosystemsLimit"}
 	queryValues := []int{}
 	for _, paramName := range queryParams {
@@ -381,9 +383,13 @@ func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVE
 				queryValues = append(queryValues, limit)
 			} else {
 				slog.Warn("invalid value for query param detected, using default value", "param", paramName)
-				queryValues = append(queryValues, 5)
+				queryValues = append(queryValues, defaultValue)
 			}
+		} else {
+			// use default value
+			queryValues = append(queryValues, defaultValue)
 		}
+
 	}
 	return queryValues[0], queryValues[1], queryValues[2], queryValues[3]
 }

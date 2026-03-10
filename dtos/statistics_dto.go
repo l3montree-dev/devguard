@@ -100,13 +100,13 @@ type RiskHistoryDTO struct {
 
 type ComponentUsageAcrossOrg struct {
 	PackageURL       string `json:"purl" gorm:"column:purl"`
-	TotalAmountInOrg string `json:"totalAmount" gorm:"column:total_amount"`
+	TotalAmountInOrg int    `json:"totalAmount" gorm:"column:total_amount"`
 }
 
 type CVEOccurrencesAcrossOrg struct {
 	CVEID            string  `json:"cveID" gorm:"column:cve_id"`
 	CVSS             float32 `json:"cvss" gorm:"cvss"`
-	TotalAmountInOrg string  `json:"totalAmount" gorm:"column:total_amount"`
+	TotalAmountInOrg int     `json:"totalAmount" gorm:"column:total_amount"`
 }
 
 type VulnEventAverage struct {

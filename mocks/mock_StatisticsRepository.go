@@ -476,12 +476,12 @@ func (_c *StatisticsRepository_FindMaliciousPackagesInOrg_Call) RunAndReturn(run
 	return _c
 }
 
-// GetAverageAgeOfDependenciesAcrossOrgs provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrgs(orgID uuid.UUID) (time.Duration, error) {
+// GetAverageAgeOfDependenciesAcrossOrg provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.UUID) (time.Duration, error) {
 	ret := _mock.Called(orgID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAverageAgeOfDependenciesAcrossOrgs")
+		panic("no return value specified for GetAverageAgeOfDependenciesAcrossOrg")
 	}
 
 	var r0 time.Duration
@@ -502,18 +502,18 @@ func (_mock *StatisticsRepository) GetAverageAgeOfDependenciesAcrossOrgs(orgID u
 	return r0, r1
 }
 
-// StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageAgeOfDependenciesAcrossOrgs'
-type StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call struct {
+// StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageAgeOfDependenciesAcrossOrg'
+type StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call struct {
 	*mock.Call
 }
 
-// GetAverageAgeOfDependenciesAcrossOrgs is a helper method to define mock.On call
+// GetAverageAgeOfDependenciesAcrossOrg is a helper method to define mock.On call
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrgs(orgID interface{}) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call {
-	return &StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call{Call: _e.mock.On("GetAverageAgeOfDependenciesAcrossOrgs", orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrg(orgID interface{}) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
+	return &StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call{Call: _e.mock.On("GetAverageAgeOfDependenciesAcrossOrg", orgID)}
 }
 
-func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call {
+func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -526,12 +526,12 @@ func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call) Run(r
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call) Return(duration time.Duration, err error) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call {
+func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) Return(duration time.Duration, err error) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	_c.Call.Return(duration, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call) RunAndReturn(run func(orgID uuid.UUID) (time.Duration, error)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrgs_Call {
+func (_c *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call) RunAndReturn(run func(orgID uuid.UUID) (time.Duration, error)) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -716,12 +716,12 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndR
 	return _c
 }
 
-// GetComponentDistribututionInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetComponentDistribututionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+// GetComponentDistributionInOrg provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetComponentDistributionInOrg(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
 	ret := _mock.Called(orgID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetComponentDistribututionInOrg")
+		panic("no return value specified for GetComponentDistributionInOrg")
 	}
 
 	var r0 []dtos.ComponentOccurrenceCount
@@ -744,18 +744,18 @@ func (_mock *StatisticsRepository) GetComponentDistribututionInOrg(orgID uuid.UU
 	return r0, r1
 }
 
-// StatisticsRepository_GetComponentDistribututionInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetComponentDistribututionInOrg'
-type StatisticsRepository_GetComponentDistribututionInOrg_Call struct {
+// StatisticsRepository_GetComponentDistributionInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetComponentDistributionInOrg'
+type StatisticsRepository_GetComponentDistributionInOrg_Call struct {
 	*mock.Call
 }
 
-// GetComponentDistribututionInOrg is a helper method to define mock.On call
+// GetComponentDistributionInOrg is a helper method to define mock.On call
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetComponentDistribututionInOrg(orgID interface{}) *StatisticsRepository_GetComponentDistribututionInOrg_Call {
-	return &StatisticsRepository_GetComponentDistribututionInOrg_Call{Call: _e.mock.On("GetComponentDistribututionInOrg", orgID)}
+func (_e *StatisticsRepository_Expecter) GetComponentDistributionInOrg(orgID interface{}) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+	return &StatisticsRepository_GetComponentDistributionInOrg_Call{Call: _e.mock.On("GetComponentDistributionInOrg", orgID)}
 }
 
-func (_c *StatisticsRepository_GetComponentDistribututionInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetComponentDistribututionInOrg_Call {
+func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Run(run func(orgID uuid.UUID)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -768,12 +768,12 @@ func (_c *StatisticsRepository_GetComponentDistribututionInOrg_Call) Run(run fun
 	return _c
 }
 
-func (_c *StatisticsRepository_GetComponentDistribututionInOrg_Call) Return(componentOccurrenceCounts []dtos.ComponentOccurrenceCount, err error) *StatisticsRepository_GetComponentDistribututionInOrg_Call {
+func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Return(componentOccurrenceCounts []dtos.ComponentOccurrenceCount, err error) *StatisticsRepository_GetComponentDistributionInOrg_Call {
 	_c.Call.Return(componentOccurrenceCounts, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetComponentDistribututionInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetComponentDistribututionInOrg_Call {
+func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

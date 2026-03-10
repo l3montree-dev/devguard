@@ -110,6 +110,7 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(orgID uuid.UUID, st
 		a.day >= ? 
 	AND 
 		a.day <= ?
-	GROUP BY day;`, orgID, start, end).Find(&history).Error
+	GROUP BY day;
+	ORDER BY day ASC`, orgID, start, end).Find(&history).Error
 	return history, err
 }

@@ -449,11 +449,11 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Vu
 		COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 		COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
        	COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-       	COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical,
+       	COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical,
        	COUNT(*) filter (where d.cvss < 4) as cvss_low,
 		COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
        	COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-       	COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+       	COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
 	FROM dependency_vulns a 
 	LEFT JOIN assets b ON a.asset_id = b.id 
 	LEFT JOIN projects c ON b.project_id = c.id
@@ -468,17 +468,19 @@ func (r *statisticsRepository) VulnClassificationByOrg(orgID uuid.UUID) (dtos.Vu
 
 func (r *statisticsRepository) GetOrgStructureDistribution(orgID uuid.UUID) (dtos.OrgStructureDistribution, error) {
 	structure := dtos.OrgStructureDistribution{}
-	err := r.db.Raw(`SELECT COUNT(DISTINCT(p.id)) as num_projects, 
-			COUNT(DISTINCT(a.id)) as num_assets, 
-			COUNT(DISTINCT CASE 
-				WHEN 
-					art.artifact_name IS NOT NULL OR art.asset_version_name IS NOT NULL 
-				THEN 
-					(art.artifact_name, art.asset_version_name) END) as num_artifacts 
-			FROM projects p 
-			LEFT JOIN assets a ON p.id = a.project_id
-			LEFT JOIN artifacts art ON art.asset_id = a.id
-			WHERE p.organization_id = ?;`, orgID).Find(&structure).Error
+	err := r.db.Raw(`
+			SELECT 
+				COUNT(DISTINCT(p.id)) as num_projects, 
+				COUNT(DISTINCT(a.id)) as num_assets, 
+				COUNT(DISTINCT(art.artifact_name, art.asset_version_name,art.asset_id)) as num_artifacts 
+			FROM 
+				projects p 
+			LEFT JOIN 
+				assets a ON p.id = a.project_id
+			LEFT JOIN 
+				artifacts art ON art.asset_id = a.id
+			WHERE 
+				p.organization_id = ?;`, orgID).Find(&structure).Error
 	return structure, err
 }
 
@@ -489,11 +491,11 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(orgID uuid.UUID, l
 			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical,
 			 COUNT(*) filter (where d.cvss < 4) as cvss_low,
 			 COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
 			 COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
 			 FROM dependency_vulns a
 			 LEFT JOIN assets b ON a.asset_id = b.id 
 			 LEFT JOIN projects c ON b.project_id = c.id
@@ -512,11 +514,11 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, lim
 			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
 			 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical,
+			 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical,
 			 COUNT(*) filter (where d.cvss < 4) as cvss_low,
 			 COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
 			 COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
 			 FROM dependency_vulns a
 			 LEFT JOIN assets b ON a.asset_id = b.id 
 			 LEFT JOIN projects c ON b.project_id = c.id
@@ -530,25 +532,40 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(orgID uuid.UUID, lim
 
 func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
 	artifacts := []dtos.VulnDistributionInStructure{}
-	err := r.db.Raw(`SELECT e.artifact_name as name, e.artifact_name as slug, e.asset_version_name as asset_version_name,b.slug as asset_slug, c.slug as project_slug,
-			 COUNT(*) as total,
-			 COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
-			 COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
-       		 COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-       		 COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical,
-			 COUNT(*) filter (where d.cvss < 4) as cvss_low,
-			 COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
-			 COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
-			 FROM dependency_vulns a
-			 LEFT JOIN assets b ON a.asset_id = b.id 
-			 LEFT JOIN projects c ON b.project_id = c.id
-			 LEFT JOIN cves d ON a.cve_id = d.cve
-			 LEFT JOIN artifacts e ON e.asset_id = b.id
-			 WHERE c.organization_id = ?
-			 AND a.state = 'open'
-			 GROUP BY e.artifact_name,e.asset_version_name, c.slug, b.slug
-			 ORDER BY total DESC LIMIT ?;`, orgID, limit).Find(&artifacts).Error
+	err := r.db.Raw(`
+	SELECT 
+		art.artifact_artifact_name as name, 
+		art.artifact_artifact_name as slug, 
+		art.artifact_asset_version_name as asset_version_name,
+		b.slug as asset_slug, 
+		c.slug as project_slug,
+		COUNT(*) as total,
+		COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
+		COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
+		COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
+		COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical,
+		COUNT(*) filter (where d.cvss < 4) as cvss_low,
+		COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
+		COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
+		COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
+	FROM 
+		dependency_vulns a
+	LEFT JOIN 
+		artifact_dependency_vulns art ON a.id = art.dependency_vuln_id
+	LEFT JOIN 
+		assets b ON a.asset_id = b.id 
+	LEFT JOIN 
+		projects c ON b.project_id = c.id
+	LEFT JOIN 
+		cves d ON a.cve_id = d.cve
+	WHERE 
+		c.organization_id = ?
+	AND 
+		a.state = 'open'
+	GROUP BY 
+		art.artifact_artifact_name,art.artifact_asset_version_name, c.slug, b.slug
+	ORDER BY 
+		total DESC LIMIT ?;`, orgID, limit).Find(&artifacts).Error
 	return artifacts, err
 }
 
@@ -652,11 +669,11 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 					COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
 					COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
 					COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-					COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment < 10) as risk_critical ,
+					COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical ,
 					COUNT(*) filter (where d.cvss < 4) as cvss_low,
 					COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
 					COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-					COUNT(*) filter (where d.cvss >= 9 AND d.cvss < 10) as cvss_critical
+					COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
 				FROM 
 					dependency_vulns a 
 				LEFT JOIN 
@@ -722,10 +739,10 @@ func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(orgID uuid.U
 	var seconds float64
 	err := r.db.Raw(`
 	SELECT 
-		EXTRACT(EPOCH FROM (AVG(NOW() - max))) as seconds
+		COALESCE(EXTRACT(EPOCH FROM (AVG(NOW() - published))),0) as seconds
 	FROM (
 			SELECT 
-				b.id, MAX(b.published) 
+				b.id, MAX(b.published) as published
 			FROM 
 				component_dependencies a 
 			LEFT JOIN 
@@ -793,15 +810,15 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(orgID uuid.UU
 			prev_type IN ?
 	)
 	SELECT
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4))  AS low_risk_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7))  AS medium_risk_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9))  AS high_risk_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)) AS critical_risk_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 0  AND raw_risk_assessment <  4)),0)  AS low_risk_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 4  AND raw_risk_assessment <  7)),0)  AS medium_risk_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 7  AND raw_risk_assessment <  9)),0)  AS high_risk_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE raw_risk_assessment >= 9  AND raw_risk_assessment <= 10)),0) AS critical_risk_average,
 
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4))  AS low_cvss_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7))  AS medium_cvss_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9))  AS high_cvss_average,
-		EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)) AS critical_cvss_average
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 0  AND cvss <  4)),0)  AS low_cvss_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 4  AND cvss <  7)),0)  AS medium_cvss_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS high_cvss_average,
+		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS critical_cvss_average
 	FROM
 		intervals;`, append(fixedEvents, openEvents...), orgID, openEvents, openEvents, openEvents, openEvents).Find(&averages).Error
 	return averages, err
@@ -811,7 +828,8 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(orgID uui
 	rows := []dtos.RemediationTypeDistributionRow{}
 	err := r.db.Raw(`
 	SELECT 
-		a.type, COUNT(*) * 100 /SUM(COUNT(*)) over() as percentage
+		a.type, 
+		COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
 	FROM 
 		vuln_events a
 	LEFT JOIN 
