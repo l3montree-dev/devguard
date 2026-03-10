@@ -9,7 +9,7 @@ import (
 )
 
 type DependencyNode struct {
-	Dependecy string            // Consists of dependecy name and version
+	Dependecy string            // Consists of dependency name and version
 	Children  []*DependencyNode // Will be [] if node is a leaf
 }
 
@@ -41,8 +41,8 @@ type Project struct {
 }
 
 const (
-	falsePositive = "false-positive"
-	affected      = "affected"
+	FalsePositive = "false-positive"
+	Affected      = "affected"
 )
 
 type VexRule struct {
@@ -50,7 +50,7 @@ type VexRule struct {
 	CVE         CVE
 	AssetID     string
 	Reasoning   string
-	Assessment  string // Use assesment constants for options, e.g. "false-positive", "affected"
+	Assessment  string // Use assessment constants for options, e.g. "false-positive", "affected"
 }
 
 type CVE struct {
@@ -82,20 +82,26 @@ func newUserVoteTracker() *userVoteTracker {
 	}
 }
 
+var diminishmentFactor = 0.1
+
 // recordVoteAndGetFactor increments the vote count for the organization's
-// creator (CreatedBy) and returns a diminishing factor based on how many
-// prior votes that creator already cast.
-// Factor: 1/2^(1+priorVotes) — 1st vote=0.5, 2nd=0.25, 3rd=0.125, etc.
-// The sum of all factors per user converges to 1 and never exceeds it.
-// This prevents a single user from having too much influence by creating many organizations/projects and voting multiple times.
+// creator (CreatedBy) and returns the amount for how often the creator
+// has already voted in the current voting context
+// This is used for diminishing the value of mass-created votes by one user
 func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) float64 {
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
-	return float64(priorVotes + 1)
+	return math.Round(1e6*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e6
 }
 
-func PathPatternMatchesPath(inPath, inPattern []string) bool {
+func pathPatternMatchesPath(inPath, inPattern []string) (bool, error) {
+	if len(inPattern) == 0 {
+		return false, fmt.Errorf("pattern is empty")
+	}
+	if len(inPath) == 0 {
+		return false, fmt.Errorf("path is empty")
+	}
 	foundEnd := false
 	endIndex := 0
 	for i, element := range inPath {
@@ -106,25 +112,34 @@ func PathPatternMatchesPath(inPath, inPattern []string) bool {
 		}
 	}
 	if !foundEnd {
-		return false
+		return false, nil
 	}
 	if inPattern[0] == "*" {
-		return true
+		return true, nil
 	} else {
 		for i, element := range inPath {
 			if element == inPattern[0] {
-				if i >= endIndex {
-					return true
+				if i <= endIndex {
+					return true, nil
 				}
 			}
 		}
-		return false
+		return false, nil
 	}
 }
 
 // If the pattern matches with the path, return the length of how far apart the two critical
 // dependecies are (accounts for wildcards)
-func PathPatternMatchLength(inPath, inPattern []string) (int, error) {
+func pathPatternMatchLength(inPath, inPattern []string) (int, error) {
+	if len(inPattern) == 0 {
+		return 0, fmt.Errorf("pattern is empty")
+	}
+	if len(inPath) == 0 {
+		return 0, fmt.Errorf("path is empty")
+	}
+	if len(inPattern) == 1 && inPattern[0] == "*" {
+		return len(inPath), nil
+	}
 	foundEnd := false
 	endIndex := 0
 	for i, element := range inPath {
@@ -142,8 +157,8 @@ func PathPatternMatchLength(inPath, inPattern []string) (int, error) {
 	} else {
 		for i, element := range inPath {
 			if element == inPattern[0] {
-				if i >= endIndex {
-					return endIndex - i, nil
+				if i <= endIndex {
+					return endIndex - i + 1, nil
 				}
 			}
 		}
@@ -197,6 +212,22 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 	var crowdsourcedVexRule VexRule
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
+
+	var assetMap = make(map[string]Asset)
+	for _, asst := range inAssets {
+		assetMap[asst.ID] = asst
+	}
+
+	var projectMap = make(map[string]Project)
+	for _, proj := range inProjects {
+		projectMap[proj.ID] = proj
+	}
+
+	var organizationMap = make(map[string]Organization)
+	for _, org := range inOrganizations {
+		organizationMap[org.ID] = org
+	}
+
 	// [Mitigation 8] Initialize user vote tracker for diminishing returns
 	tracker := newUserVoteTracker()
 
@@ -218,38 +249,25 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 		// For each VexRule, find organization and project id
 		rulePath := PathToString(rule)
 
-		var asset Asset
-		for _, asst := range inAssets {
-			if asst.ID == rule.AssetID {
-				asset = asst
-				break
-			}
-		}
+		asset := assetMap[rule.AssetID]
 		if asset.ID == "" {
 			slog.Error("failed to find asset for VEX rule", "assetID", rule.AssetID)
 			continue
 		}
-		var project Project
-		for _, proj := range inProjects {
-			if proj.ID == asset.ProjectID {
-				project = proj
-				break
-			}
-		}
+		project := projectMap[asset.ProjectID]
 		if project.ID == "" {
 			slog.Error("failed to find project for asset", "projectID", asset.ProjectID)
 			continue
 		}
-		var organization Organization
-		for _, org := range inOrganizations {
-			if org.ID == project.OrganizationID {
-				organization = org
-				break
-			}
-		}
+		organization := organizationMap[project.OrganizationID]
 		if organization.ID == "" {
 			slog.Error("failed to find organization for project", "organizationID", project.OrganizationID)
 			continue
+		}
+
+		if organization.Trustscore < 0.0 || organization.Trustscore > 1.0 || project.Trustscore < 0.0 || project.Trustscore > 1.0 {
+			slog.Error("trust score malformed", "organizationID", organization.ID, "projectID", project.ID)
+			return VexRule{}, fmt.Errorf("trust score malformed for organizationID: %s or projectID: %s", organization.ID, project.ID)
 		}
 
 		// [Mitigation 10,11] Minimum organization age check
@@ -258,16 +276,20 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 			continue
 		}
 
-		if PathPatternMatchesPath(inDependencyPath, rule.PathPattern) && rule.CVE.CVE == inCVE.CVE {
+		if pathMatch, pathMatcherror := pathPatternMatchesPath(inDependencyPath, rule.PathPattern); pathMatch && rule.CVE.CVE == inCVE.CVE {
+			if pathMatcherror != nil {
+				slog.Error("failed to match path pattern", "error", pathMatcherror)
+				continue
+			}
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
-			if rule.Assessment == affected || rule.Assessment == falsePositive {
+			if rule.Assessment == Affected || rule.Assessment == FalsePositive {
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
 				diminishingFactor := tracker.recordVoteAndGetFactor(organization)
 				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
 				// Note to mitigation 8: Using an exponential decay approach allows for
 				// - lower trusted entities to not be able to surpass high trusted entities with many votes
 				// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
-				ruleConfidence := math.Pow(math.Max(project.Trustscore, organization.Trustscore), diminishingFactor)
+				ruleConfidence := math.Max(project.Trustscore, organization.Trustscore) * diminishingFactor
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
@@ -284,6 +306,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 						}{OrganizationID: organization.ID, ProjectID: project.ID})
 
 						votes[rulePath].Value += ruleConfidence
+
 						validVotesCount++
 					}
 				} else {
@@ -299,6 +322,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 					votes[rulePath].Value += ruleConfidence
 					validVotesCount++
 				}
+				fmt.Printf("%s,%f\n", rulePath, votes[rulePath].Value)
 			}
 
 		}
@@ -331,8 +355,8 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 				// If the assessment is the same and the path is the same, both have the same security statement so either is fine
 				// We only need to check if the paths are not the same
 				if key != crowdsourcedVexRulePath {
-					candidatePathLength, errCandidate := PathPatternMatchLength(inDependencyPath, candidateRule.PathPattern)
-					currentCandidatePathLength, errCurrentCandidate := PathPatternMatchLength(inDependencyPath, currentCandidateRule.PathPattern)
+					candidatePathLength, errCandidate := pathPatternMatchLength(inDependencyPath, candidateRule.PathPattern)
+					currentCandidatePathLength, errCurrentCandidate := pathPatternMatchLength(inDependencyPath, currentCandidateRule.PathPattern)
 					if errCandidate != nil || errCurrentCandidate != nil {
 						slog.Error("failed to calculate path pattern match length for tie-breaking", "candidatePath", candidateRule.PathPattern, "currentCandidatePath", currentCandidateRule.PathPattern, "errCandidate", errCandidate, "errCurrentCandidate", errCurrentCandidate)
 						continue
@@ -345,7 +369,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 				}
 			} else {
 				// If the assessment is not the same, prefer affected over false-positive regardless of the path, since it is the more secure option
-				if candidateRule.Assessment == affected {
+				if candidateRule.Assessment == Affected {
 					maximumValue = value.Value
 					crowdsourcedVexRulePath = key
 				}
@@ -367,7 +391,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 	// 2. We can strip out the assetID or only return the relevant data to create a new VexRule with the AssetID of the user who needed the recommendation
 	crowdsourcedVexRule, found := findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
 	if !found {
-		slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRule)
+		slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
 		return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
 	}
 	return crowdsourcedVexRule, nil
