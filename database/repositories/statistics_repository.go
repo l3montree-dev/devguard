@@ -620,9 +620,9 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *g
 	return topCVEs, err
 }
 
-func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
+func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
 	averageByType := []dtos.VulnEventAverage{}
-	err := r.db.Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		type, AVG(count) as weekly_average
 	FROM(

@@ -95,7 +95,7 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Cont
 func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error) {
 	history := []dtos.OrgRiskHistory{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT ^
+	SELECT
 		day,
 		SUM(low) low_risk, SUM(medium) medium_risk, SUM(high) high_risk, SUM(critical) critical_risk, 
 		SUM(low_cvss) low_cvss, SUM(medium_cvss) medium_cvss, SUM(high_cvss) high_cvss, SUM(critical_cvss) critical_cvss

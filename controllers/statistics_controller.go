@@ -313,7 +313,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get average amount of open vulns for org").WithInternal(err)
 	}
 
-	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(org.ID, topEcosystemsLimit)
+	topEcosystems, err := c.statisticsService.GetTopEcosystemsInOrg(ctx.Request().Context(), org.ID, topEcosystemsLimit)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get top ecosystem for org").WithInternal(err)
 	}

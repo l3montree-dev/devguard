@@ -563,7 +563,7 @@ type StatisticsService interface {
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetAverageFixingTimeForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error)
 	// CVSS-based average fixing time methods
-	GetTopEcosystemsInOrg(orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
+	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
 	GetAverageFixingTimeByCvss(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	GetAverageFixingTimeByCvssForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
