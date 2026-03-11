@@ -118,7 +118,6 @@ var veryDeepPath = []string{"ROOT", "app@1.0.0", "framework@2.0.0", "middleware@
 
 var branchPathA = []string{"ROOT", "frameworkX@3.0.0", "libY@1.2.0", "pluginA@1.0.0"}
 var branchPathB = []string{"ROOT", "frameworkX@3.0.0", "libY@1.2.0", "pluginB@2.0.0"}
-var branchPathC = []string{"ROOT", "frameworkX@3.0.0", "adapterZ@0.1.0"}
 
 // Helper function tests
 
@@ -502,31 +501,6 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 		assert.Equal(t, Affected, result.Assessment,
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
 	})
-
-	/* t.Run("Rounding error edge case: same creator multiple orgs diminished vs distinct creators", func(t *testing.T) {
-		pattern := wildcardFor(deepPath)
-		var sameRules []VexRule
-		var sameOrgs []Organization
-		var sameProjs []Project
-		var sameAssets []Asset
-		for i := 0; i < 100; i++ {
-			s := fmt.Sprintf("%d", i)
-			sameOrgs = append(sameOrgs, makeOrgWithCreator("deep-same-org-"+s, 0.9, oldOrg(), "deep-single-user"))
-			sameProjs = append(sameProjs, makeProject("deep-same-proj-"+s, "deep-same-org-"+s, 0.9))
-			sameAssets = append(sameAssets, makeAsset("deep-same-asset-"+s, "deep-same-proj-"+s))
-			sameRules = append(sameRules, makeVexRule(pattern, testCVE, "deep-same-asset-"+s, Affected))
-		}
-
-		distinctR, distinctO, distinctP, distinctA := generateDistinctVoters(1, pattern, testCVE, FalsePositive, 0.9, oldOrg())
-		rekey("dist-", distinctR, distinctO, distinctP, distinctA)
-
-		allR, allO, allP, allA := merge(sameRules, distinctR, sameOrgs, distinctO, sameProjs, distinctP, sameAssets, distinctA)
-
-		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
-		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment,
-			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
-	}) */
 
 	t.Run("many same-creator orgs cannot exceed convergence limit", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
