@@ -95,7 +95,7 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
-	return math.Round(1e6*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e6
+	return math.Round(1e12*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e12
 }
 
 func PathToString(inVexRule VexRule) string {

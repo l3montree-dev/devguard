@@ -502,7 +502,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
 	})
 
-	t.Run("many same-creator orgs cannot exceed convergence limit", func(t *testing.T) {
+	t.Run("creators on the same trustlevel can compete with each other using vote volume", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
 
 		distinct1R, distinct1O, distinct1P, distinct1A := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.8, oldOrg())
