@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/l3montree-dev/devguard/dtos"
 )
 
 type DependencyNode struct {
@@ -46,7 +49,7 @@ const (
 )
 
 type VexRule struct {
-	PathPattern []string
+	PathPattern dtos.PathPattern
 	CVE         CVE
 	AssetID     string
 	Reasoning   string
@@ -95,78 +98,6 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	return math.Round(1e6*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e6
 }
 
-func pathPatternMatchesPath(inPath, inPattern []string) (bool, error) {
-	if len(inPattern) == 0 {
-		return false, fmt.Errorf("pattern is empty")
-	}
-	if len(inPath) == 0 {
-		return false, fmt.Errorf("path is empty")
-	}
-	foundEnd := false
-	endIndex := 0
-	for i, element := range inPath {
-		if element == inPattern[len(inPattern)-1] {
-			foundEnd = true
-			endIndex = i
-			break
-		}
-	}
-	if !foundEnd {
-		return false, nil
-	}
-	if inPattern[0] == "*" {
-		return true, nil
-	} else {
-		for i, element := range inPath {
-			if element == inPattern[0] {
-				if i <= endIndex {
-					return true, nil
-				}
-			}
-		}
-		return false, nil
-	}
-}
-
-// If the pattern matches with the path, return the length of how far apart the two critical
-// dependecies are (accounts for wildcards)
-func pathPatternMatchLength(inPath, inPattern []string) (int, error) {
-	if len(inPattern) == 0 {
-		return 0, fmt.Errorf("pattern is empty")
-	}
-	if len(inPath) == 0 {
-		return 0, fmt.Errorf("path is empty")
-	}
-	if len(inPattern) == 1 && inPattern[0] == "*" {
-		return len(inPath), nil
-	}
-	foundEnd := false
-	endIndex := 0
-	for i, element := range inPath {
-		if element == inPattern[len(inPattern)-1] {
-			foundEnd = true
-			endIndex = i
-			break
-		}
-	}
-	if !foundEnd {
-		return 0, fmt.Errorf("end of path not found in pattern")
-	}
-	if inPattern[0] == "*" {
-		return endIndex + 1, nil
-	} else {
-		for i, element := range inPath {
-			if element == inPattern[0] {
-				if i <= endIndex {
-					return endIndex - i + 1, nil
-				}
-			}
-		}
-		return 0, fmt.Errorf("no match found")
-	}
-
-}
-
 func PathToString(inVexRule VexRule) string {
 	//Adding the assessment to the path will make it possible to distinguish between false-positives and marked-as-affected for the voting count map
 	stringPath := strings.Join(append(inVexRule.PathPattern, []string{inVexRule.Assessment}...), "-->")
@@ -209,7 +140,6 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 // Application / Creation of vex rules counts as a vote
 
 func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRule, inOrganizations []Organization, inProjects []Project, inAssets []Asset) (VexRule, error) {
-	var crowdsourcedVexRule VexRule
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
 
@@ -276,11 +206,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 			continue
 		}
 
-		if pathMatch, pathMatcherror := pathPatternMatchesPath(inDependencyPath, rule.PathPattern); pathMatch && rule.CVE.CVE == inCVE.CVE {
-			if pathMatcherror != nil {
-				slog.Error("failed to match path pattern", "error", pathMatcherror)
-				continue
-			}
+		if rule.PathPattern.MatchesSuffix(inDependencyPath) && rule.CVE.CVE == inCVE.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if rule.Assessment == Affected || rule.Assessment == FalsePositive {
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
@@ -322,7 +248,6 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 					votes[rulePath].Value += ruleConfidence
 					validVotesCount++
 				}
-				fmt.Printf("%s,%f\n", rulePath, votes[rulePath].Value)
 			}
 
 		}
@@ -333,66 +258,52 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 		return VexRule{}, fmt.Errorf("not enough valid votes to create a crowdsourced VEX rule, validVotesCount: %d", validVotesCount)
 	}
 
+	var crowdsourcedVexRule VexRule
+	var crowdsourcedVexRulePath string
+	var found bool
+	var sortableVotes []string
+	for key := range votes {
+		sortableVotes = append(sortableVotes, key)
+	}
+	sort.SliceStable(sortableVotes, func(i, j int) bool {
+		return votes[sortableVotes[i]].Value < votes[sortableVotes[j]].Value
+	})
 	// [Mitigation 31] Use standardized cutoff; test with extreme values; define deterministictie-breaking rules
-	maximumValue := 0.0
-	crowdsourcedVexRulePath := ""
-	for key, value := range votes {
-		if value.Value > maximumValue {
-			maximumValue = value.Value
-			crowdsourcedVexRulePath = key
-		} else if value.Value == maximumValue {
-			currentCandidateRule, foundCurrentCandidate := findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
-			if !foundCurrentCandidate {
-				slog.Error("failed to find current candidate VEX rule for tie-breaking", "path", crowdsourcedVexRulePath)
-				continue
+	// After the sorting, the VexRule with the highest confidence will be at the end of the sortableVotes slice, so we can compare it with the second to last to check for a tie
+	if len(sortableVotes) == 0 {
+		return VexRule{}, nil
+	}
+	if len(sortableVotes) > 1 {
+		if votes[sortableVotes[len(sortableVotes)-1]].Value == votes[sortableVotes[len(sortableVotes)-2]].Value {
+			// Inconclusive result, no clear winner
+			// In this case we don't recommend any VexRule to the user, to encourage manual assessment by the user
+			// to generate more data for a better recommendation in the future
+			return VexRule{}, nil
+		} else {
+			// At this point we have a recommendation for a VexRule and want to return the datastructure of the VexRule to the user
+			// For that take any fitting VexRule from the database, since they should all be the same
+			// Concerns here are:
+			// 1. Does it matter which VexRule of which organization we return or is the origin of the VexRule irrelevant since the Rule data is the same?
+			// 2. Is it privacy wise correct to return any VexRule, considering that the assetID will link the VexRule to an organization?
+			// Thoughts:
+			// 1. It should'nt really matter whom's VexRule we recommend as long as the data is correct
+			// 2. We can strip out the assetID or only return the relevant data to create a new VexRule with the AssetID of the user who needed the recommendation
+			crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
+			crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
+			if !found {
+				slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
+				return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
 			}
-			candidateRule, foundCandidate := findVexRuleFromPath(key, inVexRules)
-			if !foundCandidate {
-				slog.Error("failed to find candidate VEX rule for tie-breaking", "path", key)
-				continue
-			}
-			if candidateRule.Assessment == currentCandidateRule.Assessment {
-				// If the assessment is the same and the path is the same, both have the same security statement so either is fine
-				// We only need to check if the paths are not the same
-				if key != crowdsourcedVexRulePath {
-					candidatePathLength, errCandidate := pathPatternMatchLength(inDependencyPath, candidateRule.PathPattern)
-					currentCandidatePathLength, errCurrentCandidate := pathPatternMatchLength(inDependencyPath, currentCandidateRule.PathPattern)
-					if errCandidate != nil || errCurrentCandidate != nil {
-						slog.Error("failed to calculate path pattern match length for tie-breaking", "candidatePath", candidateRule.PathPattern, "currentCandidatePath", currentCandidateRule.PathPattern, "errCandidate", errCandidate, "errCurrentCandidate", errCurrentCandidate)
-						continue
-					}
-					// We check which path covers more dependencies with its wildcard and use that one
-					if candidatePathLength > currentCandidatePathLength {
-						maximumValue = value.Value
-						crowdsourcedVexRulePath = key
-					}
-				}
-			} else {
-				// If the assessment is not the same, prefer affected over false-positive regardless of the path, since it is the more secure option
-				if candidateRule.Assessment == Affected {
-					maximumValue = value.Value
-					crowdsourcedVexRulePath = key
-				}
-			}
+			return crowdsourcedVexRule, nil
 		}
-		// Edge cases:
-		// patterns could be different
-		// assessments could be different
-		//
+	} else {
+		// Only one VexRule, so we can return it without worrying about ties
+		crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
+		crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
+		if !found {
+			slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
+			return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
+		}
+		return crowdsourcedVexRule, nil
 	}
-
-	// At this point we have a recommendation for a VexRule and want to return the datastructure of the VexRule to the user
-	// For that take any fitting VexRule from the database, since they should all be the same
-	// Concerns here are:
-	// 1. Does it matter which VexRule of which organization we return or is the origin of the VexRule irrelevant since the Rule data is the same?
-	// 2. Is it privacy wise correct to return any VexRule, considering that the assetID will link the VexRule to an organization?
-	// Thoughts:
-	// 1. It should'nt really matter whom's VexRule we recommend as long as the data is correct
-	// 2. We can strip out the assetID or only return the relevant data to create a new VexRule with the AssetID of the user who needed the recommendation
-	crowdsourcedVexRule, found := findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
-	if !found {
-		slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
-		return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
-	}
-	return crowdsourcedVexRule, nil
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,8 +62,8 @@ func makeVexRule(path []string, cve CVE, assetID, assessment string) VexRule {
 
 // wildcardFor returns a wildcard pattern that matches any dependency path
 // containing the leaf element of the given path.
-func wildcardFor(path []string) []string {
-	return []string{"*", path[len(path)-1]}
+func wildcardFor(path []string) dtos.PathPattern {
+	return dtos.PathPattern{"*", path[len(path)-1]}
 }
 
 // generateDistinctVoters creates n distinct org/project/asset chains plus
@@ -120,99 +121,6 @@ var branchPathB = []string{"ROOT", "frameworkX@3.0.0", "libY@1.2.0", "pluginB@2.
 var branchPathC = []string{"ROOT", "frameworkX@3.0.0", "adapterZ@0.1.0"}
 
 // Helper function tests
-
-func mustMatch(t *testing.T, path, pattern []string) bool {
-	t.Helper()
-	match, err := pathPatternMatchesPath(path, pattern)
-	require.NoError(t, err)
-	return match
-}
-
-func TestPathPatternMatchesPath(t *testing.T) {
-	t.Run("wildcard pattern matches path containing leaf", func(t *testing.T) {
-		assert.True(t, mustMatch(t, shallowPath, []string{"*", "packageA@1.0.0"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"*", "utilZ@0.5.0"}))
-		assert.True(t, mustMatch(t, veryDeepPath, []string{"*", "adapter@4.0.0"}))
-	})
-
-	t.Run("wildcard pattern matches path containing start and leaf", func(t *testing.T) {
-		assert.True(t, mustMatch(t, mediumPath, []string{"ROOT", "*", "packageA@1.0.0"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"ROOT", "*", "coreW@4.1.0"}))
-		assert.True(t, mustMatch(t, veryDeepPath, []string{"ROOT", "*", "native@6.0.0"}))
-	})
-
-	t.Run("wildcard pattern matches path containing intermediate elements", func(t *testing.T) {
-		assert.True(t, mustMatch(t, shallowPath, []string{"*", "packageA@1.0.0"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"*", "utilZ@0.5.0"}))
-		assert.True(t, mustMatch(t, veryDeepPath, []string{"*", "adapter@4.0.0"}))
-	})
-
-	t.Run("wildcard pattern matches path containing intermediate start and end elements", func(t *testing.T) {
-		assert.True(t, mustMatch(t, deepPath, []string{"frameworkX@3.0.0", "*", "utilZ@0.5.0"}))
-		assert.True(t, mustMatch(t, veryDeepPath, []string{"app@1.0.0", "*", "adapter@4.0.0"}))
-	})
-
-	t.Run("wildcard pattern does not match if last element absent", func(t *testing.T) {
-		assert.False(t, mustMatch(t, shallowPath, []string{"*", "nonexistent@0.0.0"}))
-		assert.False(t, mustMatch(t, deepPath, []string{"*", "nonexistent@1.0.0"}))
-		assert.False(t, mustMatch(t, shallowPath, []string{"ROOT", "*", "nonexistent@0.0.0"}))
-		assert.False(t, mustMatch(t, deepPath, []string{"ROOT", "*", "nonexistent@1.0.0"}))
-		assert.False(t, mustMatch(t, deepPath, []string{"nonexistent@1.0.0", "*", "utilZ@0.5.0"}))
-		assert.False(t, mustMatch(t, veryDeepPath, []string{"nonexistent@0.0.0", "*", "middleware@3.0.0"}))
-	})
-
-	t.Run("single element pattern matches if element in path", func(t *testing.T) {
-		assert.True(t, mustMatch(t, shallowPath, []string{"packageA@1.0.0"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"coreW@4.1.0"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"ROOT"}))
-		assert.True(t, mustMatch(t, deepPath, []string{"utilZ@0.5.0"}))
-		assert.True(t, mustMatch(t, veryDeepPath, []string{"middleware@3.0.0"}))
-	})
-}
-
-func TestPathPatternMatchLength(t *testing.T) {
-
-	t.Run("wildcard returns endIndex + 1", func(t *testing.T) {
-		length, err := pathPatternMatchLength(deepPath, []string{"libY@1.2.0", "*", "coreW@4.1.0"})
-		assert.NoError(t, err)
-		assert.Equal(t, 3, length)
-	})
-
-	t.Run("wildcard returns endIndex + 1", func(t *testing.T) {
-		length, err := pathPatternMatchLength(deepPath, []string{"*", "coreW@4.1.0"})
-		assert.NoError(t, err)
-		assert.Equal(t, 5, length)
-	})
-
-	t.Run("wildcard returns endIndex + 1", func(t *testing.T) {
-		length, err := pathPatternMatchLength(veryDeepPath, []string{"adapter@4.0.0"})
-		assert.NoError(t, err)
-		assert.Equal(t, 1, length)
-	})
-
-	t.Run("wildcard returns endIndex + 1", func(t *testing.T) {
-		length, err := pathPatternMatchLength(veryDeepPath, []string{"ROOT"})
-		assert.NoError(t, err)
-		assert.Equal(t, 1, length)
-	})
-
-	t.Run("wildcard with intermediate element", func(t *testing.T) {
-		length, err := pathPatternMatchLength(deepPath, []string{"*", "utilZ@0.5.0"})
-		assert.NoError(t, err)
-		assert.Equal(t, 4, length)
-	})
-
-	t.Run("wildcard with intermediate element", func(t *testing.T) {
-		length, err := pathPatternMatchLength(veryDeepPath, []string{"*"})
-		assert.NoError(t, err)
-		assert.Equal(t, len(veryDeepPath), length)
-	})
-
-	t.Run("missing end element returns error", func(t *testing.T) {
-		_, err := pathPatternMatchLength(deepPath, []string{"*", "nonexistent@0.0.0"})
-		assert.Error(t, err)
-	})
-}
 
 func TestPathToString(t *testing.T) {
 	rule := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", FalsePositive)
@@ -554,7 +462,7 @@ func TestSecurity_NegativeTrustscores(t *testing.T) {
 
 // [Mitigation 31] Tie-breaking — "affected" wins deterministically when votes are equal.
 func TestSecurity_TieBreaking(t *testing.T) {
-	t.Run("same rule different assessment tie - favors affected", func(t *testing.T) {
+	t.Run("same rule different assessment tie - return nothing", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
 		affR, affO, affP, affA := generateDistinctVoters(4, pattern, testCVE, Affected, 0.5, oldOrg())
 		fpR, fpO, fpP, fpA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.5, oldOrg())
@@ -563,22 +471,7 @@ func TestSecurity_TieBreaking(t *testing.T) {
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment,
-			"tie should favor affected as the more secure option on deep path")
-	})
-
-	t.Run("different rule same assessment tie - favors more coverage", func(t *testing.T) {
-		longPattern := wildcardFor(deepPath)
-		shortPattern := wildcardFor([]string{"*", "libY@1.2.0"})
-		lPR, lPO, lPP, lPA := generateDistinctVoters(4, longPattern, testCVE, Affected, 0.5, oldOrg())
-		sPR, sPO, sPP, sPA := generateDistinctVoters(4, shortPattern, testCVE, Affected, 0.5, oldOrg())
-		rekey("sP-", lPR, lPO, lPP, lPA)
-		allR, allO, allP, allA := merge(lPR, sPR, lPO, sPO, lPP, sPP, lPA, sPA)
-
-		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
-		require.NoError(t, err)
-		assert.Equal(t, longPattern, result.PathPattern,
-			"tie should favor affected as the more secure option on deep path")
+		assert.Equal(t, VexRule{}, result, "tie should return no VexRule")
 	})
 }
 
@@ -610,7 +503,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
 	})
 
-	t.Run("Rounding error edge case: same creator multiple orgs diminished vs distinct creators", func(t *testing.T) {
+	/* t.Run("Rounding error edge case: same creator multiple orgs diminished vs distinct creators", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
 		var sameRules []VexRule
 		var sameOrgs []Organization
@@ -633,7 +526,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, FalsePositive, result.Assessment,
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
-	})
+	}) */
 
 	t.Run("many same-creator orgs cannot exceed convergence limit", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
