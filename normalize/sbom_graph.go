@@ -1571,7 +1571,9 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 			if dep.Dependencies != nil {
 				// Validate that referenced components exist
 				for _, childRef := range *dep.Dependencies {
-					if childRef != "" && childRef != rootComponent.BOMRef && !seenBOMRefs[childRef] {
+					_, exists := g.nodes[childRef]
+					// check semantics
+					if childRef != "" && childRef != rootComponent.BOMRef && !exists {
 						return nil, fmt.Errorf("dependency references undefined component: %s", childRef)
 					}
 				}
