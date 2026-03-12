@@ -360,16 +360,14 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		pattern := wildcardFor(shallowPath)
 		org := makeOrg("replay-org", 0.9, oldOrg())
 		project := makeProject("replay-proj", "replay-org", 0.9)
+		asset := makeAsset("replay-asset", "replay-proj")
 
 		var rules []VexRule
-		var assets []Asset
 		for i := 0; i < 5; i++ {
-			assetID := fmt.Sprintf("replay-asset-%d", i)
-			assets = append(assets, makeAsset(assetID, "replay-proj"))
-			rules = append(rules, makeVexRule(pattern, testCVE, assetID, FalsePositive))
+			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, FalsePositive))
 		}
 
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{org}, []Project{project}, assets)
+		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
 		assert.Error(t, err, "5 duplicate votes from same org+project should count as 1 vote below threshold")
 	})
 
@@ -398,16 +396,14 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		pattern := wildcardFor(deepPath)
 		org := makeOrg("deep-replay-org", 0.9, oldOrg())
 		project := makeProject("deep-replay-proj", "deep-replay-org", 0.9)
+		asset := makeAsset("deep-replay-asset", "deep-replay-proj")
 
 		var rules []VexRule
-		var assets []Asset
 		for i := 0; i < 10; i++ {
-			assetID := fmt.Sprintf("deep-replay-asset-%d", i)
-			assets = append(assets, makeAsset(assetID, "deep-replay-proj"))
-			rules = append(rules, makeVexRule(pattern, testCVE, assetID, FalsePositive))
+			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, FalsePositive))
 		}
 
-		_, err := CrowdsourcedVexing(deepPath, testCVE, rules, []Organization{org}, []Project{project}, assets)
+		_, err := CrowdsourcedVexing(deepPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
 		assert.Error(t, err, "duplicate votes from same org+project should count as 1 even on deep paths")
 	})
 }

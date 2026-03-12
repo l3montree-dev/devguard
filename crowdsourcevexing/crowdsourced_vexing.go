@@ -64,6 +64,7 @@ type Vote struct {
 	Voters []struct {
 		OrganizationID string
 		ProjectID      string
+		AssetID        string
 	}
 	Value float64
 }
@@ -220,7 +221,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
 					for _, vote := range votes[rulePath].Voters {
-						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID {
+						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID {
 							alreadyExistingVote = true
 							break
 						}
@@ -229,7 +230,8 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 						votes[rulePath].Voters = append(votes[rulePath].Voters, struct {
 							OrganizationID string
 							ProjectID      string
-						}{OrganizationID: organization.ID, ProjectID: project.ID})
+							AssetID        string
+						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID})
 
 						votes[rulePath].Value += ruleConfidence
 
@@ -240,8 +242,9 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 						Voters: []struct {
 							OrganizationID string
 							ProjectID      string
+							AssetID        string
 						}{
-							{OrganizationID: organization.ID, ProjectID: project.ID},
+							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID},
 						},
 						Value: 0.0,
 					}
