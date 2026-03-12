@@ -510,7 +510,7 @@ func (f FilterQuery) SQL() string {
 	case "is before":
 		return field + " < ?"
 	case "like":
-		return field + " LIKE ?"
+		return field + " ILIKE ?"
 	case "any":
 		return "? = ANY(string_to_array(" + field + ", ' '))"
 	default:
