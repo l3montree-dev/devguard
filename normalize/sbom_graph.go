@@ -1564,47 +1564,14 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		}
 	}
 
-	// Validate and build dependency map
-	depMap := make(map[string][]string)
-	if bom.Dependencies != nil {
-		for _, dep := range *bom.Dependencies {
-			if dep.Dependencies != nil {
-				// Validate that referenced components exist
-				for _, childRef := range *dep.Dependencies {
-					_, exists := g.nodes[childRef]
-					// check semantics
-					if childRef != "" && childRef != rootComponent.BOMRef && !exists {
-						return nil, fmt.Errorf("dependency references undefined component: %s", childRef)
-					}
-				}
-				depMap[dep.Ref] = *dep.Dependencies
-			}
-		}
-	}
-
 	rootRef := rootComponent.BOMRef
 
-	// Add edges
-	for parent := range depMap {
-		parentNode := g.nodes[parent]
-		// skip if parent is not a component or info source
-		if parentNode == nil {
-			continue
-		}
-
-		if parentNode.Type != GraphNodeTypeComponent && parentNode.BOMRef != rootRef {
-			// not a valid parent
-			continue
-		}
-		// If parent is root or a root project component, add children as info source children
-		children := getChildrenOfParent(depMap, g.nodes, parent)
-		edgeSource := parent
-		if parent == rootRef && !keepOriginalSbomRootComponent {
-			edgeSource = infoID
-		}
-		for _, child := range children {
-			g.AddEdge(edgeSource, child)
-		}
+	// Build dependency map and eliminate leaf references to undefined components.
+	// Keep undefined refs that are dependency parents themselves because they can
+	// represent synthetic grouping nodes in CycloneDX dependency graphs.
+	depMap := buildFilteredDependencyMap(bom.Dependencies, g.nodes, rootRef)
+	if bom.Dependencies != nil {
+		addEdgesFromDependencyMap(g, depMap, rootRef, infoID, keepOriginalSbomRootComponent)
 	}
 
 	// If no explicit root dependencies, all components are roots
@@ -1737,6 +1704,92 @@ func isValidSeverity(severity cdx.Severity) bool {
 }
 
 func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {
+	return getChildrenOfParentWithVisited(depMap, nodes, parent, map[string]bool{})
+}
+
+func buildFilteredDependencyMap(dependencies *[]cdx.Dependency, nodes map[string]*GraphNode, rootRef string) map[string][]string {
+	depMap := make(map[string][]string)
+	if dependencies == nil {
+		return depMap
+	}
+
+	rawDepMap := make(map[string][]string, len(*dependencies))
+	for _, dep := range *dependencies {
+		if dep.Dependencies != nil {
+			rawDepMap[dep.Ref] = *dep.Dependencies
+		}
+	}
+
+	for parentRef, children := range rawDepMap {
+		filteredChildren := make([]string, 0, len(children))
+		for _, childRef := range children {
+			// Ignore empty references from malformed SBOMs.
+			if childRef == "" {
+				continue
+			}
+
+			// Preserve explicit links back to the root component.
+			if childRef == rootRef {
+				filteredChildren = append(filteredChildren, childRef)
+				continue
+			}
+
+			// Keep normal component links when the target node exists.
+			if _, exists := nodes[childRef]; exists {
+				filteredChildren = append(filteredChildren, childRef)
+				continue
+			}
+
+			// Keep unresolved refs that are dependency parents themselves.
+			// These are synthetic intermediary nodes that get flattened recursively
+			// by getChildrenOfParent when edges are built.
+			if _, isSyntheticParent := rawDepMap[childRef]; isSyntheticParent {
+				filteredChildren = append(filteredChildren, childRef)
+				continue
+			}
+
+			// Drop dangling leaf refs that cannot be resolved to real or synthetic nodes.
+			slog.Warn("dropping dependency reference to undefined component", "parentRef", parentRef, "childRef", childRef)
+		}
+		depMap[parentRef] = filteredChildren
+	}
+
+	return depMap
+}
+
+func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef, infoID string, keepOriginalSbomRootComponent bool) {
+	for parent := range depMap {
+		parentNode := g.nodes[parent]
+		// Skip if parent is not represented in the graph.
+		if parentNode == nil {
+			continue
+		}
+
+		if parentNode.Type != GraphNodeTypeComponent && parentNode.BOMRef != rootRef {
+			// Not a valid dependency parent for graph edges.
+			continue
+		}
+
+		// Resolve synthetic intermediary nodes recursively.
+		children := getChildrenOfParent(depMap, g.nodes, parent)
+		edgeSource := parent
+		if parent == rootRef && !keepOriginalSbomRootComponent {
+			edgeSource = infoID
+		}
+		for _, child := range children {
+			g.AddEdge(edgeSource, child)
+		}
+	}
+}
+
+func getChildrenOfParentWithVisited(depMap map[string][]string, nodes map[string]*GraphNode, parent string, visited map[string]bool) []string {
+	if visited[parent] {
+		slog.Warn("cycle detected while resolving dependency children", "parentRef", parent)
+		return []string{}
+	}
+	visited[parent] = true
+	defer delete(visited, parent)
+
 	// imagine a tree which contains the following edges:
 	// ROOT -> fake node -> pkg:a -> pkg:b
 	// this function should return only pkg:a when parent is ROOT
@@ -1750,14 +1803,14 @@ func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode
 		childNode := nodes[child]
 		if childNode == nil {
 			// Node not in graph - could be a fake node, recurse to find its real children
-			realChildren = append(realChildren, getChildrenOfParent(depMap, nodes, child)...)
+			realChildren = append(realChildren, getChildrenOfParentWithVisited(depMap, nodes, child, visited)...)
 			continue
 		}
 		if childNode.Type == GraphNodeTypeComponent {
 			realChildren = append(realChildren, child)
 		} else {
 			// we need to get the children of this fake node instead
-			realChildren = append(realChildren, getChildrenOfParent(depMap, nodes, child)...)
+			realChildren = append(realChildren, getChildrenOfParentWithVisited(depMap, nodes, child, visited)...)
 		}
 	}
 	return realChildren
