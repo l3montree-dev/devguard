@@ -96,7 +96,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	packageName, version := d.ParsePackageFromPath(NPMProxy, requestPath)
 	hasExplicitVersion := version != "" || strings.HasSuffix(requestPath, ".tgz")
 
-	if blocked, reason := d.checkMaliciousPackage(c.Request().Context(), NPMProxy, requestPath); blocked {
+	if blocked, reason := d.checkMaliciousPackage(ctx, NPMProxy, requestPath); blocked {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
 		// Also remove from cache if it exists to prevent serving cached malicious content
 		cachePath := d.getCachePath(NPMProxy, requestPath)
@@ -129,7 +129,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	// Fetch from upstream
-	data, headers, statusCode, err := d.fetchFromUpstream(NPMProxy, npmRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, NPMProxy, npmRegistry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -153,7 +153,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		// Parse the JSON response to extract the version that would be installed
 		if resolvedVersion := d.ExtractNPMVersionFromMetadata(data); resolvedVersion != "" {
 			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
-			isMalicious, entry := d.maliciousChecker.IsMalicious(c.Request().Context(), "npm", packageName, resolvedVersion)
+			isMalicious, entry := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
 			if isMalicious {
 				reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
 				if entry.Summary != "" {
@@ -202,7 +202,7 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 	slog.Info("Forwarding npm audit request", "path", requestPath, "bodySize", len(bodyBytes), "body", string(bodyBytes)[:min(len(bodyBytes), 500)])
 
 	// Fetch and forward directly without caching
-	data, headers, statusCode, err := d.fetchNPMAuditFromUpstream(requestPath, c.Request().Header, bodyBytes)
+	data, headers, statusCode, err := d.fetchNPMAuditFromUpstream(ctx, requestPath, c.Request().Header, bodyBytes)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -279,7 +279,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	// Fetch from upstream
-	data, headers, statusCode, err := d.fetchFromUpstream(GoProxy, goProxyURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, GoProxy, goProxyURL, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -371,7 +371,7 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	// Fetch from upstream (forward User-Agent and Accept headers for PyPI)
-	data, headers, statusCode, err := d.fetchPyPIFromUpstream(requestPath, c.Request().Header)
+	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, requestPath, c.Request().Header)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -457,7 +457,7 @@ func (d *DependencyProxyController) isPyPICached(cachePath string) bool {
 	return time.Since(info.ModTime()) < maxAge
 }
 
-func (d *DependencyProxyController) fetchFromUpstream(proxyType ProxyType, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
+func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, proxyType ProxyType, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
 	url := upstreamURL + requestPath
@@ -469,7 +469,7 @@ func (d *DependencyProxyController) fetchFromUpstream(proxyType ProxyType, upstr
 		method = "POST"
 	}
 
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -495,13 +495,13 @@ func (d *DependencyProxyController) fetchFromUpstream(proxyType ProxyType, upstr
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-func (d *DependencyProxyController) fetchNPMAuditFromUpstream(requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
+func (d *DependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Context, requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
 	url := npmRegistry + requestPath
 	slog.Info("Fetching npm audit from upstream", "url", url, "bodySize", len(bodyBytes))
 
-	req, err := http.NewRequest("POST", url, bytes.NewReader(bodyBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -553,13 +553,13 @@ func (d *DependencyProxyController) fetchNPMAuditFromUpstream(requestPath string
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-func (d *DependencyProxyController) fetchPyPIFromUpstream(requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
+func (d *DependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
 	url := pypiRegistry + requestPath
 	slog.Debug("Fetching from upstream", "proxy", "pypi", "url", url)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
