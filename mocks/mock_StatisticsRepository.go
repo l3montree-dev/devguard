@@ -1625,22 +1625,22 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(
 }
 
 // VulnClassificationByOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) VulnClassificationByOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnDistribution, error) {
+func (_mock *StatisticsRepository) VulnClassificationByOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.Distribution, error) {
 	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VulnClassificationByOrg")
 	}
 
-	var r0 dtos.VulnDistribution
+	var r0 dtos.Distribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.VulnDistribution, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.Distribution, error)); ok {
 		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.VulnDistribution); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.Distribution); ok {
 		r0 = returnFunc(ctx, tx, orgID)
 	} else {
-		r0 = ret.Get(0).(dtos.VulnDistribution)
+		r0 = ret.Get(0).(dtos.Distribution)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, orgID)
@@ -1686,12 +1686,12 @@ func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Run(run func(ctx co
 	return _c
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Return(vulnDistribution dtos.VulnDistribution, err error) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Return(vulnDistribution dtos.Distribution, err error) *StatisticsRepository_VulnClassificationByOrg_Call {
 	_c.Call.Return(vulnDistribution, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnDistribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.Distribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

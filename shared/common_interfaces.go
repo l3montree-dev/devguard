@@ -520,7 +520,7 @@ type StatisticsRepository interface {
 	AverageFixingTimeForRelease(ctx context.Context, tx DB, releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	// CVSS-based average fixing time methods
 
-	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.VulnDistribution, error)
+	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.Distribution, error)
 	GetOrgStructureDistribution(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error)
 	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
 	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)

@@ -77,6 +77,7 @@ type TestApp struct {
 	CSAFController              *controllers.CSAFController
 	VEXRuleController           *controllers.VEXRuleController
 	ExternalReferenceController *controllers.ExternalReferenceController
+	StatisticsController        *controllers.StatisticsController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository

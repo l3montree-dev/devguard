@@ -29,26 +29,7 @@ type VulnDistributionInStructure struct {
 	AssetSlug        *string `json:"assetSlug" gorm:"column:asset_slug"`
 	AssetVersionName *string `json:"assetVersionName" gorm:"column:asset_version_name"`
 
-	VulnDistribution
-}
-
-type RiskDistribution struct {
-	LowRisk      int `json:"lowRisk" gorm:"column:risk_low"`
-	MediumRisk   int `json:"mediumRisk" gorm:"column:risk_medium"`
-	HighRisk     int `json:"highRisk" gorm:"column:risk_high"`
-	CriticalRisk int `json:"criticalRisk" gorm:"column:risk_critical"`
-}
-
-type CVSSDistribution struct {
-	LowCVSS      int `json:"lowCVSS" gorm:"column:cvss_low"`
-	MediumCVSS   int `json:"mediumCVSS" gorm:"column:cvss_medium"`
-	HighCVSS     int `json:"highCVSS" gorm:"column:cvss_high"`
-	CriticalCVSS int `json:"criticalCVSS" gorm:"column:cvss_critical"`
-}
-
-type VulnDistribution struct {
-	RiskDistribution
-	CVSSDistribution
+	Distribution
 }
 
 type Distribution struct {
@@ -190,7 +171,7 @@ type AverageRemediationTimes struct {
 }
 
 type OrgOverview struct {
-	VulnDistribution VulnDistribution `json:"vulnDistribution"`
+	VulnDistribution Distribution `json:"vulnDistribution"`
 
 	OrgStructure OrgStructureDistribution      `json:"structure"`
 	TopProjects  []VulnDistributionInStructure `json:"topProjects"`

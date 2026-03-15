@@ -343,7 +343,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	orgStatistics := dtos.OrgOverview{
 		VulnEventAverage:               vulnEventAverageDistribution,
-		VulnDistribution:               res.GetValue(0).(dtos.VulnDistribution),
+		VulnDistribution:               res.GetValue(0).(dtos.Distribution),
 		OrgStructure:                   res.GetValue(1).(dtos.OrgStructureDistribution),
 		TopProjects:                    res.GetValue(2).([]dtos.VulnDistributionInStructure),
 		TopAssets:                      res.GetValue(3).([]dtos.VulnDistributionInStructure),
