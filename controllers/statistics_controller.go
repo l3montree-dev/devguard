@@ -33,59 +33,42 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 	}
 }
 
-func (c *StatisticsController) GetAverageFixingTime(ctx shared.Context) error {
+// @Summary Get average fixing times for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Success 200 {object} dtos.RemediationTimeAverages
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/average-fixing-time/ [get]
+func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter is required",
-		})
-	}
-
 	artifact := ctx.QueryParam("artifactName")
-	// check the severity value
-	if err := checkSeverity(severity); err != nil {
-		return ctx.JSON(400, map[string]string{
-			"error": err.Error(),
-		})
+
+	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get average fixing time").WithInternal(err)
 	}
-
-	res := utils.Concurrently(
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTime(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvss(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, severity)
-		},
-	)
-
-	if res.HasErrors() {
-		slog.Error("could not get average fixing time", "errors", res.Errors())
-		return ctx.JSON(500, map[string]string{
-			"error": "could not get average fixing time",
-		})
-	}
-
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
-		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
-	})
+	return ctx.JSON(200, averages)
 }
 
-func checkSeverity(severity string) error {
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return fmt.Errorf("severity query parameter is required")
-	}
-	// check the severity value
-	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
-		slog.Warn("severity query parameter must be one of critical, high, medium, low")
-		return fmt.Errorf("severity query parameter must be one of critical, high, medium, low")
-	}
-	return nil
-}
 
+// @Summary Get risk history for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
 	// get the start and end query params
@@ -130,10 +113,20 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
+// @Summary Get CVEs with known exploits for an asset
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {array} models.CVE
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/number-of-exploits/ [get]
 func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
 	var cves []models.CVE
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
+
 	if err != nil {
 		// we need to get the default asset version
 		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
@@ -151,7 +144,17 @@ func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 	return ctx.JSON(200, cves)
 }
 
-// GetReleaseRiskHistory returns aggregated artifact risk history for a given release
+// @Summary Get risk history for a release
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/ [get]
 func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	// parse release id from param
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
@@ -190,6 +193,17 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	return ctx.JSON(200, dtoResults)
 }
 
+// @Summary Get component risk distribution for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/component-risk/ [get]
 func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
@@ -202,7 +216,15 @@ func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	return ctx.JSON(200, results)
 }
 
-// GetAverageReleaseFixingTime returns the average fixing time (seconds) for a release across all included artifacts
+// @Summary Get average remediation times for a release
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} dtos.RemediationTimeAverages
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/ [get]
 func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
 	releaseID, err := uuid.Parse(releaseIDParam)
@@ -210,32 +232,13 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 		return ctx.JSON(400, map[string]string{"error": "invalid release id"})
 	}
 
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		return ctx.JSON(400, map[string]string{"error": "severity query parameter is required"})
-	}
-	if err := checkSeverity(severity); err != nil {
-		return ctx.JSON(400, map[string]string{"error": err.Error()})
-	}
-
-	res := utils.Concurrently(
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeForRelease(ctx.Request().Context(), releaseID, severity)
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(ctx.Request().Context(), releaseID, severity)
-		},
-	)
-
-	if res.HasErrors() {
-		slog.Error("could not get average fixing time for release", "errors", res.Errors())
+	averages, err := c.statisticsService.GetRemediationTimeAveragesForRelease(ctx.Request().Context(), releaseID)
+	if err != nil {
+		slog.Error("could not get remediation time averages for release", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
-		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
-	})
+	return ctx.JSON(200, averages)
 }
 
 // @Summary Get organization statistics overview

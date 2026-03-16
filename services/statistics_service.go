@@ -22,6 +22,8 @@ type statisticsService struct {
 	assetVersionRepository        shared.AssetVersionRepository
 }
 
+var _ shared.StatisticsService = (*statisticsService)(nil)
+
 func NewStatisticsService(statisticsRepository shared.StatisticsRepository, assetRiskHistoryRepository shared.ArtifactRiskHistoryRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetVersionRepository shared.AssetVersionRepository) *statisticsService {
 	return &statisticsService{
 		statisticsRepository:          statisticsRepository,
@@ -251,91 +253,9 @@ func (s *statisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID
 	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(ctx, nil, releaseID, start, end)
 }
 
-func (s *statisticsService) GetAverageFixingTime(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var riskIntervalStart, riskIntervalEnd float64
-	switch severity {
-	case "critical":
-		riskIntervalStart = 9
-		riskIntervalEnd = 10
-	case "high":
-		riskIntervalStart = 7
-		riskIntervalEnd = 9
-	case "medium":
-		riskIntervalStart = 4
-		riskIntervalEnd = 7
-	case "low":
-		riskIntervalStart = 0
-		riskIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTime(ctx, nil, artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-}
-
-// GetAverageFixingTimeForRelease computes average fixing time across all artifacts included in the release tree
-func (s *statisticsService) GetAverageFixingTimeForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error) {
-	var riskIntervalStart, riskIntervalEnd float64
-	switch severity {
-	case "critical":
-		riskIntervalStart = 9
-		riskIntervalEnd = 10
-	case "high":
-		riskIntervalStart = 7
-		riskIntervalEnd = 9
-	case "medium":
-		riskIntervalStart = 4
-		riskIntervalEnd = 7
-	case "low":
-		riskIntervalStart = 0
-		riskIntervalEnd = 4
-	default:
-		return 0, fmt.Errorf("invalid severity")
-	}
-
-	return s.statisticsRepository.AverageFixingTimeForRelease(ctx, nil, releaseID, riskIntervalStart, riskIntervalEnd)
-}
-
-// GetAverageFixingTimeByCvss computes average fixing time based on CVSS severity levels
-func (s *statisticsService) GetAverageFixingTimeByCvss(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var cvssIntervalStart, cvssIntervalEnd float64
-	switch severity {
-	case "critical":
-		cvssIntervalStart = 9
-		cvssIntervalEnd = 10
-	case "high":
-		cvssIntervalStart = 7
-		cvssIntervalEnd = 9
-	case "medium":
-		cvssIntervalStart = 4
-		cvssIntervalEnd = 7
-	case "low":
-		cvssIntervalStart = 0
-		cvssIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTimeByCvss(ctx, nil, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-}
-
-// GetAverageFixingTimeByCvssForRelease computes average fixing time across all artifacts included in the release tree based on CVSS
-func (s *statisticsService) GetAverageFixingTimeByCvssForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error) {
-	var cvssIntervalStart, cvssIntervalEnd float64
-	switch severity {
-	case "critical":
-		cvssIntervalStart = 9
-		cvssIntervalEnd = 10
-	case "high":
-		cvssIntervalStart = 7
-		cvssIntervalEnd = 9
-	case "medium":
-		cvssIntervalStart = 4
-		cvssIntervalEnd = 7
-	case "low":
-		cvssIntervalStart = 0
-		cvssIntervalEnd = 4
-	default:
-		return 0, fmt.Errorf("invalid severity")
-	}
-
-	return s.statisticsRepository.AverageFixingTimeByCvssForRelease(ctx, nil, releaseID, cvssIntervalStart, cvssIntervalEnd)
+// GetRemediationTimeAveragesForRelease computes all risk/CVSS average fixing times for a release tree in one query
+func (s *statisticsService) GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+	return s.statisticsRepository.AverageRemediationTimesForRelease(ctx, nil, releaseID)
 }
 
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {

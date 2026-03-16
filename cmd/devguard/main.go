@@ -50,6 +50,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 
 	_ "net/http/pprof"
 
@@ -111,7 +112,7 @@ func main() {
 	}
 
 	app := fx.New(
-		fx.NopLogger,
+		fx.WithLogger(func() fxevent.Logger { return &fxErrorLogger{} }),
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
 		database.Module,
@@ -157,6 +158,45 @@ func main() {
 	)
 
 	app.Run()
+}
+
+type fxErrorLogger struct{}
+
+func (l *fxErrorLogger) LogEvent(event fxevent.Event) {
+	switch e := event.(type) {
+	case *fxevent.OnStartExecuted:
+		if e.Err != nil {
+			slog.Error("fx: OnStart hook failed", "caller", e.CallerName, "err", e.Err)
+		}
+	case *fxevent.OnStopExecuted:
+		if e.Err != nil {
+			slog.Error("fx: OnStop hook failed", "caller", e.CallerName, "err", e.Err)
+		}
+	case *fxevent.Supplied:
+		if e.Err != nil {
+			slog.Error("fx: supply failed", "type", e.TypeName, "err", e.Err)
+		}
+	case *fxevent.Provided:
+		if e.Err != nil {
+			slog.Error("fx: provide failed", "constructor", e.ConstructorName, "err", e.Err)
+		}
+	case *fxevent.Decorated:
+		if e.Err != nil {
+			slog.Error("fx: decorate failed", "decorator", e.DecoratorName, "err", e.Err)
+		}
+	case *fxevent.Invoked:
+		if e.Err != nil {
+			slog.Error("fx: invoke failed", "function", e.FunctionName, "err", e.Err)
+		}
+	case *fxevent.Started:
+		if e.Err != nil {
+			slog.Error("fx: start failed", "err", e.Err)
+		}
+	case *fxevent.Stopped:
+		if e.Err != nil {
+			slog.Error("fx: stop failed", "err", e.Err)
+		}
+	}
 }
 
 func tracesSampleRate() float64 {
