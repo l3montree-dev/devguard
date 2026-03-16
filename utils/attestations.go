@@ -24,33 +24,37 @@ import (
 )
 
 func ExtractAttestationPayload(content string) (any, error) {
-	// check if payload and signature are in content - then it is a dead simple signing envelope - otherwise it is already the payload
-	if !strings.Contains(content, "payload") || !strings.Contains(content, "signature") {
-		var input any
-		if err := json.Unmarshal([]byte(content), &input); err != nil {
+	// parse as  map
+	var m map[string]any
+	if err := json.Unmarshal([]byte(content), &m); err != nil {
+		return nil, err
+	}
+
+	// check if predicate and predicateType are in the map
+	if predicate, ok := m["predicate"]; ok {
+		return predicate, nil
+	} else if m["payload"] != nil && m["signature"] != nil {
+		// it is a dead simple signing envelope - extract the payload
+		var envelope dtos.DeadSimpleSigningEnvelope
+		if err := json.Unmarshal([]byte(content), &envelope); err != nil {
 			return nil, err
 		}
+
+		// decode the payload string from base64
+		payload, err := base64.StdEncoding.DecodeString(envelope.Payload)
+		if err != nil {
+			return nil, err
+		}
+
+		escapedPayload := strings.ReplaceAll(string(payload), "\n", "\\n")
+
+		// unmarshal the payload
+		var input any
+		if err := json.Unmarshal([]byte(escapedPayload), &input); err != nil {
+			return nil, err
+		}
+
 		return input, nil
 	}
-
-	var envelope dtos.DeadSimpleSigningEnvelope
-	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
-		return nil, err
-	}
-
-	// decode the payload string from base64
-	payload, err := base64.StdEncoding.DecodeString(envelope.Payload)
-	if err != nil {
-		return nil, err
-	}
-
-	escapedPayload := strings.ReplaceAll(string(payload), "\n", "\\n")
-
-	// unmarshal the payload
-	var input any
-	if err := json.Unmarshal([]byte(escapedPayload), &input); err != nil {
-		return nil, err
-	}
-
-	return input, nil
+	return m, nil
 }

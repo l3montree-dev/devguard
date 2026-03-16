@@ -18,7 +18,7 @@
                 "assetPipeline"
             ],
         },
-                {
+        {
             "name": "Launch specific Daemon Pipeline",
             "type": "go",
             "request": "launch",
@@ -29,7 +29,8 @@
                 "daemon",
                 "runPipeline",
                 "e1f24270-6e68-4571-9168-9c151c639c97",
-                "--assetVersionSlug","main"
+                "--assetVersionSlug",
+                "main"
             ],
         },
         {
@@ -49,7 +50,10 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-            "attestations", "registry.opencode.de/open-code/oci/coreutils:1.0.0-rc.3-minimal-amd64", "--policy", "container.gov.de.rego"
+                "attestations",
+                "registry.opencode.de/open-code/oci/coreutils:1.0.0-rc.3-minimal-amd64",
+                "--policy",
+                "container.gov.de.rego"
             ],
         },
         {
@@ -59,7 +63,7 @@
             "cwd": "${workspaceRoot}",
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard/main.go",
-            "args": [ ],
+            "args": [],
             "env": {
                 "DISABLE_AUTOMIGRATE": "true",
                 "POSTGRES_PORT": "5433"
@@ -92,16 +96,18 @@
             ]
         },
         {
-            "name": "VulnDB Import",
+            "name": "Scanner attestations",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",
             "mode": "auto",
-            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-                "vulndb",
-                "import",
+                "attestations",
+                "registry.opencode.de/l3montree/test-container-gov-attestations:main-amd64",
+                "--policy",
+                "https://gitlab.opencode.de/oci-community/container-gov/-/raw/main/data-generation/container.gov.de.rego"
             ]
-        }
+        },
     ]
 }
