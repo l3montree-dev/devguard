@@ -398,6 +398,32 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 	return ctx.JSON(200, configContent)
 }
 
+func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+
+	var req struct {
+		ConfigID string `json:"configId"`
+		Content  any    `json:"content"`
+	}
+
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if asset.ConfigFiles == nil {
+		asset.ConfigFiles = make(map[string]any)
+	}
+
+	asset.ConfigFiles[req.ConfigID] = req.Content
+
+	err := a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
+	if err != nil {
+		return fmt.Errorf("error updating asset config file: %v", err)
+	}
+
+	return ctx.NoContent(200)
+}
+
 func (a *AssetController) GetBadges(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 
