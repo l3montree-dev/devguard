@@ -48,8 +48,9 @@ type PolicyFS struct {
 
 type PolicyEvaluation struct {
 	models.Policy
-	Compliant  *bool    `json:"compliant"`
-	Violations []string `json:"violations"`
+	Compliant           *bool          `json:"compliant"`
+	Violations          []string       `json:"violations"`
+	RawEvaluationResult map[string]any `json:"rawEvaluationResult"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
@@ -160,11 +161,13 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 	}
 
 	var violations = []string{}
+	var rawEvalResult map[string]any
 	var compliant *bool
 	if len(rs) > 0 {
 		value := rs[0].Expressions[0].Value
 		// cast value to map
 		if v, ok := value.(map[string]any); ok {
+			rawEvalResult = v
 			if v["compliant"] != nil {
 				compliant = utils.Ptr(v["compliant"].(bool))
 			}
@@ -179,9 +182,10 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 	}
 
 	return PolicyEvaluation{
-		Policy:     p,
-		Compliant:  compliant,
-		Violations: violations,
+		Policy:              p,
+		Compliant:           compliant,
+		Violations:          violations,
+		RawEvaluationResult: rawEvalResult,
 	}
 }
 

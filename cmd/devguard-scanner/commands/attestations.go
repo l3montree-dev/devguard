@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/spf13/cobra"
@@ -77,12 +78,38 @@ func attestationsCmd(cmd *cobra.Command, args []string) error {
 		defer os.Remove(policyPath)
 	}
 
-	sarifResult, err := scanner.EvaluatePolicyAgainstAttestations(image, policyPath, attestations)
+	sarifResult, evals, err := scanner.EvaluatePolicyAgainstAttestations(image, policyPath, attestations)
 	if err != nil {
 		return err
 	}
 
-	output, _ := json.MarshalIndent(sarifResult, "", "  ")
+	var output []byte
+	type evalOutput struct {
+		Violations          []string       `json:"violations"`
+		Compliant           *bool          `json:"compliant"`
+		RawEvaluationResult map[string]any `json:"rawEvaluationResult"`
+	}
+	switch config.RuntimeBaseConfig.Format {
+	case "plain":
+
+		b, err := json.MarshalIndent(utils.Map(evals, func(e compliance.PolicyEvaluation) evalOutput {
+			return evalOutput{
+				Violations:          e.Violations,
+				Compliant:           e.Compliant,
+				RawEvaluationResult: e.RawEvaluationResult,
+			}
+		}), "", "  ")
+		if err != nil {
+			return fmt.Errorf("could not marshal evaluations: %w", err)
+		}
+		output = b
+	case "sarif":
+		b, err := json.MarshalIndent(sarifResult, "", "  ")
+		if err != nil {
+			return fmt.Errorf("could not marshal SARIF result: %w", err)
+		}
+		output = b
+	}
 
 	if config.RuntimeBaseConfig.OutputPath != "" {
 		if err := os.WriteFile(config.RuntimeBaseConfig.OutputPath, output, 0o644); err != nil {
@@ -91,7 +118,13 @@ func attestationsCmd(cmd *cobra.Command, args []string) error {
 		slog.Info("SARIF report saved", "path", config.RuntimeBaseConfig.OutputPath)
 	}
 
-	_, err = os.Stdout.Write(output)
+	_, err = os.Stdout.Write(append(output, '\n'))
+	// check if some eval was wrong - if so, exit 1
+	for _, eval := range evals {
+		if eval.Compliant != nil && !*eval.Compliant {
+			os.Exit(1)
+		}
+	}
 	return err
 }
 
