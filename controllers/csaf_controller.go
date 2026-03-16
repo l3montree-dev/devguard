@@ -266,14 +266,23 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return strings.Compare(vuln1.CVEID, vuln2.CVEID)
 	})
 
+	type entryData struct {
+		Title string
+		Href  string
+	}
+
 	type pageData struct {
 		Year           int
-		Filenames      []string
+		Filenames      []entryData
 		HasOpenPGPKeys bool
 	}
-	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
+
+	data := pageData{Year: yearNumber, Filenames: make([]entryData, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
 	for _, entry := range vulnsOfThatYear {
-		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)))
+		data.Filenames = append(data.Filenames, entryData{
+			Href:  fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)),
+			Title: fmt.Sprintf("Security advisory for vulnerability %s in asset %s", entry.CVEID, asset.Name),
+		})
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
@@ -286,12 +295,12 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 <pre>
 <a href="../">../</a>
 {{ range .Filenames }}
-<a href="{{ . }}" >{{ . }}</a>
+<a href="{{ .Href }}" > {{ .Title }}.json</a>
 {{ if $.HasOpenPGPKeys }}
-<a href="{{ . }}.asc" >{{ . }}.asc</a>
+<a href="{{ .Href }}.asc" >{{ .Title }}.asc</a>
 {{ end -}}
-<a href="{{ . }}.sha256" >{{ . }}.sha256</a>
-<a href="{{ . }}.sha512">{{ . }}.sha512</a>
+<a href="{{ .Href }}.sha256" >{{ .Title }}.sha256</a>
+<a href="{{ .Href }}.sha512">{{ .Title }}.sha512</a>
 {{ end }}
 </pre>
 <hr>
@@ -502,7 +511,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 
 	// generate the report first
-	report, err := controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Slug, cveID)
+	report, err := controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
 	if err != nil {
 		return err
 	}
@@ -529,7 +538,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		// generate and return the signature
 		signature, err := services.SignCSAFReport(cjsonData)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not generate signature for report, make sure that your OpenPGP key pair is properly set up: %w", err)
 		}
 		return ctx.String(200, string(signature))
 	case "sha256":

@@ -796,7 +796,7 @@ func hasExactFit(vulnPurl packageurl.PackageURL, purls []packageurl.PackageURL) 
 }
 
 // generate a csaf report for a specific vulnerability in an asset
-func (service csafService) GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetSlug string, cveID string) (gocsaf.Advisory, error) {
+func (service csafService) GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
 
 	// fetch all vulns associated with this cve from the database
@@ -805,11 +805,13 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 		return csafDoc, err
 	}
 	if len(vulns) == 0 {
-		return csafDoc, fmt.Errorf("no vulnerability found for asset %s with cve id %s", assetSlug, cveID)
+		return csafDoc, fmt.Errorf("no vulnerability found for asset %s with cve id %s", assetName, cveID)
 	}
 
 	// now we can start building the document
 	// build static parts of the document field first
+	title := fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName)
+
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
@@ -817,7 +819,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 			Name:      &orgName,
 			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title: utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, assetSlug)),
+		Title: &title,
 		Lang:  utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
@@ -829,7 +831,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 		},
 	}
 
-	tracking, err := generateTrackingObject(ctx, vulns)
+	tracking, err := generateTrackingObject(ctx, vulns, title)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -1214,7 +1216,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln) (gocsaf.Tracking, error) {
+func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, documentTitle string) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
 	allEvents := make([]vulnEventWithVuln, 0)
 	for _, vuln := range vulns {
@@ -1251,7 +1253,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln) 
 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = utils.Ptr(gocsaf.TrackingID(strings.ToUpper(version)))
+	tracking.ID = (*gocsaf.TrackingID)(&documentTitle)
 	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
 	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
 
