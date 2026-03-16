@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,198 +40,6 @@ type StatisticsRepository_Expecter struct {
 
 func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 	return &StatisticsRepository_Expecter{mock: &_m.Mock}
-}
-
-// AverageFixingTime provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTime(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AverageFixingTime")
-	}
-
-	var r0 time.Duration
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-	} else {
-		r0 = ret.Get(0).(time.Duration)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsRepository_AverageFixingTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTime'
-type StatisticsRepository_AverageFixingTime_Call struct {
-	*mock.Call
-}
-
-// AverageFixingTime is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - artifactNam *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - riskIntervalStart float64
-//   - riskIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTime(ctx interface{}, tx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
-	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", ctx, tx, artifactNam, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
-}
-
-func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *string
-		if args[2] != nil {
-			arg2 = args[2].(*string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 uuid.UUID
-		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
-		}
-		var arg5 float64
-		if args[5] != nil {
-			arg5 = args[5].(float64)
-		}
-		var arg6 float64
-		if args[6] != nil {
-			arg6 = args[6].(float64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsRepository_AverageFixingTime_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTime_Call {
-	_c.Call.Return(duration, err)
-	return _c
-}
-
-func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTime_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// AverageFixingTimeByCvss provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimeByCvss(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error) {
-	ret := _mock.Called(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AverageFixingTimeByCvss")
-	}
-
-	var r0 time.Duration
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) (time.Duration, error)); ok {
-		return returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) time.Duration); ok {
-		r0 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-	} else {
-		r0 = ret.Get(0).(time.Duration)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID, float64, float64) error); ok {
-		r1 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsRepository_AverageFixingTimeByCvss_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTimeByCvss'
-type StatisticsRepository_AverageFixingTimeByCvss_Call struct {
-	*mock.Call
-}
-
-// AverageFixingTimeByCvss is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - artifactName *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - cvssIntervalStart float64
-//   - cvssIntervalEnd float64
-func (_e *StatisticsRepository_Expecter) AverageFixingTimeByCvss(ctx interface{}, tx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, cvssIntervalStart interface{}, cvssIntervalEnd interface{}) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	return &StatisticsRepository_AverageFixingTimeByCvss_Call{Call: _e.mock.On("AverageFixingTimeByCvss", ctx, tx, artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)}
-}
-
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Run(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *string
-		if args[2] != nil {
-			arg2 = args[2].(*string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 uuid.UUID
-		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
-		}
-		var arg5 float64
-		if args[5] != nil {
-			arg5 = args[5].(float64)
-		}
-		var arg6 float64
-		if args[6] != nil {
-			arg6 = args[6].(float64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) Return(duration time.Duration, err error) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	_c.Call.Return(duration, err)
-	return _c
-}
-
-func (_c *StatisticsRepository_AverageFixingTimeByCvss_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, cvssIntervalStart float64, cvssIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeByCvss_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // AverageFixingTimeByCvssForRelease provides a mock function for the type StatisticsRepository
@@ -397,6 +206,84 @@ func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) Return(duration
 }
 
 func (_c *StatisticsRepository_AverageFixingTimeForRelease_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64) (time.Duration, error)) *StatisticsRepository_AverageFixingTimeForRelease_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AverageFixingTimes provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+	ret := _mock.Called(ctx, artifactNam, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AverageFixingTimes")
+	}
+
+	var r0 dtos.RemediationTimeAverages
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
+		return returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) dtos.RemediationTimeAverages); ok {
+		r0 = returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(dtos.RemediationTimeAverages)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_AverageFixingTimes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AverageFixingTimes'
+type StatisticsRepository_AverageFixingTimes_Call struct {
+	*mock.Call
+}
+
+// AverageFixingTimes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artifactNam *string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsRepository_AverageFixingTimes_Call {
+	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, artifactNam, assetVersionName, assetID)}
+}
+
+func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_AverageFixingTimes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *string
+		if args[1] != nil {
+			arg1 = args[1].(*string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimes_Call) Return(remediationTimeAverages dtos.RemediationTimeAverages, err error) *StatisticsRepository_AverageFixingTimes_Call {
+	_c.Call.Return(remediationTimeAverages, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_AverageFixingTimes_Call) RunAndReturn(run func(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsRepository_AverageFixingTimes_Call {
 	_c.Call.Return(run)
 	return _c
 }
