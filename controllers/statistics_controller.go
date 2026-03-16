@@ -30,6 +30,17 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 	}
 }
 
+// @Summary Get average fixing times for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Success 200 {object} dtos.RemediationTimeAverages
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/average-fixing-time/ [get]
 func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
@@ -42,6 +53,19 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 }
 
 
+// @Summary Get risk history for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
 	// get the start and end query params
@@ -86,6 +110,15 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
+// @Summary Get CVEs with known exploits for an asset
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {array} models.CVE
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/number-of-exploits/ [get]
 func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
 	var cves []models.CVE
 	asset := shared.GetAsset(ctx)
@@ -108,7 +141,17 @@ func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 	return ctx.JSON(200, cves)
 }
 
-// GetReleaseRiskHistory returns aggregated artifact risk history for a given release
+// @Summary Get risk history for a release
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/ [get]
 func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	// parse release id from param
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
@@ -147,6 +190,17 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	return ctx.JSON(200, dtoResults)
 }
 
+// @Summary Get component risk distribution for an asset version
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/component-risk/ [get]
 func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
@@ -159,7 +213,15 @@ func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	return ctx.JSON(200, results)
 }
 
-// GetAverageReleaseFixingTime returns the remediation time averages for a release across all included artifacts
+// @Summary Get average remediation times for a release
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
+// @Success 200 {object} dtos.RemediationTimeAverages
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/ [get]
 func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
 	releaseID, err := uuid.Parse(releaseIDParam)
