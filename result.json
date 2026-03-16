@@ -1,843 +1,258 @@
-[
-  {
-    "_type": "https://in-toto.io/Statement/v0.1",
-    "predicate": {
-      "bomFormat": "CycloneDX",
-      "components": [
+{
+    "bomFormat": "CycloneDX",
+    "components": [
         {
-          "bom-ref": "pkg:npm/@fastify/busboy@3.1.1",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/@fastify/busboy@3.1.1",
-          "purl": "pkg:npm/@fastify/busboy@3.1.1",
-          "type": "library",
-          "version": "3.1.1"
+            "bom-ref": "pkg:npm/brace-expansion@2.0.1",
+            "name": "brace-expansion",
+            "purl": "pkg:npm/brace-expansion@2.0.1",
+            "type": "library",
+            "version": "2.0.1"
         },
         {
-          "bom-ref": "pkg:npm/@types/brace-expansion@1.1.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/@types/brace-expansion@1.1.0",
-          "purl": "pkg:npm/@types/brace-expansion@1.1.0",
-          "type": "library",
-          "version": "1.1.0"
+            "bom-ref": "pkg:npm/minimatch@9.0.3",
+            "name": "minimatch",
+            "purl": "pkg:npm/minimatch@9.0.3",
+            "type": "library",
+            "version": "9.0.3"
         },
         {
-          "bom-ref": "pkg:npm/@types/node@20.17.47",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/@types/node@20.17.47",
-          "purl": "pkg:npm/@types/node@20.17.47",
-          "type": "library",
-          "version": "20.17.47"
+            "bom-ref": "pkg:npm/undici@7.3.0",
+            "name": "undici",
+            "purl": "pkg:npm/undici@7.3.0",
+            "type": "library",
+            "version": "7.3.0"
         },
         {
-          "bom-ref": "pkg:npm/acorn-bigint@1.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-bigint@1.0.0",
-          "purl": "pkg:npm/acorn-bigint@1.0.0",
-          "type": "library",
-          "version": "1.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-class-fields@1.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-class-fields@1.0.0",
-          "purl": "pkg:npm/acorn-class-fields@1.0.0",
-          "type": "library",
-          "version": "1.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-dynamic-import@4.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-dynamic-import@4.0.0",
-          "purl": "pkg:npm/acorn-dynamic-import@4.0.0",
-          "type": "library",
-          "version": "4.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-export-ns-from@0.2.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-export-ns-from@0.2.0",
-          "purl": "pkg:npm/acorn-export-ns-from@0.2.0",
-          "type": "library",
-          "version": "0.2.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-globals@6.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-globals@6.0.0",
-          "purl": "pkg:npm/acorn-globals@6.0.0",
-          "type": "library",
-          "version": "6.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-import-assertions@1.8.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-import-assertions@1.8.0",
-          "purl": "pkg:npm/acorn-import-assertions@1.8.0",
-          "type": "library",
-          "version": "1.8.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-import-meta@1.1.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-import-meta@1.1.0",
-          "purl": "pkg:npm/acorn-import-meta@1.1.0",
-          "type": "library",
-          "version": "1.1.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-jsx@5.3.1",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-jsx@5.3.1",
-          "purl": "pkg:npm/acorn-jsx@5.3.1",
-          "type": "library",
-          "version": "5.3.1"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-loose@8.3.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-loose@8.3.0",
-          "purl": "pkg:npm/acorn-loose@8.3.0",
-          "type": "library",
-          "version": "8.3.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-node@2.0.1",
-          "licenses": [
-            {
-              "license": {
-                "id": "Apache-2.0"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-node@2.0.1",
-          "purl": "pkg:npm/acorn-node@2.0.1",
-          "type": "library",
-          "version": "2.0.1"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-numeric-separator@0.3.4",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-numeric-separator@0.3.4",
-          "purl": "pkg:npm/acorn-numeric-separator@0.3.4",
-          "type": "library",
-          "version": "0.3.4"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-private-class-elements@1.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-private-class-elements@1.0.0",
-          "purl": "pkg:npm/acorn-private-class-elements@1.0.0",
-          "type": "library",
-          "version": "1.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-private-methods@1.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-private-methods@1.0.0",
-          "purl": "pkg:npm/acorn-private-methods@1.0.0",
-          "type": "library",
-          "version": "1.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-static-class-features@1.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-static-class-features@1.0.0",
-          "purl": "pkg:npm/acorn-static-class-features@1.0.0",
-          "type": "library",
-          "version": "1.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn-walk@8.2.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn-walk@8.2.0",
-          "purl": "pkg:npm/acorn-walk@8.2.0",
-          "type": "library",
-          "version": "8.2.0"
-        },
-        {
-          "bom-ref": "pkg:npm/acorn@8.8.1",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/acorn@8.8.1",
-          "purl": "pkg:npm/acorn@8.8.1",
-          "type": "library",
-          "version": "8.8.1"
-        },
-        {
-          "bom-ref": "pkg:npm/balanced-match@2.0.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/balanced-match@2.0.0",
-          "purl": "pkg:npm/balanced-match@2.0.0",
-          "type": "library",
-          "version": "2.0.0"
-        },
-        {
-          "bom-ref": "pkg:npm/binary-search@1.3.6",
-          "licenses": [
-            {
-              "license": {
-                "id": "CC0-1.0"
-              }
-            }
-          ],
-          "name": "pkg:npm/binary-search@1.3.6",
-          "purl": "pkg:npm/binary-search@1.3.6",
-          "type": "library",
-          "version": "1.3.6"
-        },
-        {
-          "bom-ref": "pkg:npm/brace-expansion@2.0.1",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/brace-expansion@2.0.1",
-          "purl": "pkg:npm/brace-expansion@2.0.1",
-          "type": "library",
-          "version": "2.0.1"
-        },
-        {
-          "bom-ref": "pkg:npm/cjs-module-lexer@1.2.3",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/cjs-module-lexer@1.2.3",
-          "purl": "pkg:npm/cjs-module-lexer@1.2.3",
-          "type": "library",
-          "version": "1.2.3"
-        },
-        {
-          "bom-ref": "pkg:npm/corepack@0.24.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/corepack@0.24.0",
-          "purl": "pkg:npm/corepack@0.24.0",
-          "type": "library",
-          "version": "0.24.0"
-        },
-        {
-          "bom-ref": "pkg:npm/minimatch@9.0.3",
-          "licenses": [
-            {
-              "license": {
-                "id": "ISC"
-              }
-            }
-          ],
-          "name": "pkg:npm/minimatch@9.0.3",
-          "purl": "pkg:npm/minimatch@9.0.3",
-          "type": "library",
-          "version": "9.0.3"
-        },
-        {
-          "bom-ref": "pkg:npm/undici-types@7.3.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/undici-types@7.3.0",
-          "purl": "pkg:npm/undici-types@7.3.0",
-          "type": "library",
-          "version": "7.3.0"
-        },
-        {
-          "bom-ref": "pkg:npm/undici@7.3.0",
-          "licenses": [
-            {
-              "license": {
-                "id": "MIT"
-              }
-            }
-          ],
-          "name": "pkg:npm/undici@7.3.0",
-          "purl": "pkg:npm/undici@7.3.0",
-          "type": "library",
-          "version": "7.3.0"
-        },
-        {
-          "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "type": "application"
+            "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "type": "application"
         }
-      ],
-      "dependencies": [
+    ],
+    "dependencies": [
         {
-          "dependsOn": [],
-          "ref": "pkg:npm/@fastify/busboy@3.1.1"
+            "dependsOn": [],
+            "ref": "pkg:npm/brace-expansion@2.0.1"
         },
         {
-          "dependsOn": [],
-          "ref": "pkg:npm/@types/brace-expansion@1.1.0"
+            "dependsOn": [],
+            "ref": "pkg:npm/minimatch@9.0.3"
         },
         {
-          "dependsOn": [],
-          "ref": "pkg:npm/@types/node@20.17.47"
+            "dependsOn": [],
+            "ref": "pkg:npm/undici@7.3.0"
         },
         {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-bigint@1.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-class-fields@1.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-dynamic-import@4.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-export-ns-from@0.2.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-globals@6.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-import-assertions@1.8.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-import-meta@1.1.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-jsx@5.3.1"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-loose@8.3.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-node@2.0.1"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-numeric-separator@0.3.4"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-private-class-elements@1.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-private-methods@1.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-static-class-features@1.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn-walk@8.2.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/acorn@8.8.1"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/balanced-match@2.0.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/binary-search@1.3.6"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/brace-expansion@2.0.1"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/cjs-module-lexer@1.2.3"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/corepack@0.24.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/minimatch@9.0.3"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/undici-types@7.3.0"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/undici@7.3.0"
-        },
-        {
-          "dependsOn": [
-            "pkg:npm/acorn-private-methods@1.0.0",
-            "pkg:npm/cjs-module-lexer@1.2.3",
-            "pkg:npm/corepack@0.24.0",
-            "pkg:npm/@types/node@20.17.47",
-            "pkg:npm/acorn-jsx@5.3.1",
-            "pkg:npm/brace-expansion@2.0.1",
-            "pkg:npm/balanced-match@2.0.0",
-            "pkg:npm/acorn-dynamic-import@4.0.0",
-            "pkg:npm/acorn-static-class-features@1.0.0",
-            "pkg:npm/acorn-import-meta@1.1.0",
-            "pkg:npm/acorn-class-fields@1.0.0",
-            "pkg:npm/undici-types@7.3.0",
-            "pkg:npm/acorn-globals@6.0.0",
-            "pkg:npm/acorn-numeric-separator@0.3.4",
-            "pkg:npm/acorn-walk@8.2.0",
-            "pkg:npm/undici@7.3.0",
-            "pkg:npm/acorn-loose@8.3.0",
-            "pkg:npm/acorn@8.8.1",
-            "pkg:npm/acorn-import-assertions@1.8.0",
-            "pkg:npm/acorn-private-class-elements@1.0.0",
-            "pkg:npm/acorn-bigint@1.0.0",
-            "pkg:npm/@fastify/busboy@3.1.1",
-            "pkg:npm/@types/brace-expansion@1.1.0",
-            "pkg:npm/binary-search@1.3.6",
-            "pkg:npm/acorn-node@2.0.1",
-            "pkg:npm/minimatch@9.0.3",
-            "pkg:npm/acorn-export-ns-from@0.2.0"
-          ],
-          "ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64"
+            "dependsOn": [
+                "pkg:npm/brace-expansion@2.0.1",
+                "pkg:npm/minimatch@9.0.3",
+                "pkg:npm/undici@7.3.0"
+            ],
+            "ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64"
         }
-      ],
-      "metadata": {
+    ],
+    "metadata": {
         "component": {
-          "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "type": "application"
+            "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
+            "type": "application"
         }
-      },
-      "specVersion": "1.6",
-      "version": 1,
-      "vulnerabilities": []
     },
-    "predicateType": "https://cyclonedx.org/bom",
-    "subject": [
-      {
-        "digest": {
-          "sha256": "90eaf066926586fd919683a56c7f5379a05dbbb08957d76b1787bd2d60de666f"
+    "specVersion": "1.6",
+    "version": 1,
+    "vulnerabilities": [
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/minimatch@9.0.3"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-3ppc-4f35-3m26",
+            "ratings": [
+                {
+                    "method": "CVSSv4",
+                    "score": 8.7,
+                    "severity": "high",
+                    "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.699999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0.00052,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.3,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 3.3,
+                    "severity": "low",
+                    "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-3ppc-4f35-3m26"
+            }
         },
-        "name": "registry.opencode.de/l3montree/test-container-gov-attestations"
-      }
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/undici@7.3.0"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-cxrh-j4jr-qwg3",
+            "ratings": [
+                {
+                    "method": "CVSSv31",
+                    "score": 3.1,
+                    "severity": "low",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0.00086,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 1.75,
+                    "severity": "low",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-cxrh-j4jr-qwg3"
+            }
+        },
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/undici@7.3.0"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-g9mf-h72j-4rw9",
+            "ratings": [
+                {
+                    "method": "CVSSv31",
+                    "score": 5.9,
+                    "severity": "medium",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0.00019,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.55,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 3.55,
+                    "severity": "low",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-g9mf-h72j-4rw9"
+            }
+        },
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/brace-expansion@2.0.1"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-v6h2-p8h4-qcjw",
+            "ratings": [
+                {
+                    "method": "CVSSv31",
+                    "score": 3.1,
+                    "severity": "low",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0.00027,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 1.75,
+                    "severity": "low",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-v6h2-p8h4-qcjw"
+            }
+        },
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/minimatch@9.0.3"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-23c5-xmqv-rm74",
+            "ratings": [
+                {
+                    "method": "CVSSv31",
+                    "score": 7.5,
+                    "severity": "high",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0.0004,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.25,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 4.25,
+                    "severity": "medium",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-23c5-xmqv-rm74"
+            }
+        },
+        {
+            "affects": [
+                {
+                    "ref": "pkg:npm/minimatch@9.0.3"
+                }
+            ],
+            "analysis": {
+                "firstIssued": "2026-03-13T19:21:53Z",
+                "lastUpdated": "2026-03-13T19:21:53Z",
+                "state": "in_triage"
+            },
+            "id": "GHSA-7r86-cg39-jmmj",
+            "ratings": [
+                {
+                    "method": "CVSSv31",
+                    "score": 7.5,
+                    "severity": "high",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+                },
+                {
+                    "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.25,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
+                    "method": "DevGuard",
+                    "score": 4.25,
+                    "severity": "medium",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
+                }
+            ],
+            "source": {
+                "name": "NVD",
+                "url": "https://nvd.nist.gov/vuln/detail/GHSA-7r86-cg39-jmmj"
+            }
+        }
     ]
-  },
-  {
-    "_type": "https://in-toto.io/Statement/v0.1",
-    "predicate": {
-      "bomFormat": "CycloneDX",
-      "components": [
-        {
-          "bom-ref": "pkg:npm/brace-expansion@2.0.1",
-          "name": "brace-expansion",
-          "purl": "pkg:npm/brace-expansion@2.0.1",
-          "type": "library",
-          "version": "2.0.1"
-        },
-        {
-          "bom-ref": "pkg:npm/minimatch@9.0.3",
-          "name": "minimatch",
-          "purl": "pkg:npm/minimatch@9.0.3",
-          "type": "library",
-          "version": "9.0.3"
-        },
-        {
-          "bom-ref": "pkg:npm/undici@7.3.0",
-          "name": "undici",
-          "purl": "pkg:npm/undici@7.3.0",
-          "type": "library",
-          "version": "7.3.0"
-        },
-        {
-          "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "type": "application"
-        }
-      ],
-      "dependencies": [
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/brace-expansion@2.0.1"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/minimatch@9.0.3"
-        },
-        {
-          "dependsOn": [],
-          "ref": "pkg:npm/undici@7.3.0"
-        },
-        {
-          "dependsOn": [
-            "pkg:npm/brace-expansion@2.0.1",
-            "pkg:npm/minimatch@9.0.3",
-            "pkg:npm/undici@7.3.0"
-          ],
-          "ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64"
-        }
-      ],
-      "metadata": {
-        "component": {
-          "bom-ref": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "name": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "purl": "pkg:oci/test-container-gov-attestations@main?arch=amd64\u0026repository_url=registry.opencode.de%2Fl3montree%2Ftest-container-gov-attestations\u0026tag=main-amd64",
-          "type": "application"
-        }
-      },
-      "specVersion": "1.6",
-      "version": 1,
-      "vulnerabilities": [
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/minimatch@9.0.3"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-3ppc-4f35-3m26",
-          "ratings": [
-            {
-              "method": "CVSSv4",
-              "score": 8.7,
-              "severity": "high",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":8.699999809265137,\"confidentialityRequirement\":\"H\",\"epss\":0.00052,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.3,\"underAttack\":false,\"vector\":\"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 3.3,
-              "severity": "low",
-              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:U/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-3ppc-4f35-3m26"
-          }
-        },
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/undici@7.3.0"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-cxrh-j4jr-qwg3",
-          "ratings": [
-            {
-              "method": "CVSSv31",
-              "score": 3.1,
-              "severity": "low",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0.00086,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 1.75,
-              "severity": "low",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-cxrh-j4jr-qwg3"
-          }
-        },
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/undici@7.3.0"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-g9mf-h72j-4rw9",
-          "ratings": [
-            {
-              "method": "CVSSv31",
-              "score": 5.9,
-              "severity": "medium",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":5.900000095367432,\"confidentialityRequirement\":\"H\",\"epss\":0.00019,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":3.55,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 3.55,
-              "severity": "low",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-g9mf-h72j-4rw9"
-          }
-        },
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/brace-expansion@2.0.1"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-v6h2-p8h4-qcjw",
-          "ratings": [
-            {
-              "method": "CVSSv31",
-              "score": 3.1,
-              "severity": "low",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":3.0999999046325684,\"confidentialityRequirement\":\"H\",\"epss\":0.00027,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":1.75,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 1.75,
-              "severity": "low",
-              "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:L/E:U/RC:C/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-v6h2-p8h4-qcjw"
-          }
-        },
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/minimatch@9.0.3"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-23c5-xmqv-rm74",
-          "ratings": [
-            {
-              "method": "CVSSv31",
-              "score": 7.5,
-              "severity": "high",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0.0004,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.25,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 4.25,
-              "severity": "medium",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-23c5-xmqv-rm74"
-          }
-        },
-        {
-          "affects": [
-            {
-              "ref": "pkg:npm/minimatch@9.0.3"
-            }
-          ],
-          "analysis": {
-            "firstIssued": "2026-03-13T19:21:53Z",
-            "lastUpdated": "2026-03-13T19:21:53Z",
-            "state": "in_triage"
-          },
-          "id": "GHSA-7r86-cg39-jmmj",
-          "ratings": [
-            {
-              "method": "CVSSv31",
-              "score": 7.5,
-              "severity": "high",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
-            },
-            {
-              "justification": "{\"availabilityRequirement\":\"H\",\"baseScore\":7.5,\"confidentialityRequirement\":\"H\",\"epss\":0.00045,\"exploitExists\":false,\"integrityRequirement\":\"H\",\"risk\":4.25,\"underAttack\":false,\"vector\":\"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H\",\"verifiedExploitExists\":false}",
-              "method": "DevGuard",
-              "score": 4.25,
-              "severity": "medium",
-              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:U/RC:C/CR:H/IR:H/AR:H"
-            }
-          ],
-          "source": {
-            "name": "NVD",
-            "url": "https://nvd.nist.gov/vuln/detail/GHSA-7r86-cg39-jmmj"
-          }
-        }
-      ]
-    },
-    "predicateType": "https://cyclonedx.org/vex",
-    "subject": [
-      {
-        "digest": {
-          "sha256": "90eaf066926586fd919683a56c7f5379a05dbbb08957d76b1787bd2d60de666f"
-        },
-        "name": "registry.opencode.de/l3montree/test-container-gov-attestations"
-      }
-    ]
-  },
-  {
-    "_type": "https://in-toto.io/Statement/v0.1",
-    "predicate": {
-      "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",
-      "runs": [],
-      "version": "2.1.0"
-    },
-    "predicateType": "https://www.schemastore.org/schemas/json/sarif-2.1.0.json",
-    "subject": [
-      {
-        "digest": {
-          "sha256": "90eaf066926586fd919683a56c7f5379a05dbbb08957d76b1787bd2d60de666f"
-        },
-        "name": "registry.opencode.de/l3montree/test-container-gov-attestations"
-      }
-    ]
-  }
-]
+}
