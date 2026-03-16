@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -176,4 +177,21 @@ func DeduplicateSlice[T any](slice []T, idFunc func(t T) string) []T {
 
 func CheckIfDeleted(name string) bool {
 	return strings.Contains(name, "-deletion_scheduled-")
+}
+
+func IsCVE(str string) bool {
+	sections := strings.Split(str, "-")
+	if len(sections) != 3 {
+		return false
+	}
+	if sections[0] != "CVE" {
+		return false
+	}
+	if year, err := strconv.Atoi(sections[1]); err != nil || year < 1999 {
+		return false
+	}
+	if _, err := strconv.Atoi(sections[2]); err != nil {
+		return false
+	}
+	return true
 }

@@ -817,8 +817,8 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 			Name:      &orgName,
 			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title:      utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, assetSlug)),
-		SourceLang: utils.Ptr(gocsaf.Lang("en-US")),
+		Title: utils.Ptr(fmt.Sprintf("Vulnerability history of %s in asset: %s", cveID, assetSlug)),
+		Lang:  utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
@@ -962,11 +962,15 @@ func generateVulnerabilityObjects(ctx context.Context, cveID string, allVulnsOfC
 
 	// built the vulnerability object for the CVE
 	vulnObject := gocsaf.Vulnerability{
-		CVE:           utils.Ptr(gocsaf.CVE(cveID)),
+		IDs:           []*gocsaf.VulnerabilityID{{SystemName: utils.Ptr("OSV (OSV.dev)"), Text: &cveID}},
 		Title:         utils.Ptr(fmt.Sprintf("Additional information about %s", cveID)),
 		DiscoveryDate: initialRelease,
 	}
 
+	// only real CVEs are allowed in the CVE attribute
+	if utils.IsCVE(cveID) {
+		vulnObject.CVE = (*gocsaf.CVE)(&cveID)
+	}
 	productStatus, flagValues, distributions, remediations := calculateVulnStateInformation(ctx, allVulnsOfCVE)
 
 	// build and assign the notes for the vulnerability
@@ -1173,14 +1177,16 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 	}
 	notes := []*gocsaf.Note{}
 
-	// always append CVE description node
+	// always append CVE description note if present
 	cve := vulns[0].CVE
-	cveDescriptionNote := gocsaf.Note{
-		NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
-		Title:        utils.Ptr(fmt.Sprintf("textual description of %s", cve.CVE)),
-		Text:         &cve.Description,
+	if cve.Description != "" {
+		cveDescriptionNote := gocsaf.Note{
+			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
+			Title:        utils.Ptr(fmt.Sprintf("textual description of %s", cve.CVE)),
+			Text:         &cve.Description,
+		}
+		notes = append(notes, &cveDescriptionNote)
 	}
-	notes = append(notes, &cveDescriptionNote)
 
 	// make a node containing a textual summary for each productID
 	for _, distribution := range distributions {
