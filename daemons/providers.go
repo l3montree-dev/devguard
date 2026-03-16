@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -159,5 +160,6 @@ func (runner *DaemonRunner) tick() {
 var _ shared.DaemonRunner = (*DaemonRunner)(nil)
 
 var Module = fx.Module("daemons",
+	fx.Provide(fx.Annotate(fixedversion.NewVulnerabilityPathAnalysisFixedVersionResolver, fx.As(new(shared.FixedVersionResolver)))),
 	fx.Provide(fx.Annotate(NewDaemonRunner, fx.As(new(shared.DaemonRunner)))),
 )
