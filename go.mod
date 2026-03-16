@@ -18,7 +18,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/gocsaf/csaf/v3 v3.5.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
-	github.com/google/go-containerregistry v0.21.2
+	github.com/google/go-containerregistry v0.20.7
 	github.com/google/go-github/v62 v62.0.0
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0
@@ -56,13 +56,13 @@ require (
 	github.com/yaronf/httpsign v0.4.2
 	github.com/zalando/go-keyring v0.2.6
 	gitlab.com/gitlab-org/api/client-go v1.46.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.67.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.65.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0
 	go.opentelemetry.io/otel v1.42.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.42.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.42.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.42.0
-	go.opentelemetry.io/otel/sdk v1.42.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.40.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.40.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.40.0
+	go.opentelemetry.io/otel/sdk v1.40.0
 	go.opentelemetry.io/otel/trace v1.42.0
 	go.uber.org/fx v1.24.0
 	go.yaml.in/yaml/v2 v2.4.4
@@ -168,7 +168,7 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20250730155240-ffadbf3f398c // indirect
 	github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.3.0+incompatible // indirect
+	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
@@ -382,9 +382,9 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.40.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.42.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.40.0 // indirect
 	go.opentelemetry.io/otel/metric v1.42.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.42.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.step.sm/crypto v0.76.2 // indirect
 	go.uber.org/dig v1.19.0 // indirect

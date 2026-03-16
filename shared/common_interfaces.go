@@ -518,6 +518,24 @@ type StatisticsRepository interface {
 	AverageFixingTimes(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// AverageRemediationTimesForRelease computes all risk/CVSS average fixing times for a release tree in one query
 	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
+
+	// CVSS-based average fixing time methods
+	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.Distribution, error)
+	GetOrgStructureDistribution(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error)
+	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
+	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
+	GetWeeklyAveragePerVulnEventType(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error)
+
+	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (float32, error)
+	GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)
+	GetComponentDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
+	FindMaliciousPackagesInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)
+	GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (time.Duration, error)
+	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
+	GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)
 	CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx DB, assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
@@ -525,6 +543,7 @@ type ArtifactRiskHistoryRepository interface {
 	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
 	GetRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
+	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
 	UpdateRiskAggregation(ctx context.Context, tx DB, assetRisk *models.ArtifactRiskHistory) error
 }
@@ -540,6 +559,8 @@ type StatisticsService interface {
 	// Release scoped statistics
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
+	// CVSS-based average fixing time methods
+	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 
