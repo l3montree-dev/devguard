@@ -23,8 +23,11 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
+
+var controllersTracer = otel.Tracer("devguard/controllers")
 
 // ProvideDependencyProxyConfig creates the configuration for the dependency proxy
 func ProvideDependencyProxyConfig() DependencyProxyConfig {

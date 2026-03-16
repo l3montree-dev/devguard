@@ -49,26 +49,26 @@ func TestProjectCreation(t *testing.T) {
 			session := mocks.NewAuthSession(t)
 			shared.SetSession(ctx, session)
 			rbac := mocks.NewAccessControl(t)
-			rbac.On("LinkDomainAndProjectRole", shared.RoleAdmin, shared.RoleAdmin, mock.Anything).Return(nil)
-			rbac.On("InheritProjectRole", shared.RoleAdmin, shared.RoleMember, mock.Anything).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectUser, []shared.Action{
+			rbac.On("LinkDomainAndProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleAdmin, mock.Anything).Return(nil)
+			rbac.On("InheritProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleMember, mock.Anything).Return(nil)
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectUser, []shared.Action{
 				shared.ActionCreate,
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
 				shared.ActionCreate,
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleMember, shared.ObjectProject, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectProject, []shared.Action{
 				shared.ActionRead,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleMember, shared.ObjectAsset, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectAsset, []shared.Action{
 				shared.ActionRead,
 			}).Return(nil)
 
@@ -103,28 +103,28 @@ func TestProjectCreation(t *testing.T) {
 			session := mocks.NewAuthSession(t)
 			shared.SetSession(ctx, session)
 			rbac := mocks.NewAccessControl(t)
-			rbac.On("LinkDomainAndProjectRole", shared.RoleAdmin, shared.RoleAdmin, mock.Anything).Return(nil)
+			rbac.On("LinkDomainAndProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleAdmin, mock.Anything).Return(nil)
 
-			rbac.On("InheritProjectRole", shared.RoleAdmin, shared.RoleMember, mock.Anything).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectUser, []shared.Action{
+			rbac.On("InheritProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleMember, mock.Anything).Return(nil)
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectUser, []shared.Action{
 				shared.ActionCreate,
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
 
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
 				shared.ActionCreate,
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{
 				shared.ActionDelete,
 				shared.ActionUpdate,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleMember, shared.ObjectProject, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectProject, []shared.Action{
 				shared.ActionRead,
 			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, shared.RoleMember, shared.ObjectAsset, []shared.Action{
+			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectAsset, []shared.Action{
 				shared.ActionRead,
 			}).Return(nil)
 			shared.SetRBAC(ctx, rbac)

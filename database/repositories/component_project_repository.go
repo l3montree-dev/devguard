@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -20,11 +21,11 @@ func NewComponentProjectRepository(db *gorm.DB) *componentProjectRepository {
 	}
 }
 
-func (r *componentProjectRepository) FindAllOutdatedProjects() ([]models.ComponentProject, error) {
+func (r *componentProjectRepository) FindAllOutdatedProjects(ctx context.Context, tx *gorm.DB) ([]models.ComponentProject, error) {
 	var componentProjects []models.ComponentProject
 	// 7 days
 	date := time.Now().AddDate(0, 0, -7)
 
-	err := r.db.Where("updated_at <= ?", date).Find(&componentProjects).Error
+	err := r.GetDB(ctx, tx).Where("updated_at <= ?", date).Find(&componentProjects).Error
 	return componentProjects, err
 }

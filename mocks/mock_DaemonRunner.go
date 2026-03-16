@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -37,8 +39,8 @@ func (_m *DaemonRunner) EXPECT() *DaemonRunner_Expecter {
 }
 
 // RunAssetPipeline provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) RunAssetPipeline(forceAll bool) {
-	_mock.Called(forceAll)
+func (_mock *DaemonRunner) RunAssetPipeline(ctx context.Context, forceAll bool) {
+	_mock.Called(ctx, forceAll)
 	return
 }
 
@@ -48,19 +50,25 @@ type DaemonRunner_RunAssetPipeline_Call struct {
 }
 
 // RunAssetPipeline is a helper method to define mock.On call
+//   - ctx context.Context
 //   - forceAll bool
-func (_e *DaemonRunner_Expecter) RunAssetPipeline(forceAll interface{}) *DaemonRunner_RunAssetPipeline_Call {
-	return &DaemonRunner_RunAssetPipeline_Call{Call: _e.mock.On("RunAssetPipeline", forceAll)}
+func (_e *DaemonRunner_Expecter) RunAssetPipeline(ctx interface{}, forceAll interface{}) *DaemonRunner_RunAssetPipeline_Call {
+	return &DaemonRunner_RunAssetPipeline_Call{Call: _e.mock.On("RunAssetPipeline", ctx, forceAll)}
 }
 
-func (_c *DaemonRunner_RunAssetPipeline_Call) Run(run func(forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
+func (_c *DaemonRunner_RunAssetPipeline_Call) Run(run func(ctx context.Context, forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 bool
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(bool)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 bool
+		if args[1] != nil {
+			arg1 = args[1].(bool)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -71,22 +79,22 @@ func (_c *DaemonRunner_RunAssetPipeline_Call) Return() *DaemonRunner_RunAssetPip
 	return _c
 }
 
-func (_c *DaemonRunner_RunAssetPipeline_Call) RunAndReturn(run func(forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
+func (_c *DaemonRunner_RunAssetPipeline_Call) RunAndReturn(run func(ctx context.Context, forceAll bool)) *DaemonRunner_RunAssetPipeline_Call {
 	_c.Run(run)
 	return _c
 }
 
 // RunDaemonPipelineForAsset provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) RunDaemonPipelineForAsset(assetID uuid.UUID) error {
-	ret := _mock.Called(assetID)
+func (_mock *DaemonRunner) RunDaemonPipelineForAsset(ctx context.Context, assetID uuid.UUID) error {
+	ret := _mock.Called(ctx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RunDaemonPipelineForAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) error); ok {
-		r0 = returnFunc(assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, assetID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -99,19 +107,25 @@ type DaemonRunner_RunDaemonPipelineForAsset_Call struct {
 }
 
 // RunDaemonPipelineForAsset is a helper method to define mock.On call
+//   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(assetID interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
-	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", assetID)}
+func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(ctx interface{}, assetID interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", ctx, assetID)}
 }
 
-func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Run(run func(assetID uuid.UUID)) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Run(run func(ctx context.Context, assetID uuid.UUID)) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -122,14 +136,14 @@ func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) Return(err error) *Daemon
 	return _c
 }
 
-func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(assetID uuid.UUID) error) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID) error) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Start provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) Start() {
-	_mock.Called()
+func (_mock *DaemonRunner) Start(ctx context.Context) {
+	_mock.Called(ctx)
 	return
 }
 
@@ -139,13 +153,20 @@ type DaemonRunner_Start_Call struct {
 }
 
 // Start is a helper method to define mock.On call
-func (_e *DaemonRunner_Expecter) Start() *DaemonRunner_Start_Call {
-	return &DaemonRunner_Start_Call{Call: _e.mock.On("Start")}
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) Start(ctx interface{}) *DaemonRunner_Start_Call {
+	return &DaemonRunner_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
-func (_c *DaemonRunner_Start_Call) Run(run func()) *DaemonRunner_Start_Call {
+func (_c *DaemonRunner_Start_Call) Run(run func(ctx context.Context)) *DaemonRunner_Start_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -155,22 +176,22 @@ func (_c *DaemonRunner_Start_Call) Return() *DaemonRunner_Start_Call {
 	return _c
 }
 
-func (_c *DaemonRunner_Start_Call) RunAndReturn(run func()) *DaemonRunner_Start_Call {
+func (_c *DaemonRunner_Start_Call) RunAndReturn(run func(ctx context.Context)) *DaemonRunner_Start_Call {
 	_c.Run(run)
 	return _c
 }
 
 // UpdateFixedVersions provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) UpdateFixedVersions() error {
-	ret := _mock.Called()
+func (_mock *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateFixedVersions")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -183,13 +204,20 @@ type DaemonRunner_UpdateFixedVersions_Call struct {
 }
 
 // UpdateFixedVersions is a helper method to define mock.On call
-func (_e *DaemonRunner_Expecter) UpdateFixedVersions() *DaemonRunner_UpdateFixedVersions_Call {
-	return &DaemonRunner_UpdateFixedVersions_Call{Call: _e.mock.On("UpdateFixedVersions")}
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) UpdateFixedVersions(ctx interface{}) *DaemonRunner_UpdateFixedVersions_Call {
+	return &DaemonRunner_UpdateFixedVersions_Call{Call: _e.mock.On("UpdateFixedVersions", ctx)}
 }
 
-func (_c *DaemonRunner_UpdateFixedVersions_Call) Run(run func()) *DaemonRunner_UpdateFixedVersions_Call {
+func (_c *DaemonRunner_UpdateFixedVersions_Call) Run(run func(ctx context.Context)) *DaemonRunner_UpdateFixedVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -199,22 +227,22 @@ func (_c *DaemonRunner_UpdateFixedVersions_Call) Return(err error) *DaemonRunner
 	return _c
 }
 
-func (_c *DaemonRunner_UpdateFixedVersions_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateFixedVersions_Call {
+func (_c *DaemonRunner_UpdateFixedVersions_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_UpdateFixedVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateOpenSourceInsightInformation provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) UpdateOpenSourceInsightInformation() error {
-	ret := _mock.Called()
+func (_mock *DaemonRunner) UpdateOpenSourceInsightInformation(ctx context.Context) error {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateOpenSourceInsightInformation")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -227,13 +255,20 @@ type DaemonRunner_UpdateOpenSourceInsightInformation_Call struct {
 }
 
 // UpdateOpenSourceInsightInformation is a helper method to define mock.On call
-func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation() *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
-	return &DaemonRunner_UpdateOpenSourceInsightInformation_Call{Call: _e.mock.On("UpdateOpenSourceInsightInformation")}
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation(ctx interface{}) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+	return &DaemonRunner_UpdateOpenSourceInsightInformation_Call{Call: _e.mock.On("UpdateOpenSourceInsightInformation", ctx)}
 }
 
-func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) Run(run func()) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) Run(run func(ctx context.Context)) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -243,22 +278,22 @@ func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) Return(err error
 	return _c
 }
 
-func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+func (_c *DaemonRunner_UpdateOpenSourceInsightInformation_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateVulnDB provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) UpdateVulnDB() error {
-	ret := _mock.Called()
+func (_mock *DaemonRunner) UpdateVulnDB(ctx context.Context) error {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateVulnDB")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -271,13 +306,20 @@ type DaemonRunner_UpdateVulnDB_Call struct {
 }
 
 // UpdateVulnDB is a helper method to define mock.On call
-func (_e *DaemonRunner_Expecter) UpdateVulnDB() *DaemonRunner_UpdateVulnDB_Call {
-	return &DaemonRunner_UpdateVulnDB_Call{Call: _e.mock.On("UpdateVulnDB")}
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) UpdateVulnDB(ctx interface{}) *DaemonRunner_UpdateVulnDB_Call {
+	return &DaemonRunner_UpdateVulnDB_Call{Call: _e.mock.On("UpdateVulnDB", ctx)}
 }
 
-func (_c *DaemonRunner_UpdateVulnDB_Call) Run(run func()) *DaemonRunner_UpdateVulnDB_Call {
+func (_c *DaemonRunner_UpdateVulnDB_Call) Run(run func(ctx context.Context)) *DaemonRunner_UpdateVulnDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -287,7 +329,7 @@ func (_c *DaemonRunner_UpdateVulnDB_Call) Return(err error) *DaemonRunner_Update
 	return _c
 }
 
-func (_c *DaemonRunner_UpdateVulnDB_Call) RunAndReturn(run func() error) *DaemonRunner_UpdateVulnDB_Call {
+func (_c *DaemonRunner_UpdateVulnDB_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_UpdateVulnDB_Call {
 	_c.Call.Return(run)
 	return _c
 }

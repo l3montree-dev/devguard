@@ -1,18 +1,19 @@
 package daemons
 
 import (
+	"context"
 	"log/slog"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
-func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
+func getFixedVersion(ctx context.Context, purlComparer *scan.PurlComparer, dependencyVuln models.DependencyVuln) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
 	parsed, err := packageurl.FromString(dependencyVuln.ComponentPurl)
@@ -21,7 +22,7 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 		return nil, err
 	}
 
-	affected, err := purlComparer.GetAffectedComponents(parsed)
+	affected, err := purlComparer.GetAffectedComponents(ctx, parsed)
 	if err != nil {
 		return nil, err
 	}
@@ -44,24 +45,26 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 	return nil, nil
 }
 
-func (runner *DaemonRunner) UpdateFixedVersions() error {
+func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
-	start := time.Now()
-	defer func() {
-		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
-	}()
+	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions")
+	defer span.End()
 
 	purlComparer := scan.NewPurlComparer(runner.db)
 
 	var dependencyVulns []models.DependencyVuln
 	// get all dependency vulns without a fixed version
-	err := runner.dependencyVulnRepository.GetDB(nil).Where("component_fixed_version IS NULL OR component_fixed_version = ''").Find(&dependencyVulns).Error
+	err := runner.dependencyVulnRepository.GetDB(ctx, nil).Where("component_fixed_version IS NULL OR component_fixed_version = ''").Find(&dependencyVulns).Error
 	if err != nil {
 		slog.Error("could not get dependency vulns without fixed version", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
+
+	span.SetAttributes(attribute.Int("dependency_vulns.count", len(dependencyVulns)))
 
 	slog.Info("updating fixed versions for dependency vulns", "count", len(dependencyVulns))
 
@@ -70,7 +73,7 @@ func (runner *DaemonRunner) UpdateFixedVersions() error {
 	for _, dependencyVuln := range dependencyVulns {
 		wg.Go(func() (any, error) {
 			doUpdate := false
-			fixedVersion, err := getFixedVersion(purlComparer, dependencyVuln)
+			fixedVersion, err := getFixedVersion(ctx, purlComparer, dependencyVuln)
 
 			if err == nil {
 				if fixedVersion != nil && fixedVersion != dependencyVuln.ComponentFixedVersion {
@@ -84,7 +87,7 @@ func (runner *DaemonRunner) UpdateFixedVersions() error {
 			}
 
 			// save the dependencyVuln
-			if err := runner.dependencyVulnRepository.Save(nil, &dependencyVuln); err != nil {
+			if err := runner.dependencyVulnRepository.Save(ctx, nil, &dependencyVuln); err != nil {
 				slog.Warn("could not save dependencyVuln", "dependencyVuln", dependencyVuln.ID, "err", err)
 			}
 

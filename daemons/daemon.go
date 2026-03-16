@@ -1,6 +1,7 @@
 package daemons
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -14,7 +15,7 @@ func getLastMirrorTime(configService shared.ConfigService, key string) (time.Tim
 		Time time.Time `json:"time"`
 	}
 
-	err := configService.GetJSONConfig(key, &lastMirror)
+	err := configService.GetJSONConfig(context.Background(), key, &lastMirror)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Error("could not get last mirror time", "err", err, "key", key)
@@ -37,7 +38,7 @@ func shouldMirror(configService shared.ConfigService, key string) bool {
 }
 
 func markMirrored(configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(key, struct {
+	return configService.SetJSONConfig(context.Background(), key, struct {
 		Time time.Time `json:"time"`
 	}{
 		Time: time.Now(),
@@ -60,15 +61,22 @@ func (runner *DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 }
 
 func (runner *DaemonRunner) runDaemons() {
-	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", runner.UpdateOpenSourceInsightInformation); err != nil {
+	ctx := context.Background()
+	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", func() error {
+		return runner.UpdateOpenSourceInsightInformation(ctx)
+	}); err != nil {
 		slog.Error("could not update deps dev information", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.vulndb", runner.UpdateVulnDB); err != nil {
+	if err := runner.maybeRunAndMark("vulndb.vulndb", func() error {
+		return runner.UpdateVulnDB(ctx)
+	}); err != nil {
 		slog.Error("could not update vuln db", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.fixedVersions", runner.UpdateFixedVersions); err != nil {
+	if err := runner.maybeRunAndMark("vulndb.fixedVersions", func() error {
+		return runner.UpdateFixedVersions(ctx)
+	}); err != nil {
 		slog.Error("could not update fixed versions", "err", err)
 	}
 }

@@ -43,7 +43,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, "user-id", shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -73,7 +73,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, "user-id", shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -103,7 +103,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockRBAC.On("IsAllowed", "user-id", shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
+		mockRBAC.On("IsAllowed", mock.Anything, "user-id", shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -142,8 +142,8 @@ func TestProjectAccessControl(t *testing.T) {
 			OrganizationID: org.ID,
 		}
 
-		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
+		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -182,8 +182,8 @@ func TestProjectAccessControl(t *testing.T) {
 			OrganizationID: org.ID,
 		}
 
-		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionUpdate).Return(false, nil)
+		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
+		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, "user-id", shared.ObjectProject, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -222,8 +222,8 @@ func TestProjectAccessControl(t *testing.T) {
 			IsPublic:       true,
 		}
 
-		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(false, nil)
+		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
+		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -263,7 +263,7 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		// Project already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInProject", &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, "user-id", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -306,8 +306,8 @@ func TestAssetAccessControl(t *testing.T) {
 			ProjectID: project.ID,
 		}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -346,8 +346,8 @@ func TestAssetAccessControl(t *testing.T) {
 			ProjectID: project.ID,
 		}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionUpdate).Return(false, nil)
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "user-id", shared.ObjectAsset, shared.ActionUpdate).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -389,8 +389,8 @@ func TestAssetAccessControl(t *testing.T) {
 			IsPublic:  true,
 		}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, nil)
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -430,7 +430,7 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		// Asset already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -465,7 +465,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"})
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "nonexistent-asset").Return(models.Asset{}, errors.New("not found"))
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "nonexistent-asset").Return(models.Asset{}, errors.New("not found"))
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -505,8 +505,8 @@ func TestAssetAccessControl(t *testing.T) {
 			ProjectID: project.ID,
 		}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, errors.New("rbac error"))
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "user-id", shared.ObjectAsset, shared.ActionRead).Return(false, errors.New("rbac error"))
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -553,9 +553,9 @@ func TestAccessControlHierarchy(t *testing.T) {
 			OrganizationID: org.ID,
 		}
 
-		mockProjectRepo.On("ReadBySlug", org.ID, "test-project").Return(project, nil)
+		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
 		// The RBAC implementation should return true for org admins
-		mockRBAC.On("IsAllowedInProject", &project, "org-admin", shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, "org-admin", shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -591,9 +591,9 @@ func TestAccessControlHierarchy(t *testing.T) {
 			ProjectID: project.ID,
 		}
 
-		mockAssetRepo.On("ReadBySlug", project.ID, "test-asset").Return(asset, nil)
+		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
 		// The RBAC implementation should return true for project admins
-		mockRBAC.On("IsAllowedInAsset", &asset, "project-admin", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, "project-admin", shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)

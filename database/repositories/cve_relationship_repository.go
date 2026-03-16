@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -20,33 +22,33 @@ func NewCveRelationshipRepository(db *gorm.DB) *cveRelationshipRepository {
 }
 
 // get all source CVEs which relate to this CVE
-func (repository *cveRelationshipRepository) GetAllRelationsForCVE(tx *gorm.DB, targetCVEID string) ([]models.CVERelationship, error) {
+func (repository *cveRelationshipRepository) GetAllRelationsForCVE(ctx context.Context, tx *gorm.DB, targetCVEID string) ([]models.CVERelationship, error) {
 	var relations []models.CVERelationship
-	err := repository.GetDB(tx).Where("target_cve=?", targetCVEID).Find(&relations).Error
+	err := repository.GetDB(ctx, tx).Where("target_cve=?", targetCVEID).Find(&relations).Error
 	return relations, err
 }
 
-func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(tx *gorm.DB, sourceCVEIDs []string) ([]models.CVERelationship, error) {
+func (repository *cveRelationshipRepository) GetAllRelationshipsForCVEBatch(ctx context.Context, tx *gorm.DB, sourceCVEIDs []string) ([]models.CVERelationship, error) {
 	var relations []models.CVERelationship
-	err := repository.GetDB(tx).Raw("SELECT * FROM cve_relationships cr WHERE cr.source_cve IN ?", sourceCVEIDs).Find(&relations).Error
+	err := repository.GetDB(ctx, tx).Raw("SELECT * FROM cve_relationships cr WHERE cr.source_cve IN ?", sourceCVEIDs).Find(&relations).Error
 	if err != nil {
 		return nil, err
 	}
 	return relations, nil
 }
 
-func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
+func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(ctx context.Context, tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
 	var relations []models.CVERelationship
-	err := repository.GetDB(tx).Where("target_cve IN ?", targetCVEIDs).Find(&relations).Error
+	err := repository.GetDB(ctx, tx).Where("target_cve IN ?", targetCVEIDs).Find(&relations).Error
 	if err != nil {
 		return nil, err
 	}
 	return relations, nil
 }
 
-func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(tx *gorm.DB) error {
+func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx *gorm.DB) error {
 	var relationships []models.CVERelationship
-	err := repository.GetDB(tx).Raw(`SELECT * FROM cve_relationships a WHERE NOT EXISTS
+	err := repository.GetDB(ctx, tx).Raw(`SELECT * FROM cve_relationships a WHERE NOT EXISTS
 	(SELECT * FROM cves b WHERE a.target_cve = b.cve);`).Find(&relationships).Error
 	if err != nil {
 		return err
@@ -64,7 +66,7 @@ func (repository *cveRelationshipRepository) FilterOutRelationsWithInvalidTarget
 			counter += batchsize
 		}
 
-		err = repository.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Delete(batch).Error
+		err = repository.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Delete(batch).Error
 		if err != nil {
 			return err
 		}

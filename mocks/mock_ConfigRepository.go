@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -38,16 +40,16 @@ func (_m *ConfigRepository) EXPECT() *ConfigRepository_Expecter {
 }
 
 // GetDB provides a mock function for the type ConfigRepository
-func (_mock *ConfigRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *ConfigRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -62,19 +64,25 @@ type ConfigRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *ConfigRepository_Expecter) GetDB(tx interface{}) *ConfigRepository_GetDB_Call {
-	return &ConfigRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *ConfigRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ConfigRepository_GetDB_Call {
+	return &ConfigRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *ConfigRepository_GetDB_Call) Run(run func(tx shared.DB)) *ConfigRepository_GetDB_Call {
+func (_c *ConfigRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *ConfigRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -85,22 +93,22 @@ func (_c *ConfigRepository_GetDB_Call) Return(v shared.DB) *ConfigRepository_Get
 	return _c
 }
 
-func (_c *ConfigRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ConfigRepository_GetDB_Call {
+func (_c *ConfigRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *ConfigRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type ConfigRepository
-func (_mock *ConfigRepository) Save(tx shared.DB, config *models.Config) error {
-	ret := _mock.Called(tx, config)
+func (_mock *ConfigRepository) Save(ctx context.Context, tx shared.DB, config *models.Config) error {
+	ret := _mock.Called(ctx, tx, config)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Config) error); ok {
-		r0 = returnFunc(tx, config)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Config) error); ok {
+		r0 = returnFunc(ctx, tx, config)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -113,25 +121,31 @@ type ConfigRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - config *models.Config
-func (_e *ConfigRepository_Expecter) Save(tx interface{}, config interface{}) *ConfigRepository_Save_Call {
-	return &ConfigRepository_Save_Call{Call: _e.mock.On("Save", tx, config)}
+func (_e *ConfigRepository_Expecter) Save(ctx interface{}, tx interface{}, config interface{}) *ConfigRepository_Save_Call {
+	return &ConfigRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, config)}
 }
 
-func (_c *ConfigRepository_Save_Call) Run(run func(tx shared.DB, config *models.Config)) *ConfigRepository_Save_Call {
+func (_c *ConfigRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, config *models.Config)) *ConfigRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Config
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Config)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Config
+		if args[2] != nil {
+			arg2 = args[2].(*models.Config)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -142,7 +156,7 @@ func (_c *ConfigRepository_Save_Call) Return(err error) *ConfigRepository_Save_C
 	return _c
 }
 
-func (_c *ConfigRepository_Save_Call) RunAndReturn(run func(tx shared.DB, config *models.Config) error) *ConfigRepository_Save_Call {
+func (_c *ConfigRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, config *models.Config) error) *ConfigRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -33,7 +34,7 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
 
-	averages, err := c.statisticsRepository.AverageFixingTimes(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average fixing time").WithInternal(err)
 	}
@@ -62,7 +63,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 
-	results, err := c.getArtifactRiskHistory(utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
+	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
@@ -77,7 +78,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *StatisticsController) getArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
+func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -94,23 +95,24 @@ func (c *StatisticsController) getArtifactRiskHistory(artifactName *string, asse
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetArtifactRiskHistory(artifactName, assetVersionName, assetID, beginTime, endTime)
+	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
 func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) error {
 	var cves []models.CVE
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
+
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
 			return ctx.JSON(404, nil)
 		}
 	}
 
-	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(assetVersion)
+	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return ctx.NoContent(500)
 	}
@@ -142,7 +144,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	}
 
 	// delegate to service
-	res, err := c.statisticsService.GetReleaseRiskHistory(releaseID, beginTime, endTime)
+	res, err := c.statisticsService.GetReleaseRiskHistory(ctx.Request().Context(), releaseID, beginTime, endTime)
 	if err != nil {
 		slog.Error("could not get release risk history", "err", err)
 		return ctx.JSON(500, nil)
@@ -160,7 +162,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
-	results, err := c.statisticsService.GetComponentRisk(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	results, err := c.statisticsService.GetComponentRisk(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -187,10 +189,10 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 
 	res := utils.Concurrently(
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeForRelease(releaseID, severity)
+			return c.statisticsService.GetAverageFixingTimeForRelease(ctx.Request().Context(), releaseID, severity)
 		},
 		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(releaseID, severity)
+			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(ctx.Request().Context(), releaseID, severity)
 		},
 	)
 

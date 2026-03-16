@@ -6,6 +6,7 @@ package controllers
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -27,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"go.opentelemetry.io/otel/trace"
 	"go.yaml.in/yaml/v2"
 )
 
@@ -117,16 +119,17 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		AssetID:          asset.ID,
 	}
 
-	tx := c.artifactRepository.GetDB(nil).Begin()
+	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+	defer tx.Rollback()
 	//save the artifact
-	err := c.artifactRepository.Create(tx, &artifact)
+	err := c.artifactRepository.Create(ctx.Request().Context(), tx, &artifact)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalid := c.FetchSbomsFromUpstream(artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
+	boms, _, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
 	if len(invalid) > 0 {
 		tx.Rollback()
 		return ctx.JSON(400, invalid)
@@ -138,7 +141,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		newGraph.MergeGraph(bom) // we dont care for the diff
 	}
 
-	bom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
+	bom, err := c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
 
 	if err != nil {
 		tx.Rollback()
@@ -147,7 +150,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 	currentUserID := shared.GetSession(ctx).GetUserID()
 
-	_, _, newState, err := c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
+	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
 
 	if err != nil {
 		tx.Rollback()
@@ -157,10 +160,14 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	tx.Commit()
 
+	linkedCtx := trace.ContextWithSpan(
+		context.Background(),
+		trace.SpanFromContext(ctx.Request().Context()),
+	)
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -174,7 +181,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 			exportedBOM := bom.ToCycloneDX(normalize.BOMMetadata{
 				RootName: artifact.ArtifactName,
 			})
-			if err = c.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
+			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
 				Project:      shared.ToProjectObject(project),
@@ -192,7 +199,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, newState)
+		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -200,7 +207,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	c.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -220,8 +227,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [delete]
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
-
 	asset := shared.GetAsset(ctx)
+	reqCtx := ctx.Request().Context()
 
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -234,7 +241,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	// we need to sync the vulnerabilities after deleting the artifact
 	// maybe we need to close some: https://github.com/l3montree-dev/devguard/issues/1496
 	// fetch all vulnerabilities which ONLY belong to this artifact
-	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(nil, artifact)
+	vulns, err := c.dependencyVulnRepository.GetAllVulnsByArtifact(reqCtx, nil, artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch vulnerabilities").WithInternal(err)
 	}
@@ -248,9 +255,10 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 		}
 	}
 
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	if len(syncVulns) > 0 {
 		c.FireAndForget(func() {
-			err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, syncVulns)
+			err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, syncVulns)
 			if err != nil {
 				slog.Error("could not sync issues for vulnerabilities after artifact deletion", "err", err)
 			}
@@ -258,7 +266,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	}
 
 	// DeleteArtifact now handles depth recalculation internally
-	err = c.artifactService.DeleteArtifact(asset.ID, assetVersion.Name, artifact.ArtifactName)
+	err = c.artifactService.DeleteArtifact(reqCtx, asset.ID, assetVersion.Name, artifact.ArtifactName)
 
 	if err != nil {
 		return err
@@ -290,7 +298,9 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	artifact, err := c.artifactService.ReadArtifact(artifactName, assetVersion.Name, asset.ID)
+	reqCtx := ctx.Request().Context()
+
+	artifact, err := c.artifactService.ReadArtifact(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -306,7 +316,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	oldSources, err := c.componentService.FetchInformationSources(&artifact)
+	oldSources, err := c.componentService.FetchInformationSources(reqCtx, nil, &artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
 	}
@@ -319,7 +329,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	toDelete := comparison.OnlyInB
 
 	// we just need to remove those root nodes.
-	if err := c.componentService.RemoveInformationSources(&artifact, toDelete); err != nil {
+	if err := c.componentService.RemoveInformationSources(reqCtx, nil, &artifact, toDelete); err != nil {
 		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
 	}
 
@@ -330,7 +340,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	})
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.FetchSbomsFromUpstream(artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()
@@ -338,18 +348,19 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		graph.MergeGraph(bom)
 	}
 
-	tx := c.artifactRepository.Begin()
+	tx := c.artifactRepository.Begin(reqCtx)
+	defer tx.Rollback()
 
 	// make sure that we at least update the sbom once if there were deletions
 	// updating with nil, will just renormalize the sbom and remove all components which are not
 	// reachable anymore from the root nodes - we might have removed some root nodes above
-	sbom, err := c.assetVersionService.UpdateSBOM(tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
+	sbom, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
 
-	_, _, vulns, err = c.ScanNormalizedSBOM(tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
 	if err != nil {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
@@ -357,10 +368,11 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	tx.Commit()
 
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -374,7 +386,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 			exportedBOM := sbom.ToCycloneDX(normalize.BOMMetadata{
 				RootName: artifactName,
 			})
-			if err = c.thirdPartyIntegration.HandleEvent(shared.SBOMCreatedEvent{
+			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
 				Project:      shared.ToProjectObject(project),
@@ -392,7 +404,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -400,7 +412,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	c.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -431,7 +443,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(assetVersion)
+	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return err
 	}
@@ -451,7 +463,7 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 
 func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(assetVersion)
+	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return err
 	}
@@ -513,17 +525,17 @@ func (c *ArtifactController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return vex.VEX{}, err
 	}
 
-	return c.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
+	return c.assetVersionService.BuildOpenVeX(ctx.Request().Context(), nil, asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (c *ArtifactController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+func (c *ArtifactController) gatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	// get all associated dependencyVulns
-	dependencyVulns, err := c.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := c.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 
 	if err != nil {
 		return nil, err
@@ -535,7 +547,7 @@ func (c *ArtifactController) gatherVexInformationIncludingResolvedMarking(assetV
 	}
 
 	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = c.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, artifactName)
+	defaultVulns, err = c.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -569,12 +581,12 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.assetVersionService.BuildVeX(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
+	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
 }
 
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
@@ -609,7 +621,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(assetVersion, utils.EmptyThenNil(artifact))
+			dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
 			if err != nil {
 				return nil, err
 			}
@@ -618,7 +630,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				return nil, fmt.Errorf("FRONTEND_URL is not set")
 			}
 
-			vex := c.assetVersionService.BuildVeX(frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact, dependencyVulns)
+			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))
@@ -663,7 +675,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return result, nil
 		},
 		func() (any, error) {
-			distribution, err := c.statisticsService.GetArtifactRiskHistory(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
+			distribution, err := c.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
 			if len(distribution) == 0 {
 				return models.Distribution{}, nil
 			}
@@ -671,7 +683,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsRepository.AverageFixingTimes(utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 
@@ -758,8 +770,10 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	}
 	req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 
-	client := &http.Client{}
-	client.Timeout = 10 * time.Minute
+	client := &http.Client{
+		Timeout:   10 * time.Minute,
+		Transport: utils.EgressTransport,
+	}
 
 	//process http response
 	resp, err := client.Do(req)
@@ -787,7 +801,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 
 func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(assetVersion)
+	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return err
 	}
@@ -847,8 +861,10 @@ func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	}
 	req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 
-	client := &http.Client{}
-	client.Timeout = 10 * time.Minute
+	client := &http.Client{
+		Timeout:   10 * time.Minute,
+		Transport: utils.EgressTransport,
+	}
 
 	//process http response
 	resp, err := client.Do(req)

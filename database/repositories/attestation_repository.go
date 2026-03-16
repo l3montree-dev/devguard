@@ -1,8 +1,11 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -13,6 +16,8 @@ type attestationRepository struct {
 	utils.Repository[string, models.Attestation, *gorm.DB]
 }
 
+var _ shared.AttestationRepository = (*attestationRepository)(nil) // Ensure attestationRepository implements shared.AttestationRepository interface
+
 func NewAttestationRepository(db *gorm.DB) *attestationRepository {
 	return &attestationRepository{
 		db:         db,
@@ -20,26 +25,26 @@ func NewAttestationRepository(db *gorm.DB) *attestationRepository {
 	}
 }
 
-func (a *attestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error) {
+func (a *attestationRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.Attestation, error) {
 	var attestationList []models.Attestation
-	err := a.db.Where("asset_id = ?", assetID).Find(&attestationList).Error
+	err := a.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&attestationList).Error
 	if err != nil {
 		return attestationList, err
 	}
 	return attestationList, nil
 }
 
-func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
+func (a *attestationRepository) GetByAssetVersionAndAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
 	var attestationList []models.Attestation
-	err := a.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersion).Find(&attestationList).Error
+	err := a.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersion).Find(&attestationList).Error
 	if err != nil {
 		return attestationList, err
 	}
 	return attestationList, nil
 }
 
-func (a *attestationRepository) Create(db *gorm.DB, attestation *models.Attestation) error {
-	return a.db.Clauses(clause.OnConflict{
+func (a *attestationRepository) Create(ctx context.Context, tx *gorm.DB, attestation *models.Attestation) error {
+	return a.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "predicate_type"},
 			{Name: "asset_version_name"},

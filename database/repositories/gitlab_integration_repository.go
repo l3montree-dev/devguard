@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -35,9 +37,9 @@ func NewGitLabIntegrationRepository(db *gorm.DB) *gitlabIntegrationRepository {
 	}
 }
 
-func (r *gitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GitLabIntegration, error) {
+func (r *gitlabIntegrationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.GitLabIntegration, error) {
 	var integrations []models.GitLabIntegration
-	if err := r.db.Find(&integrations, "orgID = ?", orgID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Find(&integrations, "orgID = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return integrations, nil
@@ -53,8 +55,15 @@ func NewGitlabOauth2TokenRepository(db *gorm.DB) *gitlabOauth2TokenRepository {
 	}
 }
 
-func (r *gitlabOauth2TokenRepository) Save(tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
-	if err := r.db.Clauses(clause.OnConflict{
+func (r *gitlabOauth2TokenRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
+	}
+	return r.db.WithContext(ctx)
+}
+
+func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
+	if err := r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
 		UpdateAll: true,
 	}).Create(token).Error; err != nil {
@@ -63,8 +72,8 @@ func (r *gitlabOauth2TokenRepository) Save(tx *gorm.DB, token ...*models.GitLabO
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) Upsert(tx *gorm.DB, token *models.GitLabOauth2Token) error {
-	if err := r.db.Clauses(clause.OnConflict{
+func (r *gitlabOauth2TokenRepository) Upsert(ctx context.Context, tx *gorm.DB, token *models.GitLabOauth2Token) error {
+	if err := r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(token).Error; err != nil {
 		return err
@@ -72,35 +81,35 @@ func (r *gitlabOauth2TokenRepository) Upsert(tx *gorm.DB, token *models.GitLabOa
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(userID string, providerID string) (*models.GitLabOauth2Token, error) {
+func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(ctx context.Context, tx *gorm.DB, userID string, providerID string) (*models.GitLabOauth2Token, error) {
 	var token models.GitLabOauth2Token
-	if err := r.db.Where("user_id = ? AND provider_id = ?", userID, providerID).First(&token).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("user_id = ? AND provider_id = ?", userID, providerID).First(&token).Error; err != nil {
 		return nil, err
 	}
 	return &token, nil
 }
 
-func (r *gitlabOauth2TokenRepository) FindByUserID(userID string) ([]models.GitLabOauth2Token, error) {
+func (r *gitlabOauth2TokenRepository) FindByUserID(ctx context.Context, tx *gorm.DB, userID string) ([]models.GitLabOauth2Token, error) {
 	var tokens []models.GitLabOauth2Token
-	if err := r.db.Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
 		return nil, err
 	}
 	return tokens, nil
 }
 
-func (r *gitlabOauth2TokenRepository) Delete(tx *gorm.DB, tokens []models.GitLabOauth2Token) error {
-	if err := r.db.Delete(tokens).Error; err != nil {
+func (r *gitlabOauth2TokenRepository) Delete(ctx context.Context, tx *gorm.DB, tokens []models.GitLabOauth2Token) error {
+	if err := r.GetDB(ctx, tx).Delete(tokens).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(userID string, providerID string) error {
-	return r.db.Where("user_id = ? AND provider_id = ?", userID, providerID).Delete(&models.GitLabOauth2Token{}).Error
+func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(ctx context.Context, tx *gorm.DB, userID string, providerID string) error {
+	return r.GetDB(ctx, tx).Where("user_id = ? AND provider_id = ?", userID, providerID).Delete(&models.GitLabOauth2Token{}).Error
 }
 
-func (r *gitlabOauth2TokenRepository) CreateIfNotExists(tokens []*models.GitLabOauth2Token) error {
-	return r.db.Clauses(clause.OnConflict{
+func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx *gorm.DB, tokens []*models.GitLabOauth2Token) error {
+	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		DoNothing: true,
 		Columns: []clause.Column{
 			clause.Column{
