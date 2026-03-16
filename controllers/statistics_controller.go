@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,20 +13,23 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
 
 type StatisticsController struct {
-	statisticsService      shared.StatisticsService
-	statisticsRepository   shared.StatisticsRepository
-	assetVersionRepository shared.AssetVersionRepository
+	statisticsService             shared.StatisticsService
+	statisticsRepository          shared.StatisticsRepository
+	assetVersionRepository        shared.AssetVersionRepository
+	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
 }
 
-func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetVersionRepository shared.AssetVersionRepository) *StatisticsController {
+func NewStatisticsController(statisticsService shared.StatisticsService, statisticsRepository shared.StatisticsRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository) *StatisticsController {
 	return &StatisticsController{
-		statisticsService:      statisticsService,
-		statisticsRepository:   statisticsRepository,
-		assetVersionRepository: assetVersionRepository,
+		statisticsService:             statisticsService,
+		statisticsRepository:          statisticsRepository,
+		assetVersionRepository:        assetVersionRepository,
+		artifactRiskHistoryRepository: artifactRiskHistoryRepository,
 	}
 }
 
@@ -232,4 +236,152 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
 		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
 	})
+}
+
+// @Summary Get organization statistics overview
+// @Description Returns aggregated security statistics for an organization, including vulnerability distribution, top vulnerable projects/assets/artifacts, most used components, common CVEs, risk history, remediation metrics, and ecosystem usage. All queries are executed in parallel.
+// @Tags Organizations
+// @Produce json
+// @Param organization path string true "Organization slug"
+// @Param orgComponentsLimit query int false "Max number of top vulnerable projects/assets/artifacts to return (default: 5)"
+// @Param topCVEsLimit query int false "Max number of top CVEs to return (default: 5)"
+// @Param topComponentsLimit query int false "Max number of top components to return (default: 5)"
+// @Param topEcosystemsLimit query int false "Max number of top ecosystems to return (default: 5)"
+// @Success 200 {object} dtos.OrgOverview
+// @Router /organizations/{organization}/stats/vuln-statistics/ [get]
+func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+
+	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
+
+	now := time.Now()
+	reqCtx := ctx.Request().Context()
+
+	res := utils.Concurrently(
+		func() (any, error) { // 0: distribution
+			return c.statisticsRepository.VulnClassificationByOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 1: structure
+			return c.statisticsRepository.GetOrgStructureDistribution(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 2: projects
+			return c.statisticsRepository.GetMostVulnerableProjectsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+		},
+		func() (any, error) { // 3: assets
+			return c.statisticsRepository.GetMostVulnerableAssetsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+		},
+		func() (any, error) { // 4: artifacts
+			return c.statisticsRepository.GetMostVulnerableArtifactsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+		},
+		func() (any, error) { // 5: topComponents
+			return c.statisticsRepository.GetMostUsedComponentsInOrg(reqCtx, nil, org.ID, topComponentsLimit)
+		},
+		func() (any, error) { // 6: topCVEs
+			return c.statisticsRepository.GetMostCommonCVEsInOrg(reqCtx, nil, org.ID, topCVEsLimit)
+		},
+		func() (any, error) { // 7: vulnEventAverages
+			return c.statisticsRepository.GetWeeklyAveragePerVulnEventType(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 8: riskHistory
+			return c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(reqCtx, nil, org.ID, now.Add(-30*time.Hour*24), now)
+		},
+		func() (any, error) { // 9: openCodeRiskAverage
+			return c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 10: openVulnAverage
+			return c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 11: topEcosystems
+			return c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID, topEcosystemsLimit)
+		},
+		func() (any, error) { // 12: maliciousPackages
+			return c.statisticsRepository.FindMaliciousPackagesInOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 13: averageAge
+			return c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 14: averageRemediations
+			return c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(reqCtx, nil, org.ID)
+		},
+		func() (any, error) { // 15: remediationTypeDistributionRows
+			return c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(reqCtx, nil, org.ID)
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get org statistics", "errors", res.Errors())
+		return echo.NewHTTPError(500, "could not get org statistics")
+	}
+
+	vulnEventAverageDistribution := dtos.AverageVulnEventsPerWeek{}
+	for _, average := range res.GetValue(7).([]dtos.VulnEventAverage) {
+		switch average.VulnEventType {
+		case dtos.EventTypeDetected:
+			vulnEventAverageDistribution.AverageDetectedEvents = average.Average
+		case dtos.EventTypeAccepted:
+			vulnEventAverageDistribution.AverageAcceptedEvents = average.Average
+		case dtos.EventTypeFalsePositive:
+			vulnEventAverageDistribution.AverageFalsePositiveEvents = average.Average
+		case dtos.EventTypeFixed:
+			vulnEventAverageDistribution.AverageFixedEvents = average.Average
+		case dtos.EventTypeReopened:
+			vulnEventAverageDistribution.AverageReopenedEvents = average.Average
+		}
+	}
+
+	remediationTypeDistribution := dtos.RemediationTypeDistribution{}
+	for _, row := range res.GetValue(15).([]dtos.RemediationTypeDistributionRow) {
+		switch row.Type {
+		case string(dtos.EventTypeAccepted):
+			remediationTypeDistribution.AcceptedPercentage = row.Percentage
+		case string(dtos.EventTypeFixed):
+			remediationTypeDistribution.FixedPercentage = row.Percentage
+		case string(dtos.EventTypeFalsePositive):
+			remediationTypeDistribution.FalsePositivePercentage = row.Percentage
+		}
+	}
+
+	orgStatistics := dtos.OrgOverview{
+		VulnEventAverage:               vulnEventAverageDistribution,
+		VulnDistribution:               res.GetValue(0).(dtos.Distribution),
+		OrgStructure:                   res.GetValue(1).(dtos.OrgStructureDistribution),
+		TopProjects:                    res.GetValue(2).([]dtos.VulnDistributionInStructure),
+		TopAssets:                      res.GetValue(3).([]dtos.VulnDistributionInStructure),
+		TopArtifacts:                   res.GetValue(4).([]dtos.VulnDistributionInStructure),
+		TopComponents:                  res.GetValue(5).([]dtos.ComponentUsageAcrossOrg),
+		TopCVEs:                        res.GetValue(6).([]dtos.CVEOccurrencesAcrossOrg),
+		OrgRiskHistory:                 res.GetValue(8).([]dtos.OrgRiskHistory),
+		AverageOpenCodeRisksPerProject: res.GetValue(9).(float32),
+		ProjectOpenVulnAverage:         res.GetValue(10).(dtos.ProjectVulnCountAverageBySeverity),
+		TopEcosystems:                  res.GetValue(11).([]dtos.EcosystemUsage),
+		MaliciousPackages:              res.GetValue(12).([]dtos.MaliciousPackageInOrg),
+		AverageAgeOfDependencies:       res.GetValue(13).(time.Duration),
+		AverageRemediationTimes:        res.GetValue(14).(dtos.AverageRemediationTimes),
+		RemediationTypeDistribution:    remediationTypeDistribution,
+	}
+
+	return ctx.JSON(200, orgStatistics)
+}
+
+func evaluateOrgStatisticsParams(ctx shared.Context) (orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit int) {
+	// currently we use the same default value for all query params, if we want to specify the default for each param we can do that with a map
+	defaultValue := 5
+	queryParams := []string{"orgComponentsLimit", "topCVEsLimit", "topComponentsLimit", "topEcosystemsLimit"}
+	queryValues := []int{}
+	for _, paramName := range queryParams {
+		if ctx.QueryParam(paramName) != "" {
+			limit, err := strconv.Atoi(ctx.QueryParam(paramName))
+			if err == nil {
+				queryValues = append(queryValues, limit)
+			} else {
+				slog.Warn("invalid value for query param detected, using default value", "param", paramName)
+				queryValues = append(queryValues, defaultValue)
+			}
+		} else {
+			// use default value
+			queryValues = append(queryValues, defaultValue)
+		}
+
+	}
+	return queryValues[0], queryValues[1], queryValues[2], queryValues[3]
 }
