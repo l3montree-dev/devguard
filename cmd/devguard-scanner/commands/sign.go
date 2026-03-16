@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
@@ -28,6 +29,15 @@ import (
 	cosignsign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/spf13/cobra"
 )
+
+func signImage(ko cosignoptions.KeyOpts, regOpts cosignoptions.RegistryOptions, imageRef string) error {
+	return cosignsign.SignCmd(
+		&cosignoptions.RootOptions{Timeout: 3 * time.Minute},
+		ko,
+		cosignoptions.SignOptions{TlogUpload: false, Upload: true, Registry: regOpts},
+		[]string{imageRef},
+	)
+}
 
 func signCmd(cmd *cobra.Command, args []string) error {
 	fileOrImageName := args[0]
@@ -59,13 +69,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 
 	if _, err := os.Stat(fileOrImageName); os.IsNotExist(err) {
 		// it is an image — use cosign library directly (no CLI binary needed)
-		err = cosignsign.SignCmd(
-			&cosignoptions.RootOptions{},
-			ko,
-			cosignoptions.SignOptions{TlogUpload: false, Upload: true},
-			[]string{fileOrImageName},
-		)
-		if err != nil {
+		if err := signImage(ko, cosignoptions.RegistryOptions{}, fileOrImageName); err != nil {
 			slog.Error("could not sign image", "err", err)
 			return err
 		}
