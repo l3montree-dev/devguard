@@ -33,7 +33,7 @@ func ExtractAttestationPayload(content string) (any, error) {
 	// check if predicate and predicateType are in the map
 	if predicate, ok := m["predicate"]; ok {
 		return predicate, nil
-	} else if m["payload"] != nil && m["signature"] != nil {
+	} else if m["payload"] != nil && (m["signature"] != nil || m["signatures"] != nil || m["payloadType"] != nil) {
 		// it is a dead simple signing envelope - extract the payload
 		var envelope dtos.DeadSimpleSigningEnvelope
 		if err := json.Unmarshal([]byte(content), &envelope); err != nil {
