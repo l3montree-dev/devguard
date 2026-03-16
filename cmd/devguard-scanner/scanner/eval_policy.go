@@ -119,10 +119,17 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 	}
 
 	var results []sarif.Result
+	seen := make(map[string]bool)
+	addResult := func(r sarif.Result) {
+		key := string(r.Kind) + "|" + r.Message.Text
+		if !seen[key] {
+			seen[key] = true
+			results = append(results, r)
+		}
+	}
 	for _, evaluation := range evaluations {
 		if evaluation.Compliant != nil && *evaluation.Compliant {
-			// create a pass result
-			results = append(results, sarif.Result{
+			addResult(sarif.Result{
 				Kind:   sarif.ResultKindPass,
 				RuleID: &ruleID,
 				Message: sarif.Message{
@@ -141,7 +148,7 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 			continue
 		}
 		for _, violation := range evaluation.Violations {
-			results = append(results, sarif.Result{
+			addResult(sarif.Result{
 				Kind:   sarif.ResultKindFail,
 				RuleID: &ruleID,
 				Message: sarif.Message{
