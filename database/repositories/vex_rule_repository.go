@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -35,34 +37,34 @@ func NewVEXRuleRepository(db *gorm.DB) *vexRuleRepository {
 
 var _ shared.VEXRuleRepository = (*vexRuleRepository)(nil)
 
-func (r *vexRuleRepository) GetDB(db *gorm.DB) *gorm.DB {
-	if db != nil {
-		return db
+func (r *vexRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
 	}
-	return r.db
+	return r.db.WithContext(ctx)
 }
 
-func (r *vexRuleRepository) Begin() *gorm.DB {
-	return r.db.Begin()
+func (r *vexRuleRepository) Begin(ctx context.Context) shared.DB {
+	return r.GetDB(ctx, nil).Begin()
 }
 
-func (r *vexRuleRepository) FindByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
+func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 
-func (r *vexRuleRepository) FindByAssetVersionAndCVE(db *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
+func (r *vexRuleRepository) FindByAssetVersionAndCVE(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(db).Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 
-func (r *vexRuleRepository) FindByAssetVersionPaged(db *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+func (r *vexRuleRepository) FindByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
 	var rules []models.VEXRule
 	var total int64
 
-	query := r.GetDB(db).Model(&models.VEXRule{}).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+	query := r.GetDB(ctx, tx).Model(&models.VEXRule{}).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
 
 	// Apply search filter
 	if search != "" {
@@ -99,47 +101,47 @@ func (r *vexRuleRepository) FindByAssetVersionPaged(db *gorm.DB, assetID uuid.UU
 	return shared.NewPaged(pageInfo, total, rules), nil
 }
 
-func (r *vexRuleRepository) FindByID(db *gorm.DB, id string) (models.VEXRule, error) {
+func (r *vexRuleRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.VEXRule, error) {
 	var rule models.VEXRule
-	err := r.GetDB(db).Where("id = ?", id).First(&rule).Error
+	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&rule).Error
 	return rule, err
 }
 
-func (r *vexRuleRepository) Create(db *gorm.DB, rule *models.VEXRule) error {
+func (r *vexRuleRepository) Create(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
 	// Ensure the ID is calculated
 	rule.EnsureID()
-	return r.GetDB(db).Create(rule).Error
+	return r.GetDB(ctx, tx).Create(rule).Error
 }
 
-func (r *vexRuleRepository) Upsert(db *gorm.DB, rule *models.VEXRule) error {
+func (r *vexRuleRepository) Upsert(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
 	// Ensure the ID is calculated
 	rule.EnsureID()
-	return r.GetDB(db).Clauses(clause.OnConflict{
+	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(rule).Error
 }
 
-func (r *vexRuleRepository) Update(db *gorm.DB, rule *models.VEXRule) error {
+func (r *vexRuleRepository) Update(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
 	// Recalculate ID if path pattern changed
 	rule.EnsureID()
-	return r.GetDB(db).Save(rule).Error
+	return r.GetDB(ctx, tx).Save(rule).Error
 }
 
-func (r *vexRuleRepository) Delete(db *gorm.DB, rule models.VEXRule) error {
-	return r.GetDB(db).Delete(&rule).Error
+func (r *vexRuleRepository) Delete(ctx context.Context, tx *gorm.DB, rule models.VEXRule) error {
+	return r.GetDB(ctx, tx).Delete(&rule).Error
 }
 
-func (r *vexRuleRepository) DeleteByAssetVersion(db *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
-	return r.GetDB(db).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.VEXRule{}).Error
+func (r *vexRuleRepository) DeleteByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
+	return r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.VEXRule{}).Error
 }
 
-func (r *vexRuleRepository) FindByAssetAndVexSource(db *gorm.DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error) {
+func (r *vexRuleRepository) FindByAssetAndVexSource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(db).Where("asset_id = ? AND vex_source = ?", assetID, vexSource).Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND vex_source = ?", assetID, vexSource).Find(&rules).Error
 	return rules, err
 }
 
-func (r *vexRuleRepository) UpsertBatch(db *gorm.DB, rules []models.VEXRule) error {
+func (r *vexRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules []models.VEXRule) error {
 	if len(rules) == 0 {
 		return nil
 	}
@@ -147,17 +149,17 @@ func (r *vexRuleRepository) UpsertBatch(db *gorm.DB, rules []models.VEXRule) err
 	for i := range rules {
 		rules[i].EnsureID()
 	}
-	return r.GetDB(db).Clauses(clause.OnConflict{
+	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(&rules).Error
 }
 
-func (r *vexRuleRepository) DeleteBatch(db *gorm.DB, rules []models.VEXRule) error {
+func (r *vexRuleRepository) DeleteBatch(ctx context.Context, tx *gorm.DB, rules []models.VEXRule) error {
 	if len(rules) == 0 {
 		return nil
 	}
 	// Delete by ID
-	tx := r.GetDB(db)
+	tx = r.GetDB(ctx, tx)
 	for _, rule := range rules {
 		if err := tx.Delete(&rule).Error; err != nil {
 			return err

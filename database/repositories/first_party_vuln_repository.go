@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -21,10 +23,10 @@ func NewFirstPartyVulnerabilityRepository(db *gorm.DB) *firstPartyVulnerabilityR
 	}
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAssetVersions(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	var vulns = []models.FirstPartyVuln{}
 
-	query := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Preload("Events", func(db *gorm.DB) *gorm.DB {
+	query := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Where("asset_version_name != ? AND asset_id = ? ", assetVersionName, assetID)
 
@@ -40,10 +42,10 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAs
 
 	return vulns, nil
 }
-func (repository *firstPartyVulnerabilityRepository) ListUnfixedByAssetAndAssetVersionAndScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+func (repository *firstPartyVulnerabilityRepository) ListUnfixedByAssetAndAssetVersionAndScanner(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	var vulns = []models.FirstPartyVuln{}
 
-	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? AND state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
+	query := repository.Repository.GetDB(ctx, tx).Where("asset_version_name = ? AND asset_id = ? AND state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
 		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
@@ -57,11 +59,11 @@ func (repository *firstPartyVulnerabilityRepository) ListUnfixedByAssetAndAssetV
 	return vulns, nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+func (repository *firstPartyVulnerabilityRepository) ListByScanner(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	// tx *gorm.DB missing (or chosen not to be implemented) ?
 	var vulns = []models.FirstPartyVuln{}
 
-	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? ", assetVersionName, assetID)
+	query := repository.Repository.GetDB(ctx, tx).Where("asset_version_name = ? AND asset_id = ? ", assetVersionName, assetID)
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
 		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
@@ -75,9 +77,9 @@ func (repository *firstPartyVulnerabilityRepository) ListByScanner(assetVersionN
 	return vulns, nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
 	var firstPartyVulns = []models.FirstPartyVuln{}
-	err := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).
+	err := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).
 		Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).
 		Where("first_party_vulnerabilities.asset_id = ?", assetID).
 		Find(&firstPartyVulns).Error
@@ -87,12 +89,12 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(tx *gorm.
 	return firstPartyVulns, nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
+func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
 
 	var count int64
 	var firstPartyVulns = []models.FirstPartyVuln{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
+	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
@@ -116,9 +118,9 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx *
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
 }
 
-func (repository firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVuln, error) {
+func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx *gorm.DB, id string) (models.FirstPartyVuln, error) {
 	var t models.FirstPartyVuln
-	err := repository.db.Preload("Events", func(db *gorm.DB) *gorm.DB {
+	err := repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).First(&t, "id = ?", id).Error
 
@@ -126,10 +128,10 @@ func (repository firstPartyVulnerabilityRepository) Read(id string) (models.Firs
 }
 
 // TODO: change it
-func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
+func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx context.Context, tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
 	var firstPartyVulns = []models.FirstPartyVuln{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
+	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
 	var count int64
 
@@ -147,52 +149,52 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx 
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIDPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
-	subQueryAssetIDs := repository.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
+func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIDPaged(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
+	subQueryAssetIDs := repository.Repository.GetDB(ctx, tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
-	subQuery := repository.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
-	return repository.GetFirstPartyVulnsPaged(tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
+	return repository.GetFirstPartyVulnsPaged(ctx, tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIDPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
+func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIDPaged(ctx context.Context, tx *gorm.DB, userAllowedProjectIds []string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
 
-	subQueryAssetIDs := repository.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+	subQueryAssetIDs := repository.Repository.GetDB(ctx, tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
-	subQuery1 := repository.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery1 := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
-	return repository.GetFirstPartyVulnsPaged(tx, subQuery1, subQueryAssetIDs, pageInfo, search, filter, sort)
+	return repository.GetFirstPartyVulnsPaged(ctx, tx, subQuery1, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetOrgFromVulnID(tx *gorm.DB, firstPartyVulnID string) (models.Org, error) {
+func (repository *firstPartyVulnerabilityRepository) GetOrgFromVulnID(ctx context.Context, tx *gorm.DB, firstPartyVulnID string) (models.Org, error) {
 	var org models.Org
-	if err := repository.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join first_party_vulnerabilities f on a.id = f.asset_id where f.id = ?", firstPartyVulnID).First(&org).Error; err != nil {
+	if err := repository.GetDB(ctx, tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join first_party_vulnerabilities f on a.id = f.asset_id where f.id = ?", firstPartyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err
 	}
 	return org, nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) ApplyAndSave(tx *gorm.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) error {
+func (repository *firstPartyVulnerabilityRepository) ApplyAndSave(ctx context.Context, tx *gorm.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return repository.Transaction(func(d *gorm.DB) error {
-			_, err := repository.applyAndSave(d, firstPartyVuln, ev)
+		return repository.Transaction(ctx, func(d *gorm.DB) error {
+			_, err := repository.applyAndSave(ctx, d, firstPartyVuln, ev)
 			return err
 		})
 	}
 
-	_, err := repository.applyAndSave(tx, firstPartyVuln, ev)
+	_, err := repository.applyAndSave(ctx, tx, firstPartyVuln, ev)
 	return err
 }
 
-func (repository *firstPartyVulnerabilityRepository) applyAndSave(tx *gorm.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (repository *firstPartyVulnerabilityRepository) applyAndSave(ctx context.Context, tx *gorm.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
 	statemachine.Apply(firstPartyVuln, *ev)
 	// save the event
-	if err := repository.Save(tx, firstPartyVuln); err != nil {
+	if err := repository.Save(ctx, tx, firstPartyVuln); err != nil {
 		return models.VulnEvent{}, err
 	}
-	if err := repository.GetDB(tx).Save(ev).Error; err != nil {
+	if err := repository.GetDB(ctx, tx).Save(ev).Error; err != nil {
 		return models.VulnEvent{}, err
 	}
 	return *ev, nil

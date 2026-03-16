@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,10 +29,10 @@ func (f TestGitlabClientFactory) FromIntegration(integration models.GitLabIntegr
 	return f.GitlabClientFacade, nil
 }
 
-func (f TestGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromIntegrationUUID(_ context.Context, id uuid.UUID) (shared.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
 
-func (f TestGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromOauth2Token(_ context.Context, token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }

@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"context"
 	"net/http"
 
 	mock "github.com/stretchr/testify/mock"
@@ -38,8 +39,8 @@ func (_m *Verifier) EXPECT() *Verifier_Expecter {
 }
 
 // VerifyRequestSignature provides a mock function for the type Verifier
-func (_mock *Verifier) VerifyRequestSignature(req *http.Request) (string, string, error) {
-	ret := _mock.Called(req)
+func (_mock *Verifier) VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error) {
+	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyRequestSignature")
@@ -48,21 +49,21 @@ func (_mock *Verifier) VerifyRequestSignature(req *http.Request) (string, string
 	var r0 string
 	var r1 string
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(*http.Request) (string, string, error)); ok {
-		return returnFunc(req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) (string, string, error)); ok {
+		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(*http.Request) string); ok {
-		r0 = returnFunc(req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) string); ok {
+		r0 = returnFunc(ctx, req)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(*http.Request) string); ok {
-		r1 = returnFunc(req)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *http.Request) string); ok {
+		r1 = returnFunc(ctx, req)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	if returnFunc, ok := ret.Get(2).(func(*http.Request) error); ok {
-		r2 = returnFunc(req)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, *http.Request) error); ok {
+		r2 = returnFunc(ctx, req)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -75,19 +76,25 @@ type Verifier_VerifyRequestSignature_Call struct {
 }
 
 // VerifyRequestSignature is a helper method to define mock.On call
+//   - ctx context.Context
 //   - req *http.Request
-func (_e *Verifier_Expecter) VerifyRequestSignature(req interface{}) *Verifier_VerifyRequestSignature_Call {
-	return &Verifier_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", req)}
+func (_e *Verifier_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *Verifier_VerifyRequestSignature_Call {
+	return &Verifier_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) Run(run func(req *http.Request)) *Verifier_VerifyRequestSignature_Call {
+func (_c *Verifier_VerifyRequestSignature_Call) Run(run func(ctx context.Context, req *http.Request)) *Verifier_VerifyRequestSignature_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *http.Request
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*http.Request)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -98,7 +105,7 @@ func (_c *Verifier_VerifyRequestSignature_Call) Return(s string, s1 string, err 
 	return _c
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(req *http.Request) (string, string, error)) *Verifier_VerifyRequestSignature_Call {
+func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) (string, string, error)) *Verifier_VerifyRequestSignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

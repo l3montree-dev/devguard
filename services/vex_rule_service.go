@@ -16,6 +16,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -54,54 +55,54 @@ func NewVEXRuleService(
 	}
 }
 
-func (s *VEXRuleService) Create(tx shared.DB, rule *models.VEXRule) error {
+func (s *VEXRuleService) Create(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
 	// Ensure the ID is calculated from composite key components
 	rule.EnsureID()
-	if err := s.vexRuleRepository.Create(tx, rule); err != nil {
+	if err := s.vexRuleRepository.Create(ctx, tx, rule); err != nil {
 		return fmt.Errorf("failed to create VEX rule: %w", err)
 	}
 
 	return nil
 }
 
-func (s *VEXRuleService) Begin() shared.DB {
-	return s.vexRuleRepository.Begin()
+func (s *VEXRuleService) Begin(ctx context.Context) shared.DB {
+	return s.vexRuleRepository.Begin(ctx)
 }
 
-func (s *VEXRuleService) Update(tx shared.DB, rule *models.VEXRule) error {
+func (s *VEXRuleService) Update(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
 	rule.SetPathPattern(rule.PathPattern)
-	return s.vexRuleRepository.Update(tx, rule)
+	return s.vexRuleRepository.Update(ctx, tx, rule)
 }
 
-func (s *VEXRuleService) Delete(tx shared.DB, rule models.VEXRule) error {
-	return s.vexRuleRepository.Delete(tx, rule)
+func (s *VEXRuleService) Delete(ctx context.Context, tx shared.DB, rule models.VEXRule) error {
+	return s.vexRuleRepository.Delete(ctx, tx, rule)
 }
 
-func (s *VEXRuleService) DeleteByAssetVersion(tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
-	return s.vexRuleRepository.DeleteByAssetVersion(tx, assetID, assetVersionName)
+func (s *VEXRuleService) DeleteByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
+	return s.vexRuleRepository.DeleteByAssetVersion(ctx, tx, assetID, assetVersionName)
 }
 
-func (s *VEXRuleService) FindByAssetVersion(tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetVersion(tx, assetID, assetVersionName)
+func (s *VEXRuleService) FindByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
+	return s.vexRuleRepository.FindByAssetVersion(ctx, tx, assetID, assetVersionName)
 }
 
-func (s *VEXRuleService) FindByAssetVersionPaged(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
-	return s.vexRuleRepository.FindByAssetVersionPaged(tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
+func (s *VEXRuleService) FindByAssetVersionPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+	return s.vexRuleRepository.FindByAssetVersionPaged(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
 }
 
-func (s *VEXRuleService) FindByAssetVersionAndCVE(tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetVersionAndCVE(tx, assetID, assetVersionName, cveID)
+func (s *VEXRuleService) FindByAssetVersionAndCVE(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
+	return s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, cveID)
 }
 
-func (s *VEXRuleService) FindByAssetVersionAndVulnID(tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error) {
+func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error) {
 	// Fetch the vulnerability to get its CVEID and path
-	vuln, err := s.dependencyVulnRepository.Read(vulnID)
+	vuln, err := s.dependencyVulnRepository.Read(ctx, tx, vulnID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find vulnerability: %w", err)
 	}
 
 	// Find rules for this CVE
-	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(tx, assetID, assetVersionName, vuln.CVEID)
+	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, vuln.CVEID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,13 +119,13 @@ func (s *VEXRuleService) FindByAssetVersionAndVulnID(tx shared.DB, assetID uuid.
 	return matchingRules, nil
 }
 
-func (s *VEXRuleService) FindByID(tx shared.DB, id string) (models.VEXRule, error) {
-	return s.vexRuleRepository.FindByID(tx, id)
+func (s *VEXRuleService) FindByID(ctx context.Context, tx shared.DB, id string) (models.VEXRule, error) {
+	return s.vexRuleRepository.FindByID(ctx, tx, id)
 }
 
 // CountMatchingVulns returns the number of dependency vulnerabilities that match a VEX rule
-func (s *VEXRuleService) CountMatchingVulns(tx shared.DB, rule models.VEXRule) (int, error) {
-	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(tx, rule.AssetVersionName, rule.AssetID, nil)
+func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, rule models.VEXRule) (int, error) {
+	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, rule.AssetVersionName, rule.AssetID, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
@@ -135,7 +136,7 @@ func (s *VEXRuleService) CountMatchingVulns(tx shared.DB, rule models.VEXRule) (
 
 // CountMatchingVulnsForRules returns the number of matching vulnerabilities for each rule in a single batch query
 // Returns a map of rule ID to count
-func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models.VEXRule) (map[string]int, error) {
+func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shared.DB, rules []models.VEXRule) (map[string]int, error) {
 	if len(rules) == 0 {
 		return make(map[string]int), nil
 	}
@@ -144,7 +145,7 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(tx shared.DB, rules []models
 	assetID := rules[0].AssetID
 	assetVersionName := rules[0].AssetVersionName
 
-	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(tx, assetVersionName, assetID, nil)
+	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, assetVersionName, assetID, nil)
 
 	vulnsByRule := matchRulesToVulns(rules, vulns)
 	if err != nil {
@@ -191,16 +192,16 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	}
 }
 
-func (s *VEXRuleService) ApplyRulesToExisting(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(tx, rules, vulns, false)
+func (s *VEXRuleService) ApplyRulesToExisting(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, false)
 }
 
 // ApplyRulesToExistingForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingForce(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(tx, rules, vulns, true)
+func (s *VEXRuleService) ApplyRulesToExistingForce(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, true)
 }
 
-func (s *VEXRuleService) applyRulesToExistingInternal(tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
 	vulnsByRule := matchRulesToVulns(rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
@@ -249,11 +250,11 @@ func (s *VEXRuleService) applyRulesToExistingInternal(tx shared.DB, rules []mode
 	}
 
 	// Save all updated vulns and events in one batch
-	if err := s.dependencyVulnRepository.SaveBatchBestEffort(tx, updatedVulns); err != nil {
+	if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
 		return nil, fmt.Errorf("failed to save updated vulns: %w", err)
 	}
 
-	if err := s.vulnEventRepository.SaveBatchBestEffort(tx, allEvents); err != nil {
+	if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, allEvents); err != nil {
 		return nil, fmt.Errorf("failed to save events: %w", err)
 	}
 
@@ -271,31 +272,31 @@ func (s *VEXRuleService) applyRulesToExistingInternal(tx shared.DB, rules []mode
 // ApplyRulesToExistingVulns applies multiple VEX rules to all existing vulnerabilities
 // that match each rule's path pattern and CVE. This is more efficient than applying
 // rules one by one as it batches database queries and saves.
-func (s *VEXRuleService) ApplyRulesToExistingVulns(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
 	if len(rules) == 0 {
 		return nil, nil
 	}
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
-	return s.ApplyRulesToExisting(tx, rules, vulns)
+	return s.ApplyRulesToExisting(ctx, tx, rules, vulns)
 }
 
 // ApplyRulesToExistingVulnsForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingVulnsForce(tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) ApplyRulesToExistingVulnsForce(ctx context.Context, tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
 	if len(rules) == 0 {
 		return nil, nil
 	}
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
-	return s.ApplyRulesToExistingForce(tx, rules, vulns)
+	return s.ApplyRulesToExistingForce(ctx, tx, rules, vulns)
 }
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
@@ -307,7 +308,7 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	return false
 }
 
-func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error {
+func (s *VEXRuleService) IngestVexes(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error {
 	// Collect all rules from all VEX reports to batch process them
 	allAddedRules := make([]models.VEXRule, 0)
 
@@ -315,7 +316,7 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVers
 	enabled := !asset.ParanoidMode
 
 	for _, vexReport := range vexReports {
-		rules, err := s.parseVEXRulesInBOM(asset.ID, assetVersion.Name, vexReport)
+		rules, err := s.parseVEXRulesInBOM(ctx, asset.ID, assetVersion.Name, vexReport)
 		if err != nil {
 			return fmt.Errorf("failed to parse VEX rules from SBOM (source %s): %w", vexReport.Source, err)
 		}
@@ -323,7 +324,7 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVers
 		for i := range rules {
 			rules[i].Enabled = enabled
 		}
-		addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
+		addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, vexReport.Source, rules)
 		if err != nil {
 			return fmt.Errorf("failed to sync VEX rules from source %s: %w", vexReport.Source, err)
 		}
@@ -331,12 +332,12 @@ func (s *VEXRuleService) IngestVexes(tx shared.DB, asset models.Asset, assetVers
 	}
 
 	// Apply all enabled rules to existing vulns in a single batch
-	_, err := s.ApplyRulesToExistingVulns(tx, allAddedRules)
+	_, err := s.ApplyRulesToExistingVulns(ctx, tx, allAddedRules)
 	return err
 }
 
-func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error {
-	rules, err := s.parseVEXRulesInBOM(asset.ID, assetVersion.Name, vexReport)
+func (s *VEXRuleService) IngestVEX(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error {
+	rules, err := s.parseVEXRulesInBOM(ctx, asset.ID, assetVersion.Name, vexReport)
 	if err != nil {
 		return fmt.Errorf("failed to parse VEX rules from SBOM: %w", err)
 	}
@@ -347,17 +348,17 @@ func (s *VEXRuleService) IngestVEX(tx shared.DB, asset models.Asset, assetVersio
 		rules[i].Enabled = enabled
 	}
 
-	addedRules, _, err := s.syncVEXRulesFromSource(tx, asset.ID, vexReport.Source, rules)
+	addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, vexReport.Source, rules)
 	if err != nil {
 		return fmt.Errorf("failed to sync VEX rules from source: %w", err)
 	}
 
 	// Apply all enabled rules to existing vulns in a single batch
-	_, err = s.ApplyRulesToExistingVulns(tx, addedRules)
+	_, err = s.ApplyRulesToExistingVulns(ctx, tx, addedRules)
 	return err
 }
 
-func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName string, report *normalize.VexReport) ([]models.VEXRule, error) {
+func (s *VEXRuleService) parseVEXRulesInBOM(ctx context.Context, assetID uuid.UUID, assetVersionName string, report *normalize.VexReport) ([]models.VEXRule, error) {
 	// we are only interested in the vulnerabilities
 	bom := report.Report
 	// for creating vex rules we need to find the starting path to the components
@@ -521,9 +522,9 @@ func (s *VEXRuleService) parseVEXRulesInBOM(assetID uuid.UUID, assetVersionName 
 // SyncVEXRulesFromSource syncs VEX rules from a specific source.
 // It fetches existing rules for the given asset and vexSource, compares them with
 // the new rules, adds new ones and removes ones that no longer exist.
-func (s *VEXRuleService) syncVEXRulesFromSource(tx shared.DB, assetID uuid.UUID, vexSource string, newRules []models.VEXRule) ([]models.VEXRule, []models.VEXRule, error) {
+func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.DB, assetID uuid.UUID, vexSource string, newRules []models.VEXRule) ([]models.VEXRule, []models.VEXRule, error) {
 	// Fetch existing rules for this asset and vexSource
-	existingRules, err := s.vexRuleRepository.FindByAssetAndVexSource(tx, assetID, vexSource)
+	existingRules, err := s.vexRuleRepository.FindByAssetAndVexSource(ctx, tx, assetID, vexSource)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch existing VEX rules: %w", err)
 	}
@@ -537,7 +538,7 @@ func (s *VEXRuleService) syncVEXRulesFromSource(tx shared.DB, assetID uuid.UUID,
 
 	// Add new rules
 	if len(rulesToAdd) > 0 {
-		if err := s.vexRuleRepository.UpsertBatch(tx, rulesToAdd); err != nil {
+		if err := s.vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
 			return nil, nil, fmt.Errorf("failed to add new VEX rules: %w", err)
 		}
 		slog.Info("added new VEX rules from source",
@@ -548,7 +549,7 @@ func (s *VEXRuleService) syncVEXRulesFromSource(tx shared.DB, assetID uuid.UUID,
 
 	// Remove old rules
 	if len(rulesToRemove) > 0 {
-		if err := s.vexRuleRepository.DeleteBatch(tx, rulesToRemove); err != nil {
+		if err := s.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
 			return nil, nil, fmt.Errorf("failed to remove old VEX rules: %w", err)
 		}
 		slog.Info("removed old VEX rules from source",

@@ -112,7 +112,7 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 	configService := services.NewConfigService(db)
 	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService, pool)
 
-	err = configService.RemoveConfig("vulndb.lastIncrementalImport")
+	err = configService.RemoveConfig(context.Background(), "vulndb.lastIncrementalImport")
 	if err != nil {
 		slog.Error("could not remove last incremental import config", "err", err)
 		return err
@@ -120,7 +120,7 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 	// the import will create foreign keys we need to disable temporarily
 	vulndb.DisableForeignKeyFix = true
 	// slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(nil)
+	err = v.ImportFromDiff(context.Background(), nil)
 	vulndb.DisableForeignKeyFix = false
 	return err
 }
@@ -229,7 +229,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 					continue
 				}
 
-				vulnsInPackage, err := pc.GetVulns(parsedPurl)
+				vulnsInPackage, err := pc.GetVulns(context.Background(), parsedPurl)
 
 				cacheMu.Lock()
 				purlCache[purl] = cacheEntry{vulns: vulnsInPackage, err: err}
@@ -641,7 +641,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			var eventsToCreate []models.VulnEvent
 
 			// Load SBOM components for this asset version
-			componentDeps, err := componentRepository.LoadComponents(tx, key.AssetVersionName, key.AssetID)
+			componentDeps, err := componentRepository.LoadComponents(context.Background(), tx, key.AssetVersionName, key.AssetID)
 			if err != nil {
 				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {

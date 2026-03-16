@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -18,14 +20,14 @@ func NewCWERepository(db *gorm.DB) *cweRepository {
 	}
 }
 
-func (g *cweRepository) GetAllCWEsID() ([]string, error) {
+func (g *cweRepository) GetAllCWEsID(ctx context.Context, tx *gorm.DB) ([]string, error) {
 	var cwesID []string
 	batchSize := 10000
 	offset := 0
 
 	for {
 		var batch []string
-		err := g.db.Model(&models.CWE{}).
+		err := g.GetDB(ctx, tx).Model(&models.CWE{}).
 			Offset(offset).
 			Limit(batchSize).
 			Pluck("cwe", &batch).

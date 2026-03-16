@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -34,9 +36,9 @@ func NewExternalUserRepository(db *gorm.DB) *externalUserRepository {
 	}
 }
 
-func (r *externalUserRepository) FindByOrgID(tx *gorm.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
+func (r *externalUserRepository) FindByOrgID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
 	var users []models.ExternalUser
-	if err := r.GetDB(tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil

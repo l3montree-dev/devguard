@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -45,7 +46,7 @@ func (h *ReleaseController) List(c shared.Context) error {
 	search := c.QueryParam("search")
 	sort := shared.GetSortQuery(c)
 
-	paged, err := h.service.ListByProjectPaged(project.GetID(), pageInfo, search, filter, sort)
+	paged, err := h.service.ListByProjectPaged(c.Request().Context(), project.GetID(), pageInfo, search, filter, sort)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list releases").WithInternal(err)
 	}
@@ -74,7 +75,7 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.ReadRecursive(id)
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
@@ -111,7 +112,7 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.ReadRecursive(id)
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
@@ -148,7 +149,7 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.ReadRecursive(id)
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
@@ -185,7 +186,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.ReadRecursive(id)
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
@@ -208,7 +209,7 @@ func (h *ReleaseController) VEXXML(c shared.Context) error {
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
 func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName, orgSlug, projectSlug string, frontendURL string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseSBOM(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
+	merged, err := h.mergeReleaseSBOM(c.Request().Context(), release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +221,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 
 // buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
 func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseVEX(release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
+	merged, err := h.mergeReleaseVEX(c.Request().Context(), release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 // mergeReleaseSBOM loops over release items, resolving each item either as an artifact
 // reference (by asset ID, asset version name, or artifact name) or as a child release
 // reference with no asset fields, and guards against bugs such as nil-pointer access.
-func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
+func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
@@ -246,7 +247,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
 			child := item.ChildRelease
 			if child == nil && item.ChildReleaseID != nil {
-				rel, err := h.service.ReadRecursive(*item.ChildReleaseID)
+				rel, err := h.service.ReadRecursive(ctx, *item.ChildReleaseID)
 				if err != nil {
 					return nil, err
 				}
@@ -255,7 +256,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 			if child == nil {
 				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseSBOM(*child, orgName, orgSlug, projectSlug, frontendURL, visiting)
+			childBom, err := h.mergeReleaseSBOM(ctx, *child, orgName, orgSlug, projectSlug, frontendURL, visiting)
 			if err != nil {
 				return nil, err
 			}
@@ -269,7 +270,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		bom, err := h.assetVersionService.LoadFullSBOMGraph(models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName})
+		bom, err := h.assetVersionService.LoadFullSBOMGraph(ctx, nil, models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName})
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +291,7 @@ func (h *ReleaseController) mergeReleaseSBOM(release models.Release, orgName, or
 	return result, nil
 }
 
-func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
+func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
@@ -303,7 +304,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
 			child := item.ChildRelease
 			if child == nil && item.ChildReleaseID != nil {
-				rel, err := h.service.ReadRecursive(*item.ChildReleaseID)
+				rel, err := h.service.ReadRecursive(ctx, *item.ChildReleaseID)
 				if err != nil {
 					return nil, err
 				}
@@ -312,7 +313,7 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 			if child == nil {
 				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseVEX(*child, orgName, orgSlug, projectSlug, frontendURL, visiting)
+			childBom, err := h.mergeReleaseVEX(ctx, *child, orgName, orgSlug, projectSlug, frontendURL, visiting)
 			if err != nil {
 				return nil, err
 			}
@@ -326,21 +327,21 @@ func (h *ReleaseController) mergeReleaseVEX(release models.Release, orgName, org
 			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
+		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(ctx, nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
 		if err != nil {
 			return nil, err
 		}
 
-		av, err := h.assetVersionRepository.Read(*item.AssetVersionName, *item.AssetID)
+		av, err := h.assetVersionRepository.Read(ctx, nil, *item.AssetVersionName, *item.AssetID)
 		if err != nil {
 			return nil, err
 		}
-		asset, err := h.assetRepository.Read(av.AssetID)
+		asset, err := h.assetRepository.Read(ctx, nil, av.AssetID)
 		if err != nil {
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
+		bom := h.assetVersionService.BuildVeX(ctx, nil, frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}
@@ -369,7 +370,7 @@ func (h *ReleaseController) Read(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	rel, err := h.service.ReadRecursive(id)
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
@@ -395,7 +396,7 @@ func (h *ReleaseController) Create(c shared.Context) error {
 	project := shared.GetProject(c)
 	model := transformer.ReleaseCreateRequestToModel(req, project.GetID())
 
-	if err := h.service.Create(&model); err != nil {
+	if err := h.service.Create(c.Request().Context(), &model); err != nil {
 		return echo.NewHTTPError(500, "could not create release").WithInternal(err)
 	}
 
@@ -424,14 +425,14 @@ func (h *ReleaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
-	rel, err := h.service.Read(id)
+	rel, err := h.service.Read(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
 	transformer.ApplyReleasePatchRequestToModel(req, &rel)
 
-	if err := h.service.Update(&rel); err != nil {
+	if err := h.service.Update(c.Request().Context(), &rel); err != nil {
 		return echo.NewHTTPError(500, "could not update release").WithInternal(err)
 	}
 
@@ -454,7 +455,7 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	if err := h.service.Delete(id); err != nil {
+	if err := h.service.Delete(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(500, "could not delete release").WithInternal(err)
 	}
 
@@ -492,7 +493,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		AssetID:          dto.AssetID,
 	}
 
-	if err := h.service.AddItem(&item); err != nil {
+	if err := h.service.AddItem(c.Request().Context(), &item); err != nil {
 		return echo.NewHTTPError(500, "could not add release item").WithInternal(err)
 	}
 
@@ -516,7 +517,7 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid item id")
 	}
 
-	if err := h.service.RemoveItem(itemID); err != nil {
+	if err := h.service.RemoveItem(c.Request().Context(), itemID); err != nil {
 		return echo.NewHTTPError(500, "could not remove release item").WithInternal(err)
 	}
 
@@ -545,7 +546,7 @@ func (h *ReleaseController) ListCandidates(c shared.Context) error {
 		releaseID = &id
 	}
 
-	artifacts, releases, err := h.service.ListCandidates(project.GetID(), releaseID)
+	artifacts, releases, err := h.service.ListCandidates(c.Request().Context(), project.GetID(), releaseID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list candidates").WithInternal(err)
 	}

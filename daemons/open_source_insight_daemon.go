@@ -1,26 +1,29 @@
 package daemons
 
 import (
+	"context"
 	"sync"
-	"time"
 
-	"github.com/l3montree-dev/devguard/monitoring"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
-func (runner *DaemonRunner) UpdateOpenSourceInsightInformation() error {
-	start := time.Now()
-	defer func() {
-		monitoring.UpdateOpenSourceInsightInformationDuration.Observe(time.Since(start).Minutes())
-	}()
+func (runner *DaemonRunner) UpdateOpenSourceInsightInformation(ctx context.Context) error {
+	ctx, span := daemonTracer.Start(ctx, "daemon.open-source-insight")
+	defer span.End()
 
-	projectsToUpdate, err := runner.componentProjectRepository.FindAllOutdatedProjects()
+	projectsToUpdate, err := runner.componentProjectRepository.FindAllOutdatedProjects(ctx, nil)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
+	span.SetAttributes(attribute.Int("projects.count", len(projectsToUpdate)))
+
 	var wg sync.WaitGroup
 	for _, project := range projectsToUpdate {
-		wg.Go(func() { runner.componentService.RefreshComponentProjectInformation(project) })
+		wg.Go(func() { runner.componentService.RefreshComponentProjectInformation(ctx, project) })
 	}
 
 	wg.Wait()

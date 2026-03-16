@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,41 +37,41 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
-func (g *gormPatRepository) MarkAsLastUsedNow(fingerprint string) error {
-	return g.db.Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
+func (g *gormPatRepository) MarkAsLastUsedNow(ctx context.Context, tx *gorm.DB, fingerprint string) error {
+	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
 }
 
-func (g *gormPatRepository) DeleteByFingerprint(fingerprint string) error {
-	return g.db.Where("fingerprint = ?", fingerprint).Delete(&models.PAT{}).Error
+func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) error {
+	return g.GetDB(ctx, tx).Where("fingerprint = ?", fingerprint).Delete(&models.PAT{}).Error
 }
 
-func (g *gormPatRepository) ReadByToken(token string) (models.PAT, error) {
+func (g *gormPatRepository) ReadByToken(ctx context.Context, tx *gorm.DB, token string) (models.PAT, error) {
 	var t models.PAT
 	// make sure to hash the token before querying
-	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
+	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
 	return t, err
 }
 
-func (g *gormPatRepository) ListByUserID(userID string) ([]models.PAT, error) {
+func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userID string) ([]models.PAT, error) {
 	var pats []models.PAT
-	err := g.db.Where("user_id = ?", userID).Find(&pats).Error
+	err := g.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&pats).Error
 	return pats, err
 }
 
-func (g *gormPatRepository) GetUserIDByToken(token string) (string, error) {
+func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, token string) (string, error) {
 	var t models.PAT
-	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
+	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
 	return t.UserID.String(), err
 }
 
-func (g *gormPatRepository) GetByFingerprint(fingerprint string) (models.PAT, error) {
+func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {
 	var t models.PAT
-	err := g.db.First(&t, "fingerprint = ?", fingerprint).Error
+	err := g.GetDB(ctx, tx).First(&t, "fingerprint = ?", fingerprint).Error
 	return t, err
 }
 
-func (g *gormPatRepository) FindByUserIDs(userIDs []uuid.UUID) ([]models.PAT, error) {
+func (g *gormPatRepository) FindByUserIDs(ctx context.Context, tx *gorm.DB, userIDs []uuid.UUID) ([]models.PAT, error) {
 	var pats []models.PAT
-	err := g.db.Where("user_id IN (?)", userIDs).Find(&pats).Error
+	err := g.GetDB(ctx, tx).Where("user_id IN (?)", userIDs).Find(&pats).Error
 	return pats, err
 }

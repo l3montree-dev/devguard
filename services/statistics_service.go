@@ -1,7 +1,10 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"math"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type statisticsService struct {
@@ -17,6 +21,8 @@ type statisticsService struct {
 	dependencyVulnRepository      shared.DependencyVulnRepository
 	assetVersionRepository        shared.AssetVersionRepository
 }
+
+var _ shared.StatisticsService = (*statisticsService)(nil)
 
 func NewStatisticsService(statisticsRepository shared.StatisticsRepository, assetRiskHistoryRepository shared.ArtifactRiskHistoryRepository, dependencyVulnRepository shared.DependencyVulnRepository, assetVersionRepository shared.AssetVersionRepository) *statisticsService {
 	return &statisticsService{
@@ -27,8 +33,8 @@ func NewStatisticsService(statisticsRepository shared.StatisticsRepository, asse
 	}
 }
 
-func (s *statisticsService) GetComponentRisk(artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, artifactName, assetVersionName, assetID)
+func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, nil, artifactName, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +89,8 @@ func (s *statisticsService) GetComponentRisk(artifactName *string, assetVersionN
 	return distributionPerComponent, nil
 }
 
-func (s *statisticsService) GetArtifactRiskHistory(artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	return s.artifactRiskHistoryRepository.GetRiskHistory(artifactName, assetVersionName, assetID, start, end)
+func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
 }
 
 // project-level aggregation via project_risk_history has been removed.
@@ -92,7 +98,7 @@ func (s *statisticsService) GetArtifactRiskHistory(artifactName *string, assetVe
 // That behavior was intentionally removed to focus statistics on artifact histories only.
 // If project-level aggregation is required in future, reintroduce with a new storage model.
 
-func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
+func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past
@@ -104,7 +110,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(&artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -220,7 +226,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 			},
 		}
 
-		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(&result)
+		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, nil, &result)
 		if err != nil {
 			return err
 		}
@@ -228,7 +234,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
-	err := s.assetVersionRepository.GetDB(nil).Save(artifact).Error
+	err := s.assetVersionRepository.GetDB(ctx, nil).Save(artifact).Error
 	if err != nil {
 		return err
 	}
@@ -236,102 +242,20 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(artifact *models.Artif
 	return nil
 }
 
-func (s *statisticsService) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
+func (s *statisticsService) GetProjectRiskHistory(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
 	// project-level risk history storage was removed; return empty result for compatibility.
 	return []models.ProjectRiskHistory{}, nil
 }
 
 // GetReleaseRiskHistory aggregates artifact risk histories for all artifacts included in the release tree
-func (s *statisticsService) GetReleaseRiskHistory(releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (s *statisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	// Use a DB-level query to collect artifact histories for all artifacts present in the release tree.
-	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(releaseID, start, end)
+	return s.artifactRiskHistoryRepository.GetRiskHistoryByRelease(ctx, nil, releaseID, start, end)
 }
 
-func (s *statisticsService) GetAverageFixingTime(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var riskIntervalStart, riskIntervalEnd float64
-	switch severity {
-	case "critical":
-		riskIntervalStart = 9
-		riskIntervalEnd = 10
-	case "high":
-		riskIntervalStart = 7
-		riskIntervalEnd = 9
-	case "medium":
-		riskIntervalStart = 4
-		riskIntervalEnd = 7
-	case "low":
-		riskIntervalStart = 0
-		riskIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTime(artifactName, assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
-}
-
-// GetAverageFixingTimeForRelease computes average fixing time across all artifacts included in the release tree
-func (s *statisticsService) GetAverageFixingTimeForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
-	var riskIntervalStart, riskIntervalEnd float64
-	switch severity {
-	case "critical":
-		riskIntervalStart = 9
-		riskIntervalEnd = 10
-	case "high":
-		riskIntervalStart = 7
-		riskIntervalEnd = 9
-	case "medium":
-		riskIntervalStart = 4
-		riskIntervalEnd = 7
-	case "low":
-		riskIntervalStart = 0
-		riskIntervalEnd = 4
-	default:
-		return 0, fmt.Errorf("invalid severity")
-	}
-
-	return s.statisticsRepository.AverageFixingTimeForRelease(releaseID, riskIntervalStart, riskIntervalEnd)
-}
-
-// GetAverageFixingTimeByCvss computes average fixing time based on CVSS severity levels
-func (s *statisticsService) GetAverageFixingTimeByCvss(artifactName *string, assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
-	var cvssIntervalStart, cvssIntervalEnd float64
-	switch severity {
-	case "critical":
-		cvssIntervalStart = 9
-		cvssIntervalEnd = 10
-	case "high":
-		cvssIntervalStart = 7
-		cvssIntervalEnd = 9
-	case "medium":
-		cvssIntervalStart = 4
-		cvssIntervalEnd = 7
-	case "low":
-		cvssIntervalStart = 0
-		cvssIntervalEnd = 4
-	}
-
-	return s.statisticsRepository.AverageFixingTimeByCvss(artifactName, assetVersionName, assetID, cvssIntervalStart, cvssIntervalEnd)
-}
-
-// GetAverageFixingTimeByCvssForRelease computes average fixing time across all artifacts included in the release tree based on CVSS
-func (s *statisticsService) GetAverageFixingTimeByCvssForRelease(releaseID uuid.UUID, severity string) (time.Duration, error) {
-	var cvssIntervalStart, cvssIntervalEnd float64
-	switch severity {
-	case "critical":
-		cvssIntervalStart = 9
-		cvssIntervalEnd = 10
-	case "high":
-		cvssIntervalStart = 7
-		cvssIntervalEnd = 9
-	case "medium":
-		cvssIntervalStart = 4
-		cvssIntervalEnd = 7
-	case "low":
-		cvssIntervalStart = 0
-		cvssIntervalEnd = 4
-	default:
-		return 0, fmt.Errorf("invalid severity")
-	}
-
-	return s.statisticsRepository.AverageFixingTimeByCvssForRelease(releaseID, cvssIntervalStart, cvssIntervalEnd)
+// GetRemediationTimeAveragesForRelease computes all risk/CVSS average fixing times for a release tree in one query
+func (s *statisticsService) GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+	return s.statisticsRepository.AverageRemediationTimesForRelease(ctx, nil, releaseID)
 }
 
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
@@ -420,4 +344,52 @@ func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low
 		}
 	}
 	return
+}
+
+// calculate the most popular component ecosystems in org and return up to limit entries sorted by total count
+func (s *statisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error) {
+	if limit <= 0 {
+		return []dtos.EcosystemUsage{}, nil
+	}
+
+	distribution, err := s.statisticsRepository.GetComponentDistributionInOrg(ctx, nil, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := 0
+	amountPerEcosystem := make(map[string]int)
+	// map each ecosystem to its total count by building the sum over the purl.type property
+	for _, component := range distribution {
+		purl, err := packageurl.FromString(component.DependencyID)
+		if err != nil {
+			continue
+		}
+		amountPerEcosystem[purl.Type] += component.Count
+		total += component.Count
+	}
+
+	//
+	ecosystemUsage := []dtos.EcosystemUsage{}
+	for ecosystem, count := range amountPerEcosystem {
+		var relativeCount float32 = 0
+		// do not divide by zero
+		if total != 0 {
+			relativeCount = float32(count) / float32(total)
+		}
+		ecosystemUsage = append(ecosystemUsage, dtos.EcosystemUsage{
+			Ecosystem:      ecosystem,
+			TotalCount:     count,
+			RelativeAmount: relativeCount,
+		})
+	}
+
+	// sort slice by totalCount to determine the top ecosystems
+	slices.SortFunc(ecosystemUsage, func(ecosystem1, ecosystem2 dtos.EcosystemUsage) int {
+		return ecosystem2.TotalCount - ecosystem1.TotalCount
+	})
+
+	// if limit is smaller than the length of all ecosystems then use the limit otherwise return the whole slice
+	sliceUpperBounds := int(math.Min(float64(len(ecosystemUsage)), float64(limit)))
+	return ecosystemUsage[:sliceUpperBounds], nil
 }

@@ -29,5 +29,9 @@
     "git.ignoredRepositories": [
         "malicious-packages"
     ],
-    "go.testTimeout": "300s"
+    "go.testTimeout": "300s",
+    "semgrep.scan.configuration": [
+        "semgrep.yml"
+    ],
+    "semgrep.scan.onlyGitDirty": false
 }

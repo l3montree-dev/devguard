@@ -392,6 +392,7 @@ func TestBuildVEX(t *testing.T) {
 			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 		})
+		creationTime := time.Now()
 		vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(f.DB, asset.ID, assetVersion.Name, artifactName)
 		t.Run("build Vex with everything set as intended", func(t *testing.T) {
 			//setup function call
@@ -440,8 +441,9 @@ func TestBuildVEX(t *testing.T) {
 			responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 			assert.Nil(t, err)
 			//test if the first responded timestamp is calculated about right
-			assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
-			assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
+			const tolerance = 5 * time.Second
+			assert.True(t, responseTime1.Before(creationTime.Add(-7*time.Minute+tolerance)) && responseTime1.After(creationTime.Add(-7*time.Minute-tolerance)))
+			assert.True(t, responseTime2.Before(creationTime.Add(-1*time.Minute+tolerance)) && responseTime2.After(creationTime.Add(-1*time.Minute-tolerance)))
 			//last updated should be the same as first responded when only 1 updateEvent happens
 			assert.Equal(t, axiosVuln.Analysis.LastUpdated, (*axiosVuln.Properties)[0].Value)
 		})

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -133,7 +134,7 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 // that returns the given rules for any FindByAssetVersion call.
 func buildVeXTestService(t *testing.T, rules []models.VEXRule) *assetVersionService {
 	vexRuleService := mocks.NewVEXRuleService(t)
-	vexRuleService.On("FindByAssetVersion", mock.Anything, mock.Anything, mock.Anything).Return(rules, nil)
+	vexRuleService.On("FindByAssetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(rules, nil)
 	return &assetVersionService{vexRuleService: vexRuleService}
 }
 
@@ -193,7 +194,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
@@ -271,7 +272,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", organizationName, "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
@@ -338,7 +339,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
@@ -410,7 +411,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
@@ -482,7 +483,7 @@ func TestBuildVeX(t *testing.T) {
 			},
 		}
 
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.Vulnerabilities)
@@ -547,7 +548,7 @@ func TestBuildVeX(t *testing.T) {
 		}
 
 		s := buildVeXTestService(t, rules)
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		require.NotNil(t, result)
 		require.NotNil(t, result.Vulnerabilities)
@@ -603,7 +604,7 @@ func TestBuildVeX(t *testing.T) {
 		}
 
 		s := buildVeXTestService(t, nil)
-		result := s.BuildVeX("", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
+		result := s.BuildVeX(context.Background(), nil, "", "test-org", "", "", asset, assetVersion, "test-artifact", dependencyVulns).ToCycloneDX(normalize.BOMMetadata{})
 
 		require.NotNil(t, result)
 		require.NotNil(t, result.Vulnerabilities)
