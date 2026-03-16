@@ -166,7 +166,7 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 	return suite, arch, nil
 }
 
-func (resolver *DebianResolver) ParseVersionConstraint(spec string) (rangeType string, baseVersion string) {
+func (d *DebianResolver) ParseVersionConstraint(spec string) (rangeType string, baseVersion string) {
 	spec = strings.TrimSpace(spec)
 
 	var extracted string

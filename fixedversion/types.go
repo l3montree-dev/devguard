@@ -100,15 +100,3 @@ type DebianResponse struct {
 	Dependencies map[string]string // For a specific version: dependency_name -> version_constraint
 	RawMetadata  interface{}       // Store raw response if needed
 }
-
-type snapshotMRResult struct {
-	Binary string            `json:"binary"`
-	Result []snapshotVersion `json:"result"`
-}
-
-type snapshotVersion struct {
-	BinaryVersion string `json:"binary_version"`
-	Name          string `json:"name"`
-	Source        string `json:"source"`
-	Version       string `json:"version"` // source version
-}

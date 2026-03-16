@@ -14,35 +14,3 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package fixedversion
-
-import (
-	"fmt"
-	"net/http"
-
-	"github.com/package-url/packageurl-go"
-)
-
-func getCratesRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
-	var req *http.Response
-	var err error
-
-	if pkg.Version != "" {
-		req, err = httpClient.Get("https://crates.io/api/v1/crates/" + pkg.Name + "/" + pkg.Version)
-	} else {
-		req, err = httpClient.Get("https://crates.io/api/v1/crates/" + pkg.Name)
-	}
-
-	if err != nil {
-		if req != nil {
-			req.Body.Close()
-		}
-		return nil, err
-	}
-
-	if req.StatusCode != 200 {
-		req.Body.Close()
-		return nil, fmt.Errorf("failed to fetch data for %s: %s", pkg.Name, req.Status)
-	}
-	return req, nil
-
-}
