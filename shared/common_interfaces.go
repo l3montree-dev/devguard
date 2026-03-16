@@ -516,10 +516,8 @@ type ConfigService interface {
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(ctx context.Context, tx DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
 	AverageFixingTimes(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
-	// AverageFixingTimeForRelease computes average fixing time across all artifacts included in a release tree
-	AverageFixingTimeForRelease(ctx context.Context, tx DB, releaseID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
-	// CVSS-based average fixing time methods
-	AverageFixingTimeByCvssForRelease(ctx context.Context, tx DB, releaseID uuid.UUID, cvssIntervalStart, cvssIntervalEnd float64) (time.Duration, error)
+	// AverageRemediationTimesForRelease computes all risk/CVSS average fixing times for a release tree in one query
+	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx DB, assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
@@ -541,9 +539,7 @@ type StatisticsService interface {
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	// Release scoped statistics
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetAverageFixingTimeForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error)
-	// CVSS-based average fixing time methods
-	GetAverageFixingTimeByCvssForRelease(ctx context.Context, releaseID uuid.UUID, severity string) (time.Duration, error)
+	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 

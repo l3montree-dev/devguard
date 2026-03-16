@@ -41,18 +41,6 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	return ctx.JSON(200, averages)
 }
 
-func checkSeverity(severity string) error {
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return fmt.Errorf("severity query parameter is required")
-	}
-	// check the severity value
-	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
-		slog.Warn("severity query parameter must be one of critical, high, medium, low")
-		return fmt.Errorf("severity query parameter must be one of critical, high, medium, low")
-	}
-	return nil
-}
 
 func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
@@ -171,7 +159,7 @@ func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	return ctx.JSON(200, results)
 }
 
-// GetAverageReleaseFixingTime returns the average fixing time (seconds) for a release across all included artifacts
+// GetAverageReleaseFixingTime returns the remediation time averages for a release across all included artifacts
 func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
 	releaseIDParam := shared.GetParam(ctx, "releaseID")
 	releaseID, err := uuid.Parse(releaseIDParam)
@@ -179,30 +167,11 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 		return ctx.JSON(400, map[string]string{"error": "invalid release id"})
 	}
 
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		return ctx.JSON(400, map[string]string{"error": "severity query parameter is required"})
-	}
-	if err := checkSeverity(severity); err != nil {
-		return ctx.JSON(400, map[string]string{"error": err.Error()})
-	}
-
-	res := utils.Concurrently(
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeForRelease(ctx.Request().Context(), releaseID, severity)
-		},
-		func() (any, error) {
-			return c.statisticsService.GetAverageFixingTimeByCvssForRelease(ctx.Request().Context(), releaseID, severity)
-		},
-	)
-
-	if res.HasErrors() {
-		slog.Error("could not get average fixing time for release", "errors", res.Errors())
+	averages, err := c.statisticsService.GetRemediationTimeAveragesForRelease(ctx.Request().Context(), releaseID)
+	if err != nil {
+		slog.Error("could not get remediation time averages for release", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds":       res.GetValue(0).(time.Duration).Abs().Seconds(),
-		"averageFixingTimeSecondsByCvss": res.GetValue(1).(time.Duration).Abs().Seconds(),
-	})
+	return ctx.JSON(200, averages)
 }
