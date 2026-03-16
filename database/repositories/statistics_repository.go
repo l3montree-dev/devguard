@@ -522,7 +522,15 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Contex
 			 COUNT(*) filter (where d.cvss < 4) as low_cvss,
 			 COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as medium_cvss,
 			 COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as high_cvss,
-			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss
+			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical,
+			 COUNT(DISTINCT CASE WHEN d.cvss < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 4 AND d.cvss < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 7 AND d.cvss < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 9 AND d.cvss <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical_cvss
 			 FROM dependency_vulns a
 			 LEFT JOIN assets b ON a.asset_id = b.id
 			 LEFT JOIN projects c ON b.project_id = c.id
@@ -545,7 +553,15 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context,
 			 COUNT(*) filter (where d.cvss < 4) as low_cvss,
 			 COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as medium_cvss,
 			 COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as high_cvss,
-			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss
+			 COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high,
+			 COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical,
+			 COUNT(DISTINCT CASE WHEN d.cvss < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 4 AND d.cvss < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 7 AND d.cvss < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high_cvss,
+			 COUNT(DISTINCT CASE WHEN d.cvss >= 9 AND d.cvss <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical_cvss
 			 FROM dependency_vulns a
 			 LEFT JOIN assets b ON a.asset_id = b.id
 			 LEFT JOIN projects c ON b.project_id = c.id
@@ -574,7 +590,15 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 		COUNT(*) filter (where d.cvss < 4) as low_cvss,
 		COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as medium_cvss,
 		COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as high_cvss,
-		COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss
+		COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss,
+		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low,
+		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium,
+		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high,
+		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical,
+		COUNT(DISTINCT CASE WHEN d.cvss < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low_cvss,
+		COUNT(DISTINCT CASE WHEN d.cvss >= 4 AND d.cvss < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium_cvss,
+		COUNT(DISTINCT CASE WHEN d.cvss >= 7 AND d.cvss < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high_cvss,
+		COUNT(DISTINCT CASE WHEN d.cvss >= 9 AND d.cvss <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical_cvss
 	FROM
 		dependency_vulns a
 	LEFT JOIN
