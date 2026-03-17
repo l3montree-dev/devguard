@@ -136,7 +136,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		testVuln := vulns[0]
 		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
 		// only pass first vuln
-		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// TEST PRODUCT STATUS
@@ -157,6 +157,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		// TEST remediations
 		// we expect 0 remediations if only unhandled vulns are passed
 		assert.Len(t, remediations, 0)
+
+		assert.Len(t, flags, 0, "since the vulnerability is not handled as falsePositive we expect no flags")
 	})
 	t.Run("multiple different paths inside a vuln which are all handled differently should result in a correct distribution and a correct classification as accepted", func(t *testing.T) {
 		baseVuln := vulns[len(vulns)-1]
@@ -186,7 +188,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 
 		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVulns[0].AssetVersionName, testVulns[0].ComponentPurl)
 
-		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// since at least 1 path has been marked as accepted the risks is actually present and exploitable
@@ -212,6 +214,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		}
 		assert.Len(t, affected, 1)
 		assert.Equal(t, string(productID), affected[0])
+
+		assert.Len(t, flags, 0, "since the vuln should be classified as accepted we expect no false Positive flags")
 	})
 	t.Run("CVE in multiple different components each with multiple differently handled paths", func(t *testing.T) {
 		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
@@ -233,7 +237,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
@@ -246,7 +250,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
 		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
 
-		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// first test the distributions
@@ -279,11 +283,16 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			}
 		}
 
-		// now test for correct remediations (we expect 1 for artifact2 comp2 -> false positive)
-		assert.Len(t, remediations, 1)
-		assert.Equal(t, csaf.CSAFRemediationCategoryMitigation, *remediations[0].Category)
-		assert.True(t, strings.Contains(*remediations[0].Details, "marked as false positive. Justification: This is a false positive"))
-		assert.Equal(t, string(artifact2ProductID2), string(*(*remediations[0].ProductIds)[0]))
+		assert.Len(t, remediations, 0, "we do not have any vulns classified as accepted -> no remediations")
+
+		assert.Len(t, flags, 1, "since 1 vuln is classified as false Positive we expect 1 flag")
+		flag := flags[0]
+		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, *flag.MechanicalJustification)
+		assert.Len(t, flag.ProductIDs, 1)
+		assert.Equal(t, eventTime, *flag.Date)
+
+		product := flag.ProductIDs[0]
+		assert.Equal(t, artifact2ProductID2, *product)
 
 		// finally test the productStatus classifications
 		assert.Empty(t, affected)
@@ -292,6 +301,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
 
 		assert.Len(t, underInvestigation, 2)
+
 	})
 }
 
