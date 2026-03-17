@@ -810,8 +810,6 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 
 	// now we can start building the document
 	// build static parts of the document field first
-	title := fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName)
-
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
@@ -819,7 +817,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 			Name:      &orgName,
 			Namespace: utils.Ptr("https://devguard.org"),
 		},
-		Title: &title,
+		Title: GenerateDocumentTitle(assetName, cveID),
 		Lang:  utils.Ptr(gocsaf.Lang("en-US")),
 	}
 
@@ -831,7 +829,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 		},
 	}
 
-	tracking, err := generateTrackingObject(ctx, vulns, title)
+	tracking, err := generateTrackingObject(ctx, vulns, assetName, cveID)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -1104,35 +1102,53 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 }
 
 func getMostRecentJustifications(vulns []models.DependencyVuln) (*string, *dtos.MechanicalJustificationType, *time.Time) {
-	var latestEventWithJustification *models.VulnEvent
-	var latestEventWithMechanicalJustification *models.VulnEvent
+	var latestJustification *string
+	var latestMechanicalJustification *dtos.MechanicalJustificationType
 
+	var latestJustificationTimeStamp *time.Time
+	var latestMechanicalJustificationTimeStamp *time.Time
+
+	// loop over all vulns and update the 2 latest events variables by using time.Before() if justifications are present
 	for _, vuln := range vulns {
 		lastEventForVuln := vuln.Events[len(vuln.Events)-1]
 
 		// no justification for this event -> we can skip this one
 		if lastEventForVuln.Justification != nil {
 			// determine the most recent justification
-			if latestEventWithJustification == nil {
-				latestEventWithJustification = &lastEventForVuln
-			} else if latestEventWithJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
-				latestEventWithJustification = &lastEventForVuln
+			if latestJustification == nil {
+				latestJustification = lastEventForVuln.Justification
+				latestJustificationTimeStamp = &lastEventForVuln.CreatedAt
+			} else if latestJustificationTimeStamp.Before(lastEventForVuln.CreatedAt) {
+				latestJustification = lastEventForVuln.Justification
+				latestJustificationTimeStamp = &lastEventForVuln.CreatedAt
 			}
 		}
 
+		// do the exact same for mechanical justifications
 		if lastEventForVuln.MechanicalJustification != "" {
-			if latestEventWithMechanicalJustification == nil {
-				latestEventWithMechanicalJustification = &lastEventForVuln
-			} else if latestEventWithMechanicalJustification.CreatedAt.Before(lastEventForVuln.CreatedAt) {
-				latestEventWithMechanicalJustification = &lastEventForVuln
+			if latestMechanicalJustification == nil {
+				latestMechanicalJustification = &lastEventForVuln.MechanicalJustification
+				latestMechanicalJustificationTimeStamp = &lastEventForVuln.CreatedAt
+			} else if latestMechanicalJustificationTimeStamp.Before(lastEventForVuln.CreatedAt) {
+				latestMechanicalJustification = &lastEventForVuln.MechanicalJustification
+				latestMechanicalJustificationTimeStamp = &lastEventForVuln.CreatedAt
 			}
 		}
 	}
 
-	if latestEventWithJustification == nil {
-		return nil, nil, nil
+	var timeStamp *time.Time
+
+	if latestJustificationTimeStamp != nil {
+		if latestMechanicalJustification != nil && latestJustificationTimeStamp.Before(*latestMechanicalJustificationTimeStamp) {
+			timeStamp = latestMechanicalJustificationTimeStamp
+		} else {
+			timeStamp = latestJustificationTimeStamp
+		}
+	} else {
+		timeStamp = latestMechanicalJustificationTimeStamp
 	}
-	return latestEventWithJustification.Justification, &latestEventWithJustification.MechanicalJustification, &latestEventWithJustification.CreatedAt
+
+	return latestJustification, latestMechanicalJustification, timeStamp
 }
 
 func emptySliceThenNil(s *gocsaf.Products) *gocsaf.Products {
@@ -1216,7 +1232,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 }
 
 // generate the tracking object used by the document object
-func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, documentTitle string) (gocsaf.Tracking, error) {
+func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, assetName, cveID string) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
 	allEvents := make([]vulnEventWithVuln, 0)
 	for _, vuln := range vulns {
@@ -1253,7 +1269,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
-	tracking.ID = (*gocsaf.TrackingID)(&documentTitle)
+	tracking.ID = (*gocsaf.TrackingID)(GenerateDocumentTitle(assetName, cveID))
 	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
 	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
 
@@ -1374,4 +1390,8 @@ func (service csafService) GetCSAFVulnsForAsset(ctx context.Context, assetID uui
 		return vuln.CVEID
 	})
 	return allVulns, nil
+}
+
+func GenerateDocumentTitle(assetName, cveID string) *string {
+	return utils.Ptr(fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName))
 }

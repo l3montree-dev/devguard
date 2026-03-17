@@ -281,7 +281,7 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	for _, entry := range vulnsOfThatYear {
 		data.Filenames = append(data.Filenames, entryData{
 			Href:  fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)),
-			Title: fmt.Sprintf("Security advisory for vulnerability %s in asset %s", entry.CVEID, asset.Name),
+			Title: *services.GenerateDocumentTitle(asset.Name, entry.CVEID),
 		})
 	}
 

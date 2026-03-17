@@ -43,7 +43,7 @@ func TestGenerateProductTree(t *testing.T) {
 		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
 		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
 
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, vulns)
+		tree, err := generateProductTree(context.Background(), asset1.ID, mockAssetVersionRepository, mockArtifactRepository, vulns)
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
@@ -91,7 +91,7 @@ func TestGenerateProductTree(t *testing.T) {
 		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
 		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
 
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
+		tree, err := generateProductTree(context.Background(), asset1.ID, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}
@@ -136,7 +136,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		testVuln := vulns[0]
 		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
 		// only pass first vuln
-		productStatus, distributions, remediations := calculateVulnStateInformation([]models.DependencyVuln{testVuln})
+		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// TEST PRODUCT STATUS
@@ -186,7 +186,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 
 		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVulns[0].AssetVersionName, testVulns[0].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(testVulns)
+		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// since at least 1 path has been marked as accepted the risks is actually present and exploitable
@@ -246,7 +246,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
 		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(append(testVulnsArtifact1, testVulnsArtifact2...))
+		productStatus, _, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// first test the distributions
@@ -295,34 +295,57 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 	})
 }
 
-func TestGetMostRecentJustification(t *testing.T) {
+func TestGetMostRecentJustifications(t *testing.T) {
 	_, _, _, vulns := setUpVulns()
-	eventTimeLatest, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
+	eventTimeT1, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	eventTimeEarlier, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
+	eventTimeT2, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	t.Run("should return nil if no justification can be found", func(t *testing.T) {
-		justification := getMostRecentJustification(vulns)
-		assert.Nil(t, justification)
+	eventTimeT3, err := time.Parse(time.RFC3339, "2026-02-12T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+
+	t.Run("should return all nil if no justifications can be found", func(t *testing.T) {
+		justification, mechanicalJustification, timeStamp := getMostRecentJustifications(vulns)
+		assert.Nil(t, justification, timeStamp, mechanicalJustification)
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeEarlier}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
-		justification := getMostRecentJustification(vulns)
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
 		assert.Equal(t, "this information is up to date", *justification)
+		assert.Nil(t, mechanicalJustification, "since we did not provide a mechanical justification we should not find one")
+		assert.Equal(t, eventTimeT2, *timestamp)
+	})
+	t.Run("should return the latest justification and the latest mechanical justification if both are present and in different events", func(t *testing.T) {
+		vulns[0].State = dtos.VulnStateFalsePositive
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, MechanicalJustification: dtos.ComponentNotPresent, Justification: utils.Ptr("this information is outdated")})
+
+		vulns[1].State = dtos.VulnStateFalsePositive
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+
+		// latest event has no justifications
+		vulns[2].State = dtos.VulnStateFixed
+		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT3}, Type: dtos.EventTypeFixed})
+
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
+		assert.Equal(t, "this information is up to date", *justification)
+		assert.Equal(t, *mechanicalJustification, dtos.ComponentNotPresent)
+		assert.Equal(t, eventTimeT2, *timestamp, "the justification at T2 was the after the mechanical justification at T1")
 	})
 }
 
 func TestGenerateTrackingObject(t *testing.T) {
-	_, _, artifact1, vulns := setUpVulns()
+	asset, _, artifact1, vulns := setUpVulns()
 	eventTimeFalsePositives, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
@@ -366,7 +389,7 @@ func TestGenerateTrackingObject(t *testing.T) {
 			testVulnsArtifact2[i].ID = testVulnsArtifact2[i].CalculateHash()
 		}
 
-		tracking, err := generateTrackingObject(append(testVulnsArtifact1, testVulnsArtifact2...))
+		tracking, err := generateTrackingObject(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...), asset.Name, testVulnsArtifact1[0].CVEID)
 		assert.NoError(t, err)
 
 		// the current release date should be the timestamp of the latest event
