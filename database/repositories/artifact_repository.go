@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -61,14 +62,15 @@ func (r *artifactRepository) DeleteArtifact(ctx context.Context, tx *gorm.DB, as
 	if err != nil {
 		return err
 	}
+	linkedCtx := shared.CreateLinkedCtx(ctx)
+	go func() {
+		sql := CleanupOrphanedRecordsSQL
+		if err := r.GetDB(linkedCtx, nil).Exec(sql).Error; err != nil {
+			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+		}
+	}()
 
-	sql := CleanupOrphanedRecordsSQL
-	err = r.GetDB(ctx, tx).Exec(sql).Error
-	if err != nil {
-		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-	}
-
-	return err
+	return nil
 }
 
 func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID string) ([]models.Artifact, error) {

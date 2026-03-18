@@ -26,6 +26,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -691,4 +692,8 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 		return ""
 	}
 	return buf.String()
+}
+
+func CreateLinkedCtx(ctx context.Context) context.Context {
+	return trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
 }
