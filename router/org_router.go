@@ -64,6 +64,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics)
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile)
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)
 	organizationRouter.GET("/", orgController.Read)
 	organizationRouter.GET("/metrics/", orgController.Metrics)

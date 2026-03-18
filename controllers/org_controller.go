@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 
@@ -28,6 +29,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
+//go:embed default-config-files/*
+var defaultConfigFiles embed.FS
 
 type OrgController struct {
 	organizationRepository shared.OrganizationRepository
@@ -379,8 +383,50 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 
 	configContent, ok := organization.ConfigFiles[configID]
 	if !ok {
-		return ctx.NoContent(404)
+		// read the default config file from the embedded filesystem
+		data, err := defaultConfigFiles.ReadFile("default-config-files/" + configID + ".json")
+		if err != nil {
+			return ctx.NoContent(404)
+		}
+
+		var defaultContent any
+		if err := json.Unmarshal(data, &defaultContent); err != nil {
+			return echo.NewHTTPError(500, "could not parse default config file").WithInternal(err)
+		}
+
+		// save it to the organization
+		if organization.ConfigFiles == nil {
+			organization.ConfigFiles = make(map[string]any)
+		}
+		organization.ConfigFiles[configID] = defaultContent
+
+		if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
+			return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
+		}
+
+		return ctx.JSON(200, defaultContent)
 	}
+	return ctx.JSON(200, configContent)
+}
+
+func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
+	organization := shared.GetOrg(ctx)
+	configID := ctx.Param("config-file")
+
+	var configContent any
+	if err := ctx.Bind(&configContent); err != nil {
+		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	}
+
+	if organization.ConfigFiles == nil {
+		organization.ConfigFiles = make(map[string]any)
+	}
+	organization.ConfigFiles[configID] = configContent
+
+	if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
+		return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
+	}
+
 	return ctx.JSON(200, configContent)
 }
 
