@@ -63,12 +63,12 @@ func (r *artifactRepository) DeleteArtifact(ctx context.Context, tx *gorm.DB, as
 		return err
 	}
 	linkedCtx := shared.CreateLinkedCtx(ctx)
-	go func() {
+	r.FireAndForget(func() {
 		sql := CleanupOrphanedRecordsSQL
 		if err := r.GetDB(linkedCtx, nil).Exec(sql).Error; err != nil {
 			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 		}
-	}()
+	})
 
 	return nil
 }

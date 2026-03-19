@@ -695,5 +695,6 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 }
 
 func CreateLinkedCtx(ctx context.Context) context.Context {
-	return trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
+	ctxWithoutCancel := context.WithoutCancel(ctx)
+	return trace.ContextWithSpan(ctxWithoutCancel, trace.SpanFromContext(ctx))
 }
