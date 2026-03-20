@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/utils"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -37,16 +39,16 @@ func (_m *ModelWriter[ID, T, Tx]) EXPECT() *ModelWriter_Expecter[ID, T, Tx] {
 }
 
 // Activate provides a mock function for the type ModelWriter
-func (_mock *ModelWriter[ID, T, Tx]) Activate(tx Tx, id ID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ModelWriter[ID, T, Tx]) Activate(ctx context.Context, tx Tx, id ID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, ID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -59,25 +61,31 @@ type ModelWriter_Activate_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Activate(tx interface{}, id interface{}) *ModelWriter_Activate_Call[ID, T, Tx] {
-	return &ModelWriter_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", tx, id)}
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Activate(ctx interface{}, tx interface{}, id interface{}) *ModelWriter_Activate_Call[ID, T, Tx] {
+	return &ModelWriter_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *ModelWriter_Activate_Call[ID, T, Tx]) Run(run func(tx Tx, id ID)) *ModelWriter_Activate_Call[ID, T, Tx] {
+func (_c *ModelWriter_Activate_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, id ID)) *ModelWriter_Activate_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 ID
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(ID)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 ID
+		if args[2] != nil {
+			arg2 = args[2].(ID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -88,22 +96,22 @@ func (_c *ModelWriter_Activate_Call[ID, T, Tx]) Return(err error) *ModelWriter_A
 	return _c
 }
 
-func (_c *ModelWriter_Activate_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, id ID) error) *ModelWriter_Activate_Call[ID, T, Tx] {
+func (_c *ModelWriter_Activate_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, id ID) error) *ModelWriter_Activate_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ModelWriter
-func (_mock *ModelWriter[ID, T, Tx]) Create(tx Tx, t *T) error {
-	ret := _mock.Called(tx, t)
+func (_mock *ModelWriter[ID, T, Tx]) Create(ctx context.Context, tx Tx, t *T) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, *T) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, *T) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -116,25 +124,31 @@ type ModelWriter_Create_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Create(tx interface{}, t interface{}) *ModelWriter_Create_Call[ID, T, Tx] {
-	return &ModelWriter_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", tx, t)}
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Create(ctx interface{}, tx interface{}, t interface{}) *ModelWriter_Create_Call[ID, T, Tx] {
+	return &ModelWriter_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *ModelWriter_Create_Call[ID, T, Tx]) Run(run func(tx Tx, t *T)) *ModelWriter_Create_Call[ID, T, Tx] {
+func (_c *ModelWriter_Create_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, t *T)) *ModelWriter_Create_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(*T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 *T
+		if args[2] != nil {
+			arg2 = args[2].(*T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -145,22 +159,22 @@ func (_c *ModelWriter_Create_Call[ID, T, Tx]) Return(err error) *ModelWriter_Cre
 	return _c
 }
 
-func (_c *ModelWriter_Create_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, t *T) error) *ModelWriter_Create_Call[ID, T, Tx] {
+func (_c *ModelWriter_Create_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, t *T) error) *ModelWriter_Create_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ModelWriter
-func (_mock *ModelWriter[ID, T, Tx]) Delete(tx Tx, id ID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ModelWriter[ID, T, Tx]) Delete(ctx context.Context, tx Tx, id ID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, ID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, ID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -173,25 +187,31 @@ type ModelWriter_Delete_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Delete(tx interface{}, id interface{}) *ModelWriter_Delete_Call[ID, T, Tx] {
-	return &ModelWriter_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", tx, id)}
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Delete(ctx interface{}, tx interface{}, id interface{}) *ModelWriter_Delete_Call[ID, T, Tx] {
+	return &ModelWriter_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *ModelWriter_Delete_Call[ID, T, Tx]) Run(run func(tx Tx, id ID)) *ModelWriter_Delete_Call[ID, T, Tx] {
+func (_c *ModelWriter_Delete_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, id ID)) *ModelWriter_Delete_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 ID
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(ID)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 ID
+		if args[2] != nil {
+			arg2 = args[2].(ID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -202,22 +222,22 @@ func (_c *ModelWriter_Delete_Call[ID, T, Tx]) Return(err error) *ModelWriter_Del
 	return _c
 }
 
-func (_c *ModelWriter_Delete_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, id ID) error) *ModelWriter_Delete_Call[ID, T, Tx] {
+func (_c *ModelWriter_Delete_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, id ID) error) *ModelWriter_Delete_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type ModelWriter
-func (_mock *ModelWriter[ID, T, Tx]) Save(tx Tx, t *T) error {
-	ret := _mock.Called(tx, t)
+func (_mock *ModelWriter[ID, T, Tx]) Save(ctx context.Context, tx Tx, t *T) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, *T) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, *T) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -230,25 +250,31 @@ type ModelWriter_Save_Call[ID any, T utils.Tabler, Tx any] struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Save(tx interface{}, t interface{}) *ModelWriter_Save_Call[ID, T, Tx] {
-	return &ModelWriter_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", tx, t)}
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Save(ctx interface{}, tx interface{}, t interface{}) *ModelWriter_Save_Call[ID, T, Tx] {
+	return &ModelWriter_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *ModelWriter_Save_Call[ID, T, Tx]) Run(run func(tx Tx, t *T)) *ModelWriter_Save_Call[ID, T, Tx] {
+func (_c *ModelWriter_Save_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, t *T)) *ModelWriter_Save_Call[ID, T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].(*T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 *T
+		if args[2] != nil {
+			arg2 = args[2].(*T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -259,7 +285,7 @@ func (_c *ModelWriter_Save_Call[ID, T, Tx]) Return(err error) *ModelWriter_Save_
 	return _c
 }
 
-func (_c *ModelWriter_Save_Call[ID, T, Tx]) RunAndReturn(run func(tx Tx, t *T) error) *ModelWriter_Save_Call[ID, T, Tx] {
+func (_c *ModelWriter_Save_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, t *T) error) *ModelWriter_Save_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }

@@ -16,6 +16,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -62,7 +63,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&artifact2).Error)
 
 			// First run: detect risk for artifact-1 using FX-injected service
-			err := f.App.LicenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName)
+			err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName)
 			assert.NoError(t, err)
 
 			// Verify license risk exists and is associated with artifact-1
@@ -73,7 +74,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 			assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
 
 			// Second run: process same component for artifact-2
-			err = f.App.LicenseRiskService.FindLicenseRisksInComponents(assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName)
+			err = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName)
 			assert.NoError(t, err)
 
 			// Verify the license risk is now associated with both artifacts
@@ -165,7 +166,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Use FX-injected repository (now with GetByAssetID in interface)
-			risks, err := f.App.LicenseRiskRepository.GetByAssetID(nil, asset.ID)
+			risks, err := f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, risks, 1)
 
@@ -198,11 +199,11 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Use FX-injected repository (now with GetByAssetID in interface)
-			risks, err = f.App.LicenseRiskRepository.GetByAssetID(nil, asset.ID)
+			risks, err = f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, risks, 2)
 
-			risks, err = f.App.LicenseRiskRepository.GetLicenseRisksByOtherAssetVersions(nil, newAssetVersion.Name, asset.ID)
+			risks, err = f.App.LicenseRiskRepository.GetLicenseRisksByOtherAssetVersions(context.Background(), nil, newAssetVersion.Name, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, risks, 1)
 			newRisk := risks[0]

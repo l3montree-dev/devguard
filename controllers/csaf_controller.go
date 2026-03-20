@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
@@ -57,7 +58,7 @@ func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository,
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt [get]
 func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv [get]
 func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -165,8 +166,8 @@ func (controller *CSAFController) GetOpenPGPHTML(ctx shared.Context) error {
 }
 
 // returns the set of all years where new csaf versions where published
-func getAllYears(asset models.Asset, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository) ([]int, error) {
-	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+func getAllYears(ctx context.Context, asset models.Asset, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository) ([]int, error) {
+	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, asset.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +200,7 @@ func (controller *CSAFController) GetTLPWhiteEntriesHTML(ctx shared.Context) err
 	asset := shared.GetAsset(ctx)
 
 	// get all years where csaf version were published and make a directory for each of these
-	allYears, err := getAllYears(asset, controller.dependencyVulnRepository, controller.vulnEventRepository)
+	allYears, err := getAllYears(ctx.Request().Context(), asset, controller.dependencyVulnRepository, controller.vulnEventRepository)
 	if err != nil {
 		return err
 	}
@@ -249,7 +250,7 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return fmt.Errorf("invalid year format")
 	}
 
-	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -386,7 +387,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
 	}
 
-	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets()
+	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}
@@ -452,7 +453,7 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 	if fingerprint != "" {
 		metadata.PGPKeys = []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}}
 	}
-	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(org.ID)
+	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(404, "organization not found")
 	}

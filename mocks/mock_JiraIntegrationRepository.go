@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *JiraIntegrationRepository) EXPECT() *JiraIntegrationRepository_Expecte
 }
 
 // Delete provides a mock function for the type JiraIntegrationRepository
-func (_mock *JiraIntegrationRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *JiraIntegrationRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type JiraIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *JiraIntegrationRepository_Delete_Call {
-	return &JiraIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *JiraIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *JiraIntegrationRepository_Delete_Call {
+	return &JiraIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *JiraIntegrationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *JiraIntegrationRepository_Delete_Call {
+func (_c *JiraIntegrationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *JiraIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *JiraIntegrationRepository_Delete_Call) Return(err error) *JiraIntegrat
 	return _c
 }
 
-func (_c *JiraIntegrationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *JiraIntegrationRepository_Delete_Call {
+func (_c *JiraIntegrationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *JiraIntegrationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByOrganizationID provides a mock function for the type JiraIntegrationRepository
-func (_mock *JiraIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error) {
-	ret := _mock.Called(orgID)
+func (_mock *JiraIntegrationRepository) FindByOrganizationID(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.JiraIntegration, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByOrganizationID")
@@ -105,18 +113,18 @@ func (_mock *JiraIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([
 
 	var r0 []models.JiraIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.JiraIntegration, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.JiraIntegration, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.JiraIntegration); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.JiraIntegration); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.JiraIntegration)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,19 +137,31 @@ type JiraIntegrationRepository_FindByOrganizationID_Call struct {
 }
 
 // FindByOrganizationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) FindByOrganizationID(orgID interface{}) *JiraIntegrationRepository_FindByOrganizationID_Call {
-	return &JiraIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", orgID)}
+func (_e *JiraIntegrationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *JiraIntegrationRepository_FindByOrganizationID_Call {
+	return &JiraIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
-func (_c *JiraIntegrationRepository_FindByOrganizationID_Call) Run(run func(orgID uuid.UUID)) *JiraIntegrationRepository_FindByOrganizationID_Call {
+func (_c *JiraIntegrationRepository_FindByOrganizationID_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *JiraIntegrationRepository_FindByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -152,14 +172,14 @@ func (_c *JiraIntegrationRepository_FindByOrganizationID_Call) Return(jiraIntegr
 	return _c
 }
 
-func (_c *JiraIntegrationRepository_FindByOrganizationID_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.JiraIntegration, error)) *JiraIntegrationRepository_FindByOrganizationID_Call {
+func (_c *JiraIntegrationRepository_FindByOrganizationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.JiraIntegration, error)) *JiraIntegrationRepository_FindByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetClientByIntegrationID provides a mock function for the type JiraIntegrationRepository
-func (_mock *JiraIntegrationRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error) {
-	ret := _mock.Called(integrationID)
+func (_mock *JiraIntegrationRepository) GetClientByIntegrationID(ctx context.Context, tx shared.DB, integrationID uuid.UUID) (models.JiraIntegration, error) {
+	ret := _mock.Called(ctx, tx, integrationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetClientByIntegrationID")
@@ -167,16 +187,16 @@ func (_mock *JiraIntegrationRepository) GetClientByIntegrationID(integrationID u
 
 	var r0 models.JiraIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.JiraIntegration, error)); ok {
-		return returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.JiraIntegration, error)); ok {
+		return returnFunc(ctx, tx, integrationID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.JiraIntegration); ok {
-		r0 = returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.JiraIntegration); ok {
+		r0 = returnFunc(ctx, tx, integrationID)
 	} else {
 		r0 = ret.Get(0).(models.JiraIntegration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, integrationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -189,19 +209,31 @@ type JiraIntegrationRepository_GetClientByIntegrationID_Call struct {
 }
 
 // GetClientByIntegrationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - integrationID uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) GetClientByIntegrationID(integrationID interface{}) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
-	return &JiraIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", integrationID)}
+func (_e *JiraIntegrationRepository_Expecter) GetClientByIntegrationID(ctx interface{}, tx interface{}, integrationID interface{}) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
+	return &JiraIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", ctx, tx, integrationID)}
 }
 
-func (_c *JiraIntegrationRepository_GetClientByIntegrationID_Call) Run(run func(integrationID uuid.UUID)) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
+func (_c *JiraIntegrationRepository_GetClientByIntegrationID_Call) Run(run func(ctx context.Context, tx shared.DB, integrationID uuid.UUID)) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -212,14 +244,14 @@ func (_c *JiraIntegrationRepository_GetClientByIntegrationID_Call) Return(jiraIn
 	return _c
 }
 
-func (_c *JiraIntegrationRepository_GetClientByIntegrationID_Call) RunAndReturn(run func(integrationID uuid.UUID) (models.JiraIntegration, error)) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
+func (_c *JiraIntegrationRepository_GetClientByIntegrationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, integrationID uuid.UUID) (models.JiraIntegration, error)) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type JiraIntegrationRepository
-func (_mock *JiraIntegrationRepository) Read(id uuid.UUID) (models.JiraIntegration, error) {
-	ret := _mock.Called(id)
+func (_mock *JiraIntegrationRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.JiraIntegration, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -227,16 +259,16 @@ func (_mock *JiraIntegrationRepository) Read(id uuid.UUID) (models.JiraIntegrati
 
 	var r0 models.JiraIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.JiraIntegration, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.JiraIntegration, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.JiraIntegration); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.JiraIntegration); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.JiraIntegration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -249,19 +281,31 @@ type JiraIntegrationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) Read(id interface{}) *JiraIntegrationRepository_Read_Call {
-	return &JiraIntegrationRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *JiraIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *JiraIntegrationRepository_Read_Call {
+	return &JiraIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *JiraIntegrationRepository_Read_Call) Run(run func(id uuid.UUID)) *JiraIntegrationRepository_Read_Call {
+func (_c *JiraIntegrationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *JiraIntegrationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -272,22 +316,22 @@ func (_c *JiraIntegrationRepository_Read_Call) Return(jiraIntegration models.Jir
 	return _c
 }
 
-func (_c *JiraIntegrationRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.JiraIntegration, error)) *JiraIntegrationRepository_Read_Call {
+func (_c *JiraIntegrationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.JiraIntegration, error)) *JiraIntegrationRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type JiraIntegrationRepository
-func (_mock *JiraIntegrationRepository) Save(tx shared.DB, model *models.JiraIntegration) error {
-	ret := _mock.Called(tx, model)
+func (_mock *JiraIntegrationRepository) Save(ctx context.Context, tx shared.DB, model *models.JiraIntegration) error {
+	ret := _mock.Called(ctx, tx, model)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.JiraIntegration) error); ok {
-		r0 = returnFunc(tx, model)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.JiraIntegration) error); ok {
+		r0 = returnFunc(ctx, tx, model)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -300,25 +344,31 @@ type JiraIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.JiraIntegration
-func (_e *JiraIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *JiraIntegrationRepository_Save_Call {
-	return &JiraIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
+func (_e *JiraIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *JiraIntegrationRepository_Save_Call {
+	return &JiraIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 
-func (_c *JiraIntegrationRepository_Save_Call) Run(run func(tx shared.DB, model *models.JiraIntegration)) *JiraIntegrationRepository_Save_Call {
+func (_c *JiraIntegrationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model *models.JiraIntegration)) *JiraIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.JiraIntegration
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.JiraIntegration)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.JiraIntegration
+		if args[2] != nil {
+			arg2 = args[2].(*models.JiraIntegration)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -329,7 +379,7 @@ func (_c *JiraIntegrationRepository_Save_Call) Return(err error) *JiraIntegratio
 	return _c
 }
 
-func (_c *JiraIntegrationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model *models.JiraIntegration) error) *JiraIntegrationRepository_Save_Call {
+func (_c *JiraIntegrationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, model *models.JiraIntegration) error) *JiraIntegrationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

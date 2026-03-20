@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -38,8 +40,8 @@ func (_m *CweRepository) EXPECT() *CweRepository_Expecter {
 }
 
 // GetAllCWEsID provides a mock function for the type CweRepository
-func (_mock *CweRepository) GetAllCWEsID() ([]string, error) {
-	ret := _mock.Called()
+func (_mock *CweRepository) GetAllCWEsID(ctx context.Context, tx shared.DB) ([]string, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllCWEsID")
@@ -47,18 +49,18 @@ func (_mock *CweRepository) GetAllCWEsID() ([]string, error) {
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]string, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]string, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []string); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []string); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,13 +73,26 @@ type CweRepository_GetAllCWEsID_Call struct {
 }
 
 // GetAllCWEsID is a helper method to define mock.On call
-func (_e *CweRepository_Expecter) GetAllCWEsID() *CweRepository_GetAllCWEsID_Call {
-	return &CweRepository_GetAllCWEsID_Call{Call: _e.mock.On("GetAllCWEsID")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *CweRepository_Expecter) GetAllCWEsID(ctx interface{}, tx interface{}) *CweRepository_GetAllCWEsID_Call {
+	return &CweRepository_GetAllCWEsID_Call{Call: _e.mock.On("GetAllCWEsID", ctx, tx)}
 }
 
-func (_c *CweRepository_GetAllCWEsID_Call) Run(run func()) *CweRepository_GetAllCWEsID_Call {
+func (_c *CweRepository_GetAllCWEsID_Call) Run(run func(ctx context.Context, tx shared.DB)) *CweRepository_GetAllCWEsID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -87,22 +102,22 @@ func (_c *CweRepository_GetAllCWEsID_Call) Return(strings []string, err error) *
 	return _c
 }
 
-func (_c *CweRepository_GetAllCWEsID_Call) RunAndReturn(run func() ([]string, error)) *CweRepository_GetAllCWEsID_Call {
+func (_c *CweRepository_GetAllCWEsID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]string, error)) *CweRepository_GetAllCWEsID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type CweRepository
-func (_mock *CweRepository) SaveBatch(tx shared.DB, cwes []models.CWE) error {
-	ret := _mock.Called(tx, cwes)
+func (_mock *CweRepository) SaveBatch(ctx context.Context, tx shared.DB, cwes []models.CWE) error {
+	ret := _mock.Called(ctx, tx, cwes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CWE) error); ok {
-		r0 = returnFunc(tx, cwes)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CWE) error); ok {
+		r0 = returnFunc(ctx, tx, cwes)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -115,25 +130,31 @@ type CweRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - cwes []models.CWE
-func (_e *CweRepository_Expecter) SaveBatch(tx interface{}, cwes interface{}) *CweRepository_SaveBatch_Call {
-	return &CweRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, cwes)}
+func (_e *CweRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, cwes interface{}) *CweRepository_SaveBatch_Call {
+	return &CweRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, cwes)}
 }
 
-func (_c *CweRepository_SaveBatch_Call) Run(run func(tx shared.DB, cwes []models.CWE)) *CweRepository_SaveBatch_Call {
+func (_c *CweRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, cwes []models.CWE)) *CweRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.CWE
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.CWE)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.CWE
+		if args[2] != nil {
+			arg2 = args[2].([]models.CWE)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -144,7 +165,7 @@ func (_c *CweRepository_SaveBatch_Call) Return(err error) *CweRepository_SaveBat
 	return _c
 }
 
-func (_c *CweRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, cwes []models.CWE) error) *CweRepository_SaveBatch_Call {
+func (_c *CweRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cwes []models.CWE) error) *CweRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

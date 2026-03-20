@@ -1,11 +1,14 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
@@ -43,9 +46,9 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	if err := a.daemonRunner.RunDaemonPipelineForAsset(asset.ID); err != nil {
+	if err := a.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), asset.ID); err != nil {
 		slog.Error("Failed to run daemon pipeline for asset", "assetID", asset.ID, "error", err)
-		return echo.NewHTTPError(500, err.Error()).WithInternal(err)
+		return echo.NewHTTPError(500, fmt.Sprintf("could not run asset pipeline: %s", err.Error())).WithInternal(err)
 	}
 
 	return ctx.NoContent(200)
@@ -58,6 +61,7 @@ func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 // @Success 200 {object} dtos.LookupResponse
 // @Router /lookup [get]
 func (a *AssetController) HandleLookup(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 	provider := ctx.QueryParam("provider")
 	if provider == "" {
 		return echo.NewHTTPError(400, "missing provider")
@@ -68,13 +72,13 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "missing repository id ('id')")
 	}
 
-	asset, err := a.assetRepository.FindAssetByExternalProviderID(provider, id)
+	asset, err := a.assetRepository.FindAssetByExternalProviderID(reqCtx, nil, provider, id)
 
 	if err != nil {
 		return echo.NewHTTPError(404, "asset not found").WithInternal(err)
 	}
 
-	assetFqn, err := a.assetRepository.GetFQNByID(asset.ID)
+	assetFqn, err := a.assetRepository.GetFQNByID(reqCtx, nil, asset.ID)
 
 	// split the fqn into organization, project and asset
 	if err != nil {
@@ -111,7 +115,7 @@ func (a *AssetController) List(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
 
-	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(allowedAssetIDs, project.GetID())
+	apps, err := a.assetRepository.GetAllowedAssetsByProjectID(ctx.Request().Context(), nil, allowedAssetIDs, project.GetID())
 	if err != nil {
 		return err
 	}
@@ -133,7 +137,7 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 
 	asset.SigningPubKey = &req.PubKey
 	// save the asset
-	err := a.assetRepository.Update(nil, &asset)
+	err := a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not attach signing key").WithInternal(err)
 	}
@@ -152,7 +156,7 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [delete]
 func (a *AssetController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	err := a.assetRepository.Delete(nil, asset.GetID())
+	err := a.assetRepository.Delete(ctx.Request().Context(), nil, asset.GetID())
 	if err != nil {
 		return err
 	}
@@ -195,7 +199,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
+	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
 	if err != nil {
 		return err
 	}
@@ -234,6 +238,7 @@ func (a *AssetController) Read(ctx shared.Context) error {
 // @Success 200 {object} dtos.AssetDetailsDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [patch]
 func (a *AssetController) Update(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 	asset := shared.GetAsset(ctx)
 
 	req := ctx.Request().Body
@@ -269,7 +274,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if justification != "" {
-		err = a.assetService.UpdateAssetRequirements(asset, shared.GetSession(ctx).GetUserID(), justification)
+		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetUserID(), justification)
 		if err != nil {
 			return fmt.Errorf("error updating requirements: %v", err)
 		}
@@ -330,7 +335,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			asset.Metadata = map[string]any{}
 		}
 		if asset.Metadata["gitlabLabels"] == nil {
-			err = a.thirdPartyIntegration.CreateLabels(ctx.Request().Context(), asset)
+			err = a.thirdPartyIntegration.CreateLabels(reqCtx, asset)
 			if err != nil {
 				slog.Error("could not create labels in gitlab", "err", err)
 			} else {
@@ -338,14 +343,15 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			}
 		}
 
+		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 		a.FireAndForget(func() {
-			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(linkedCtx, nil, asset.ID)
 			if err != nil {
 				slog.Error("could not get default asset version", "err", err)
 				return
 			}
 
-			if err := a.dependencyVulnService.SyncAllIssues(org, project, asset, defaultAssetVersion); err != nil {
+			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		})
@@ -357,7 +363,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if updated || enableTicketRangeUpdated {
-		err = a.assetRepository.Update(nil, &asset)
+		err = a.assetRepository.Update(reqCtx, nil, &asset)
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)
 		}
@@ -393,6 +399,7 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 }
 
 func (a *AssetController) GetBadges(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 
 	badge := ctx.Param("badge")
 	if badge == "" {
@@ -404,7 +411,7 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// get default asset version
-		assetVersion, err = a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = a.assetVersionRepository.GetDefaultAssetVersion(reqCtx, nil, asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
 		}
@@ -418,11 +425,11 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetArtifactRiskHistory(artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		results, err := a.statisticsService.GetArtifactRiskHistory(reqCtx, artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
 		if err != nil {
 			return err
 		}
-		svg = a.assetService.GetCVSSBadgeSVG(results)
+		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, results)
 
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")
@@ -476,7 +483,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 			"addedUser", newMemberID,
 			"assetID", asset.ID.String())
 
-		if err := rbac.GrantRoleInAsset(newMemberID, shared.RoleMember, asset.ID.String()); err != nil {
+		if err := rbac.GrantRoleInAsset(c.Request().Context(), newMemberID, shared.RoleMember, asset.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -484,6 +491,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 }
 
 func (a *AssetController) RemoveMember(c shared.Context) error {
+	reqCtx := c.Request().Context()
 	asset := shared.GetAsset(c)
 
 	// get rbac
@@ -500,13 +508,14 @@ func (a *AssetController) RemoveMember(c shared.Context) error {
 		"assetID", asset.ID.String())
 
 	// revoke admin and member role
-	rbac.RevokeRoleInAsset(userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
 
 func (a *AssetController) ChangeRole(c shared.Context) error {
+	reqCtx := c.Request().Context()
 	asset := shared.GetAsset(c)
 
 	// get rbac
@@ -552,10 +561,10 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		"assetID", asset.ID.String(),
 		"newRole", req.Role)
 
-	rbac.RevokeRoleInAsset(userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInAsset(userID, shared.Role(req.Role), asset.ID.String()); err != nil {
+	if err := rbac.GrantRoleInAsset(reqCtx, userID, shared.Role(req.Role), asset.ID.String()); err != nil {
 		return err
 	}
 

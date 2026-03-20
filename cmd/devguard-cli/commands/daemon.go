@@ -21,7 +21,7 @@ import (
 )
 
 func markMirrored(configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(key, struct {
+	return configService.SetJSONConfig(context.Background(), key, struct {
 		Time time.Time `json:"time"`
 	}{
 		Time: time.Now(),
@@ -114,7 +114,7 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
 		LimitToAssetVersionSlug: assetVersionSlug,
 	})
 
-	if err := runner.RunDaemonPipelineForAsset(assetID); err != nil {
+	if err := runner.RunDaemonPipelineForAsset(context.Background(), assetID); err != nil {
 		slog.Error("pipeline failed", "assetID", assetID, "err", err)
 		return err
 	}
@@ -150,7 +150,7 @@ func triggerDaemon(selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "openSourceInsights") {
 				start = time.Now()
-				err := runner.UpdateOpenSourceInsightInformation()
+				err := runner.UpdateOpenSourceInsightInformation(context.Background())
 				if err != nil {
 					slog.Error("could not update deps dev information", "err", err)
 					return
@@ -160,7 +160,7 @@ func triggerDaemon(selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "vulndb") {
 				start = time.Now()
-				if err := runner.UpdateVulnDB(); err != nil {
+				if err := runner.UpdateVulnDB(context.Background()); err != nil {
 					slog.Error("could not update vulndb", "err", err)
 					return
 				}
@@ -172,7 +172,7 @@ func triggerDaemon(selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "fixedVersions") {
 				start = time.Now()
-				if err := runner.UpdateFixedVersions(); err != nil {
+				if err := runner.UpdateFixedVersions(context.Background()); err != nil {
 					slog.Error("could not update component properties", "err", err)
 					return
 				}
@@ -184,7 +184,7 @@ func triggerDaemon(selectedDaemons []string) error {
 
 			if emptyOrContains(selectedDaemons, "assetPipeline") {
 				start = time.Now()
-				runner.RunAssetPipeline(true)
+				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 		}),

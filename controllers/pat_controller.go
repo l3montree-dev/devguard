@@ -59,9 +59,9 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct := p.service.ToModel(req, userID)
+	patStruct := p.service.ToModel(c.Request().Context(), req, userID)
 
-	err := p.patRepository.Create(nil, &patStruct)
+	err := p.patRepository.Create(c.Request().Context(), nil, &patStruct)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
 	}
@@ -95,7 +95,7 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	}
 
 	// get the pat by the fingerprint
-	err := p.service.RevokeByPrivateKey(req.PrivateKey)
+	err := p.service.RevokeByPrivateKey(c.Request().Context(), req.PrivateKey)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not revoke personal access token").WithInternal(err)
 	}
@@ -114,7 +114,7 @@ func (p *PatController) Delete(c shared.Context) error {
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
 
 	// check if the current user is allowed to delete the token
-	pat, err := p.patRepository.Read(uuid.MustParse(tokenID))
+	pat, err := p.patRepository.Read(c.Request().Context(), nil, uuid.MustParse(tokenID))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}
@@ -122,7 +122,7 @@ func (p *PatController) Delete(c shared.Context) error {
 	if pat.UserID.String() != shared.GetSession(c).GetUserID() {
 		return echo.NewHTTPError(403, "not allowed to delete this token")
 	}
-	err = p.patRepository.Delete(nil, uuid.MustParse(tokenID))
+	err = p.patRepository.Delete(c.Request().Context(), nil, uuid.MustParse(tokenID))
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete personal access token").WithInternal(err)
@@ -141,7 +141,7 @@ func (p *PatController) List(c shared.Context) error {
 	session := shared.GetSession(c)
 	userID := session.GetUserID()
 
-	pats, err := p.patRepository.ListByUserID(userID)
+	pats, err := p.patRepository.ListByUserID(c.Request().Context(), nil, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
 	}

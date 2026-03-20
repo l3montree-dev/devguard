@@ -55,6 +55,7 @@ type baseConfig struct {
 	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
 	Origin        string `json:"origin" mapstructure:"origin"`
 	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
+	Format        string `json:"format" mapstructure:"format"`
 
 	Timeout                    int  `json:"timeout" mapstructure:"timeout"`
 	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`

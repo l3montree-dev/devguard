@@ -27,7 +27,7 @@ func TestList(t *testing.T) {
 		shared.SetAssetVersion(ctx, assetVersion)
 
 		attestationRepository := mocks.NewAttestationRepository(t)
-		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{
+		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Attestation{
 			{PredicateType: "not ocol name"},
 		}, nil)
 
@@ -50,7 +50,7 @@ func TestList(t *testing.T) {
 		shared.SetAssetVersion(ctx, assetVersion)
 
 		attestationRepository := mocks.NewAttestationRepository(t)
-		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{}, fmt.Errorf("Something went wrong"))
+		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Attestation{}, fmt.Errorf("Something went wrong"))
 		attestationController := NewAttestationController(attestationRepository, mocks.NewArtifactRepository(t))
 
 		result := attestationController.List(ctx)

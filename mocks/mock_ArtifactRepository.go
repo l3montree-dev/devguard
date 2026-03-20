@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *ArtifactRepository) EXPECT() *ArtifactRepository_Expecter {
 }
 
 // Activate provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Activate(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ArtifactRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type ArtifactRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ArtifactRepository_Expecter) Activate(tx interface{}, id interface{}) *ArtifactRepository_Activate_Call {
-	return &ArtifactRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *ArtifactRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Activate_Call {
+	return &ArtifactRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *ArtifactRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *ArtifactRepository_Activate_Call {
+func (_c *ArtifactRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *ArtifactRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *ArtifactRepository_Activate_Call) Return(err error) *ArtifactRepositor
 	return _c
 }
 
-func (_c *ArtifactRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *ArtifactRepository_Activate_Call {
+func (_c *ArtifactRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *ArtifactRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) All() ([]models.Artifact, error) {
-	ret := _mock.Called()
+func (_mock *ArtifactRepository) All(ctx context.Context, tx shared.DB) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *ArtifactRepository) All() ([]models.Artifact, error) {
 
 	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Artifact, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Artifact); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type ArtifactRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *ArtifactRepository_Expecter) All() *ArtifactRepository_All_Call {
-	return &ArtifactRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *ArtifactRepository_Expecter) All(ctx interface{}, tx interface{}) *ArtifactRepository_All_Call {
+	return &ArtifactRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *ArtifactRepository_All_Call) Run(run func()) *ArtifactRepository_All_Call {
+func (_c *ArtifactRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *ArtifactRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *ArtifactRepository_All_Call) Return(artifacts []models.Artifact, err e
 	return _c
 }
 
-func (_c *ArtifactRepository_All_Call) RunAndReturn(run func() ([]models.Artifact, error)) *ArtifactRepository_All_Call {
+func (_c *ArtifactRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Artifact, error)) *ArtifactRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *ArtifactRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type ArtifactRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *ArtifactRepository_Expecter) Begin() *ArtifactRepository_Begin_Call {
-	return &ArtifactRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *ArtifactRepository_Expecter) Begin(ctx interface{}) *ArtifactRepository_Begin_Call {
+	return &ArtifactRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *ArtifactRepository_Begin_Call) Run(run func()) *ArtifactRepository_Begin_Call {
+func (_c *ArtifactRepository_Begin_Call) Run(run func(ctx context.Context)) *ArtifactRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,73 @@ func (_c *ArtifactRepository_Begin_Call) Return(v shared.DB) *ArtifactRepository
 	return _c
 }
 
-func (_c *ArtifactRepository_Begin_Call) RunAndReturn(run func() shared.DB) *ArtifactRepository_Begin_Call {
+func (_c *ArtifactRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *ArtifactRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type ArtifactRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ArtifactRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ArtifactRepository_CleanupOrphanedRecords_Call {
+	return &ArtifactRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *ArtifactRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *ArtifactRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_CleanupOrphanedRecords_Call) Return(err error) *ArtifactRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *ArtifactRepository_CleanupOrphanedRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Create(tx shared.DB, t *models.Artifact) error {
-	ret := _mock.Called(tx, t)
+func (_mock *ArtifactRepository) Create(ctx context.Context, tx shared.DB, t *models.Artifact) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Artifact) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,25 +299,31 @@ type ArtifactRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Artifact
-func (_e *ArtifactRepository_Expecter) Create(tx interface{}, t interface{}) *ArtifactRepository_Create_Call {
-	return &ArtifactRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *ArtifactRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ArtifactRepository_Create_Call {
+	return &ArtifactRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *ArtifactRepository_Create_Call) Run(run func(tx shared.DB, t *models.Artifact)) *ArtifactRepository_Create_Call {
+func (_c *ArtifactRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Artifact)) *ArtifactRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Artifact
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Artifact)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -249,22 +334,22 @@ func (_c *ArtifactRepository_Create_Call) Return(err error) *ArtifactRepository_
 	return _c
 }
 
-func (_c *ArtifactRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Artifact) error) *ArtifactRepository_Create_Call {
+func (_c *ArtifactRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Artifact) error) *ArtifactRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) CreateBatch(tx shared.DB, ts []models.Artifact) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *ArtifactRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.Artifact) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Artifact) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,25 +362,31 @@ type ArtifactRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ArtifactRepository_CreateBatch_Call {
-	return &ArtifactRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *ArtifactRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ArtifactRepository_CreateBatch_Call {
+	return &ArtifactRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *ArtifactRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Artifact)) *ArtifactRepository_CreateBatch_Call {
+func (_c *ArtifactRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Artifact)) *ArtifactRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Artifact
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Artifact)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].([]models.Artifact)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -306,22 +397,22 @@ func (_c *ArtifactRepository_CreateBatch_Call) Return(err error) *ArtifactReposi
 	return _c
 }
 
-func (_c *ArtifactRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_CreateBatch_Call {
+func (_c *ArtifactRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Delete(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ArtifactRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -334,25 +425,31 @@ type ArtifactRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ArtifactRepository_Expecter) Delete(tx interface{}, id interface{}) *ArtifactRepository_Delete_Call {
-	return &ArtifactRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *ArtifactRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Delete_Call {
+	return &ArtifactRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *ArtifactRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *ArtifactRepository_Delete_Call {
+func (_c *ArtifactRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *ArtifactRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -363,22 +460,22 @@ func (_c *ArtifactRepository_Delete_Call) Return(err error) *ArtifactRepository_
 	return _c
 }
 
-func (_c *ArtifactRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *ArtifactRepository_Delete_Call {
+func (_c *ArtifactRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *ArtifactRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteArtifact provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) DeleteArtifact(tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	ret := _mock.Called(tx, assetID, assetVersionName, artifactName)
+func (_mock *ArtifactRepository) DeleteArtifact(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(tx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -391,27 +488,250 @@ type ArtifactRepository_DeleteArtifact_Call struct {
 }
 
 // DeleteArtifact is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ArtifactRepository_Expecter) DeleteArtifact(tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactRepository_DeleteArtifact_Call {
-	return &ArtifactRepository_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", tx, assetID, assetVersionName, artifactName)}
+func (_e *ArtifactRepository_Expecter) DeleteArtifact(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactRepository_DeleteArtifact_Call {
+	return &ArtifactRepository_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
 }
 
-func (_c *ArtifactRepository_DeleteArtifact_Call) Run(run func(tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactRepository_DeleteArtifact_Call {
+func (_c *ArtifactRepository_DeleteArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactRepository_DeleteArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_DeleteArtifact_Call) Return(err error) *ArtifactRepository_DeleteArtifact_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_DeleteArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactRepository_DeleteArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteBatch provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.Artifact) error {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type ArtifactRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []models.Artifact
+func (_e *ArtifactRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ArtifactRepository_DeleteBatch_Call {
+	return &ArtifactRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
+}
+
+func (_c *ArtifactRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.Artifact)) *ArtifactRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_DeleteBatch_Call) Return(err error) *ArtifactRepository_DeleteBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Artifact) error) *ArtifactRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllArtifactAffectedByDependencyVuln provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx shared.DB, vulnID string) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, vulnID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllArtifactAffectedByDependencyVuln")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, vulnID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, vulnID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, vulnID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllArtifactAffectedByDependencyVuln'
+type ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call struct {
+	*mock.Call
+}
+
+// GetAllArtifactAffectedByDependencyVuln is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - vulnID string
+func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(ctx interface{}, tx interface{}, vulnID interface{}) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	return &ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call{Call: _e.mock.On("GetAllArtifactAffectedByDependencyVuln", ctx, tx, vulnID)}
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID string)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 string
 		if args[2] != nil {
 			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID string) ([]models.Artifact, error)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByAssetIDAndAssetVersionName provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetIDAndAssetVersionName")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetIDAndAssetVersionName'
+type ArtifactRepository_GetByAssetIDAndAssetVersionName_Call struct {
+	*mock.Call
+}
+
+// GetByAssetIDAndAssetVersionName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - assetVersionName string
+func (_e *ArtifactRepository_Expecter) GetByAssetIDAndAssetVersionName(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+	return &ArtifactRepository_GetByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName)}
+}
+
+func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		var arg3 string
 		if args[3] != nil {
@@ -427,212 +747,19 @@ func (_c *ArtifactRepository_DeleteArtifact_Call) Run(run func(tx shared.DB, ass
 	return _c
 }
 
-func (_c *ArtifactRepository_DeleteArtifact_Call) Return(err error) *ArtifactRepository_DeleteArtifact_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_DeleteArtifact_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactRepository_DeleteArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteBatch provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) DeleteBatch(tx shared.DB, ids []models.Artifact) error {
-	ret := _mock.Called(tx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Artifact) error); ok {
-		r0 = returnFunc(tx, ids)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
-type ArtifactRepository_DeleteBatch_Call struct {
-	*mock.Call
-}
-
-// DeleteBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ids []models.Artifact
-func (_e *ArtifactRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ArtifactRepository_DeleteBatch_Call {
-	return &ArtifactRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
-}
-
-func (_c *ArtifactRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Artifact)) *ArtifactRepository_DeleteBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.Artifact
-		if args[1] != nil {
-			arg1 = args[1].([]models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_DeleteBatch_Call) Return(err error) *ArtifactRepository_DeleteBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Artifact) error) *ArtifactRepository_DeleteBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAllArtifactAffectedByDependencyVuln provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(tx shared.DB, vulnID string) ([]models.Artifact, error) {
-	ret := _mock.Called(tx, vulnID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllArtifactAffectedByDependencyVuln")
-	}
-
-	var r0 []models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) ([]models.Artifact, error)); ok {
-		return returnFunc(tx, vulnID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) []models.Artifact); ok {
-		r0 = returnFunc(tx, vulnID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Artifact)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string) error); ok {
-		r1 = returnFunc(tx, vulnID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllArtifactAffectedByDependencyVuln'
-type ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call struct {
-	*mock.Call
-}
-
-// GetAllArtifactAffectedByDependencyVuln is a helper method to define mock.On call
-//   - tx shared.DB
-//   - vulnID string
-func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(tx interface{}, vulnID interface{}) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
-	return &ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call{Call: _e.mock.On("GetAllArtifactAffectedByDependencyVuln", tx, vulnID)}
-}
-
-func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(run func(tx shared.DB, vulnID string)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
-	_c.Call.Return(artifacts, err)
-	return _c
-}
-
-func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAndReturn(run func(tx shared.DB, vulnID string) ([]models.Artifact, error)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByAssetIDAndAssetVersionName provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
-	ret := _mock.Called(assetID, assetVersionName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByAssetIDAndAssetVersionName")
-	}
-
-	var r0 []models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.Artifact, error)); ok {
-		return returnFunc(assetID, assetVersionName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.Artifact); ok {
-		r0 = returnFunc(assetID, assetVersionName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Artifact)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetID, assetVersionName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactRepository_GetByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetIDAndAssetVersionName'
-type ArtifactRepository_GetByAssetIDAndAssetVersionName_Call struct {
-	*mock.Call
-}
-
-// GetByAssetIDAndAssetVersionName is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *ArtifactRepository_Expecter) GetByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
-	return &ArtifactRepository_GetByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetByAssetIDAndAssetVersionName", assetID, assetVersionName)}
-}
-
-func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
 func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(artifacts, err)
 	return _c
 }
 
-func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetVersions provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
-	ret := _mock.Called(assetID, assetVersionNames)
+func (_mock *ArtifactRepository) GetByAssetVersions(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionNames)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetVersions")
@@ -640,18 +767,18 @@ func (_mock *ArtifactRepository) GetByAssetVersions(assetID uuid.UUID, assetVers
 
 	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) ([]models.Artifact, error)); ok {
-		return returnFunc(assetID, assetVersionNames)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, []string) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionNames)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) []models.Artifact); ok {
-		r0 = returnFunc(assetID, assetVersionNames)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, []string) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionNames)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, []string) error); ok {
-		r1 = returnFunc(assetID, assetVersionNames)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, []string) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionNames)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -664,25 +791,37 @@ type ArtifactRepository_GetByAssetVersions_Call struct {
 }
 
 // GetByAssetVersions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionNames []string
-func (_e *ArtifactRepository_Expecter) GetByAssetVersions(assetID interface{}, assetVersionNames interface{}) *ArtifactRepository_GetByAssetVersions_Call {
-	return &ArtifactRepository_GetByAssetVersions_Call{Call: _e.mock.On("GetByAssetVersions", assetID, assetVersionNames)}
+func (_e *ArtifactRepository_Expecter) GetByAssetVersions(ctx interface{}, tx interface{}, assetID interface{}, assetVersionNames interface{}) *ArtifactRepository_GetByAssetVersions_Call {
+	return &ArtifactRepository_GetByAssetVersions_Call{Call: _e.mock.On("GetByAssetVersions", ctx, tx, assetID, assetVersionNames)}
 }
 
-func (_c *ArtifactRepository_GetByAssetVersions_Call) Run(run func(assetID uuid.UUID, assetVersionNames []string)) *ArtifactRepository_GetByAssetVersions_Call {
+func (_c *ArtifactRepository_GetByAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionNames []string)) *ArtifactRepository_GetByAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -693,22 +832,22 @@ func (_c *ArtifactRepository_GetByAssetVersions_Call) Return(artifacts []models.
 	return _c
 }
 
-func (_c *ArtifactRepository_GetByAssetVersions_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetVersions_Call {
+func (_c *ArtifactRepository_GetByAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *ArtifactRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -723,19 +862,25 @@ type ArtifactRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *ArtifactRepository_Expecter) GetDB(tx interface{}) *ArtifactRepository_GetDB_Call {
-	return &ArtifactRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *ArtifactRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ArtifactRepository_GetDB_Call {
+	return &ArtifactRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *ArtifactRepository_GetDB_Call) Run(run func(tx shared.DB)) *ArtifactRepository_GetDB_Call {
+func (_c *ArtifactRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *ArtifactRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -746,14 +891,14 @@ func (_c *ArtifactRepository_GetDB_Call) Return(v shared.DB) *ArtifactRepository
 	return _c
 }
 
-func (_c *ArtifactRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ArtifactRepository_GetDB_Call {
+func (_c *ArtifactRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *ArtifactRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) List(ids []string) ([]models.Artifact, error) {
-	ret := _mock.Called(ids)
+func (_mock *ArtifactRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -761,18 +906,18 @@ func (_mock *ArtifactRepository) List(ids []string) ([]models.Artifact, error) {
 
 	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.Artifact, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []models.Artifact); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -785,427 +930,22 @@ type ArtifactRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []string
-func (_e *ArtifactRepository_Expecter) List(ids interface{}) *ArtifactRepository_List_Call {
-	return &ArtifactRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *ArtifactRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ArtifactRepository_List_Call {
+	return &ArtifactRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *ArtifactRepository_List_Call) Run(run func(ids []string)) *ArtifactRepository_List_Call {
+func (_c *ArtifactRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *ArtifactRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]string)
+			arg0 = args[0].(context.Context)
 		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_List_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_List_Call {
-	_c.Call.Return(artifacts, err)
-	return _c
-}
-
-func (_c *ArtifactRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.Artifact, error)) *ArtifactRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Read(id string) (models.Artifact, error) {
-	ret := _mock.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.Artifact, error)); ok {
-		return returnFunc(id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.Artifact); ok {
-		r0 = returnFunc(id)
-	} else {
-		r0 = ret.Get(0).(models.Artifact)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type ArtifactRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - id string
-func (_e *ArtifactRepository_Expecter) Read(id interface{}) *ArtifactRepository_Read_Call {
-	return &ArtifactRepository_Read_Call{Call: _e.mock.On("Read", id)}
-}
-
-func (_c *ArtifactRepository_Read_Call) Run(run func(id string)) *ArtifactRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_Read_Call) Return(artifact models.Artifact, err error) *ArtifactRepository_Read_Call {
-	_c.Call.Return(artifact, err)
-	return _c
-}
-
-func (_c *ArtifactRepository_Read_Call) RunAndReturn(run func(id string) (models.Artifact, error)) *ArtifactRepository_Read_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ReadArtifact provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
-	ret := _mock.Called(name, assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ReadArtifact")
-	}
-
-	var r0 models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) (models.Artifact, error)); ok {
-		return returnFunc(name, assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, uuid.UUID) models.Artifact); ok {
-		r0 = returnFunc(name, assetVersionName, assetID)
-	} else {
-		r0 = ret.Get(0).(models.Artifact)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(name, assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactRepository_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
-type ArtifactRepository_ReadArtifact_Call struct {
-	*mock.Call
-}
-
-// ReadArtifact is a helper method to define mock.On call
-//   - name string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *ArtifactRepository_Expecter) ReadArtifact(name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactRepository_ReadArtifact_Call {
-	return &ArtifactRepository_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", name, assetVersionName, assetID)}
-}
-
-func (_c *ArtifactRepository_ReadArtifact_Call) Run(run func(name string, assetVersionName string, assetID uuid.UUID)) *ArtifactRepository_ReadArtifact_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactRepository_ReadArtifact_Call {
-	_c.Call.Return(artifact, err)
-	return _c
-}
-
-func (_c *ArtifactRepository_ReadArtifact_Call) RunAndReturn(run func(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactRepository_ReadArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Save provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Save(tx shared.DB, t *models.Artifact) error {
-	ret := _mock.Called(tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Save")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Artifact) error); ok {
-		r0 = returnFunc(tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
-type ArtifactRepository_Save_Call struct {
-	*mock.Call
-}
-
-// Save is a helper method to define mock.On call
-//   - tx shared.DB
-//   - t *models.Artifact
-func (_e *ArtifactRepository_Expecter) Save(tx interface{}, t interface{}) *ArtifactRepository_Save_Call {
-	return &ArtifactRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
-}
-
-func (_c *ArtifactRepository_Save_Call) Run(run func(tx shared.DB, t *models.Artifact)) *ArtifactRepository_Save_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.Artifact
-		if args[1] != nil {
-			arg1 = args[1].(*models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_Save_Call) Return(err error) *ArtifactRepository_Save_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Artifact) error) *ArtifactRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatch provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) SaveBatch(tx shared.DB, ts []models.Artifact) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Artifact) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
-type ArtifactRepository_SaveBatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ArtifactRepository_SaveBatch_Call {
-	return &ArtifactRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
-}
-
-func (_c *ArtifactRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.Artifact
-		if args[1] != nil {
-			arg1 = args[1].([]models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatch_Call) Return(err error) *ArtifactRepository_SaveBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchBestEffort provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Artifact) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Artifact) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type ArtifactRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *ArtifactRepository_SaveBatchBestEffort_Call {
-	return &ArtifactRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.Artifact
-		if args[1] != nil {
-			arg1 = args[1].([]models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Return(err error) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type ArtifactRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - fn func(tx shared.DB) error
-func (_e *ArtifactRepository_Expecter) Transaction(fn interface{}) *ArtifactRepository_Transaction_Call {
-	return &ArtifactRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
-}
-
-func (_c *ArtifactRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *ArtifactRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_Transaction_Call) Return(err error) *ArtifactRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *ArtifactRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Upsert provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) Upsert(t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Artifact, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
-type ArtifactRepository_Upsert_Call struct {
-	*mock.Call
-}
-
-// Upsert is a helper method to define mock.On call
-//   - t *[]*models.Artifact
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
-func (_e *ArtifactRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ArtifactRepository_Upsert_Call {
-	return &ArtifactRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
-}
-
-func (_c *ArtifactRepository_Upsert_Call) Run(run func(t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string)) *ArtifactRepository_Upsert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Artifact
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Artifact)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 []string
 		if args[2] != nil {
@@ -1220,12 +960,489 @@ func (_c *ArtifactRepository_Upsert_Call) Run(run func(t *[]*models.Artifact, co
 	return _c
 }
 
+func (_c *ArtifactRepository_List_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_List_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.Artifact, error)) *ArtifactRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) Read(ctx context.Context, tx shared.DB, id string) (models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type ArtifactRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *ArtifactRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Read_Call {
+	return &ArtifactRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
+}
+
+func (_c *ArtifactRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *ArtifactRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_Read_Call) Return(artifact models.Artifact, err error) *ArtifactRepository_Read_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.Artifact, error)) *ArtifactRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReadArtifact provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, name, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadArtifact")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) (models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, name, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, name, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, name, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
+type ArtifactRepository_ReadArtifact_Call struct {
+	*mock.Call
+}
+
+// ReadArtifact is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - name string
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *ArtifactRepository_Expecter) ReadArtifact(ctx interface{}, tx interface{}, name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactRepository_ReadArtifact_Call {
+	return &ArtifactRepository_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", ctx, tx, name, assetVersionName, assetID)}
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID)) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_ReadArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactRepository_ReadArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) Save(ctx context.Context, tx shared.DB, t *models.Artifact) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type ArtifactRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.Artifact
+func (_e *ArtifactRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ArtifactRepository_Save_Call {
+	return &ArtifactRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
+}
+
+func (_c *ArtifactRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Artifact)) *ArtifactRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_Save_Call) Return(err error) *ArtifactRepository_Save_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Artifact) error) *ArtifactRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.Artifact) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type ArtifactRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.Artifact
+func (_e *ArtifactRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ArtifactRepository_SaveBatch_Call {
+	return &ArtifactRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
+}
+
+func (_c *ArtifactRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatch_Call) Return(err error) *ArtifactRepository_SaveBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Artifact) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type ArtifactRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.Artifact
+func (_e *ArtifactRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *ArtifactRepository_SaveBatchBestEffort_Call {
+	return &ArtifactRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].([]models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Return(err error) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type ArtifactRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(tx shared.DB) error
+func (_e *ArtifactRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ArtifactRepository_Transaction_Call {
+	return &ArtifactRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
+}
+
+func (_c *ArtifactRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *ArtifactRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_Transaction_Call) Return(err error) *ArtifactRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ArtifactRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *ArtifactRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Artifact, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ArtifactRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type ArtifactRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *[]*models.Artifact
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *ArtifactRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ArtifactRepository_Upsert_Call {
+	return &ArtifactRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+}
+
+func (_c *ArtifactRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string)) *ArtifactRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *[]*models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*[]*models.Artifact)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
 func (_c *ArtifactRepository_Upsert_Call) Return(err error) *ArtifactRepository_Upsert_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ArtifactRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string) error) *ArtifactRepository_Upsert_Call {
+func (_c *ArtifactRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Artifact, conflictingColumns []clause.Column, updateOnly []string) error) *ArtifactRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -15,13 +15,13 @@
 package scanner
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/pem"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path"
+
+	cosignpkg "github.com/sigstore/cosign/v2/pkg/cosign"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/services"
@@ -41,46 +41,49 @@ func TokenToKey(token string) (string, string, error) {
 		slog.Error("could not marshal private key", "err", err)
 		return "", "", err
 	}
-	// create a new temporary file to store the private key - the file needs to have minimum permissions
+
 	tempDir := path.Join(os.TempDir(), uuid.New().String())
-	err = os.Mkdir(
-		tempDir,
-		0700,
-	)
+	err = os.Mkdir(tempDir, 0700)
 	if err != nil {
 		slog.Error("could not create temp dir", "err", err)
 		return "", "", err
 	}
 
-	file, err := os.OpenFile(path.Join(tempDir, "ecdsa.pem"), os.O_CREATE|os.O_WRONLY, 0600)
-
+	ecKeyPath := path.Join(tempDir, "ecdsa.pem")
+	file, err := os.OpenFile(ecKeyPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		slog.Error("could not create file", "err", err)
 		return "", "", err
 	}
-
-	// encode the private key to PEM
 	err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
+	file.Close()
 	if err != nil {
 		slog.Error("could not encode private key to PEM", "err", err)
 		return "", "", err
 	}
 
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-
-	// import the cosign key
-	importCmd := exec.Command("cosign", "import-key-pair", "--output-key-prefix", "cosign", "--key", "ecdsa.pem")
-	importCmd.Dir = tempDir
-	importCmd.Stdout = &out
-	importCmd.Stderr = &errOut
-	importCmd.Env = []string{"COSIGN_PASSWORD="}
-
-	err = importCmd.Run()
+	// Use the cosign Go library to convert EC key → cosign-encrypted key format
+	// (replaces: cosign import-key-pair --output-key-prefix cosign --key ecdsa.pem)
+	keysBytes, err := cosignpkg.ImportKeyPair(ecKeyPath, func(_ bool) ([]byte, error) {
+		return []byte{}, nil // empty password
+	})
 	if err != nil {
-		slog.Error("could not import key", "err", err, "out", out.String(), "errOut", errOut.String())
+		slog.Error("could not import key pair", "err", err)
+		return "", "", err
+	}
+	os.Remove(ecKeyPath)
+
+	cosignKeyPath := path.Join(tempDir, "cosign.key")
+	if err = os.WriteFile(cosignKeyPath, keysBytes.PrivateBytes, 0600); err != nil {
+		slog.Error("could not write cosign key", "err", err)
 		return "", "", err
 	}
 
-	return path.Join(tempDir, "cosign.key"), path.Join(tempDir, "cosign.pub"), nil
+	cosignPubPath := path.Join(tempDir, "cosign.pub")
+	if err = os.WriteFile(cosignPubPath, keysBytes.PublicBytes, 0644); err != nil {
+		slog.Error("could not write cosign public key", "err", err)
+		return "", "", err
+	}
+
+	return cosignKeyPath, cosignPubPath, nil
 }

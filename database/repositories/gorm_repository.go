@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 
 	"github.com/in-toto/go-witness/log"
@@ -35,46 +36,48 @@ func newGormRepository[ID comparable, T utils.Tabler](db *gorm.DB) *GormReposito
 	}
 }
 
-func (g *GormRepository[ID, T]) All() ([]T, error) {
+func (g *GormRepository[ID, T]) All(ctx context.Context, tx *gorm.DB) ([]T, error) {
 	var ts []T
-	err := g.db.Find(&ts).Error
+	err := g.GetDB(ctx, tx).Find(&ts).Error
 	return ts, err
 }
 
-func (g *GormRepository[ID, T]) DeleteBatch(tx *gorm.DB, m []T) error {
-	err := g.GetDB(tx).Delete(m).Error
+func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, m []T) error {
+	err := g.GetDB(ctx, tx).Delete(m).Error
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
-	return g.GetDB(tx).Save(t).Error
+func (g *GormRepository[ID, T]) Save(ctx context.Context, tx *gorm.DB, t *T) error {
+	return g.GetDB(ctx, tx).Save(t).Error
 }
 
-func (g *GormRepository[ID, T]) Upsert(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error {
+func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error {
 	if len(*t) == 0 {
 		return nil
 	}
+	db := g.GetDB(ctx, tx)
 	if len(conflictingColumns) == 0 {
 		if len(updateOnly) > 0 {
-			return g.db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
+			return db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
 		}
-		return g.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
+		return db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
 	}
 
 	if len(updateOnly) > 0 {
-		return g.db.Clauses(clause.OnConflict{
+		return db.Clauses(clause.OnConflict{
 			DoUpdates: clause.AssignmentColumns(updateOnly),
 			Columns:   conflictingColumns,
 		}).Create(t).Error
 	}
 
-	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
+	return db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
 func (g *GormRepository[ID, T]) SaveBatchBestEffort(
+	ctx context.Context,
 	tx *gorm.DB,
 	ts []T,
 ) error {
@@ -82,7 +85,7 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 		return nil
 	}
 
-	err := g.GetDB(tx).Save(ts).Error
+	err := g.GetDB(ctx, tx).Save(ts).Error
 	if err == nil {
 		return nil
 	}
@@ -102,33 +105,34 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 		return err
 	}
 
-	if err := g.SaveBatchBestEffort(tx, ts[:half]); err != nil {
+	if err := g.SaveBatchBestEffort(ctx, tx, ts[:half]); err != nil {
 		return err
 	}
-	return g.SaveBatchBestEffort(tx, ts[half:])
+	return g.SaveBatchBestEffort(ctx, tx, ts[half:])
 }
 
-func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
+func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
 	if len(ts) == 0 {
 		return nil
 	}
 
-	err := g.GetDB(tx).Save(ts).Error
+	err := g.GetDB(ctx, tx).Save(ts).Error
 	// check if "extended protocol limited to 65535 parameters" error
 	if err != nil && err.Error() == "extended protocol limited to 65535 parameters" {
 		// split the batch in half and try again
 		half := len(ts) / 2
-		err = g.SaveBatch(tx, ts[:half])
+		err = g.SaveBatch(ctx, tx, ts[:half])
 		if err != nil {
 			return err
 		}
-		err = g.SaveBatch(tx, ts[half:])
+		err = g.SaveBatch(ctx, tx, ts[half:])
 	}
 	return err
 }
 
-func (g *GormRepository[ID, T]) Transaction(f func(tx *gorm.DB) error) error {
-	tx := g.db.Begin()
+func (g *GormRepository[ID, T]) Transaction(ctx context.Context, f func(tx *gorm.DB) error) error {
+	tx := g.GetDB(ctx, nil).Begin()
+	defer tx.Rollback()
 	err := f(tx)
 	if err != nil {
 		tx.Rollback()
@@ -137,57 +141,55 @@ func (g *GormRepository[ID, T]) Transaction(f func(tx *gorm.DB) error) error {
 	return tx.Commit().Error
 }
 
-func (g *GormRepository[ID, T]) Begin() *gorm.DB {
-	return g.db.Begin()
+func (g *GormRepository[ID, T]) Begin(ctx context.Context) *gorm.DB {
+	return g.GetDB(ctx, nil).Begin()
 }
 
-func (g *GormRepository[ID, T]) GetDB(tx *gorm.DB) *gorm.DB {
+func (g *GormRepository[ID, T]) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
 	}
-
-	return g.db
+	return g.db.WithContext(ctx)
 }
 
-func (g *GormRepository[ID, T]) Create(tx *gorm.DB, t *T) error {
-	return g.GetDB(tx).Create(t).Error
+func (g *GormRepository[ID, T]) Create(ctx context.Context, tx *gorm.DB, t *T) error {
+	return g.GetDB(ctx, tx).Create(t).Error
 }
 
-func (g *GormRepository[ID, T]) CreateBatch(tx *gorm.DB, ts []T) error {
+func (g *GormRepository[ID, T]) CreateBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
 	if len(ts) == 0 {
 		return nil
 	}
-	return g.GetDB(tx).Clauses(clause.OnConflict{DoNothing: true}).Create(ts).Error
+	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{DoNothing: true}).Create(ts).Error
 }
 
-func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
+func (g *GormRepository[ID, T]) Read(ctx context.Context, tx *gorm.DB, id ID) (T, error) {
 	var t T
-	err := g.db.First(&t, "id = ?", id).Error
-
+	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error
 	return t, err
 }
 
-func (g *GormRepository[ID, T]) Delete(tx *gorm.DB, id ID) error {
+func (g *GormRepository[ID, T]) Delete(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(tx).Delete(&t, id).Error
+	return g.GetDB(ctx, tx).Delete(&t, id).Error
 }
 
-func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
+func (g *GormRepository[ID, T]) List(ctx context.Context, tx *gorm.DB, ids []ID) ([]T, error) {
 	if len(ids) == 0 {
 		return []T{}, nil
 	}
 	var ts []T
 
-	err := g.db.Find(&ts, ids).Error
+	err := g.GetDB(ctx, tx).Find(&ts, ids).Error
 	if err != nil {
 		return ts, err
 	}
 	return ts, nil
 }
 
-func (g *GormRepository[ID, T]) Activate(tx *gorm.DB, id ID) error {
+func (g *GormRepository[ID, T]) Activate(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
+	return g.GetDB(ctx, tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
 }
 
 func isIgnorableUpsertError(err error) bool {

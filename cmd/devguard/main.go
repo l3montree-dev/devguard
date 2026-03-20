@@ -17,9 +17,12 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -32,6 +35,14 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -40,6 +51,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 
 	_ "net/http/pprof"
 
@@ -85,6 +97,9 @@ func main() {
 
 	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
+		if sampleRate := tracesSampleRate(); sampleRate > 0 {
+			initTracer(sampleRate)
+		}
 
 		// Catch panics
 		defer func() {
@@ -98,7 +113,7 @@ func main() {
 	}
 
 	app := fx.New(
-		fx.NopLogger,
+		fx.WithLogger(func() fxevent.Logger { return &fxErrorLogger{} }),
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
 		database.Module,
@@ -137,7 +152,7 @@ func main() {
 		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					go daemonRunner.Start() // start in background
+					go daemonRunner.Start(ctx) // start in background
 					return nil
 				},
 			})
@@ -145,6 +160,146 @@ func main() {
 	)
 
 	app.Run()
+}
+
+type fxErrorLogger struct{}
+
+func (l *fxErrorLogger) LogEvent(event fxevent.Event) {
+	switch e := event.(type) {
+	case *fxevent.OnStartExecuted:
+		if e.Err != nil {
+			slog.Error("fx: OnStart hook failed", "caller", e.CallerName, "err", e.Err)
+		}
+	case *fxevent.OnStopExecuted:
+		if e.Err != nil {
+			slog.Error("fx: OnStop hook failed", "caller", e.CallerName, "err", e.Err)
+		}
+	case *fxevent.Supplied:
+		if e.Err != nil {
+			slog.Error("fx: supply failed", "type", e.TypeName, "err", e.Err)
+		}
+	case *fxevent.Provided:
+		if e.Err != nil {
+			slog.Error("fx: provide failed", "constructor", e.ConstructorName, "err", e.Err)
+		}
+	case *fxevent.Decorated:
+		if e.Err != nil {
+			slog.Error("fx: decorate failed", "decorator", e.DecoratorName, "err", e.Err)
+		}
+	case *fxevent.Invoked:
+		if e.Err != nil {
+			slog.Error("fx: invoke failed", "function", e.FunctionName, "err", e.Err)
+		}
+	case *fxevent.Started:
+		if e.Err != nil {
+			slog.Error("fx: start failed", "err", e.Err)
+		}
+	case *fxevent.Stopped:
+		if e.Err != nil {
+			slog.Error("fx: stop failed", "err", e.Err)
+		}
+	}
+}
+
+func tracesSampleRate() float64 {
+	val := os.Getenv("TRACES_SAMPLE_RATE")
+	if val == "" {
+		return 0
+	}
+	rate, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		slog.Warn("invalid TRACES_SAMPLE_RATE, tracing disabled", "value", val)
+		return 0
+	}
+	return rate
+}
+
+func initTracer(sampleRate float64) {
+	var processors []sdktrace.SpanProcessor
+
+	// When OTEL_TRACES_EXPORTER=stdout, print spans to stderr for local debugging.
+	if os.Getenv("OTEL_TRACES_EXPORTER") == "stdout" {
+		exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		if err != nil {
+			slog.Warn("failed to create stdout trace exporter", "err", err)
+		} else {
+			processors = append(processors, sdktrace.NewSimpleSpanProcessor(exp))
+		}
+	}
+
+	// OTEL_EXPORTER_OTLP_ENDPOINT selects transport by scheme:
+	//   grpc://host:port   → gRPC, no TLS  (e.g. local Jaeger)
+	//   grpcs://host:port  → gRPC, TLS
+	//   http://host:port   → HTTP, no TLS
+	//   https://host:port  → HTTP, TLS
+	// Optional: OTEL_EXPORTER_BASIC_AUTH_USERNAME / OTEL_EXPORTER_BASIC_AUTH_PASSWORD
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		var (
+			exp     sdktrace.SpanExporter
+			err     error
+			headers map[string]string
+		)
+
+		if user, pass := os.Getenv("OTEL_EXPORTER_BASIC_AUTH_USERNAME"), os.Getenv("OTEL_EXPORTER_BASIC_AUTH_PASSWORD"); user != "" && pass != "" {
+			encoded := base64.StdEncoding.EncodeToString([]byte(user + ":" + pass))
+			headers = map[string]string{"Authorization": "Basic " + encoded}
+		}
+
+		u, parseErr := url.Parse(endpoint)
+		if parseErr != nil {
+			slog.Warn("failed to parse OTEL_EXPORTER_OTLP_ENDPOINT", "err", parseErr, "endpoint", endpoint)
+		} else {
+			switch u.Scheme {
+			case "grpc":
+				exp, err = otlptracegrpc.New(context.Background(),
+					otlptracegrpc.WithEndpoint(u.Host),
+					otlptracegrpc.WithInsecure(),
+					otlptracegrpc.WithHeaders(headers),
+				)
+			case "https":
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithHeaders(headers),
+				)
+			default: // http
+				exp, err = otlptracehttp.New(context.Background(),
+					otlptracehttp.WithEndpointURL(endpoint),
+					otlptracehttp.WithInsecure(),
+					otlptracehttp.WithHeaders(headers),
+				)
+			}
+		}
+		if err != nil {
+			slog.Warn("failed to create OTLP trace exporter", "err", err, "endpoint", endpoint)
+		} else {
+			processors = append(processors, sdktrace.NewBatchSpanProcessor(exp))
+			slog.Info("OTLP trace exporter enabled", "endpoint", endpoint)
+		}
+	}
+
+	res, resErr := resource.New(context.Background(),
+		resource.WithAttributes(semconv.ServiceNameKey.String("devguard")),
+	)
+	if resErr != nil {
+		slog.Warn("failed to create OTel resource", "err", resErr)
+		res = resource.Default()
+	}
+
+	opts := []sdktrace.TracerProviderOption{
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
+		sdktrace.WithResource(res),
+	}
+	for _, p := range processors {
+		opts = append(opts, sdktrace.WithSpanProcessor(p))
+	}
+
+	tp := sdktrace.NewTracerProvider(opts...)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+	slog.Info("tracing initialized", "sample_rate", sampleRate)
 }
 
 func initSentry() {
@@ -158,10 +313,6 @@ func initSentry() {
 		Environment: environment,
 		Release:     release,
 
-		// In debug mode, the debug information is printed to stdout to help you
-		// understand what Sentry is doing.
-		Debug: environment == "dev",
-
 		// Configures whether SDK should generate and attach stack traces to pure
 		// capture message calls.
 		AttachStacktrace: true,
@@ -170,6 +321,7 @@ func initSentry() {
 		// By default, no such data is sent.
 		SendDefaultPII: false,
 	})
+
 	if err != nil {
 		slog.Error("Failed to init logger", "err", err)
 	}

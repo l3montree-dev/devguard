@@ -59,7 +59,7 @@ func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChe
 // @Router /vulndb [get]
 func (c VulnDBController) ListPaged(ctx shared.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		shared.GetPageInfo(ctx),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
@@ -93,7 +93,7 @@ func (c VulnDBController) ListPaged(ctx shared.Context) error {
 // @Router /vulndb/{cveID}/ [get]
 func (c VulnDBController) Read(ctx shared.Context) error {
 	cve, err := c.cveRepository.FindCVE(
-		nil,
+		ctx.Request().Context(), nil,
 		shared.GetParam(ctx, "cveID"),
 	)
 
@@ -137,31 +137,31 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	matchCtx := normalize.ParsePurlForMatching(purl)
 
-	purlComparer := scan.NewPurlComparer(c.cveRepository.GetDB(nil))
+	purlComparer := scan.NewPurlComparer(c.cveRepository.GetDB(ctx.Request().Context(), nil))
 
-	affectedComponents, err := purlComparer.GetAffectedComponents(purl)
+	affectedComponents, err := purlComparer.GetAffectedComponents(ctx.Request().Context(), purl)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to retrieve affected components for PURL").WithInternal(err)
 	}
 
-	vulns, err := purlComparer.GetVulns(purl)
+	vulns, err := purlComparer.GetVulns(ctx.Request().Context(), purl)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}
 
-	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
+	_, maliciousPackage := c.maliciousPackageChecker.IsMalicious(ctx.Request().Context(), purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
 
 	var componentDTO *dtos.ComponentDTO
 	comp := models.Component{ID: purlString}
-	if err := c.componentRepository.GetDB(nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil {
+	if err := c.componentRepository.GetDB(ctx.Request().Context(), nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil {
 		// Component not in DB yet — fetch license and project info on-demand and create it
-		comp, _ = c.componentService.GetLicense(comp)
-		comp, _ = c.componentService.FetchComponentProject(comp)
-		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+		comp, _ = c.componentService.GetLicense(ctx.Request().Context(), comp)
+		comp, _ = c.componentService.FetchComponentProject(ctx.Request().Context(), comp)
+		_ = c.componentRepository.SaveBatch(ctx.Request().Context(), nil, []models.Component{comp})
 	} else if comp.ComponentProject == nil {
 		// Component exists but has no project info yet — fetch it now
-		comp, _ = c.componentService.FetchComponentProject(comp)
-		_ = c.componentRepository.SaveBatch(nil, []models.Component{comp})
+		comp, _ = c.componentService.FetchComponentProject(ctx.Request().Context(), comp)
+		_ = c.componentRepository.SaveBatch(ctx.Request().Context(), nil, []models.Component{comp})
 	}
 	if comp.ComponentProject != nil || comp.License != nil {
 		dto := transformer.ComponentModelToDTO(comp)
@@ -222,10 +222,10 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 		}
 
 		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ? LIMIT ?;`
-		err = c.cveRepository.GetDB(nil).Raw(sql, offset, limit).Find(&results).Error
+		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset, limit).Find(&results).Error
 	} else {
 		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ?;`
-		err = c.cveRepository.GetDB(nil).Raw(sql, offset).Find(&results).Error
+		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset).Find(&results).Error
 	}
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get cve ids").WithInternal(err)
@@ -253,7 +253,7 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM cve_affected_component a
 	LEFT JOIN affected_components b ON b.id = a.affected_component_id
 	GROUP BY LOWER(b.ecosystem);`
-	err := c.affectedComponentRepository.GetDB(nil).Raw(cveSQL).Find(&cveResults).Error
+	err := c.affectedComponentRepository.GetDB(ctx.Request().Context(), nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
@@ -262,7 +262,7 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a 
 	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id 
 	GROUP BY LOWER(b.ecosystem);`
-	err = c.affectedComponentRepository.GetDB(nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
+	err = c.affectedComponentRepository.GetDB(ctx.Request().Context(), nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
 	}
@@ -276,69 +276,4 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 
 	// convert the result in a map and return it
 	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
-}
-
-func (c VulnDBController) GetDependencyVulnerabilities(ctx shared.Context) error {
-	type depVulnRow struct {
-		ComponentPurl                string  `json:"componentPurl"`
-		VulnerabilityPath            string  `json:"vulnerabilityPath"`
-		ComponentFixedVersion        *string `json:"componentFixedVersion"`
-		DirectDependencyFixedVersion *string `json:"directDependencyFixedVersion"`
-	}
-
-	type responseDTO struct {
-		Total int          `json:"total"`
-		Data  []depVulnRow `json:"data"`
-	}
-
-	offset := 0
-	offsetParam := ctx.QueryParam("offset")
-	if offsetParam != "" {
-		var err error
-		offset, err = strconv.Atoi(offsetParam)
-		if err != nil || offset < 0 {
-			return echo.NewHTTPError(400, "invalid offset value").WithInternal(err)
-		}
-	}
-
-	limit := 100
-	limitParam := ctx.QueryParam("limit")
-	if limitParam != "" {
-		var err error
-		limit, err = strconv.Atoi(limitParam)
-		if err != nil || limit <= 0 {
-			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
-		}
-	}
-
-	componentPurl := ctx.QueryParam("componentPurl")
-
-	results := make([]depVulnRow, 0, limit)
-	query := c.dependencyVulnRepository.GetDB(nil).
-		Select("component_purl, vulnerability_path, component_fixed_version, direct_dependency_fixed_version").
-		Offset(offset).
-		Limit(limit)
-
-	if componentPurl != "" {
-		query = query.Where("component_purl LIKE ?", "%"+componentPurl+"%")
-	}
-
-	err := query.Find(&results).Error
-	if err != nil {
-		return echo.NewHTTPError(500, "could not fetch dependency vulnerabilities").WithInternal(err)
-	}
-
-	var totalCount int64
-	countQuery := c.dependencyVulnRepository.GetDB(nil)
-	if componentPurl != "" {
-		countQuery = countQuery.Where("component_purl LIKE ?", "%"+componentPurl+"%")
-	}
-	countQuery.Model(&models.DependencyVuln{}).Count(&totalCount)
-
-	response := responseDTO{
-		Total: int(totalCount),
-		Data:  results,
-	}
-
-	return ctx.JSON(200, response)
 }

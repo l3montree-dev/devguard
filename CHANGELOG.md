@@ -13,6 +13,37 @@ The release notes MUST identify every publicly known run-time vulnerability fixe
 
 You can find the public key for verifying the image and SBOM signatures here: [cosign.pub](https://github.com/l3montree-dev/devguard/blob/main/cosign.pub)
 
+## [v1.1.0] - 2026-03-17
+
+### Security
+
+- No publicly assigned run-time CVE fixes were identified in this release window.
+
+### Added
+
+- Consolidated organization statistics in DevGuard API server, including additional metrics for CVEs, open vulnerabilities, first-party vulnerabilities, component age, ecosystems, and risk history endpoints.
+- New tracing and observability capabilities in DevGuard API server and deployment manifests, including OpenTelemetry instrumentation, trace context propagation, Jaeger integration, span metrics, and Helm support for tracing options.
+- Scanner and policy capabilities in DevGuard API server and supporting components, including policy loading from URL and additional scanner output metadata.
+- DevGuard Helm chart updates for tracing, ServiceMonitor connector endpoint support, and Kyverno policy support for build provenance verification.
+- DevGuard CI component enhancements for attestation pipeline orchestration, including improved source attestation flow, job dependency handling, and scanner update to v1.1.0.
+- DevGuard Web improvements, including a structured cross-page filter system for risk views, billing URL handling for payment-required flows, dynamic issue tracker URLs, and onboarding/project configuration refinements.
+
+### Changed
+
+- DevGuard API server SQL queries and statistics implementation were refactored for better performance and consistency, including query parallelization, endpoint consolidation, and interface cleanup.
+- DevGuard API server security data ingestion changed by removing Debian Security Tracker synchronization and related workflow/import logic.
+- DevGuard API server build and runtime stack changed with dependency refreshes, Go upgrade to 1.25.7, and migration from standalone cosign binary usage to library-based signing.
+- DevGuard Web remediation-time and dependency/risk UI logic were refactored to align with unified backend endpoints and updated filtering semantics.
+
+### Fixed
+
+- DevGuard API server fixed stack overflow conditions in SBOM processing via node elision and test coverage.
+- DevGuard API server fixed transaction commit behavior, tracing context issues across external providers, dependency proxy tracing bugs, and edge cases in remediation-time queries.
+- DevGuard API server fixed image tag generation to sanitize slash characters in generated tags.
+- DevGuard Helm chart fixed Kyverno policy issues and namespace handling in chart resources.
+- DevGuard CI component fixed YAML formatting/syntax issues and corrected attestation job configuration regressions.
+- DevGuard Web fixed compliance visibility toggling, CVSS badge image source handling, asset-version deletion flow behavior, and several UI consistency regressions.
+
 ## [v1.0.1] - 2025-03-03
 
 ### Added
@@ -106,6 +137,7 @@ This is the first stable release of DevGuard. It marks the transition from the `
 - GitLab ticket links using un-slugified refs
 - Various database constraint and migration errors
 
-[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.0.1...main
+[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.1.0...main
+[v1.1.0]: https://github.com/l3montree-dev/devguard/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/l3montree-dev/devguard/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/l3montree-dev/devguard/compare/v0.4.7...v1.0.0

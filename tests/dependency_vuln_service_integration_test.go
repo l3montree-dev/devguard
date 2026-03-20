@@ -16,6 +16,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -106,7 +107,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion)
 			assert.NoError(t, err)
 
 			// Verify CreateIssue was called only once, not twice
@@ -188,7 +189,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion2)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion2)
 			assert.NoError(t, err)
 
 			// Verify CreateIssue was called twice (once for each different vulnerability)
@@ -280,7 +281,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(org, project, asset, assetVersion)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion)
 			assert.NoError(t, err)
 
 			// Verify UpdateIssue was called once and CreateIssue was not called

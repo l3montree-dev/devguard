@@ -18,8 +18,7 @@ var vulndbTables = []string{"cves", "cwes", "affected_components", "cve_affected
 // we are going to compare two tables to extract the diffs.
 // this means, for example for cve we need another cve table which holds the old state
 // THIS expects the cve table having the already synced new state: t0 and the cve_${compareWithSuffix} table holding the old state: t-1
-func (service importService) ExportDiffs(compareWithSuffix string) error {
-	ctx := context.Background()
+func (service importService) ExportDiffs(ctx context.Context, compareWithSuffix string) error {
 	dirName := "diffs-tmp"
 	err := os.Mkdir(dirName, os.ModePerm)
 	if err != nil {

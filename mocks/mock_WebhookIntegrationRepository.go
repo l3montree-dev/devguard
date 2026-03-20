@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *WebhookIntegrationRepository) EXPECT() *WebhookIntegrationRepository_E
 }
 
 // Delete provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *WebhookIntegrationRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type WebhookIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *WebhookIntegrationRepository_Delete_Call {
-	return &WebhookIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *WebhookIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *WebhookIntegrationRepository_Delete_Call {
+	return &WebhookIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *WebhookIntegrationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *WebhookIntegrationRepository_Delete_Call {
+func (_c *WebhookIntegrationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *WebhookIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *WebhookIntegrationRepository_Delete_Call) Return(err error) *WebhookIn
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *WebhookIntegrationRepository_Delete_Call {
+func (_c *WebhookIntegrationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *WebhookIntegrationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByOrgIDAndProjectID provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
-	ret := _mock.Called(orgID, projectID)
+func (_mock *WebhookIntegrationRepository) FindByOrgIDAndProjectID(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByOrgIDAndProjectID")
@@ -105,18 +113,18 @@ func (_mock *WebhookIntegrationRepository) FindByOrgIDAndProjectID(orgID uuid.UU
 
 	var r0 []models.WebhookIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) ([]models.WebhookIntegration, error)); ok {
-		return returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) ([]models.WebhookIntegration, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) []models.WebhookIntegration); ok {
-		r0 = returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) []models.WebhookIntegration); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.WebhookIntegration)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,25 +137,37 @@ type WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call struct {
 }
 
 // FindByOrgIDAndProjectID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projectID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) FindByOrgIDAndProjectID(orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
-	return &WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call{Call: _e.mock.On("FindByOrgIDAndProjectID", orgID, projectID)}
+func (_e *WebhookIntegrationRepository_Expecter) FindByOrgIDAndProjectID(ctx interface{}, tx interface{}, orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
+	return &WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call{Call: _e.mock.On("FindByOrgIDAndProjectID", ctx, tx, orgID, projectID)}
 }
 
-func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) Run(run func(orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
+func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -158,14 +178,14 @@ func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) Return(webh
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) RunAndReturn(run func(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
+func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetClientByIntegrationID provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error) {
-	ret := _mock.Called(integrationID)
+func (_mock *WebhookIntegrationRepository) GetClientByIntegrationID(ctx context.Context, tx shared.DB, integrationID uuid.UUID) (models.WebhookIntegration, error) {
+	ret := _mock.Called(ctx, tx, integrationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetClientByIntegrationID")
@@ -173,16 +193,16 @@ func (_mock *WebhookIntegrationRepository) GetClientByIntegrationID(integrationI
 
 	var r0 models.WebhookIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.WebhookIntegration, error)); ok {
-		return returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.WebhookIntegration, error)); ok {
+		return returnFunc(ctx, tx, integrationID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.WebhookIntegration); ok {
-		r0 = returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.WebhookIntegration); ok {
+		r0 = returnFunc(ctx, tx, integrationID)
 	} else {
 		r0 = ret.Get(0).(models.WebhookIntegration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(integrationID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, integrationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -195,19 +215,31 @@ type WebhookIntegrationRepository_GetClientByIntegrationID_Call struct {
 }
 
 // GetClientByIntegrationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - integrationID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) GetClientByIntegrationID(integrationID interface{}) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
-	return &WebhookIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", integrationID)}
+func (_e *WebhookIntegrationRepository_Expecter) GetClientByIntegrationID(ctx interface{}, tx interface{}, integrationID interface{}) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
+	return &WebhookIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", ctx, tx, integrationID)}
 }
 
-func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) Run(run func(integrationID uuid.UUID)) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
+func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) Run(run func(ctx context.Context, tx shared.DB, integrationID uuid.UUID)) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -218,14 +250,14 @@ func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) Return(web
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) RunAndReturn(run func(integrationID uuid.UUID) (models.WebhookIntegration, error)) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
+func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, integrationID uuid.UUID) (models.WebhookIntegration, error)) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetProjectWebhooks provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
-	ret := _mock.Called(orgID, projectID)
+func (_mock *WebhookIntegrationRepository) GetProjectWebhooks(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProjectWebhooks")
@@ -233,18 +265,18 @@ func (_mock *WebhookIntegrationRepository) GetProjectWebhooks(orgID uuid.UUID, p
 
 	var r0 []models.WebhookIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) ([]models.WebhookIntegration, error)); ok {
-		return returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) ([]models.WebhookIntegration, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, uuid.UUID) []models.WebhookIntegration); ok {
-		r0 = returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) []models.WebhookIntegration); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.WebhookIntegration)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(orgID, projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -257,25 +289,37 @@ type WebhookIntegrationRepository_GetProjectWebhooks_Call struct {
 }
 
 // GetProjectWebhooks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projectID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) GetProjectWebhooks(orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
-	return &WebhookIntegrationRepository_GetProjectWebhooks_Call{Call: _e.mock.On("GetProjectWebhooks", orgID, projectID)}
+func (_e *WebhookIntegrationRepository_Expecter) GetProjectWebhooks(ctx interface{}, tx interface{}, orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
+	return &WebhookIntegrationRepository_GetProjectWebhooks_Call{Call: _e.mock.On("GetProjectWebhooks", ctx, tx, orgID, projectID)}
 }
 
-func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) Run(run func(orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
+func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -286,14 +330,14 @@ func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) Return(webhookIn
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) RunAndReturn(run func(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
+func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) Read(id uuid.UUID) (models.WebhookIntegration, error) {
-	ret := _mock.Called(id)
+func (_mock *WebhookIntegrationRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.WebhookIntegration, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -301,16 +345,16 @@ func (_mock *WebhookIntegrationRepository) Read(id uuid.UUID) (models.WebhookInt
 
 	var r0 models.WebhookIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.WebhookIntegration, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.WebhookIntegration, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.WebhookIntegration); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.WebhookIntegration); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.WebhookIntegration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -323,19 +367,31 @@ type WebhookIntegrationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) Read(id interface{}) *WebhookIntegrationRepository_Read_Call {
-	return &WebhookIntegrationRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *WebhookIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *WebhookIntegrationRepository_Read_Call {
+	return &WebhookIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *WebhookIntegrationRepository_Read_Call) Run(run func(id uuid.UUID)) *WebhookIntegrationRepository_Read_Call {
+func (_c *WebhookIntegrationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *WebhookIntegrationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -346,22 +402,22 @@ func (_c *WebhookIntegrationRepository_Read_Call) Return(webhookIntegration mode
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.WebhookIntegration, error)) *WebhookIntegrationRepository_Read_Call {
+func (_c *WebhookIntegrationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.WebhookIntegration, error)) *WebhookIntegrationRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type WebhookIntegrationRepository
-func (_mock *WebhookIntegrationRepository) Save(tx shared.DB, model *models.WebhookIntegration) error {
-	ret := _mock.Called(tx, model)
+func (_mock *WebhookIntegrationRepository) Save(ctx context.Context, tx shared.DB, model *models.WebhookIntegration) error {
+	ret := _mock.Called(ctx, tx, model)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.WebhookIntegration) error); ok {
-		r0 = returnFunc(tx, model)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.WebhookIntegration) error); ok {
+		r0 = returnFunc(ctx, tx, model)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -374,25 +430,31 @@ type WebhookIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.WebhookIntegration
-func (_e *WebhookIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *WebhookIntegrationRepository_Save_Call {
-	return &WebhookIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
+func (_e *WebhookIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *WebhookIntegrationRepository_Save_Call {
+	return &WebhookIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 
-func (_c *WebhookIntegrationRepository_Save_Call) Run(run func(tx shared.DB, model *models.WebhookIntegration)) *WebhookIntegrationRepository_Save_Call {
+func (_c *WebhookIntegrationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model *models.WebhookIntegration)) *WebhookIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.WebhookIntegration
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.WebhookIntegration)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.WebhookIntegration
+		if args[2] != nil {
+			arg2 = args[2].(*models.WebhookIntegration)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -403,7 +465,7 @@ func (_c *WebhookIntegrationRepository_Save_Call) Return(err error) *WebhookInte
 	return _c
 }
 
-func (_c *WebhookIntegrationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model *models.WebhookIntegration) error) *WebhookIntegrationRepository_Save_Call {
+func (_c *WebhookIntegrationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, model *models.WebhookIntegration) error) *WebhookIntegrationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

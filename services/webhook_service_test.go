@@ -4,6 +4,7 @@
 package services
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,7 +28,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		client := NewWebhookService(server.URL, nil)
 		body := strings.NewReader(`{"test": "data"}`)
 
-		resp, err := client.CreateRequest("POST", server.URL, body)
+		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -49,7 +50,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		client := NewWebhookService(server.URL, nil)
 		body := strings.NewReader(`{"test": "data"}`)
 
-		resp, err := client.CreateRequest("POST", server.URL, body)
+		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
 		assert.Error(t, err)
 		assert.Nil(t, resp)
