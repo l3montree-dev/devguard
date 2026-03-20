@@ -1223,13 +1223,18 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 // generate the tracking object used by the document object
 func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, assetName, cveID string) (gocsaf.Tracking, error) {
 	tracking := gocsaf.Tracking{}
+
 	allEvents := make([]vulnEventWithVuln, 0)
+	validEventTypes := []dtos.VulnEventType{dtos.EventTypeDetected, dtos.EventTypeFixed, dtos.EventTypeFalsePositive, dtos.EventTypeAccepted, dtos.EventTypeReopened}
 	for _, vuln := range vulns {
 		for _, event := range vuln.Events {
-			allEvents = append(allEvents, vulnEventWithVuln{
-				VulnEvent: event,
-				Vuln:      vuln,
-			})
+			// also filter all events which are not relevant for state lifecycle of the vulnerability
+			if slices.Contains(validEventTypes, event.Type) {
+				allEvents = append(allEvents, vulnEventWithVuln{
+					VulnEvent: event,
+					Vuln:      vuln,
+				})
+			}
 		}
 	}
 
@@ -1284,46 +1289,73 @@ type vulnEventWithVuln struct {
 // builds the full revision history for an object, that being a list of all changes to all vulnerabilities associated with this asset
 func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, error) {
 	var revisions []*gocsaf.Revision
-	// then just create a revision entry for every event group
-	version := 0
+
+	// combine vulnerability path events which occurred in the same time frame in the same component of the same vuln event type
+	// map 1: timestamp _> map 2: component_purl -> map 3: vuln event type -> slice: vulns
+	chunkedEventsByTime := make(map[string]map[string]map[dtos.VulnEventType][]vulnEventWithVuln, len(vulnEvents))
 	for _, event := range vulnEvents {
-		revisionObject := gocsaf.Revision{
-			Date: utils.Ptr(event.VulnEvent.CreatedAt.Format(time.RFC3339)),
+		// time.RFC822 cuts truncates timestamp to minutes
+		component := event.Vuln.ComponentPurl
+		timestamp := event.VulnEvent.CreatedAt.Format(time.RFC822)
+
+		// initialize nested maps on first access to avoid nil map access
+		if _, ok := chunkedEventsByTime[timestamp]; !ok {
+			chunkedEventsByTime[timestamp] = make(map[string]map[dtos.VulnEventType][]vulnEventWithVuln)
 		}
-		revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version + 1)))
-		summary, err := generateSummaryForEvent(event.Vuln, event.VulnEvent)
-		if err != nil {
-			continue
+		if _, ok := chunkedEventsByTime[timestamp][component]; !ok {
+			chunkedEventsByTime[timestamp][component] = make(map[dtos.VulnEventType][]vulnEventWithVuln)
 		}
-		revisionObject.Summary = &summary
-		revisions = append(revisions, &revisionObject)
-		version++
+
+		chunkedEventsByTime[timestamp][component][event.VulnEvent.Type] = append(chunkedEventsByTime[timestamp][component][event.VulnEvent.Type], event)
+	}
+
+	version := 0
+	for _, eventsInChunk := range chunkedEventsByTime {
+		for component, eventsInComponent := range eventsInChunk {
+			for eventType, events := range eventsInComponent {
+				// since we grouped by created at timestamp we can just take the first entries timestamp
+				date := events[0].Vuln.CreatedAt.Format(time.RFC3339)
+				revisionObject := gocsaf.Revision{
+					Date: &date,
+				}
+				revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version + 1)))
+
+				// aggregate all unique artifacts from out vuln selection
+				artifactNames := make([]string, 0, len(events))
+				for _, event := range events {
+					for _, artifact := range event.Vuln.Artifacts {
+						artifactNames = append(artifactNames, artifact.ArtifactName)
+					}
+				}
+				artifactNames = utils.DeduplicateSlice(artifactNames, func(t string) string { return t })
+				summary := generateSummaryForEvent(eventType, len(events), component, artifactNames)
+
+				revisionObject.Summary = &summary
+				revisions = append(revisions, &revisionObject)
+				version++
+			}
+		}
 	}
 
 	return revisions, nil
 }
 
-func generateSummaryForEvent(vuln models.DependencyVuln, event models.VulnEvent) (string, error) {
-	artifactNames := make([]string, 0)
-	for _, artifact := range vuln.Artifacts {
-		artifactNames = append(artifactNames, fmt.Sprintf("%s@%s", artifact.ArtifactName, artifact.AssetVersionName))
-	}
+func generateSummaryForEvent(eventType dtos.VulnEventType, amountOfEvents int, componentPurl string, artifactNames []string) string {
 	artifactNameString := strings.Join(normalize.SortStringsSlice(artifactNames), ", ")
 
-	switch event.Type {
+	switch eventType {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Detected %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Reopened %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Fixed %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted path in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
+		return fmt.Sprintf("Accepted %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked path as false positive in package %s (artifact: %s)", vuln.ComponentPurl, artifactNameString), nil
-	default:
-		return "", fmt.Errorf("unknown event type: %s (artifact: %s)", event.Type, artifactNameString)
+		return fmt.Sprintf("Marked %d path as false positive in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
 	}
+	return ""
 }
 
 // signs report and returns the resulting signature
