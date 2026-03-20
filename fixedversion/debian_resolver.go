@@ -16,10 +16,8 @@
 package fixedversion
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -101,12 +99,6 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (map[string][]package
 		return nil, fmt.Errorf("failed to read whole packages XZ: %w", err)
 	}
 	d.packagesXZ[key] = packages
-
-	// save as json
-	b, _ := json.Marshal(packages) // nolint
-	fmt.Printf("Fetched and parsed Packages.xz for suite %s and arch %s, total packages: %d\n", suite, arch, len(packages))
-
-	os.WriteFile("packages_"+suite+"_"+arch+".json", b, 0644) // nolint
 
 	return packages, nil
 }

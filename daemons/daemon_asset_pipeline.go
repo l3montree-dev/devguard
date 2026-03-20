@@ -187,7 +187,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 		for assetWithDetails := range input {
 			toSaveVulns := make([]models.DependencyVuln, 0)
 			// get all closed/accepted vulnerabilities for the asset version
-			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(nil, nil, assetWithDetails.asset.ID)
+			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(assetWithDetails.ctx, nil, assetWithDetails.asset.ID)
 			if err != nil {
 				slog.Error("could not get vulns for asset", "assetID", assetWithDetails.asset.ID, "err", err)
 				errChan <- pipelineError{
@@ -224,7 +224,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 			}
 
 			if len(toSaveVulns) > 0 {
-				err = runner.dependencyVulnRepository.SaveBatch(nil, nil, toSaveVulns)
+				err = runner.dependencyVulnRepository.SaveBatch(assetWithDetails.ctx, nil, toSaveVulns)
 				if err != nil {
 					slog.Error("could not save vulns with resolved fixed versions", "assetID", assetWithDetails.asset.ID, "err", err)
 					errChan <- pipelineError{

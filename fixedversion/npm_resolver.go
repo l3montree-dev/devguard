@@ -112,15 +112,7 @@ func (resolver *NPMResolver) GetUpgradeCandidates(npmResponse *NPMResponse, curr
 	}
 
 	sort.Slice(recommended, func(i, j int) bool {
-		vi := parseVersion(recommended[i])
-		vj := parseVersion(recommended[j])
-		if vi[0] != vj[0] {
-			return vi[0] > vj[0]
-		}
-		if vi[1] != vj[1] {
-			return vi[1] > vj[1]
-		}
-		return vi[2] > vj[2]
+		return semver.Compare("v"+recommended[i], "v"+recommended[j]) > 0
 	})
 
 	return recommended, nil
@@ -176,7 +168,6 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 		return baseVersion, nil
 	}
 
-	baseParts := parseVersion(baseVersion)
 	var candidates []string
 
 	// Collect matching versions from all available versions
@@ -192,12 +183,11 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 			continue
 		}
 
-		vParts := parseVersion(v)
 		matches := false
 
 		switch rangeType {
 		case "^", "~", ">=", ">":
-			matches = matchesVersionConstraint(rangeType, v, vParts, baseVersion, baseParts)
+			matches = matchesVersionConstraint(rangeType, v, baseVersion)
 		case "||":
 			for _, orSpec := range baseVersions {
 				orRangeType, orBaseVersion := resolver.ParseVersionConstraint(orSpec)
@@ -209,13 +199,7 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 					continue // Skip invalid specs after normalization
 				}
 
-				orBaseParts := parseVersion(orBaseVersionNormalized)
-
-				// Check if current version matches this OR spec
-				orMatches := matchesVersionConstraint(orRangeType, v, vParts, orBaseVersionNormalized, orBaseParts)
-
-				// If any OR element matches, the whole OR expression matches
-				if orMatches {
+				if matchesVersionConstraint(orRangeType, v, orBaseVersionNormalized) {
 					matches = true
 					break
 				}
@@ -228,10 +212,7 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 	}
 
 	if len(candidates) == 0 {
-		if rangeType == "||" {
-			return "", fmt.Errorf("no versions match spec %s", versionConstraint)
-		}
-		return "", fmt.Errorf("no versions match spec %s in major version %d", versionConstraint, baseParts[0])
+		return "", fmt.Errorf("no versions match spec %s", versionConstraint)
 	}
 
 	// Sort candidates and return the highest version
@@ -258,7 +239,7 @@ func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
 	if pkg.Namespace != "" {
 		fullName = pkg.Namespace + "/" + pkg.Name
 	}
-	encodedName := url.QueryEscape(fullName)
+	encodedName := url.PathEscape(fullName)
 
 	if pkg.Version != "" {
 		req, err = httpClient.Get("https://registry.npmjs.org/" + encodedName + "/" + normalizedVersion)
