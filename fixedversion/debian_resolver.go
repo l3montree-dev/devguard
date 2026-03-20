@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/package-url/packageurl-go"
@@ -132,7 +133,8 @@ func (idx *packageIndex) lookupDepToken(e debianEntry, pkgName string) (string, 
 }
 
 type DebianResolver struct {
-	index map[distroArch]*packageIndex
+	index      map[distroArch]*packageIndex
+	timestamps map[distroArch]time.Time
 }
 
 var distroToSuite = map[string]string{
@@ -157,7 +159,11 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 
 	key := distroArch{suite, arch}
 	if idx, exists := d.index[key]; exists {
-		return idx, nil
+		// check if older than 12h
+		lastTime := d.timestamps[key]
+		if time.Since(lastTime) < 12*time.Hour {
+			return idx, nil
+		}
 	}
 
 	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
@@ -186,6 +192,7 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 		return nil, fmt.Errorf("failed to build package index: %w", err)
 	}
 	d.index[key] = idx
+	d.timestamps[key] = time.Now()
 	return idx, nil
 }
 
