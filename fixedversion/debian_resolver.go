@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unsafe"
 
 	"github.com/package-url/packageurl-go"
 	"github.com/ulikunitz/xz"
@@ -34,14 +35,53 @@ type distroArch struct {
 	arch   string
 }
 
-type packagesXZ struct {
-	Package string
-	Version string
-	Depends map[string]string
+// debianEntry stores offsets into a shared arena instead of individual strings.
+// This collapses ~190k heap allocations (3 strings × 63k packages) into 2.
+type debianEntry struct {
+	nameOff    uint32
+	nameLen    uint16
+	versionOff uint32
+	versionLen uint16
+	dependsOff uint32
+	dependsLen uint32
+}
+
+// packageIndex is a compact, arena-backed package list sorted by name.
+// All string data lives in a single []byte; entries hold offsets into it.
+type packageIndex struct {
+	entries []debianEntry
+	arena   []byte
+}
+
+func (idx *packageIndex) nameOf(e debianEntry) string {
+	return unsafe.String(&idx.arena[e.nameOff], int(e.nameLen))
+}
+
+func (idx *packageIndex) versionOf(e debianEntry) string {
+	return unsafe.String(&idx.arena[e.versionOff], int(e.versionLen))
+}
+
+func (idx *packageIndex) dependsOf(e debianEntry) string {
+	return unsafe.String(&idx.arena[e.dependsOff], int(e.dependsLen))
+}
+
+// findByName returns all entries for the given package name via binary search.
+func (idx *packageIndex) findByName(name string) []debianEntry {
+	lo := sort.Search(len(idx.entries), func(i int) bool {
+		return idx.nameOf(idx.entries[i]) >= name
+	})
+	if lo >= len(idx.entries) || idx.nameOf(idx.entries[lo]) != name {
+		return nil
+	}
+	hi := lo + 1
+	for hi < len(idx.entries) && idx.nameOf(idx.entries[hi]) == name {
+		hi++
+	}
+	return idx.entries[lo:hi]
 }
 
 type DebianResolver struct {
-	packagesXZ map[distroArch]map[string][]packagesXZ
+	index map[distroArch]*packageIndex
 }
 
 var distroToSuite = map[string]string{
@@ -59,52 +99,51 @@ func NewDebianResolver() *DebianResolver {
 	return &d
 }
 
-func (d *DebianResolver) getPackagesXZ(suite, arch string) (map[string][]packagesXZ, error) {
-	if d.packagesXZ == nil {
-		d.packagesXZ = make(map[distroArch]map[string][]packagesXZ)
+func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error) {
+	if d.index == nil {
+		d.index = make(map[distroArch]*packageIndex)
 	}
 
 	key := distroArch{suite, arch}
-	if reader, exists := d.packagesXZ[key]; exists {
-		return reader, nil
+	if idx, exists := d.index[key]; exists {
+		return idx, nil
 	}
-	// Fetch from Packages.xz for the specified suite
-	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
 
+	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
 	}
 
-	// Decompress xz
 	xzReader, err := xz.NewReader(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create xz reader: %w", err)
 	}
 
-	// Parse Debian control format with pault.ag
 	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create paragraph reader: %w", err)
 	}
 
-	packages, err := readWholePackagesXZ(paragraphReader)
+	idx, err := buildPackageIndex(paragraphReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read whole packages XZ: %w", err)
+		return nil, fmt.Errorf("failed to build package index: %w", err)
 	}
-	d.packagesXZ[key] = packages
-
-	return packages, nil
+	d.index[key] = idx
+	return idx, nil
 }
 
-func readWholePackagesXZ(paragraphReader *control.ParagraphReader) (map[string][]packagesXZ, error) {
-	packages := make(map[string][]packagesXZ)
+// buildPackageIndex parses all paragraphs and builds a compact arena-backed index.
+// First pass collects raw strings; second pass packs them into one []byte arena.
+func buildPackageIndex(paragraphReader *control.ParagraphReader) (*packageIndex, error) {
+	type raw struct{ name, version, depends string }
+	var rows []raw
+	var arenaSize int
 
 	for {
 		pkg, err := paragraphReader.Next()
@@ -114,19 +153,38 @@ func readWholePackagesXZ(paragraphReader *control.ParagraphReader) (map[string][
 		if err != nil {
 			return nil, fmt.Errorf("failed to read control paragraph: %w", err)
 		}
-
 		name := pkg.Values["Package"]
 		ver := pkg.Values["Version"]
-		deps := pkg.Values["Depends"]
-
-		packages[name] = append(packages[name], packagesXZ{
-			Package: name,
-			Version: ver,
-			Depends: parseDependencies(deps),
-		})
+		deps := parseDependencies(pkg.Values["Depends"])
+		arenaSize += len(name) + len(ver) + len(deps)
+		rows = append(rows, raw{name, ver, deps})
 	}
 
-	return packages, nil
+	// Sort by name so findByName can binary-search.
+	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
+
+	arena := make([]byte, 0, arenaSize)
+	entries := make([]debianEntry, len(rows))
+
+	for i, r := range rows {
+		nameOff := uint32(len(arena))
+		arena = append(arena, r.name...)
+		verOff := uint32(len(arena))
+		arena = append(arena, r.version...)
+		depsOff := uint32(len(arena))
+		arena = append(arena, r.depends...)
+
+		entries[i] = debianEntry{
+			nameOff:    nameOff,
+			nameLen:    uint16(len(r.name)),
+			versionOff: verOff,
+			versionLen: uint16(len(r.version)),
+			dependsOff: depsOff,
+			dependsLen: uint32(len(r.depends)),
+		}
+	}
+
+	return &packageIndex{entries: entries, arena: arena}, nil
 }
 
 var debianConstraintRegex = regexp.MustCompile(`^(>>|>=|<<|<=|=)\s*(.+)$`)
@@ -206,38 +264,40 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 // parseParagraphs iterates through all control paragraphs and collects matching packages
 func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
 	var allVersions []string
-	var targetDependencies map[string]string
+	var targetDependencies string
 	var targetVersion string
+	targetFound := false
 
-	packagesXZ, err := d.getPackagesXZ(suite, arch)
+	idx, err := d.getPackagesXZ(suite, arch)
 	if err != nil {
 		return DebianResponse{}, fmt.Errorf("failed to get Packages.xz data: %w", err)
 	}
 
-	packagesFromXZ, exists := packagesXZ[pkgName]
-	if !exists {
+	entries := idx.findByName(pkgName)
+	if len(entries) == 0 {
 		return DebianResponse{}, fmt.Errorf("package %s not found in suite %s for arch %s", pkgName, suite, arch)
 	}
 
-	for _, pkg := range packagesFromXZ {
-		allVersions = append(allVersions, pkg.Version)
+	for _, e := range entries {
+		ver := idx.versionOf(e)
+		allVersions = append(allVersions, ver)
 
-		if pkgVersion != "" && debianVersionsMatch(pkg.Version, pkgVersion) {
-			targetDependencies = pkg.Depends
-			targetVersion = pkg.Version
+		if pkgVersion != "" && debianVersionsMatch(ver, pkgVersion) {
+			targetDependencies = idx.dependsOf(e)
+			targetVersion = ver
+			targetFound = true
 			break
 		}
 	}
 
 	if pkgVersion != "" {
-		if targetDependencies == nil {
+		if !targetFound {
 			return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s", pkgName, pkgVersion, "suite")
 		}
 		return DebianResponse{
 			PackageName:  pkgName,
 			Versions:     []string{targetVersion},
 			Dependencies: targetDependencies,
-			RawMetadata:  nil,
 		}, nil
 	}
 
@@ -246,49 +306,54 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 	}
 
 	return DebianResponse{
-		PackageName:  pkgName,
-		Versions:     allVersions,
-		Dependencies: make(map[string]string),
-		RawMetadata:  nil,
+		PackageName: pkgName,
+		Versions:    allVersions,
 	}, nil
 }
 
-// Returns a map of package -> version constraint
-func parseDependencies(depString string) map[string]string {
+// parseDependencies encodes a Debian Depends field as newline-separated lines.
+// Each line is "pkgname constraint" or just "pkgname" when unconstrained.
+// Example: "libc6 >= 2.36\nzlib1g\ncurl >= 7.0"
+func parseDependencies(depString string) string {
 	if depString == "" {
-		return make(map[string]string)
+		return ""
 	}
-
-	deps := make(map[string]string)
 
 	rel, err := dependency.Parse(depString)
-	if err != nil {
-		fmt.Printf("Warning: failed to parse dependencies '%s': %v\n", depString, err)
-		return deps
+	if err != nil || rel == nil {
+		return ""
 	}
 
-	if rel == nil {
-		return deps
-	}
-
-	// example:  Depends: libc6 (>= 2.40), libcurl3t64-gnutls (>= 7.16.2), zlib1g, will turn this into a map [string]string
-
+	var b strings.Builder
 	for _, possibility := range rel.Relations {
-		// Take first alternative (MVP approach)
-		if len(possibility.Possibilities) > 0 {
-			dep := possibility.Possibilities[0]
-			pkgName := dep.Name
+		if len(possibility.Possibilities) == 0 {
+			continue
+		}
+		dep := possibility.Possibilities[0]
+		b.WriteString(dep.Name)
+		if dep.Version != nil {
+			b.WriteByte(' ')
+			b.WriteString(dep.Version.Operator)
+			b.WriteByte(' ')
+			b.WriteString(dep.Version.Number)
+		}
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
 
-			var constraint string
-			if dep.Version != nil {
-				constraint = dep.Version.Operator + " " + dep.Version.Number
-			}
-
-			deps[pkgName] = constraint
+// lookupDependency finds a package in a flat Dependencies string.
+func lookupDependency(depends, pkgName string) (string, bool) {
+	s := depends
+	for len(s) > 0 {
+		line, rest, _ := strings.Cut(s, "\n")
+		s = rest
+		name, constraint, _ := strings.Cut(line, " ")
+		if name == pkgName {
+			return constraint, true
 		}
 	}
-
-	return deps
+	return "", false
 }
 
 // GetUpgradeCandidates returns newer versions than currentVersion (upgrade candidates)
@@ -339,7 +404,7 @@ func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, cu
 }
 
 func (d *DebianResolver) FindDependencyVersionInMeta(depMeta DebianResponse, pkgName string) (VersionConstraint, bool) {
-	constraint, exists := depMeta.Dependencies[pkgName]
+	constraint, exists := lookupDependency(depMeta.Dependencies, pkgName)
 	return VersionConstraint(constraint), exists
 }
 

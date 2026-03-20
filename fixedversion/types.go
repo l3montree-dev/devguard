@@ -96,7 +96,6 @@ type Signatures struct {
 
 type DebianResponse struct {
 	PackageName  string
-	Versions     []string          // All available versions (sorted newest first)
-	Dependencies map[string]string // For a specific version: dependency_name -> version_constraint
-	RawMetadata  interface{}       // Store raw response if needed
+	Versions     []string // All available versions (sorted newest first)
+	Dependencies string   // For a specific version: newline-separated "pkgname constraint" pairs
 }
