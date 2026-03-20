@@ -139,6 +139,7 @@ type ArtifactRepository interface {
 	DeleteArtifact(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID string) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
+	CleanupOrphanedRecords(ctx context.Context) error
 }
 
 type ReleaseRepository interface {

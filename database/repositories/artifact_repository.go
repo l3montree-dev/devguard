@@ -9,22 +9,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
 
 type artifactRepository struct {
 	utils.Repository[string, models.Artifact, *gorm.DB]
-	utils.FireAndForgetSynchronizer
 	db *gorm.DB
 }
 
-func NewArtifactRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchronizer) *artifactRepository {
+func NewArtifactRepository(db *gorm.DB) *artifactRepository {
 	return &artifactRepository{
-		db:                        db,
-		Repository:                newGormRepository[string, models.Artifact](db),
-		FireAndForgetSynchronizer: synchronizer,
+		db:         db,
+		Repository: newGormRepository[string, models.Artifact](db),
 	}
 }
 
@@ -57,19 +54,14 @@ func (r *artifactRepository) ReadArtifact(ctx context.Context, tx *gorm.DB, name
 }
 
 func (r *artifactRepository) DeleteArtifact(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
+	return r.GetDB(ctx, tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
+}
 
-	err := r.GetDB(ctx, tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
-	if err != nil {
+func (r *artifactRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	if err := r.GetDB(ctx, nil).Exec(CleanupOrphanedRecordsSQL).Error; err != nil {
+		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 		return err
 	}
-	linkedCtx := shared.CreateLinkedCtx(ctx)
-	go func() {
-		sql := CleanupOrphanedRecordsSQL
-		if err := r.GetDB(linkedCtx, nil).Exec(sql).Error; err != nil {
-			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-		}
-	}()
-
 	return nil
 }
 
