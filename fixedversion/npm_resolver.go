@@ -62,6 +62,40 @@ func (resolver *NPMResolver) ParseVersionConstraint(spec string) (rangeType stri
 	return rangeType, extracted
 }
 
+func matchesVersionConstraint(rangeType string, version string, baseVersion string) bool {
+	vV := "v" + version
+	vB := "v" + baseVersion
+
+	switch rangeType {
+	case "^":
+		// ^0.2.3 → same minor band; ^0.0.3 → exact patch; ^1.2.3 → same major
+		if semver.Major(vB) != "v0" {
+			return semver.Major(vV) == semver.Major(vB) && semver.Compare(vV, vB) >= 0
+		} else if semver.MajorMinor(vB) != "v0.0" {
+			return semver.MajorMinor(vV) == semver.MajorMinor(vB) && semver.Compare(vV, vB) >= 0
+		}
+		return semver.Canonical(vV) == semver.Canonical(vB)
+
+	case "~":
+		// Tilde: same major.minor, >= patch
+		return semver.MajorMinor(vV) == semver.MajorMinor(vB) && semver.Compare(vV, vB) >= 0
+
+	case ">=":
+		// Greater than or equal: same major version, >= base
+		return semver.Compare(vV, vB) >= 0
+
+	case ">":
+		// Greater than: same major version, > base
+		return semver.Compare(vV, vB) > 0
+
+	case "exact":
+		return semver.Canonical(vV) == semver.Canonical(vB)
+
+	default:
+		return false
+	}
+}
+
 func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*NPMResponse, error) {
 	resp, err := getNPMRegistry(purl)
 	if err != nil {
