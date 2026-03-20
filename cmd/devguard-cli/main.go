@@ -52,6 +52,8 @@ func init() {
 	commands.GetRootCmd().AddCommand(commands.NewLicensesCommand())
 	commands.GetRootCmd().AddCommand(commands.NewMigrateCommand())
 	commands.GetRootCmd().AddCommand(commands.NewSBOMCommand())
+	commands.GetRootCmd().AddCommand(commands.NewCSAFValidateCommand())
+	commands.GetRootCmd().AddCommand(commands.NewCSAFValidateReportCommand())
 }
 
 func main() {

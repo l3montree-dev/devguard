@@ -863,36 +863,11 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
 func generateProductTree(ctx context.Context, assetID uuid.UUID, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
 	tree := gocsaf.ProductTree{}
-	assetVersions, err := assetVersionRepository.GetAllTagsAndDefaultBranchForAsset(ctx, nil, assetID)
-	if err != nil {
-		return tree, err
-	}
-
-	assetVersionNames := utils.Map(assetVersions, func(el models.AssetVersion) string {
-		return el.Name
-	})
-
-	artifacts, err := artifactRepository.GetByAssetVersions(ctx, nil, assetID, assetVersionNames)
-	if err != nil {
-		return tree, err
-	}
 
 	// use maps (of the productID) to deduplicate
 	productNames := make([]*gocsaf.FullProductName, 0)
 	relationships := make([]*gocsaf.Relationship, 0)
-	// for each artifact build the productName using the purlify function and append to the slice
-	for _, artifact := range artifacts {
-		artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
-		productName := &gocsaf.FullProductName{
-			Name:      &artifactPurl,
-			ProductID: utils.Ptr(gocsaf.ProductID(artifactPurl)),
-			ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-				PURL: utils.Ptr(gocsaf.PURL(artifactPurl)),
-			},
-		}
-		productNames = append(productNames, productName)
-	}
-
+	seenArtifact := make(map[string]struct{})
 	// append each vulnerable component as well as their relationship to the affected artifact
 	for _, vuln := range vulnsForCVE {
 		// first append the component itself
@@ -904,9 +879,24 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, assetVersionRep
 			},
 		}
 		productNames = append(productNames, productName)
-		// then each affected artifact
+
+		// then each affected artifact and its relations
 		for _, artifact := range vuln.Artifacts {
+
 			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+			// check if we already list the artifact in our product IDs, if not append it
+			if _, ok := seenArtifact[artifactPurl]; !ok {
+				productName := &gocsaf.FullProductName{
+					Name:      &artifactPurl,
+					ProductID: utils.Ptr(gocsaf.ProductID(artifactPurl)),
+					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
+						PURL: utils.Ptr(gocsaf.PURL(artifactPurl)),
+					},
+				}
+				productNames = append(productNames, productName)
+				seenArtifact[artifactPurl] = struct{}{}
+			}
+
 			relationship := gocsaf.Relationship{
 				Category:                  utils.Ptr(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
 				ProductReference:          utils.Ptr(gocsaf.ProductID(vuln.ComponentPurl)),
@@ -915,7 +905,7 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, assetVersionRep
 					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
 						PURL: (*gocsaf.PURL)(&vuln.ComponentPurl),
 					},
-					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, "", vuln.ComponentPurl)),
+					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, artifact.AssetVersionName, vuln.ComponentPurl)),
 					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", vuln.ComponentPurl, artifactPurl)),
 				},
 			}
