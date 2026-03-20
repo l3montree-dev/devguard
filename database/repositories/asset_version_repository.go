@@ -370,9 +370,9 @@ func (repository *assetVersionRepository) GetAmountOfAssetVersionsInOrg(ctx cont
 	FROM 
 		asset_versions
 	JOIN
-		assets ON assets.id = asset_version.asset_id
+		assets ON assets.id = asset_versions.asset_id
 	JOIN 
-		projects ON projects.id = assets.asset_id
+		projects ON projects.id = assets.project_id
 	WHERE 
 		projects.organization_id = ?;
 	`, orgID).Find(&totalAmount).Error
