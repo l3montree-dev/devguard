@@ -394,6 +394,7 @@ type AssetVersionRepository interface {
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
 	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 }
 
 type FirstPartyVulnService interface {

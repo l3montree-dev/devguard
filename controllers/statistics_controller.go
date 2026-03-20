@@ -55,7 +55,6 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	return ctx.JSON(200, averages)
 }
 
-
 // @Summary Get risk history for an asset version
 // @Tags Statistics
 // @Security CookieAuth
@@ -253,61 +252,136 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 // @Success 200 {object} dtos.OrgOverview
 // @Router /organizations/{organization}/stats/vuln-statistics/ [get]
 func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
-	org := shared.GetOrg(ctx)
-
-	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
 
 	now := time.Now()
 	reqCtx := ctx.Request().Context()
 
+	org := shared.GetOrg(ctx)
+
+	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
+
+	// test if org is empty
+	amount, err := c.assetVersionRepository.GetAmountOfAssetVersionsInOrg(reqCtx, nil, org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not query total amount of asset versions for org").WithInternal(err)
+	}
+
+	if amount == 0 {
+		return echo.NewHTTPError(404, "organization has no vulnerability data yet")
+	}
+
 	res := utils.Concurrently(
 		func() (any, error) { // 0: distribution
-			return c.statisticsRepository.VulnClassificationByOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.VulnClassificationByOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get vuln classification:  %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 1: structure
-			return c.statisticsRepository.GetOrgStructureDistribution(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetOrgStructureDistribution(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get org structure distribution: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 2: projects
-			return c.statisticsRepository.GetMostVulnerableProjectsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			results, err := c.statisticsRepository.GetMostVulnerableProjectsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable projects: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 3: assets
-			return c.statisticsRepository.GetMostVulnerableAssetsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			results, err := c.statisticsRepository.GetMostVulnerableAssetsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable assets: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 4: artifacts
-			return c.statisticsRepository.GetMostVulnerableArtifactsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			results, err := c.statisticsRepository.GetMostVulnerableArtifactsInOrg(reqCtx, nil, org.ID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable artifacts: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 5: topComponents
-			return c.statisticsRepository.GetMostUsedComponentsInOrg(reqCtx, nil, org.ID, topComponentsLimit)
+			results, err := c.statisticsRepository.GetMostUsedComponentsInOrg(reqCtx, nil, org.ID, topComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most used components: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 6: topCVEs
-			return c.statisticsRepository.GetMostCommonCVEsInOrg(reqCtx, nil, org.ID, topCVEsLimit)
+			results, err := c.statisticsRepository.GetMostCommonCVEsInOrg(reqCtx, nil, org.ID, topCVEsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most common CVEs: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 7: vulnEventAverages
-			return c.statisticsRepository.GetWeeklyAveragePerVulnEventType(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetWeeklyAveragePerVulnEventType(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get weekly average per vuln event type: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 8: riskHistory
-			return c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(reqCtx, nil, org.ID, now.Add(-30*time.Hour*24), now)
+			results, err := c.artifactRiskHistoryRepository.GetRiskHistoryForOrg(reqCtx, nil, org.ID, now.Add(-30*time.Hour*24), now)
+			if err != nil {
+				return results, fmt.Errorf("could not get risk history: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 9: openCodeRiskAverage
-			return c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get open code risk average: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 10: openVulnAverage
-			return c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get open vuln average: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 11: topEcosystems
-			return c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID, topEcosystemsLimit)
+			results, err := c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID, topEcosystemsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get top ecosystems: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 12: maliciousPackages
-			return c.statisticsRepository.FindMaliciousPackagesInOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.FindMaliciousPackagesInOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get malicious packages: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 13: averageAge
-			return c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get average age of dependencies: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 14: averageRemediations
-			return c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get average remediation times: %w", err)
+			}
+			return results, nil
 		},
 		func() (any, error) { // 15: remediationTypeDistributionRows
-			return c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(reqCtx, nil, org.ID)
+			results, err := c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(reqCtx, nil, org.ID)
+			if err != nil {
+				return results, fmt.Errorf("could not get remediation type distribution: %w", err)
+			}
+			return results, nil
 		},
 	)
 
