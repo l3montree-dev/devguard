@@ -835,7 +835,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 	}
 	csafDoc.Document.Tracking = &tracking
 
-	tree, err := generateProductTree(ctx, assetID, service.assetVersionRepository, service.artifactRepository, vulns)
+	tree, err := generateProductTree(ctx, assetID, vulns)
 	if err != nil {
 		return csafDoc, err
 	}
@@ -861,7 +861,7 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 }
 
 // generates the product tree object for a specific asset, which includes the default branch as well as all tags
-func generateProductTree(ctx context.Context, assetID uuid.UUID, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
+func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []models.DependencyVuln) (gocsaf.ProductTree, error) {
 	tree := gocsaf.ProductTree{}
 
 	// use maps (of the productID) to deduplicate

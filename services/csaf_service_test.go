@@ -27,23 +27,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestGenerateProductTree(t *testing.T) {
-	asset1, assetVersion1, artifact1, vulns := setUpVulns()
+	asset1, _, artifact1, vulns := setUpVulns()
 	t.Run("test for trivial product tree consisting of 1 asset -> 1 assetVersion -> 1 artifact", func(t *testing.T) {
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1.ID, mockAssetVersionRepository, mockArtifactRepository, vulns)
+		tree, err := generateProductTree(context.Background(), asset1.ID, vulns)
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
@@ -73,7 +66,7 @@ func TestGenerateProductTree(t *testing.T) {
 
 		for _, component := range expectedComponents {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
 	})
@@ -85,13 +78,7 @@ func TestGenerateProductTree(t *testing.T) {
 		newVuln.Artifacts = []models.Artifact{artifact2}
 		newVuln.ComponentPurl = "pkg:golang/github.com/sigstore/rekor@v1.3.10"
 
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1.ID, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
+		tree, err := generateProductTree(context.Background(), asset1.ID, append(vulns, newVuln))
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}
@@ -118,10 +105,10 @@ func TestGenerateProductTree(t *testing.T) {
 		// check if all relationships are present and correctly formatted
 		for _, component := range expectedComponents[:len(expectedComponents)-1] {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
-		idNew := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, newVuln.ComponentPurl)
+		idNew := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), newVuln.ComponentPurl)
 		assert.Contains(t, allRelationshipIDs, idNew)
 	})
 }
@@ -134,7 +121,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 	}
 	t.Run("generate basic test with 1 dependency vuln for this CVE", func(t *testing.T) {
 		testVuln := vulns[0]
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
+		artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+		productID := artifactNameAndComponentPurlToProductID(artifactPurl, testVuln.ComponentPurl)
 		// only pass first vuln
 		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
@@ -186,7 +174,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			testVulns = append(testVulns, newVuln)
 		}
 
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVulns[0].AssetVersionName, testVulns[0].ComponentPurl)
+		productID := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, testVulns[0].AssetVersionName), testVulns[0].ComponentPurl)
 
 		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
@@ -244,11 +232,11 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
 
-		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
-		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
+		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[0].ComponentPurl)
+		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[2].ComponentPurl)
 
-		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
-		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
+		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[0].ComponentPurl)
+		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[2].ComponentPurl)
 
 		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
