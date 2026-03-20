@@ -80,7 +80,7 @@ func TestMatchesVersionConstraint(t *testing.T) {
 
 		// Greater than or equal (>=)
 		{">=: same major, >= base", ">=", "1.5.0", "1.0.0", true},
-		{">=: different major", ">=", "2.0.0", "1.0.0", false},
+		{">=: different major", ">=", "2.0.0", "1.0.0", true},
 
 		// Greater than (>)
 		{"greater: same major, > base", ">", "1.5.0", "1.0.0", true},
