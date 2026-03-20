@@ -458,14 +458,14 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 	projectAverage := dtos.ProjectVulnCountAverageBySeverity{}
 	err := r.GetDB(ctx, tx).Raw(`
 		SELECT 
-			AVG(sub.risk_low) risk_low_average, 
-			AVG(sub.risk_medium) risk_medium_average, 
-			AVG(sub.risk_high) risk_high_average, 
-			AVG(sub.risk_critical) risk_critical_average,
-			AVG(sub.cvss_low) cvss_low_average, 
-			AVG(sub.cvss_medium) cvss_medium_average, 
-			AVG(sub.cvss_high) cvss_high_average, 
-			AVG(sub.cvss_critical) cvss_critical_average
+			COALESCE(AVG(sub.risk_low) risk_low_average,0), 
+			COALESCE(AVG(sub.risk_medium) risk_medium_average.0), 
+			COALESCE(AVG(sub.risk_high) risk_high_average.0), 
+			COALESCE(AVG(sub.risk_critical) risk_critical_average.0),
+			COALESCE(AVG(sub.cvss_low) cvss_low_average.0), 
+			COALESCE(AVG(sub.cvss_medium) cvss_medium_average.0), 
+			COALESCE(AVG(sub.cvss_high) cvss_high_average.0), 
+			COALESCE(AVG(sub.cvss_critical) cvss_critical_average.0)
 		FROM 
 			(
 				SELECT 
