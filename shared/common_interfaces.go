@@ -47,6 +47,10 @@ type DaemonRunner interface {
 	Start(ctx context.Context)
 }
 
+type FixedVersionResolver interface {
+	ResolveFixedVersions(path []packageurl.PackageURL, fixedVersion string) (string, error)
+}
+
 type LeaderElector interface {
 	IsLeader() bool
 }

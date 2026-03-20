@@ -113,7 +113,8 @@ type TestApp struct {
 	VulnDBImportService  shared.VulnDBImportService
 
 	// Daemons
-	DaemonRunner shared.DaemonRunner
+	DaemonRunner         shared.DaemonRunner
+	FixedVersionResolver shared.FixedVersionResolver
 }
 
 // TestAppOptions configures the test application

@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -62,7 +63,8 @@ type DaemonRunner struct {
 	vulnDBImportService          shared.VulnDBImportService
 	vexRuleService               shared.VEXRuleService
 
-	debugOptions DebugOptions
+	debugOptions         DebugOptions
+	fixedVersionResolver shared.FixedVersionResolver
 }
 
 func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
@@ -103,6 +105,7 @@ func NewDaemonRunner(
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBImportService,
 	vexRuleService shared.VEXRuleService,
+	fixedVersionResolver shared.FixedVersionResolver,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -133,6 +136,7 @@ func NewDaemonRunner(
 		maliciousPackageChecker:      maliciousPackageChecker,
 		vulnDBImportService:          vulnDBImportService,
 		vexRuleService:               vexRuleService,
+		fixedVersionResolver:         fixedVersionResolver,
 	}
 }
 
@@ -161,5 +165,6 @@ func (runner *DaemonRunner) tick() {
 var _ shared.DaemonRunner = (*DaemonRunner)(nil)
 
 var Module = fx.Module("daemons",
+	fx.Provide(fx.Annotate(fixedversion.NewVulnerabilityPathAnalysisFixedVersionResolver, fx.As(new(shared.FixedVersionResolver)))),
 	fx.Provide(fx.Annotate(NewDaemonRunner, fx.As(new(shared.DaemonRunner)))),
 )
