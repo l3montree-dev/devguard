@@ -97,5 +97,8 @@ type Signatures struct {
 type DebianResponse struct {
 	PackageName  string
 	Versions     []string // All available versions (sorted newest first)
-	Dependencies string   // For a specific version: newline-separated "pkgname constraint" pairs
+	Dependencies string   // legacy text format; empty when depIdx is set
+	// binary depends reference — set by the debian resolver, nil for all other paths
+	depIdx   *packageIndex
+	depEntry debianEntry
 }

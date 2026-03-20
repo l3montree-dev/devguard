@@ -16,6 +16,7 @@
 package fixedversion
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -35,8 +36,7 @@ type distroArch struct {
 	arch   string
 }
 
-// debianEntry stores offsets into a shared arena instead of individual strings.
-// This collapses ~190k heap allocations (3 strings × 63k packages) into 2.
+// debianEntry holds offsets into packageIndex.data for name, version, and depends.
 type debianEntry struct {
 	nameOff    uint32
 	nameLen    uint16
@@ -46,23 +46,33 @@ type debianEntry struct {
 	dependsLen uint32
 }
 
+// nameRange is a (offset, length) pointer into a []byte arena.
+type nameRange struct {
+	off uint32
+	len uint16
+}
+
 // packageIndex is a compact, arena-backed package list sorted by name.
-// All string data lives in a single []byte; entries hold offsets into it.
+// data is a single backing buffer holding, in order:
+//
+//	pass-1: [name₀][ver₀][name₁][ver₁]…  (all entry names then all versions interleaved)
+//	pass-2: [deps₀][deps₁]…              (tokenised depends blobs appended after)
+//
+// depDict/depRanges is a sorted uint16-token dictionary of dep-field package names.
+// Binary dep format per record: [uint16LE token][constraint bytes]['\n']
 type packageIndex struct {
-	entries []debianEntry
-	arena   []byte
+	entries   []debianEntry
+	data      []byte      // names + versions + tokenised deps in one allocation
+	depDict   []byte      // dep-name strings concatenated
+	depRanges []nameRange // depRanges[token] → offset/len in depDict
 }
 
 func (idx *packageIndex) nameOf(e debianEntry) string {
-	return unsafe.String(&idx.arena[e.nameOff], int(e.nameLen))
+	return unsafe.String(&idx.data[e.nameOff], int(e.nameLen))
 }
 
 func (idx *packageIndex) versionOf(e debianEntry) string {
-	return unsafe.String(&idx.arena[e.versionOff], int(e.versionLen))
-}
-
-func (idx *packageIndex) dependsOf(e debianEntry) string {
-	return unsafe.String(&idx.arena[e.dependsOff], int(e.dependsLen))
+	return unsafe.String(&idx.data[e.versionOff], int(e.versionLen))
 }
 
 // findByName returns all entries for the given package name via binary search.
@@ -78,6 +88,47 @@ func (idx *packageIndex) findByName(name string) []debianEntry {
 		hi++
 	}
 	return idx.entries[lo:hi]
+}
+
+// findDepToken returns the uint16 token for pkgName, or -1 if not in the dictionary.
+func (idx *packageIndex) findDepToken(name string) int {
+	lo := sort.Search(len(idx.depRanges), func(i int) bool {
+		n := idx.depRanges[i]
+		return unsafe.String(&idx.depDict[n.off], int(n.len)) >= name
+	})
+	if lo >= len(idx.depRanges) {
+		return -1
+	}
+	n := idx.depRanges[lo]
+	if unsafe.String(&idx.depDict[n.off], int(n.len)) != name {
+		return -1
+	}
+	return lo
+}
+
+// lookupDepToken scans the binary dep records for entry e and returns the constraint
+// string for pkgName (e.g. ">= 2.36", or "" if unconstrained), or ("", false) if absent.
+func (idx *packageIndex) lookupDepToken(e debianEntry, pkgName string) (string, bool) {
+	token := idx.findDepToken(pkgName)
+	if token < 0 {
+		return "", false
+	}
+	want := uint16(token)
+	data := idx.data[e.dependsOff : e.dependsOff+e.dependsLen]
+	for len(data) >= 3 { // 2-byte token + at least '\n'
+		tok := uint16(data[0]) | uint16(data[1])<<8
+		data = data[2:]
+		nl := bytes.IndexByte(data, '\n')
+		if nl < 0 {
+			break
+		}
+		constraint := string(data[:nl])
+		data = data[nl+1:]
+		if tok == want {
+			return constraint, true
+		}
+	}
+	return "", false
 }
 
 type DebianResolver struct {
@@ -139,7 +190,7 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 }
 
 // buildPackageIndex parses all paragraphs and builds a compact arena-backed index.
-// First pass collects raw strings; second pass packs them into one []byte arena.
+// Dep names are tokenised to uint16 so each occurrence costs 2 bytes instead of ~10.
 func buildPackageIndex(paragraphReader *control.ParagraphReader) (*packageIndex, error) {
 	type raw struct{ name, version, depends string }
 	var rows []raw
@@ -156,35 +207,95 @@ func buildPackageIndex(paragraphReader *control.ParagraphReader) (*packageIndex,
 		name := pkg.Values["Package"]
 		ver := pkg.Values["Version"]
 		deps := parseDependencies(pkg.Values["Depends"])
-		arenaSize += len(name) + len(ver) + len(deps)
+		arenaSize += len(name) + len(ver)
 		rows = append(rows, raw{name, ver, deps})
 	}
 
 	// Sort by name so findByName can binary-search.
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 
-	arena := make([]byte, 0, arenaSize)
-	entries := make([]debianEntry, len(rows))
-
-	for i, r := range rows {
-		nameOff := uint32(len(arena))
-		arena = append(arena, r.name...)
-		verOff := uint32(len(arena))
-		arena = append(arena, r.version...)
-		depsOff := uint32(len(arena))
-		arena = append(arena, r.depends...)
-
-		entries[i] = debianEntry{
-			nameOff:    nameOff,
-			nameLen:    uint16(len(r.name)),
-			versionOff: verOff,
-			versionLen: uint16(len(r.version)),
-			dependsOff: depsOff,
-			dependsLen: uint32(len(r.depends)),
+	// --- Build dep-name token dictionary (uint16, dep-field names only) ---
+	depNameSet := make(map[string]uint16, 40000)
+	for _, r := range rows {
+		s := r.depends
+		for len(s) > 0 {
+			line, rest, _ := strings.Cut(s, "\n")
+			s = rest
+			name, _, _ := strings.Cut(line, " ")
+			if name != "" {
+				depNameSet[name] = 0
+			}
 		}
 	}
+	uniqueDepNames := make([]string, 0, len(depNameSet))
+	for name := range depNameSet {
+		uniqueDepNames = append(uniqueDepNames, name)
+	}
+	sort.Strings(uniqueDepNames)
 
-	return &packageIndex{entries: entries, arena: arena}, nil
+	depDict := make([]byte, 0, len(depNameSet)*10)
+	depRanges := make([]nameRange, len(uniqueDepNames))
+	for i, name := range uniqueDepNames {
+		depRanges[i] = nameRange{off: uint32(len(depDict)), len: uint16(len(name))}
+		depDict = append(depDict, name...)
+		depNameSet[name] = uint16(i)
+	}
+
+	// --- Single data buffer: pass-1 names+versions, pass-2 tokenised deps ---
+	var depsCap int
+	for _, r := range rows {
+		s := r.depends
+		for len(s) > 0 {
+			line, rest, _ := strings.Cut(s, "\n")
+			s = rest
+			if line == "" {
+				continue
+			}
+			_, constraint, _ := strings.Cut(line, " ")
+			depsCap += 2 + len(constraint) + 1
+		}
+	}
+	data := make([]byte, 0, arenaSize+depsCap)
+	entries := make([]debianEntry, len(rows))
+
+	// Pass 1: names and versions
+	for i, r := range rows {
+		nameOff := uint32(len(data))
+		data = append(data, r.name...)
+		verOff := uint32(len(data))
+		data = append(data, r.version...)
+		entries[i].nameOff = nameOff
+		entries[i].nameLen = uint16(len(r.name))
+		entries[i].versionOff = verOff
+		entries[i].versionLen = uint16(len(r.version))
+	}
+
+	// Pass 2: tokenised dep blobs
+	for i, r := range rows {
+		depsOff := uint32(len(data))
+		s := r.depends
+		for len(s) > 0 {
+			line, rest, _ := strings.Cut(s, "\n")
+			s = rest
+			if line == "" {
+				continue
+			}
+			name, constraint, _ := strings.Cut(line, " ")
+			tok := depNameSet[name]
+			data = append(data, byte(tok), byte(tok>>8))
+			data = append(data, constraint...)
+			data = append(data, '\n')
+		}
+		entries[i].dependsOff = depsOff
+		entries[i].dependsLen = uint32(len(data)) - depsOff
+	}
+
+	return &packageIndex{
+		entries:   entries,
+		data:      data,
+		depDict:   depDict,
+		depRanges: depRanges,
+	}, nil
 }
 
 var debianConstraintRegex = regexp.MustCompile(`^(>>|>=|<<|<=|=)\s*(.+)$`)
@@ -264,7 +375,7 @@ func (d *DebianResolver) fetchVersionMetadata(pkgName, pkgVersion, suite, arch s
 // parseParagraphs iterates through all control paragraphs and collects matching packages
 func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string) (DebianResponse, error) {
 	var allVersions []string
-	var targetDependencies string
+	var targetEntry debianEntry
 	var targetVersion string
 	targetFound := false
 
@@ -283,7 +394,7 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 		allVersions = append(allVersions, ver)
 
 		if pkgVersion != "" && debianVersionsMatch(ver, pkgVersion) {
-			targetDependencies = idx.dependsOf(e)
+			targetEntry = e
 			targetVersion = ver
 			targetFound = true
 			break
@@ -295,9 +406,10 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 			return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s", pkgName, pkgVersion, "suite")
 		}
 		return DebianResponse{
-			PackageName:  pkgName,
-			Versions:     []string{targetVersion},
-			Dependencies: targetDependencies,
+			PackageName: pkgName,
+			Versions:    []string{targetVersion},
+			depIdx:      idx,
+			depEntry:    targetEntry,
 		}, nil
 	}
 
@@ -404,6 +516,10 @@ func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, cu
 }
 
 func (d *DebianResolver) FindDependencyVersionInMeta(depMeta DebianResponse, pkgName string) (VersionConstraint, bool) {
+	if depMeta.depIdx != nil {
+		constraint, ok := depMeta.depIdx.lookupDepToken(depMeta.depEntry, pkgName)
+		return VersionConstraint(constraint), ok
+	}
 	constraint, exists := lookupDependency(depMeta.Dependencies, pkgName)
 	return VersionConstraint(constraint), exists
 }
