@@ -27,23 +27,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestGenerateProductTree(t *testing.T) {
-	asset1, assetVersion1, artifact1, vulns := setUpVulns()
+	asset1, _, artifact1, vulns := setUpVulns()
 	t.Run("test for trivial product tree consisting of 1 asset -> 1 assetVersion -> 1 artifact", func(t *testing.T) {
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, vulns)
+		tree, err := generateProductTree(context.Background(), asset1.ID, vulns)
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
@@ -73,7 +66,7 @@ func TestGenerateProductTree(t *testing.T) {
 
 		for _, component := range expectedComponents {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
 	})
@@ -85,13 +78,7 @@ func TestGenerateProductTree(t *testing.T) {
 		newVuln.Artifacts = []models.Artifact{artifact2}
 		newVuln.ComponentPurl = "pkg:golang/github.com/sigstore/rekor@v1.3.10"
 
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
+		tree, err := generateProductTree(context.Background(), asset1.ID, append(vulns, newVuln))
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}
@@ -118,10 +105,10 @@ func TestGenerateProductTree(t *testing.T) {
 		// check if all relationships are present and correctly formatted
 		for _, component := range expectedComponents[:len(expectedComponents)-1] {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
-		idNew := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, newVuln.ComponentPurl)
+		idNew := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), newVuln.ComponentPurl)
 		assert.Contains(t, allRelationshipIDs, idNew)
 	})
 }
@@ -134,9 +121,10 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 	}
 	t.Run("generate basic test with 1 dependency vuln for this CVE", func(t *testing.T) {
 		testVuln := vulns[0]
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
+		artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+		productID := artifactNameAndComponentPurlToProductID(artifactPurl, testVuln.ComponentPurl)
 		// only pass first vuln
-		productStatus, distributions, remediations := calculateVulnStateInformation([]models.DependencyVuln{testVuln})
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// TEST PRODUCT STATUS
@@ -157,6 +145,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		// TEST remediations
 		// we expect 0 remediations if only unhandled vulns are passed
 		assert.Len(t, remediations, 0)
+
+		assert.Len(t, flags, 0, "since the vulnerability is not handled as falsePositive we expect no flags")
 	})
 	t.Run("multiple different paths inside a vuln which are all handled differently should result in a correct distribution and a correct classification as accepted", func(t *testing.T) {
 		baseVuln := vulns[len(vulns)-1]
@@ -184,9 +174,9 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			testVulns = append(testVulns, newVuln)
 		}
 
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVulns[0].AssetVersionName, testVulns[0].ComponentPurl)
+		productID := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, testVulns[0].AssetVersionName), testVulns[0].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(testVulns)
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// since at least 1 path has been marked as accepted the risks is actually present and exploitable
@@ -212,6 +202,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		}
 		assert.Len(t, affected, 1)
 		assert.Equal(t, string(productID), affected[0])
+
+		assert.Len(t, flags, 0, "since the vuln should be classified as accepted we expect no false Positive flags")
 	})
 	t.Run("CVE in multiple different components each with multiple differently handled paths", func(t *testing.T) {
 		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
@@ -233,20 +225,20 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
 
-		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
-		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
+		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[0].ComponentPurl)
+		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[2].ComponentPurl)
 
-		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
-		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
+		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[0].ComponentPurl)
+		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[2].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(append(testVulnsArtifact1, testVulnsArtifact2...))
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// first test the distributions
@@ -279,11 +271,16 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			}
 		}
 
-		// now test for correct remediations (we expect 1 for artifact2 comp2 -> false positive)
-		assert.Len(t, remediations, 1)
-		assert.Equal(t, csaf.CSAFRemediationCategoryMitigation, *remediations[0].Category)
-		assert.True(t, strings.Contains(*remediations[0].Details, "marked as false positive. Justification: This is a false positive"))
-		assert.Equal(t, string(artifact2ProductID2), string(*(*remediations[0].ProductIds)[0]))
+		assert.Len(t, remediations, 0, "we do not have any vulns classified as accepted -> no remediations")
+
+		assert.Len(t, flags, 1, "since 1 vuln is classified as false Positive we expect 1 flag")
+		flag := flags[0]
+		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, *flag.MechanicalJustification)
+		assert.Len(t, flag.ProductIDs, 1)
+		assert.Equal(t, eventTime, *flag.Date)
+
+		product := flag.ProductIDs[0]
+		assert.Equal(t, artifact2ProductID2, *product)
 
 		// finally test the productStatus classifications
 		assert.Empty(t, affected)
@@ -292,37 +289,61 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
 
 		assert.Len(t, underInvestigation, 2)
+
 	})
 }
 
-func TestGetMostRecentJustification(t *testing.T) {
+func TestGetMostRecentJustifications(t *testing.T) {
 	_, _, _, vulns := setUpVulns()
-	eventTimeLatest, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
+	eventTimeT1, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	eventTimeEarlier, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
+	eventTimeT2, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	t.Run("should return nil if no justification can be found", func(t *testing.T) {
-		justification := getMostRecentJustification(vulns)
-		assert.Nil(t, justification)
+	eventTimeT3, err := time.Parse(time.RFC3339, "2026-02-12T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+
+	t.Run("should return all nil if no justifications can be found", func(t *testing.T) {
+		justification, mechanicalJustification, timeStamp := getMostRecentJustifications(vulns)
+		assert.Nil(t, justification, timeStamp, mechanicalJustification)
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeEarlier}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
-		justification := getMostRecentJustification(vulns)
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
 		assert.Equal(t, "this information is up to date", *justification)
+		assert.Nil(t, mechanicalJustification, "since we did not provide a mechanical justification we should not find one")
+		assert.Equal(t, eventTimeT2, *timestamp)
+	})
+	t.Run("should return the latest justification and the latest mechanical justification if both are present and in different events", func(t *testing.T) {
+		vulns[0].State = dtos.VulnStateFalsePositive
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, MechanicalJustification: dtos.ComponentNotPresent, Justification: utils.Ptr("this information is outdated")})
+
+		vulns[1].State = dtos.VulnStateFalsePositive
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+
+		// latest event has no justifications
+		vulns[2].State = dtos.VulnStateFixed
+		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT3}, Type: dtos.EventTypeFixed})
+
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
+		assert.Equal(t, "this information is up to date", *justification)
+		assert.Equal(t, *mechanicalJustification, dtos.ComponentNotPresent)
+		assert.Equal(t, eventTimeT2, *timestamp, "the justification at T2 was the after the mechanical justification at T1")
 	})
 }
 
 func TestGenerateTrackingObject(t *testing.T) {
-	_, _, artifact1, vulns := setUpVulns()
+	asset, _, artifact1, vulns := setUpVulns()
 	eventTimeFalsePositives, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
@@ -366,7 +387,7 @@ func TestGenerateTrackingObject(t *testing.T) {
 			testVulnsArtifact2[i].ID = testVulnsArtifact2[i].CalculateHash()
 		}
 
-		tracking, err := generateTrackingObject(append(testVulnsArtifact1, testVulnsArtifact2...))
+		tracking, err := generateTrackingObject(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...), asset.Name, testVulnsArtifact1[0].CVEID)
 		assert.NoError(t, err)
 
 		// the current release date should be the timestamp of the latest event
@@ -374,13 +395,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, eventTimeFixed.Equal(currentRelease))
 
-		// 7 vulns each has a detected event + 1 fix event + 3 false positive events = we expect 11 entries
-		assert.Len(t, tracking.RevisionHistory, 11)
+		// 7 vulns each has a detected event (grouped to 2) + 3 false positive events (grouped to 2) + 1 fix event  = we expect 5 entries
+		assert.Len(t, tracking.RevisionHistory, 5)
 		// the version number should match the number of entries
 		assert.Equal(t, strconv.Itoa(len(tracking.RevisionHistory)), string(*tracking.Version))
 
 		// all detected Events should happen the earliest
-		detectedEntries := tracking.RevisionHistory[:7]
+		detectedEntries := tracking.RevisionHistory[:2]
 		detectionTime := vulns[0].Events[0].CreatedAt
 		for i, entry := range detectedEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
@@ -388,18 +409,18 @@ func TestGenerateTrackingObject(t *testing.T) {
 			assert.True(t, detectionTime.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Detected path in package"))
+			assert.True(t, strings.Contains(*entry.Summary, "Detected"))
 		}
 
 		// then we should find all the false positives events
-		falsePositiveEntries := tracking.RevisionHistory[7:10]
+		falsePositiveEntries := tracking.RevisionHistory[2 : len(tracking.RevisionHistory)-1]
 		for i, entry := range falsePositiveEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
 			assert.NoError(t, err)
 			assert.True(t, eventTimeFalsePositives.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1+len(detectedEntries)), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Marked path as false positive"))
+			assert.True(t, strings.Contains(*entry.Summary, "as false positive"))
 		}
 
 		// lastly check for the fixed event as the last entry
@@ -409,20 +430,21 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.True(t, eventTimeFixed.Equal(date))
 
 		assert.Equal(t, strconv.Itoa(len(detectedEntries)+len(falsePositiveEntries)+1), string(*entry.Number))
-		assert.True(t, strings.Contains(*entry.Summary, "Fixed path in package"))
+		assert.True(t, strings.Contains(*entry.Summary, "Fixed"))
 
-		amountPurl1 := 0
-		amountPurl2 := 0
+		// lastly check if we have correct amount of components and artifact in our revisions
+		amountPurlKotlin := 0
+		amountPurlDebug := 0
 
 		amountArtifact1 := 0
 		amountArtifact2 := 0
 
 		for _, entry := range tracking.RevisionHistory {
 			if strings.Contains(*entry.Summary, "pkg:github.com/jetbrains/kotlin@v872") {
-				amountPurl1++
+				amountPurlKotlin++
 			}
 			if strings.Contains(*entry.Summary, "pkg:rpm/redhat/openssh-debugsource@v1.0.1") {
-				amountPurl2++
+				amountPurlDebug++
 			}
 			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
 				amountArtifact1++
@@ -432,13 +454,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, len(tracking.RevisionHistory), amountArtifact1+amountArtifact2, amountPurl1+amountPurl2)
+		assert.Equal(t, len(tracking.RevisionHistory), amountPurlKotlin+amountPurlDebug)
 		// 3 detected events 1 fixed event
-		assert.Equal(t, 3+1, amountArtifact1)
+		assert.Equal(t, 3, amountArtifact1)
 		// 4 detected events 3 falsePositives
-		assert.Equal(t, 4+3, amountArtifact2)
-		assert.Equal(t, 5, amountPurl1)
-		assert.Equal(t, 6, amountPurl2)
+		assert.Equal(t, 4, amountArtifact2)
+		assert.Equal(t, 2, amountPurlKotlin)
+		assert.Equal(t, 3, amountPurlDebug)
 
 	})
 }
