@@ -1294,7 +1294,7 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 	// map 1: timestamp _> map 2: component_purl -> map 3: vuln event type -> slice: vulns
 	chunkedEventsByTime := make(map[string]map[string]map[dtos.VulnEventType][]vulnEventWithVuln, len(vulnEvents))
 	for _, event := range vulnEvents {
-		// time.RFC822 cuts truncates timestamp to minutes
+		// time.RFC822 truncates timestamp to minutes
 		component := event.Vuln.ComponentPurl
 		timestamp := event.VulnEvent.CreatedAt.Format(time.RFC822)
 
@@ -1309,34 +1309,58 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 		chunkedEventsByTime[timestamp][component][event.VulnEvent.Type] = append(chunkedEventsByTime[timestamp][component][event.VulnEvent.Type], event)
 	}
 
-	version := 0
 	for _, eventsInChunk := range chunkedEventsByTime {
 		for component, eventsInComponent := range eventsInChunk {
 			for eventType, events := range eventsInComponent {
 				// since we grouped by created at timestamp we can just take the first entries timestamp
-				date := events[0].Vuln.CreatedAt.Format(time.RFC3339)
-				revisionObject := gocsaf.Revision{
-					Date: &date,
-				}
-				revisionObject.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version + 1)))
+				var earliestDate *time.Time
 
 				// aggregate all unique artifacts from out vuln selection
 				artifactNames := make([]string, 0, len(events))
 				for _, event := range events {
+					if earliestDate == nil {
+						earliestDate = &event.VulnEvent.CreatedAt
+					} else if event.VulnEvent.CreatedAt.Before(*earliestDate) {
+						earliestDate = &event.VulnEvent.CreatedAt
+					}
+
 					for _, artifact := range event.Vuln.Artifacts {
 						artifactNames = append(artifactNames, artifact.ArtifactName)
 					}
 				}
+
+				revisionObject := gocsaf.Revision{
+					Date: utils.Ptr((*earliestDate).Format(time.RFC3339)),
+				}
+
 				artifactNames = utils.DeduplicateSlice(artifactNames, func(t string) string { return t })
 				summary := generateSummaryForEvent(eventType, len(events), component, artifactNames)
 
 				revisionObject.Summary = &summary
 				revisions = append(revisions, &revisionObject)
-				version++
 			}
 		}
 	}
 
+	// sort with higher precision
+	slices.SortFunc(revisions, func(revision1, revision2 *gocsaf.Revision) int {
+		revision1Timestamp, err := time.Parse(time.RFC3339, *revision1.Date)
+		if err != nil {
+			return -1
+		}
+
+		revision2Timestamp, err := time.Parse(time.RFC3339, *revision2.Date)
+		if err != nil {
+			return 1
+		}
+		return revision1Timestamp.Compare(revision2Timestamp)
+	})
+
+	version := 1
+	for _, entry := range revisions {
+		entry.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version)))
+		version++
+	}
 	return revisions, nil
 }
 
