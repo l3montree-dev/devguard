@@ -1325,7 +1325,7 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 					}
 
 					for _, artifact := range event.Vuln.Artifacts {
-						artifactNames = append(artifactNames, artifact.ArtifactName)
+						artifactNames = append(artifactNames, normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName))
 					}
 				}
 

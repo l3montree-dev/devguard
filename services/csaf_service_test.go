@@ -395,13 +395,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, eventTimeFixed.Equal(currentRelease))
 
-		// 7 vulns each has a detected event + 1 fix event + 3 false positive events = we expect 11 entries
-		assert.Len(t, tracking.RevisionHistory, 11)
+		// 7 vulns each has a detected event (grouped to 2) + 3 false positive events (grouped to 2) + 1 fix event  = we expect 5 entries
+		assert.Len(t, tracking.RevisionHistory, 5)
 		// the version number should match the number of entries
 		assert.Equal(t, strconv.Itoa(len(tracking.RevisionHistory)), string(*tracking.Version))
 
 		// all detected Events should happen the earliest
-		detectedEntries := tracking.RevisionHistory[:7]
+		detectedEntries := tracking.RevisionHistory[:2]
 		detectionTime := vulns[0].Events[0].CreatedAt
 		for i, entry := range detectedEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
@@ -409,18 +409,18 @@ func TestGenerateTrackingObject(t *testing.T) {
 			assert.True(t, detectionTime.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Detected path in package"))
+			assert.True(t, strings.Contains(*entry.Summary, "Detected"))
 		}
 
 		// then we should find all the false positives events
-		falsePositiveEntries := tracking.RevisionHistory[7:10]
+		falsePositiveEntries := tracking.RevisionHistory[2 : len(tracking.RevisionHistory)-1]
 		for i, entry := range falsePositiveEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
 			assert.NoError(t, err)
 			assert.True(t, eventTimeFalsePositives.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1+len(detectedEntries)), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Marked path as false positive"))
+			assert.True(t, strings.Contains(*entry.Summary, "as false positive"))
 		}
 
 		// lastly check for the fixed event as the last entry
@@ -430,20 +430,21 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.True(t, eventTimeFixed.Equal(date))
 
 		assert.Equal(t, strconv.Itoa(len(detectedEntries)+len(falsePositiveEntries)+1), string(*entry.Number))
-		assert.True(t, strings.Contains(*entry.Summary, "Fixed path in package"))
+		assert.True(t, strings.Contains(*entry.Summary, "Fixed"))
 
-		amountPurl1 := 0
-		amountPurl2 := 0
+		// lastly check if we have correct amount of components and artifact in our revisions
+		amountPurlKotlin := 0
+		amountPurlDebug := 0
 
 		amountArtifact1 := 0
 		amountArtifact2 := 0
 
 		for _, entry := range tracking.RevisionHistory {
 			if strings.Contains(*entry.Summary, "pkg:github.com/jetbrains/kotlin@v872") {
-				amountPurl1++
+				amountPurlKotlin++
 			}
 			if strings.Contains(*entry.Summary, "pkg:rpm/redhat/openssh-debugsource@v1.0.1") {
-				amountPurl2++
+				amountPurlDebug++
 			}
 			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
 				amountArtifact1++
@@ -453,13 +454,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, len(tracking.RevisionHistory), amountArtifact1+amountArtifact2, amountPurl1+amountPurl2)
+		assert.Equal(t, len(tracking.RevisionHistory), amountPurlKotlin+amountPurlDebug)
 		// 3 detected events 1 fixed event
-		assert.Equal(t, 3+1, amountArtifact1)
+		assert.Equal(t, 3, amountArtifact1)
 		// 4 detected events 3 falsePositives
-		assert.Equal(t, 4+3, amountArtifact2)
-		assert.Equal(t, 5, amountPurl1)
-		assert.Equal(t, 6, amountPurl2)
+		assert.Equal(t, 4, amountArtifact2)
+		assert.Equal(t, 2, amountPurlKotlin)
+		assert.Equal(t, 3, amountPurlDebug)
 
 	})
 }
