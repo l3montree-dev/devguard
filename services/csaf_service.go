@@ -905,7 +905,7 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, assetVersionRep
 					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
 						PURL: (*gocsaf.PURL)(&vuln.ComponentPurl),
 					},
-					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, artifact.AssetVersionName, vuln.ComponentPurl)),
+					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, vuln.ComponentPurl)),
 					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", vuln.ComponentPurl, artifactPurl)),
 				},
 			}
@@ -935,11 +935,9 @@ type stateDistributionOfPathsInProduct struct {
 	AmountFixed         int
 }
 
-func artifactNameAndComponentPurlToProductID(artifactName, assetVersionName, componentPurl string) gocsaf.ProductID {
-	if assetVersionName == "" {
-		return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
-	}
-	return gocsaf.ProductID(fmt.Sprintf("%s@%s|%s", artifactName, assetVersionName, componentPurl))
+// unify how we put together the productIDs
+func artifactNameAndComponentPurlToProductID(artifactName, componentPurl string) gocsaf.ProductID {
+	return gocsaf.ProductID(fmt.Sprintf("%s|%s", artifactName, componentPurl))
 }
 
 // generates the vulnerability object for a specific asset at a certain timeStamp in time
@@ -995,7 +993,8 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 	vulnsByProductName := make(map[string][]models.DependencyVuln, len(allVulnsOfCVE))
 	for _, vuln := range allVulnsOfCVE {
 		for _, artifact := range vuln.Artifacts {
-			key := string(artifactNameAndComponentPurlToProductID(artifact.ArtifactName, artifact.AssetVersionName, vuln.ComponentPurl))
+			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+			key := string(artifactNameAndComponentPurlToProductID(artifactPurl, vuln.ComponentPurl))
 			vulnsByProductName[key] = append(vulnsByProductName[key], vuln)
 		}
 	}
