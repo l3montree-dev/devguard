@@ -1343,17 +1343,28 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 func generateSummaryForEvent(eventType dtos.VulnEventType, amountOfEvents int, componentPurl string, artifactNames []string) string {
 	artifactNameString := strings.Join(normalize.SortStringsSlice(artifactNames), ", ")
 
+	dynamicPathString := "path"
+	dynamicArtifactString := "artifact"
+
+	if amountOfEvents > 1 {
+		dynamicPathString = "paths"
+	}
+
+	if len(artifactNames) > 1 {
+		dynamicArtifactString = "artifacts"
+	}
+
 	switch eventType {
 	case dtos.EventTypeDetected:
-		return fmt.Sprintf("Detected %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
+		return fmt.Sprintf("Detected %d %s in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	case dtos.EventTypeReopened:
-		return fmt.Sprintf("Reopened %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
+		return fmt.Sprintf("Reopened %d %s in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	case dtos.EventTypeFixed:
-		return fmt.Sprintf("Fixed %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
+		return fmt.Sprintf("Fixed %d %s in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	case dtos.EventTypeAccepted:
-		return fmt.Sprintf("Accepted %d path in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
+		return fmt.Sprintf("Accepted %d %s in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	case dtos.EventTypeFalsePositive:
-		return fmt.Sprintf("Marked %d path as false positive in package %s (artifacts: %s)", amountOfEvents, componentPurl, artifactNameString)
+		return fmt.Sprintf("Marked %d %s as false positive in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	}
 	return ""
 }
