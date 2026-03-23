@@ -18,7 +18,10 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/in-toto/go-witness/log"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/l3montree-dev/devguard/utils"
@@ -85,9 +88,20 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 		return nil
 	}
 
-	err := g.GetDB(ctx, tx).Save(ts).Error
+	db := g.GetDB(ctx, tx)
+	sp := fmt.Sprintf("sp%s", strings.ReplaceAll(uuid.NewString(), "-", ""))
+	if err := db.SavePoint(sp).Error; err != nil {
+		return err
+	}
+
+	err := db.Omit(clause.Associations).Save(ts).Error
 	if err == nil {
 		return nil
+	}
+
+	// Roll back to savepoint so the transaction is still usable for retries.
+	if rbErr := db.RollbackTo(sp).Error; rbErr != nil {
+		return rbErr
 	}
 
 	// Base case: single row
@@ -101,10 +115,6 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 
 	// Split and retry
 	half := len(ts) / 2
-	if half == 0 {
-		return err
-	}
-
 	if err := g.SaveBatchBestEffort(ctx, tx, ts[:half]); err != nil {
 		return err
 	}
