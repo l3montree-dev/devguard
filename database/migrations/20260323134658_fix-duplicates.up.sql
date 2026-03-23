@@ -30,7 +30,7 @@ WHERE rn > 1;
 
 CREATE INDEX ON dupes_to_delete(id);
 
-SELECT COUNT(*) FROM dupes_to_delete;
+SELECT COUNT(*) FROM public.dupes_to_delete;
 
 CREATE TABLE public.vuln_events_new (LIKE vuln_events INCLUDING ALL);
 
