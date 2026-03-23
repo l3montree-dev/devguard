@@ -15,8 +15,16 @@ UPDATE vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUID WHERE
 UPDATE vuln_events SET license_risk_id     = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'licenseRisk';
 UPDATE vuln_events SET first_party_vuln_id = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'firstPartyVuln';
 
+-- add constraint to check that each vuln event has exactly one vuln_id as parent
+
+ALTER TABLE vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
+  (dependency_vuln_id  IS NOT NULL)::int +
+  (license_risk_id     IS NOT NULL)::int +
+  (first_party_vuln_id IS NOT NULL)::int = 1
+);
+
 -- lastly drop the old column
 
 ALTER TABLE vuln_events
   DROP COLUMN vuln_id;
-  -- DROP COLUMN vuln_type; -- maybe still useful
+  DROP COLUMN vuln_type; -- maybe still useful
