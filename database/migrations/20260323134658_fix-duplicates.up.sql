@@ -28,11 +28,11 @@ SELECT id FROM (
 ) t
 WHERE rn > 1;
 
-CREATE INDEX ON dupes_to_delete(id);
+CREATE INDEX ON public.dupes_to_delete(id);
 
 SELECT COUNT(*) FROM public.dupes_to_delete;
 
-CREATE TABLE public.vuln_events_new (LIKE vuln_events INCLUDING ALL);
+CREATE TABLE public.vuln_events_new (LIKE public.vuln_events INCLUDING ALL);
 
 -- 2. Insert only rows NOT in dupes_to_delete
 INSERT INTO public.vuln_events_new
