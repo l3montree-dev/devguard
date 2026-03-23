@@ -1,5 +1,9 @@
--- dependency vulns
+-- This migration script migrates the id columns of the 3 vuln tables dependency_vulns, first_party_vulnerabilities and license_risk.
+-- Previously the id was a 256 bit hash stored as a text -> Now its only a 128 bit hash stored as a uuid 
+-- This leads to 1/4 of the disk space required and performance improvements regarding internal processing of UUIDs in comparison to text
 
+
+-- dependency vulns
 BEGIN;
 
 -- add new uuid column
