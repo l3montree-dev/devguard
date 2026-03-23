@@ -79,6 +79,7 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 	return db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
+// it does not save any associations, so it is the caller's responsibility to save them separately if needed
 func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 	ctx context.Context,
 	tx *gorm.DB,
