@@ -14,7 +14,7 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CREATE INDEX idx_vuln_events_dedupe
-ON vuln_events (type, vuln_id, vuln_type, justification, id);
+ON public.vuln_events (type, vuln_id, vuln_type, justification, id);
 
 -- 1. Stage the duplicate IDs
 CREATE TABLE public.dupes_to_delete AS
