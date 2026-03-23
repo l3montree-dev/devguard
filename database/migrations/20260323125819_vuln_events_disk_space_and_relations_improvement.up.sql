@@ -27,4 +27,4 @@ ALTER TABLE vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
 
 ALTER TABLE vuln_events
   DROP COLUMN vuln_id;
-  DROP COLUMN vuln_type; -- maybe still useful
+  DROP COLUMN vuln_type;

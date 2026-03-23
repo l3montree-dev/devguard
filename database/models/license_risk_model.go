@@ -35,7 +35,8 @@ func (licenseRisk LicenseRisk) GetType() dtos.VulnType {
 func (licenseRisk *LicenseRisk) CalculateHash() string {
 	// we should only use static and unique information for the hash ( maybe we need to add scanner IDs, see pull request)
 	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", licenseRisk.ComponentPurl, licenseRisk.AssetVersionName, licenseRisk.AssetID))
-	return hash
+	// to remain backwards compatible we cannot change the algorithm to calculate the hash but since we only need 128 bit hash we truncate the later half
+	return hash[:16]
 }
 
 func (licenseRisk *LicenseRisk) BeforeSave(tx *gorm.DB) (err error) {

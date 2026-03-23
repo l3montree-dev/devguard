@@ -58,14 +58,14 @@ func (firstPartyVuln FirstPartyVuln) TableName() string {
 }
 
 func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
-
 	hash := firstPartyVuln.Fingerprint
 	if hash == "" {
 		stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
 		hash = utils.HashString(stringToHash)
 	}
 	firstPartyVuln.ID = hash
-	return hash
+	// to remain backwards compatible we cannot change the algorithm to calculate the hash but since we only need 128 bit hash we truncate the later half
+	return hash[:16]
 }
 
 func (firstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {

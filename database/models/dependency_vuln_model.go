@@ -107,7 +107,8 @@ func (vuln DependencyVuln) TableName() string {
 }
 
 func (vuln *DependencyVuln) CalculateHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
+	// to remain backwards compatible we cannot change the algorithm to calculate the hash but since we only need 128 bit hash we truncate the later half
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))[:16]
 }
 
 // hook to calculate the hash before creating the dependencyVuln
