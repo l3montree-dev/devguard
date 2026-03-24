@@ -280,7 +280,7 @@ func GetConfigFile(ctx context.Context, configID string, assetName string) (stri
 	}
 
 	// download the config file from the server
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/config-file/%s", RuntimeBaseConfig.APIURL, org, project, asset, configID), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/config-files/%s", RuntimeBaseConfig.APIURL, org, project, asset, configID), nil)
 	if err != nil {
 		return "", errors.Wrap(err, "could not create request")
 	}
