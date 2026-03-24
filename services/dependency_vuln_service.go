@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,6 +48,39 @@ func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepo
 		vulnEventRepository:      vulnEventRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
 	}
+}
+
+// saveArtifactAssociations bulk-inserts rows into artifact_dependency_vulns.
+// SaveBatchBestEffort omits associations, so callers that create new vulns with
+// artifacts must call this explicitly.
+func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error {
+	type row struct {
+		ArtifactName        string
+		ArtifactVersionName string
+		ArtifactAssetID     uuid.UUID
+		DependencyVulnID    string
+	}
+
+	rows := make([]row, 0, len(vulns))
+	for _, v := range vulns {
+		hash := v.CalculateHash()
+		for _, a := range v.Artifacts {
+			rows = append(rows, row{a.ArtifactName, a.AssetVersionName, a.AssetID, hash})
+		}
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+
+	placeholders := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?),", len(rows)), ",")
+	return tx.Exec(
+		"INSERT INTO artifact_dependency_vulns (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) VALUES "+
+			placeholders+
+			" ON CONFLICT DO NOTHING",
+		utils.Flat(utils.Map(rows, func(r row) []any {
+			return []any{r.ArtifactName, r.ArtifactVersionName, r.ArtifactAssetID, r.DependencyVulnID}
+		}))...,
+	).Error
 }
 
 func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
@@ -89,6 +123,10 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx co
 		return err
 	}
 
+	if err := saveArtifactAssociations(tx, vulns); err != nil {
+		return err
+	}
+
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
@@ -117,6 +155,9 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	// run the updates in the transaction to keep a valid state
 	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
 	if err != nil {
+		return err
+	}
+	if err := saveArtifactAssociations(tx, dependencyVulns); err != nil {
 		return err
 	}
 	err = s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)

@@ -84,6 +84,11 @@ func generateTag(upstreamVersion string, architecture string, imagePath string, 
 		tagElements = append(tagElements, lastElement)
 	}
 
+	// replace all / with -, this avoids issues with container image tags, which do not allow / in tag values.
+	for i, element := range tagElements {
+		tagElements[i] = strings.ReplaceAll(element, "/", "-")
+	}
+
 	imagePathWithSuffix := imagePath
 	// only append suffix when it is set and not "default"
 	if imageSuffix != "" && imageSuffix != "default" {

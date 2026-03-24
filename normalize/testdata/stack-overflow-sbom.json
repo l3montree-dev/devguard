@@ -1,0 +1,4441 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:c95cd835-2807-4199-aff3-83d3803e6833",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-13T07:25:06+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "manufacturer": {
+            "name": "Aqua Security Software Ltd."
+          },
+          "group": "aquasecurity",
+          "name": "trivy",
+          "version": "0.66.0"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "e586df12-e1e4-4494-baee-a632594a3587",
+      "type": "container",
+      "name": "image.tar",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:DiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:DiffID",
+          "value": "sha256:99d9acebaa25a8b9c419a327e08faa2e89d5469426331e39fbeef0e514c2609f"
+        },
+        {
+          "name": "aquasecurity:trivy:ImageID",
+          "value": "sha256:e3536b04113f43390f2ce4f00f5660a671b01a85bc620cfbf5cc7c2b92c648de"
+        },
+        {
+          "name": "aquasecurity:trivy:SchemaVersion",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:Size",
+          "value": "213094400"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "04820a9e-a692-4d62-8f6c-fcda3464aeb3",
+      "type": "library",
+      "supplier": {
+        "name": "Debian OpenSSL Team <pkg-openssl-devel@alioth-lists.debian.net>"
+      },
+      "name": "openssl-provider-legacy",
+      "version": "3.5.4-1~deb13u2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "openssl-provider-legacy@3.5.4-1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "openssl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.5.4"
+        }
+      ]
+    },
+    {
+      "bom-ref": "048c46a4-d014-4d5a-8e6b-eb1f2cf88686",
+      "type": "library",
+      "supplier": {
+        "name": "Debian GCC Maintainers <debian-gcc@lists.debian.org>"
+      },
+      "name": "gcc-14-base",
+      "version": "14.2.0-19",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gcc-14-base@14.2.0-19"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gcc-14"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "19"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "14.2.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+      "type": "library",
+      "supplier": {
+        "name": "Mark Brown <broonie@debian.org>"
+      },
+      "name": "zlib1g",
+      "version": "1:1.3.dfsg+really1.3.1-1+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "zlib1g@1:1.3.dfsg+really1.3.1-1+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "zlib"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3.dfsg+really1.3.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+      "type": "library",
+      "supplier": {
+        "name": "Debian GCC Maintainers <debian-gcc@lists.debian.org>"
+      },
+      "name": "libgcc-s1",
+      "version": "14.2.0-19",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libgcc-s1@14.2.0-19"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gcc-14"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "19"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "14.2.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "07e55c5f-c9ad-46da-83ec-0943c726ef4e",
+      "type": "library",
+      "supplier": {
+        "name": "Clint Adams <clint@debian.org>"
+      },
+      "name": "sed",
+      "version": "4.9-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sed@4.9-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "sed"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.9"
+        }
+      ]
+    },
+    {
+      "bom-ref": "0aae2902-6b06-4b82-8aae-05154c29768f",
+      "type": "library",
+      "supplier": {
+        "name": "Debian SELinux maintainers <selinux-devel@lists.alioth.debian.org>"
+      },
+      "name": "libsemanage2",
+      "version": "3.8.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libsemanage2@3.8.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libsemanage"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.8.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "0ad4fd89-d9a2-43ba-9fb0-fe23967c81c2",
+      "type": "library",
+      "supplier": {
+        "name": "Ncurses Maintainers <ncurses@packages.debian.org>"
+      },
+      "name": "libncursesw6",
+      "version": "6.5+20250216-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libncursesw6@6.5+20250216-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "ncurses"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "6.5+20250216"
+        }
+      ]
+    },
+    {
+      "bom-ref": "11f7c7ad-7a46-4d66-91fc-3b85493c89e9",
+      "type": "library",
+      "supplier": {
+        "name": "Nicolas Mora <babelouest@debian.org>"
+      },
+      "name": "libgdbm-compat4t64",
+      "version": "1.24-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libgdbm-compat4t64@1.24-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gdbm"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.24"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1385e5f9-c12a-4b01-af6d-8712722be437",
+      "type": "library",
+      "supplier": {
+        "name": "Shadow package maintainers <pkg-shadow-devel@lists.alioth.debian.org>"
+      },
+      "name": "login.defs",
+      "version": "1:4.17.4-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "login.defs@1:4.17.4-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "shadow"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.17.4"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1477c08f-0777-4fe7-bd79-bd2e66cc6cfc",
+      "type": "library",
+      "supplier": {
+        "name": "Guillem Jover <guillem@debian.org>"
+      },
+      "name": "libattr1",
+      "version": "1:2.5.2-3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libattr1@1:2.5.2-3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "attr"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.5.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1896edd0-9d97-4319-92c4-659f838caa91",
+      "type": "library",
+      "supplier": {
+        "name": "Marco d'Itri <md@linux.it>"
+      },
+      "name": "libcrypt1",
+      "version": "1:4.4.38-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libcrypt1@1:4.4.38-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libxcrypt"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.4.38"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1ad9ae78-4e04-49c5-a1da-3fdb5fc4eaf0",
+      "type": "library",
+      "supplier": {
+        "name": "GNU Libc Maintainers <debian-glibc@lists.debian.org>"
+      },
+      "name": "libc-bin",
+      "version": "2.41-12+deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libc-bin@2.41-12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "glibc"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.41"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2534063f-4e56-415c-b7fe-6e7c0ace401c",
+      "type": "library",
+      "supplier": {
+        "name": "RPM packaging team <team+pkg-rpm@tracker.debian.org>"
+      },
+      "name": "libzstd1",
+      "version": "1.5.7+dfsg-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libzstd1@1.5.7+dfsg-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libzstd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.5.7+dfsg"
+        }
+      ]
+    },
+    {
+      "bom-ref": "260e9411-49ec-461d-b7e4-326ed9108595",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Libidn team <help-libidn@gnu.org>"
+      },
+      "name": "libidn2-0",
+      "version": "2.3.8-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libidn2-0@2.3.8-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libidn2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.3.8"
+        }
+      ]
+    },
+    {
+      "bom-ref": "265174af-0121-47c7-9d27-7c02619a13d2",
+      "type": "library",
+      "supplier": {
+        "name": "Debian GCC Maintainers <debian-gcc@lists.debian.org>"
+      },
+      "name": "libmpfr6",
+      "version": "4.2.2-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libmpfr6@4.2.2-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "mpfr4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.2.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+      "type": "library",
+      "supplier": {
+        "name": "Laurent Bigonville <bigon@debian.org>"
+      },
+      "name": "libaudit1",
+      "version": "1:4.0.2-2+b2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libaudit1@1:4.0.2-2+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "audit"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.0.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2e1f3c90-22cb-4a70-97cb-af4ef41e6ae3",
+      "type": "library",
+      "supplier": {
+        "name": "GNU Libc Maintainers <debian-glibc@lists.debian.org>"
+      },
+      "name": "locales",
+      "version": "2.41-12+deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "locales@2.41-12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "glibc"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.41"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2e5db756-e570-4924-90cc-2edf660c2d6b",
+      "type": "library",
+      "supplier": {
+        "name": "Shadow package maintainers <pkg-shadow-devel@lists.alioth.debian.org>"
+      },
+      "name": "base-passwd",
+      "version": "3.6.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "base-passwd@3.6.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "base-passwd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.6.7"
+        }
+      ]
+    },
+    {
+      "bom-ref": "379b3c66-51ef-422d-9a57-744791fe3562",
+      "type": "library",
+      "supplier": {
+        "name": "Sam Hartman <hartmans@debian.org>"
+      },
+      "name": "libpam0g",
+      "version": "1.7.0-5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libpam0g@1.7.0-5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "pam"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "5"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.7.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "384a3862-9979-43a2-b84b-3f0357883dbb",
+      "type": "library",
+      "supplier": {
+        "name": "Santiago Vila <sanvila@debian.org>"
+      },
+      "name": "diffutils",
+      "version": "1:3.10-4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "diffutils@1:3.10-4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "diffutils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.10"
+        }
+      ]
+    },
+    {
+      "bom-ref": "395ca7a2-ba9a-4f94-8e39-990eeaa375a8",
+      "type": "library",
+      "supplier": {
+        "name": "Nobuhiro Iwamatsu <iwamatsu@debian.org>"
+      },
+      "name": "liblz4-1",
+      "version": "1.10.0-4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "liblz4-1@1.10.0-4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "lz4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.10.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Science Maintainers <debian-science-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libgmp10",
+      "version": "2:6.3.0+dfsg-3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libgmp10@2:6.3.0+dfsg-3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gmp"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "6.3.0+dfsg"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3ff4a532-2749-44fd-a93a-6a5f1a1969fe",
+      "type": "library",
+      "supplier": {
+        "name": "Sam Hartman <hartmans@debian.org>"
+      },
+      "name": "libpam-modules-bin",
+      "version": "1.7.0-5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libpam-modules-bin@1.7.0-5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "pam"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "5"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.7.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+      "type": "library",
+      "supplier": {
+        "name": "Debian OpenSSL Team <pkg-openssl-devel@alioth-lists.debian.net>"
+      },
+      "name": "libssl3t64",
+      "version": "3.5.4-1~deb13u2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libssl3t64@3.5.4-1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "openssl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.5.4"
+        }
+      ]
+    },
+    {
+      "bom-ref": "47d93467-9bcc-4cf2-8c59-3085f4baa8d4",
+      "type": "library",
+      "supplier": {
+        "name": "Laurent Bigonville <bigon@debian.org>"
+      },
+      "name": "libaudit-common",
+      "version": "1:4.0.2-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libaudit-common@1:4.0.2-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "audit"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.0.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4c9f2eb8-25a0-47cf-bb95-48ec30f77700",
+      "type": "library",
+      "supplier": {
+        "name": "Matthias Klose <doko@debian.org>"
+      },
+      "name": "bash",
+      "version": "5.2.37-2+b7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "bash@5.2.37-2+b7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "bash"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2+b7"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.2.37"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4d60b7e4-0181-464e-96bb-0736ed07c289",
+      "type": "library",
+      "supplier": {
+        "name": "Boyuan Yang <byang@debian.org>"
+      },
+      "name": "mawk",
+      "version": "1.3.4.20250131-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "mawk@1.3.4.20250131-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "mawk"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3.4.20250131"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4f4facf5-b280-42fc-86ff-faf0ff55ca0d",
+      "type": "library",
+      "supplier": {
+        "name": "Julien Cristau <jcristau@debian.org>"
+      },
+      "name": "ca-certificates",
+      "version": "20250419",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "ca-certificates@20250419"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "ca-certificates"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "20250419"
+        }
+      ]
+    },
+    {
+      "bom-ref": "50c152a0-2a3a-4269-b746-da5f8f230b45",
+      "type": "library",
+      "supplier": {
+        "name": "Niko Tyni <ntyni@debian.org>"
+      },
+      "name": "libperl5.40",
+      "version": "5.40.1-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libperl5.40@5.40.1-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.40.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5132c97d-8287-44d2-9838-ffba4e7d717a",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Install System Team <debian-boot@lists.debian.org>"
+      },
+      "name": "libdebconfclient0",
+      "version": "0.280",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libdebconfclient0@0.280"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "cdebconf"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.280"
+        }
+      ]
+    },
+    {
+      "bom-ref": "57fdf1d7-298d-4d1c-be5d-3b21c512e030",
+      "type": "library",
+      "supplier": {
+        "name": "APT Development Team <deity@lists.debian.org>"
+      },
+      "name": "libapt-pkg7.0",
+      "version": "3.0.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libapt-pkg7.0@3.0.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "apt"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.0.3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "58ada82b-2f85-450b-8416-84abd41db8c8",
+      "type": "library",
+      "supplier": {
+        "name": "Nicolas Mora <babelouest@debian.org>"
+      },
+      "name": "libgdbm6t64",
+      "version": "1.24-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libgdbm6t64@1.24-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gdbm"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.24"
+        }
+      ]
+    },
+    {
+      "bom-ref": "592fe9a3-689b-4bc6-ae7e-08c66823f910",
+      "type": "library",
+      "supplier": {
+        "name": "Håvard F. Aasen <havard.f.aasen@pfft.no>"
+      },
+      "name": "libcap-ng0",
+      "version": "0.8.5-4+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libcap-ng0@0.8.5-4+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libcap-ng"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "4+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.8.5"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5ad315a6-e726-4251-8ef6-74555bac034c",
+      "type": "library",
+      "supplier": {
+        "name": "Jörg Frings-Fürst <debian@jff.email>"
+      },
+      "name": "libunistring5",
+      "version": "1.3-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libunistring5@1.3-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libunistring"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5aeecd7d-6ad7-4904-94e4-71e6ef97f4e0",
+      "type": "library",
+      "supplier": {
+        "name": "Debian QA Group <packages@qa.debian.org>"
+      },
+      "name": "libdb5.3t64",
+      "version": "5.3.28+dfsg2-9",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libdb5.3t64@5.3.28+dfsg2-9"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "db5.3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "9"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.3.28+dfsg2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5aef116f-3cc9-4c75-ad28-a333e4e62f23",
+      "type": "library",
+      "supplier": {
+        "name": "Anibal Monsalve Salazar <anibal@debian.org>"
+      },
+      "name": "grep",
+      "version": "3.11-4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "grep@3.11-4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "grep"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.11"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5b07028c-58ac-4faf-b806-61230c57dd97",
+      "type": "library",
+      "supplier": {
+        "name": "Andreas Metzler <ametzler@debian.org>"
+      },
+      "name": "findutils",
+      "version": "4.10.0-3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "findutils@4.10.0-3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "findutils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.10.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5c5c83e7-8010-4274-bbc1-8378517142ab",
+      "type": "library",
+      "supplier": {
+        "name": "Debian SELinux maintainers <selinux-devel@lists.alioth.debian.org>"
+      },
+      "name": "libsepol2",
+      "version": "3.8.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libsepol2@3.8.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libsepol"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.8.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "623072dd-0d84-45a5-9350-7284bf7a37d0",
+      "type": "library",
+      "supplier": {
+        "name": "Kees Cook <kees@debian.org>"
+      },
+      "name": "libseccomp2",
+      "version": "2.6.0-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libseccomp2@2.6.0-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libseccomp"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.6.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "62caec5a-a4b7-464d-86dc-099eb035d16e",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Release Team <packages@release.debian.org>"
+      },
+      "name": "debian-archive-keyring",
+      "version": "2025.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "debian-archive-keyring@2025.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "debian-archive-keyring"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2025.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "68ec7ee0-980d-4b2b-b524-d0078a6a893d",
+      "type": "library",
+      "supplier": {
+        "name": "Debian GCC Maintainers <debian-gcc@lists.debian.org>"
+      },
+      "name": "libstdc++6",
+      "version": "14.2.0-19",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libstdc++6@14.2.0-19"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gcc-14"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "19"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "14.2.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6a7d724e-4527-4e9e-a1d7-b20e656ce1a5",
+      "type": "library",
+      "supplier": {
+        "name": "Matthew Vernon <matthew@debian.org>"
+      },
+      "name": "libpcre2-8-0",
+      "version": "10.46-1~deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libpcre2-8-0@10.46-1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "pcre2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "10.46"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6a97e70d-ee1b-4da8-85ff-a7e98c45ee65",
+      "type": "library",
+      "supplier": {
+        "name": "Debian OpenSSL Team <pkg-openssl-devel@alioth-lists.debian.net>"
+      },
+      "name": "openssl",
+      "version": "3.5.4-1~deb13u2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "openssl@3.5.4-1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "openssl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.5.4"
+        }
+      ]
+    },
+    {
+      "bom-ref": "71a09793-6958-4432-955f-9c9ed9544b14",
+      "type": "library",
+      "supplier": {
+        "name": "Guillem Jover <guillem@debian.org>"
+      },
+      "name": "libmd0",
+      "version": "1.1.0-2+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libmd0@1.1.0-2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libmd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.1.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7542ef46-11b4-4a19-997b-66568f5a3e45",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Rust Maintainers <pkg-rust-maintainers@alioth-lists.debian.net>"
+      },
+      "name": "sqv",
+      "version": "1.3.0-3+b2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sqv@1.3.0-3+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "rust-sequoia-sqv"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "76541f94-1726-42d8-a89d-6a7588508167",
+      "type": "library",
+      "supplier": {
+        "name": "Adrian Bunk <bunk@debian.org>"
+      },
+      "name": "gawk",
+      "version": "1:5.2.1-2+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gawk@1:5.2.1-2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gawk"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.2.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "79a266d5-070f-472e-b883-2d2cfaeb5b4d",
+      "type": "library",
+      "supplier": {
+        "name": "Dr. Tobias Quathamer <toddy@debian.org>"
+      },
+      "name": "manpages",
+      "version": "6.9.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "manpages@6.9.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "manpages"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "6.9.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7bfca3ad-1a89-4255-b78c-60215444cf4c",
+      "type": "library",
+      "supplier": {
+        "name": "Anibal Monsalve Salazar <anibal@debian.org>"
+      },
+      "name": "sensible-utils",
+      "version": "0.0.25",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sensible-utils@0.0.25"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "sensible-utils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.0.25"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7c3fac01-0388-47e4-8e1a-555130380d60",
+      "type": "library",
+      "supplier": {
+        "name": "Debconf Developers <debconf-devel@lists.alioth.debian.org>"
+      },
+      "name": "debconf-i18n",
+      "version": "1.5.91",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "debconf-i18n@1.5.91"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "debconf"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.5.91"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7fc55db8-5dbf-4a97-856d-64da27ac53ba",
+      "type": "library",
+      "supplier": {
+        "name": "Magnus Holmgren <holmgren@debian.org>"
+      },
+      "name": "libhogweed6t64",
+      "version": "3.10.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libhogweed6t64@3.10.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "nettle"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.10.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "85854584-1629-45d4-94f9-963786845093",
+      "type": "library",
+      "supplier": {
+        "name": "GNU Libc Maintainers <debian-glibc@lists.debian.org>"
+      },
+      "name": "libc-l10n",
+      "version": "2.41-12+deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libc-l10n@2.41-12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "glibc"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.41"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8837a32f-186f-41aa-8775-ed5782e95a93",
+      "type": "library",
+      "supplier": {
+        "name": "Chris Hofstaedtler <zeha@debian.org>"
+      },
+      "name": "bsdutils",
+      "version": "1:2.41-5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "bsdutils@1:2.41-5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "util-linux"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "5"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.41"
+        }
+      ]
+    },
+    {
+      "bom-ref": "89ca2dda-3b75-426d-9f44-9dd7cb674f21",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "liblocale-gettext-perl",
+      "version": "1.07-7+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "liblocale-gettext-perl@1.07-7+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "liblocale-gettext-perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "7+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.07"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8c3e196c-628e-452d-b133-ef0a756df387",
+      "type": "library",
+      "supplier": {
+        "name": "Guillem Jover <guillem@debian.org>"
+      },
+      "name": "libacl1",
+      "version": "2.3.2-2+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libacl1@2.3.2-2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "acl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.3.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8e5286a3-53ee-41c4-879d-4da4c5f368b1",
+      "type": "library",
+      "supplier": {
+        "name": "Ileana Dumitrescu <ileanadumitrescu95@gmail.com>"
+      },
+      "name": "debianutils",
+      "version": "5.23.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "debianutils@5.23.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "debianutils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.23.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "924a5012-6e19-434a-aaa7-884b186477d6",
+      "type": "library",
+      "supplier": {
+        "name": "Debconf Developers <debconf-devel@lists.alioth.debian.org>"
+      },
+      "name": "debconf",
+      "version": "1.5.91",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "debconf@1.5.91"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "debconf"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.5.91"
+        }
+      ]
+    },
+    {
+      "bom-ref": "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+      "type": "library",
+      "supplier": {
+        "name": "Debian SELinux maintainers <selinux-devel@lists.alioth.debian.org>"
+      },
+      "name": "libselinux1",
+      "version": "3.8.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libselinux1@3.8.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libselinux"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.8.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "984c272d-fd9b-49d1-addb-347db647d77d",
+      "type": "library",
+      "supplier": {
+        "name": "Santiago Vila <sanvila@debian.org>"
+      },
+      "name": "base-files",
+      "version": "13.8+deb13u3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "base-files@13.8+deb13u3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "base-files"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "13.8+deb13u3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9cd569c6-fca3-4f0b-af2d-59ab74dff2f1",
+      "type": "library",
+      "supplier": {
+        "name": "Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libudev1",
+      "version": "257.9-1~deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libudev1@257.9-1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "systemd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "257.9"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a07c1d47-bb4b-4f1c-97c9-d4ecf636f8b3",
+      "type": "library",
+      "supplier": {
+        "name": "Matthias Klose <doko@debian.org>"
+      },
+      "name": "libreadline8t64",
+      "version": "8.2-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libreadline8t64@8.2-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "readline"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "8.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a0aa251c-e856-4053-963e-cbdc377b97da",
+      "type": "library",
+      "supplier": {
+        "name": "Sam Hartman <hartmans@debian.org>"
+      },
+      "name": "libpam-modules",
+      "version": "1.7.0-5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libpam-modules@1.7.0-5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "pam"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "5"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.7.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a1c4031a-6c36-4c9d-a2a1-f0ecfdfbf61b",
+      "type": "library",
+      "supplier": {
+        "name": "Christian Kastner <ckk@debian.org>"
+      },
+      "name": "libcap2",
+      "version": "1:2.75-10+b3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libcap2@1:2.75-10+b3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libcap2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "10+b3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.75"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a439545e-fde0-44d2-8339-ad2041862d68",
+      "type": "library",
+      "supplier": {
+        "name": "GNU Libc Maintainers <debian-glibc@lists.debian.org>"
+      },
+      "name": "libc6",
+      "version": "2.41-12+deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libc6@2.41-12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "glibc"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "12+deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.41"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a47f55df-ea25-4df7-902b-c07360e9bf50",
+      "type": "library",
+      "supplier": {
+        "name": "Alastair McKinstry <mckinstry@debian.org>"
+      },
+      "name": "libslang2",
+      "version": "2.3.3-5+b2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libslang2@2.3.3-5+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "slang2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "5+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.3.3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c",
+      "type": "library",
+      "supplier": {
+        "name": "Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libsystemd0",
+      "version": "257.9-1~deb13u1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libsystemd0@257.9-1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "systemd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1~deb13u1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "257.9"
+        }
+      ]
+    },
+    {
+      "bom-ref": "aa0e44f6-f3e1-4e6d-8c42-7fe16480b0c6",
+      "type": "library",
+      "supplier": {
+        "name": "Axel Beckert <abe@debian.org>"
+      },
+      "name": "libgpm2",
+      "version": "1.20.7-11+b2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libgpm2@1.20.7-11+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "gpm"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "11+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.20.7"
+        }
+      ]
+    },
+    {
+      "bom-ref": "acc36c75-8518-490a-bb99-03f2e618019b",
+      "type": "library",
+      "supplier": {
+        "name": "Debian QA Group <packages@qa.debian.org>"
+      },
+      "name": "libtextwrap1",
+      "version": "0.1-17+b1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libtextwrap1@0.1-17+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libtextwrap"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "17+b1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ad859b34-01b7-463d-84d0-3a20d755c023",
+      "type": "library",
+      "supplier": {
+        "name": "APT Development Team <deity@lists.debian.org>"
+      },
+      "name": "apt",
+      "version": "3.0.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "apt@3.0.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "apt"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.0.3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b326d15a-00d2-4ce2-9929-f60bbdedb93a",
+      "type": "library",
+      "supplier": {
+        "name": "Niko Tyni <ntyni@debian.org>"
+      },
+      "name": "perl",
+      "version": "5.40.1-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "perl@5.40.1-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.40.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+      "type": "library",
+      "supplier": {
+        "name": "Anibal Monsalve Salazar <anibal@debian.org>"
+      },
+      "name": "libbz2-1.0",
+      "version": "1.0.8-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libbz2-1.0@1.0.8-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "bzip2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.0.8"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b3ec339a-f3ab-4701-9da9-5f13f4c14ffd",
+      "type": "library",
+      "supplier": {
+        "name": "Niko Tyni <ntyni@debian.org>"
+      },
+      "name": "perl-modules-5.40",
+      "version": "5.40.1-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "perl-modules-5.40@5.40.1-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.40.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b495f3de-49a7-450d-8279-4310037de833",
+      "type": "library",
+      "supplier": {
+        "name": "Josue Ortega <josue@debian.org>"
+      },
+      "name": "libxxhash0",
+      "version": "0.8.3-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libxxhash0@0.8.3-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "xxhash"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.8.3"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b9db7de1-0865-4440-8865-2c96588adc74",
+      "type": "library",
+      "supplier": {
+        "name": "Janos Lenart <ocsi@debian.org>"
+      },
+      "name": "tar",
+      "version": "1.35+dfsg-3.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "tar@1.35+dfsg-3.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "tar"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3.1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.35+dfsg"
+        }
+      ]
+    },
+    {
+      "bom-ref": "badadacb-dce4-4c9c-b9ad-837d4780e50a",
+      "type": "library",
+      "supplier": {
+        "name": "Matthias Klose <doko@debian.org>"
+      },
+      "name": "readline-common",
+      "version": "8.2-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "readline-common@8.2-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "readline"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "8.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bbd64509-f0de-45a2-b14c-e7e1235bfb39",
+      "type": "library",
+      "supplier": {
+        "name": "Michael Stone <mstone@debian.org>"
+      },
+      "name": "coreutils",
+      "version": "9.7-3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "coreutils@9.7-3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "coreutils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "3"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "9.7"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bc2b33ab-6502-4f73-9251-04d62617c1ba",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libtext-wrapi18n-perl",
+      "version": "0.06-10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libtext-wrapi18n-perl@0.06-10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libtext-wrapi18n-perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "10"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.06"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bcdc2236-7114-4832-8a6f-d806d7a9ae59",
+      "type": "library",
+      "supplier": {
+        "name": "Alastair McKinstry <mckinstry@debian.org>"
+      },
+      "name": "libnewt0.52",
+      "version": "0.52.25-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libnewt0.52@0.52.25-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "newt"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.52.25"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bd8179dd-5d28-4dae-8a24-adfbfffcc800",
+      "type": "library",
+      "supplier": {
+        "name": "Guillem Jover <guillem@debian.org>"
+      },
+      "name": "libbsd0",
+      "version": "0.12.2-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libbsd0@0.12.2-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libbsd"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.12.2"
+        }
+      ]
+    },
+    {
+      "bom-ref": "be6834bf-e3a9-4359-bd01-1bdfe72aa67f",
+      "type": "library",
+      "supplier": {
+        "name": "Gabriel F. T. Gomes <gabriel@debian.org>"
+      },
+      "name": "bash-completion",
+      "version": "1:2.16.0-7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "bash-completion@1:2.16.0-7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "bash-completion"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "7"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.16.0"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bf6e0fb1-6674-4d92-8d31-813591bd557b",
+      "type": "library",
+      "supplier": {
+        "name": "Sebastian Andrzej Siewior <sebastian@breakpoint.cc>"
+      },
+      "name": "liblzma5",
+      "version": "5.8.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "liblzma5@5.8.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "xz-utils"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.8.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c231f155-a366-44cb-877a-8f0bba62a672",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libtext-iconv-perl",
+      "version": "1.7-8+b4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libtext-iconv-perl@1.7-8+b4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libtext-iconv-perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "8+b4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.7"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c2b20d7e-7824-482f-8b24-d73b777971e1",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Install System Team <debian-boot@lists.debian.org>"
+      },
+      "name": "cdebconf",
+      "version": "0.280",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "cdebconf@0.280"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "cdebconf"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.280"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c4844632-b7bb-4967-b2b7-d1d02caa5259",
+      "type": "operating-system",
+      "name": "none",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "os-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "none"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c6eade30-30fb-4c48-b353-576dce6a24cf",
+      "type": "library",
+      "supplier": {
+        "name": "Shadow package maintainers <pkg-shadow-devel@lists.alioth.debian.org>"
+      },
+      "name": "passwd",
+      "version": "1:4.17.4-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "passwd@1:4.17.4-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcEpoch",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "shadow"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "4.17.4"
+        }
+      ]
+    },
+    {
+      "bom-ref": "caecc393-833e-4a04-80ce-93e04bbc2b52",
+      "type": "library",
+      "supplier": {
+        "name": "Santiago Vila <sanvila@debian.org>"
+      },
+      "name": "libdialog15",
+      "version": "1.3-20250116-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libdialog15@1.3-20250116-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "dialog"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3-20250116"
+        }
+      ]
+    },
+    {
+      "bom-ref": "cc25f962-845d-41e2-90bc-a279df8ffed2",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>"
+      },
+      "name": "libtext-charwidth-perl",
+      "version": "0.04-11+b4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libtext-charwidth-perl@0.04-11+b4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libtext-charwidth-perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "11+b4"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.04"
+        }
+      ]
+    },
+    {
+      "bom-ref": "cc4db4b2-ff6d-4ae4-bef8-e39f3b6fb4a5",
+      "type": "library",
+      "supplier": {
+        "name": "Marco d'Itri <md@linux.it>"
+      },
+      "name": "netbase",
+      "version": "6.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "netbase@6.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "netbase"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "6.5"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ce00137d-35dd-4dcf-8e4c-e741ee17d586",
+      "type": "library",
+      "supplier": {
+        "name": "Niko Tyni <ntyni@debian.org>"
+      },
+      "name": "perl-base",
+      "version": "5.40.1-6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "perl-base@5.40.1-6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "perl"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "6"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "5.40.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d23cdfc4-47f2-4044-a14e-64d0c51d3a86",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Install System Team <debian-boot@lists.debian.org>"
+      },
+      "name": "libdebian-installer4",
+      "version": "0.125",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libdebian-installer4@0.125"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libdebian-installer"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "0.125"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d30335d4-ff2c-4390-b090-ca802e499844",
+      "type": "library",
+      "supplier": {
+        "name": "Debian Common Lisp Team <debian-common-lisp@lists.debian.org>"
+      },
+      "name": "libsigsegv2",
+      "version": "2.14-1+b2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libsigsegv2@2.14-1+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libsigsegv"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1+b2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "2.14"
+        }
+      ]
+    },
+    {
+      "bom-ref": "dbd7ef5e-16d0-434c-9902-e6bfb540cd0a",
+      "type": "library",
+      "supplier": {
+        "name": "Dpkg Developers <debian-dpkg@lists.debian.org>"
+      },
+      "name": "dpkg",
+      "version": "1.22.21",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "dpkg@1.22.21"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "dpkg"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.22.21"
+        }
+      ]
+    },
+    {
+      "bom-ref": "dddd5cb6-a294-40d3-ba23-7447b6fae025",
+      "type": "library",
+      "supplier": {
+        "name": "Ncurses Maintainers <ncurses@packages.debian.org>"
+      },
+      "name": "libtinfo6",
+      "version": "6.5+20250216-2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libtinfo6@6.5+20250216-2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "ncurses"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "2"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "6.5+20250216"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e18d2e6a-33fe-403c-9b8e-1c6c675f1310",
+      "type": "library",
+      "supplier": {
+        "name": "Magnus Holmgren <holmgren@debian.org>"
+      },
+      "name": "libnettle8t64",
+      "version": "3.10.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libnettle8t64@3.10.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "nettle"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.10.1"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ee8a3d93-c1ac-4e5f-bc99-03028cb30879",
+      "type": "library",
+      "supplier": {
+        "name": "Santiago Vila <sanvila@debian.org>"
+      },
+      "name": "dialog",
+      "version": "1.3-20250116-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "dialog@1.3-20250116-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "dialog"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "1.3-20250116"
+        }
+      ]
+    },
+    {
+      "bom-ref": "fe90f4a3-04bc-4c7f-82be-02661f807bce",
+      "type": "library",
+      "supplier": {
+        "name": "Debian SELinux maintainers <selinux-devel@lists.alioth.debian.org>"
+      },
+      "name": "libsemanage-common",
+      "version": "3.8.1-1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:LayerDiffID",
+          "value": "sha256:5d02a43a1526f2247a3ea63badb4dbcb5209379b17675beb9f569681a706b6dc"
+        },
+        {
+          "name": "aquasecurity:trivy:LayerDigest",
+          "value": "sha256:2c4c6cbed9858a099961f78f5d7bdf41dcf709d6b5cc0645097cd891638f3605"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "libsemanage-common@3.8.1-1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "none"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcName",
+          "value": "libsemanage"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcRelease",
+          "value": "1"
+        },
+        {
+          "name": "aquasecurity:trivy:SrcVersion",
+          "value": "3.8.1"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "04820a9e-a692-4d62-8f6c-fcda3464aeb3",
+      "dependsOn": [
+        "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "048c46a4-d014-4d5a-8e6b-eb1f2cf88686",
+      "dependsOn": []
+    },
+    {
+      "ref": "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+      "dependsOn": [
+        "048c46a4-d014-4d5a-8e6b-eb1f2cf88686",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "07e55c5f-c9ad-46da-83ec-0943c726ef4e",
+      "dependsOn": [
+        "8c3e196c-628e-452d-b133-ef0a756df387",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "0aae2902-6b06-4b82-8aae-05154c29768f",
+      "dependsOn": [
+        "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+        "5c5c83e7-8010-4274-bbc1-8378517142ab",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+        "fe90f4a3-04bc-4c7f-82be-02661f807bce"
+      ]
+    },
+    {
+      "ref": "0ad4fd89-d9a2-43ba-9fb0-fe23967c81c2",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "dddd5cb6-a294-40d3-ba23-7447b6fae025"
+      ]
+    },
+    {
+      "ref": "11f7c7ad-7a46-4d66-91fc-3b85493c89e9",
+      "dependsOn": [
+        "58ada82b-2f85-450b-8416-84abd41db8c8",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "1385e5f9-c12a-4b01-af6d-8712722be437",
+      "dependsOn": []
+    },
+    {
+      "ref": "1477c08f-0777-4fe7-bd79-bd2e66cc6cfc",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "1896edd0-9d97-4319-92c4-659f838caa91",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "1ad9ae78-4e04-49c5-a1da-3fdb5fc4eaf0",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "2534063f-4e56-415c-b7fe-6e7c0ace401c",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "260e9411-49ec-461d-b7e4-326ed9108595",
+      "dependsOn": [
+        "5ad315a6-e726-4251-8ef6-74555bac034c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "265174af-0121-47c7-9d27-7c02619a13d2",
+      "dependsOn": [
+        "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+      "dependsOn": [
+        "47d93467-9bcc-4cf2-8c59-3085f4baa8d4",
+        "592fe9a3-689b-4bc6-ae7e-08c66823f910",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "2e1f3c90-22cb-4a70-97cb-af4ef41e6ae3",
+      "dependsOn": [
+        "1ad9ae78-4e04-49c5-a1da-3fdb5fc4eaf0",
+        "85854584-1629-45d4-94f9-963786845093",
+        "924a5012-6e19-434a-aaa7-884b186477d6"
+      ]
+    },
+    {
+      "ref": "2e5db756-e570-4924-90cc-2edf660c2d6b",
+      "dependsOn": [
+        "5132c97d-8287-44d2-9838-ffba4e7d717a",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "379b3c66-51ef-422d-9a57-744791fe3562",
+      "dependsOn": [
+        "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+        "924a5012-6e19-434a-aaa7-884b186477d6",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "384a3862-9979-43a2-b84b-3f0357883dbb",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "395ca7a2-ba9a-4f94-8e39-990eeaa375a8",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "b495f3de-49a7-450d-8279-4310037de833"
+      ]
+    },
+    {
+      "ref": "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "3ff4a532-2749-44fd-a93a-6a5f1a1969fe",
+      "dependsOn": [
+        "1896edd0-9d97-4319-92c4-659f838caa91",
+        "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+        "379b3c66-51ef-422d-9a57-744791fe3562",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c"
+      ]
+    },
+    {
+      "ref": "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+      "dependsOn": [
+        "04820a9e-a692-4d62-8f6c-fcda3464aeb3",
+        "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+        "2534063f-4e56-415c-b7fe-6e7c0ace401c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "47d93467-9bcc-4cf2-8c59-3085f4baa8d4",
+      "dependsOn": []
+    },
+    {
+      "ref": "4c9f2eb8-25a0-47cf-bb95-48ec30f77700",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "dddd5cb6-a294-40d3-ba23-7447b6fae025"
+      ]
+    },
+    {
+      "ref": "4d60b7e4-0181-464e-96bb-0736ed07c289",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "4f4facf5-b280-42fc-86ff-faf0ff55ca0d",
+      "dependsOn": [
+        "6a97e70d-ee1b-4da8-85ff-a7e98c45ee65",
+        "924a5012-6e19-434a-aaa7-884b186477d6"
+      ]
+    },
+    {
+      "ref": "50c152a0-2a3a-4269-b746-da5f8f230b45",
+      "dependsOn": [
+        "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+        "11f7c7ad-7a46-4d66-91fc-3b85493c89e9",
+        "1896edd0-9d97-4319-92c4-659f838caa91",
+        "58ada82b-2f85-450b-8416-84abd41db8c8",
+        "5aeecd7d-6ad7-4904-94e4-71e6ef97f4e0",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+        "b3ec339a-f3ab-4701-9da9-5f13f4c14ffd"
+      ]
+    },
+    {
+      "ref": "5132c97d-8287-44d2-9838-ffba4e7d717a",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "57fdf1d7-298d-4d1c-be5d-3b21c512e030",
+      "dependsOn": [
+        "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+        "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+        "2534063f-4e56-415c-b7fe-6e7c0ace401c",
+        "395ca7a2-ba9a-4f94-8e39-990eeaa375a8",
+        "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+        "68ec7ee0-980d-4b2b-b524-d0078a6a893d",
+        "9cd569c6-fca3-4f0b-af2d-59ab74dff2f1",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c",
+        "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+        "b495f3de-49a7-450d-8279-4310037de833",
+        "bf6e0fb1-6674-4d92-8d31-813591bd557b"
+      ]
+    },
+    {
+      "ref": "58ada82b-2f85-450b-8416-84abd41db8c8",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "592fe9a3-689b-4bc6-ae7e-08c66823f910",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "5ad315a6-e726-4251-8ef6-74555bac034c",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "5aeecd7d-6ad7-4904-94e4-71e6ef97f4e0",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "5aef116f-3cc9-4c75-ad28-a333e4e62f23",
+      "dependsOn": [
+        "6a7d724e-4527-4e9e-a1d7-b20e656ce1a5",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "5b07028c-58ac-4faf-b806-61230c57dd97",
+      "dependsOn": [
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "5c5c83e7-8010-4274-bbc1-8378517142ab",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "623072dd-0d84-45a5-9350-7284bf7a37d0",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "62caec5a-a4b7-464d-86dc-099eb035d16e",
+      "dependsOn": []
+    },
+    {
+      "ref": "68ec7ee0-980d-4b2b-b524-d0078a6a893d",
+      "dependsOn": [
+        "048c46a4-d014-4d5a-8e6b-eb1f2cf88686",
+        "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "6a7d724e-4527-4e9e-a1d7-b20e656ce1a5",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "6a97e70d-ee1b-4da8-85ff-a7e98c45ee65",
+      "dependsOn": [
+        "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "71a09793-6958-4432-955f-9c9ed9544b14",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "7542ef46-11b4-4a19-997b-66568f5a3e45",
+      "dependsOn": [
+        "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+        "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+        "7fc55db8-5dbf-4a97-856d-64da27ac53ba",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "e18d2e6a-33fe-403c-9b8e-1c6c675f1310"
+      ]
+    },
+    {
+      "ref": "76541f94-1726-42d8-a89d-6a7588508167",
+      "dependsOn": [
+        "265174af-0121-47c7-9d27-7c02619a13d2",
+        "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+        "a07c1d47-bb4b-4f1c-97c9-d4ecf636f8b3",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "d30335d4-ff2c-4390-b090-ca802e499844"
+      ]
+    },
+    {
+      "ref": "79a266d5-070f-472e-b883-2d2cfaeb5b4d",
+      "dependsOn": []
+    },
+    {
+      "ref": "7bfca3ad-1a89-4255-b78c-60215444cf4c",
+      "dependsOn": []
+    },
+    {
+      "ref": "7c3fac01-0388-47e4-8e1a-555130380d60",
+      "dependsOn": [
+        "89ca2dda-3b75-426d-9f44-9dd7cb674f21",
+        "924a5012-6e19-434a-aaa7-884b186477d6",
+        "bc2b33ab-6502-4f73-9251-04d62617c1ba",
+        "c231f155-a366-44cb-877a-8f0bba62a672",
+        "cc25f962-845d-41e2-90bc-a279df8ffed2"
+      ]
+    },
+    {
+      "ref": "7fc55db8-5dbf-4a97-856d-64da27ac53ba",
+      "dependsOn": [
+        "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "e18d2e6a-33fe-403c-9b8e-1c6c675f1310"
+      ]
+    },
+    {
+      "ref": "85854584-1629-45d4-94f9-963786845093",
+      "dependsOn": []
+    },
+    {
+      "ref": "8837a32f-186f-41aa-8775-ed5782e95a93",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c"
+      ]
+    },
+    {
+      "ref": "89ca2dda-3b75-426d-9f44-9dd7cb674f21",
+      "dependsOn": [
+        "ce00137d-35dd-4dcf-8e4c-e741ee17d586"
+      ]
+    },
+    {
+      "ref": "8c3e196c-628e-452d-b133-ef0a756df387",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "8e5286a3-53ee-41c4-879d-4da4c5f368b1",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "924a5012-6e19-434a-aaa7-884b186477d6",
+      "dependsOn": []
+    },
+    {
+      "ref": "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+      "dependsOn": [
+        "6a7d724e-4527-4e9e-a1d7-b20e656ce1a5",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "984c272d-fd9b-49d1-addb-347db647d77d",
+      "dependsOn": []
+    },
+    {
+      "ref": "9cd569c6-fca3-4f0b-af2d-59ab74dff2f1",
+      "dependsOn": [
+        "a1c4031a-6c36-4c9d-a2a1-f0ecfdfbf61b",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "a07c1d47-bb4b-4f1c-97c9-d4ecf636f8b3",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "badadacb-dce4-4c9c-b9ad-837d4780e50a",
+        "dddd5cb6-a294-40d3-ba23-7447b6fae025"
+      ]
+    },
+    {
+      "ref": "a0aa251c-e856-4053-963e-cbdc377b97da",
+      "dependsOn": [
+        "1896edd0-9d97-4319-92c4-659f838caa91",
+        "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+        "379b3c66-51ef-422d-9a57-744791fe3562",
+        "3ff4a532-2749-44fd-a93a-6a5f1a1969fe",
+        "5aeecd7d-6ad7-4904-94e4-71e6ef97f4e0",
+        "924a5012-6e19-434a-aaa7-884b186477d6",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c"
+      ]
+    },
+    {
+      "ref": "a1c4031a-6c36-4c9d-a2a1-f0ecfdfbf61b",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "a439545e-fde0-44d2-8339-ad2041862d68",
+      "dependsOn": [
+        "07dd3cc7-5a43-4396-bd97-213f33d5438a"
+      ]
+    },
+    {
+      "ref": "a47f55df-ea25-4df7-902b-c07360e9bf50",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c",
+      "dependsOn": [
+        "a1c4031a-6c36-4c9d-a2a1-f0ecfdfbf61b",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "aa0e44f6-f3e1-4e6d-8c42-7fe16480b0c6",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "acc36c75-8518-490a-bb99-03f2e618019b",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "ad859b34-01b7-463d-84d0-3a20d755c023",
+      "dependsOn": [
+        "07dd3cc7-5a43-4396-bd97-213f33d5438a",
+        "2e5db756-e570-4924-90cc-2edf660c2d6b",
+        "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+        "57fdf1d7-298d-4d1c-be5d-3b21c512e030",
+        "623072dd-0d84-45a5-9350-7284bf7a37d0",
+        "62caec5a-a4b7-464d-86dc-099eb035d16e",
+        "68ec7ee0-980d-4b2b-b524-d0078a6a893d",
+        "7542ef46-11b4-4a19-997b-66568f5a3e45",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c"
+      ]
+    },
+    {
+      "ref": "b326d15a-00d2-4ce2-9929-f60bbdedb93a",
+      "dependsOn": [
+        "50c152a0-2a3a-4269-b746-da5f8f230b45",
+        "b3ec339a-f3ab-4701-9da9-5f13f4c14ffd",
+        "ce00137d-35dd-4dcf-8e4c-e741ee17d586"
+      ]
+    },
+    {
+      "ref": "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "b3ec339a-f3ab-4701-9da9-5f13f4c14ffd",
+      "dependsOn": [
+        "ce00137d-35dd-4dcf-8e4c-e741ee17d586"
+      ]
+    },
+    {
+      "ref": "b495f3de-49a7-450d-8279-4310037de833",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "b9db7de1-0865-4440-8865-2c96588adc74",
+      "dependsOn": [
+        "8c3e196c-628e-452d-b133-ef0a756df387",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "badadacb-dce4-4c9c-b9ad-837d4780e50a",
+      "dependsOn": []
+    },
+    {
+      "ref": "bbd64509-f0de-45a2-b14c-e7e1235bfb39",
+      "dependsOn": [
+        "1477c08f-0777-4fe7-bd79-bd2e66cc6cfc",
+        "3aa058f4-5367-42ef-bc7c-14e10af12ba4",
+        "44433daf-43b2-4bc2-8e4c-583d0e6bef94",
+        "8c3e196c-628e-452d-b133-ef0a756df387",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a1c4031a-6c36-4c9d-a2a1-f0ecfdfbf61b",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a508aee8-5f0b-4d5c-aeed-06cf0ee8868c"
+      ]
+    },
+    {
+      "ref": "bc2b33ab-6502-4f73-9251-04d62617c1ba",
+      "dependsOn": [
+        "cc25f962-845d-41e2-90bc-a279df8ffed2"
+      ]
+    },
+    {
+      "ref": "bcdc2236-7114-4832-8a6f-d806d7a9ae59",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a47f55df-ea25-4df7-902b-c07360e9bf50"
+      ]
+    },
+    {
+      "ref": "bd8179dd-5d28-4dae-8a24-adfbfffcc800",
+      "dependsOn": [
+        "71a09793-6958-4432-955f-9c9ed9544b14",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "be6834bf-e3a9-4359-bd01-1bdfe72aa67f",
+      "dependsOn": []
+    },
+    {
+      "ref": "bf6e0fb1-6674-4d92-8d31-813591bd557b",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "c231f155-a366-44cb-877a-8f0bba62a672",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "ce00137d-35dd-4dcf-8e4c-e741ee17d586"
+      ]
+    },
+    {
+      "ref": "c2b20d7e-7824-482f-8b24-d73b777971e1",
+      "dependsOn": [
+        "924a5012-6e19-434a-aaa7-884b186477d6",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a07c1d47-bb4b-4f1c-97c9-d4ecf636f8b3",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "a47f55df-ea25-4df7-902b-c07360e9bf50",
+        "acc36c75-8518-490a-bb99-03f2e618019b",
+        "bcdc2236-7114-4832-8a6f-d806d7a9ae59",
+        "d23cdfc4-47f2-4044-a14e-64d0c51d3a86"
+      ]
+    },
+    {
+      "ref": "c4844632-b7bb-4967-b2b7-d1d02caa5259",
+      "dependsOn": [
+        "07e55c5f-c9ad-46da-83ec-0943c726ef4e",
+        "260e9411-49ec-461d-b7e4-326ed9108595",
+        "2e1f3c90-22cb-4a70-97cb-af4ef41e6ae3",
+        "384a3862-9979-43a2-b84b-3f0357883dbb",
+        "4c9f2eb8-25a0-47cf-bb95-48ec30f77700",
+        "4d60b7e4-0181-464e-96bb-0736ed07c289",
+        "4f4facf5-b280-42fc-86ff-faf0ff55ca0d",
+        "5aef116f-3cc9-4c75-ad28-a333e4e62f23",
+        "5b07028c-58ac-4faf-b806-61230c57dd97",
+        "76541f94-1726-42d8-a89d-6a7588508167",
+        "79a266d5-070f-472e-b883-2d2cfaeb5b4d",
+        "7bfca3ad-1a89-4255-b78c-60215444cf4c",
+        "7c3fac01-0388-47e4-8e1a-555130380d60",
+        "8837a32f-186f-41aa-8775-ed5782e95a93",
+        "984c272d-fd9b-49d1-addb-347db647d77d",
+        "aa0e44f6-f3e1-4e6d-8c42-7fe16480b0c6",
+        "ad859b34-01b7-463d-84d0-3a20d755c023",
+        "b326d15a-00d2-4ce2-9929-f60bbdedb93a",
+        "b9db7de1-0865-4440-8865-2c96588adc74",
+        "bbd64509-f0de-45a2-b14c-e7e1235bfb39",
+        "be6834bf-e3a9-4359-bd01-1bdfe72aa67f",
+        "c2b20d7e-7824-482f-8b24-d73b777971e1",
+        "c6eade30-30fb-4c48-b353-576dce6a24cf",
+        "cc4db4b2-ff6d-4ae4-bef8-e39f3b6fb4a5",
+        "dbd7ef5e-16d0-434c-9902-e6bfb540cd0a",
+        "ee8a3d93-c1ac-4e5f-bc99-03028cb30879"
+      ]
+    },
+    {
+      "ref": "c6eade30-30fb-4c48-b353-576dce6a24cf",
+      "dependsOn": [
+        "0aae2902-6b06-4b82-8aae-05154c29768f",
+        "1385e5f9-c12a-4b01-af6d-8712722be437",
+        "1477c08f-0777-4fe7-bd79-bd2e66cc6cfc",
+        "1896edd0-9d97-4319-92c4-659f838caa91",
+        "28830e0d-1c05-43a7-b51c-c235ccc8d9a2",
+        "2e5db756-e570-4924-90cc-2edf660c2d6b",
+        "379b3c66-51ef-422d-9a57-744791fe3562",
+        "8c3e196c-628e-452d-b133-ef0a756df387",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a0aa251c-e856-4053-963e-cbdc377b97da",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "bd8179dd-5d28-4dae-8a24-adfbfffcc800"
+      ]
+    },
+    {
+      "ref": "caecc393-833e-4a04-80ce-93e04bbc2b52",
+      "dependsOn": [
+        "0ad4fd89-d9a2-43ba-9fb0-fe23967c81c2",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "dddd5cb6-a294-40d3-ba23-7447b6fae025"
+      ]
+    },
+    {
+      "ref": "cc25f962-845d-41e2-90bc-a279df8ffed2",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "ce00137d-35dd-4dcf-8e4c-e741ee17d586"
+      ]
+    },
+    {
+      "ref": "cc4db4b2-ff6d-4ae4-bef8-e39f3b6fb4a5",
+      "dependsOn": []
+    },
+    {
+      "ref": "ce00137d-35dd-4dcf-8e4c-e741ee17d586",
+      "dependsOn": [
+        "1896edd0-9d97-4319-92c4-659f838caa91",
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "d23cdfc4-47f2-4044-a14e-64d0c51d3a86",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "d30335d4-ff2c-4390-b090-ca802e499844",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "dbd7ef5e-16d0-434c-9902-e6bfb540cd0a",
+      "dependsOn": [
+        "065d121c-a1e0-4b93-92f1-4bce2e985b79",
+        "2534063f-4e56-415c-b7fe-6e7c0ace401c",
+        "71a09793-6958-4432-955f-9c9ed9544b14",
+        "958faf92-fe9b-48ee-bcd2-473e3d80329c",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "b3e7eba3-62ae-473a-9cb9-15cf16181a07",
+        "bf6e0fb1-6674-4d92-8d31-813591bd557b"
+      ]
+    },
+    {
+      "ref": "dddd5cb6-a294-40d3-ba23-7447b6fae025",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "e18d2e6a-33fe-403c-9b8e-1c6c675f1310",
+      "dependsOn": [
+        "a439545e-fde0-44d2-8339-ad2041862d68"
+      ]
+    },
+    {
+      "ref": "e586df12-e1e4-4494-baee-a632594a3587",
+      "dependsOn": [
+        "c4844632-b7bb-4967-b2b7-d1d02caa5259"
+      ]
+    },
+    {
+      "ref": "ee8a3d93-c1ac-4e5f-bc99-03028cb30879",
+      "dependsOn": [
+        "0ad4fd89-d9a2-43ba-9fb0-fe23967c81c2",
+        "8e5286a3-53ee-41c4-879d-4da4c5f368b1",
+        "a439545e-fde0-44d2-8339-ad2041862d68",
+        "caecc393-833e-4a04-80ce-93e04bbc2b52",
+        "dddd5cb6-a294-40d3-ba23-7447b6fae025"
+      ]
+    },
+    {
+      "ref": "fe90f4a3-04bc-4c7f-82be-02661f807bce",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": []
+}

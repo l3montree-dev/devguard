@@ -25,7 +25,6 @@ func newSyncCommand() *cobra.Command {
   - OSV (Open Source Vulnerabilities)
   - CISA KEV (Known Exploited Vulnerabilities)
   - ExploitDB and GitHub POCs
-  - Debian Security Tracker
   - Malicious package databases
 
 Use --databases flag to sync specific sources only.`,
@@ -55,7 +54,6 @@ Use --databases flag to sync specific sources only.`,
 					epssService := vulndb.NewEPSSService(cveRepository, cveRelationshipRepository)
 					cisaKEVService := vulndb.NewCISAKEVService(cveRepository, cveRelationshipRepository)
 					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
-					debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 					expoitDBService := vulndb.NewExploitDBService(exploitRepository)
 					githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
 
@@ -115,15 +113,6 @@ Use --databases flag to sync specific sources only.`,
 						slog.Info("finished github-poc database sync", "duration", time.Since(now))
 					}
 
-					if emptyOrContains(databasesToSync, "dsa") {
-						slog.Info("starting dsa database sync")
-						now := time.Now()
-						if err := debianSecurityTracker.Mirror(context.Background()); err != nil {
-							slog.Error("could not sync dsa database", "err", err)
-						}
-						slog.Info("finished dsa database sync", "duration", time.Since(now))
-					}
-
 					if emptyOrContains(databasesToSync, "malicious-packages") {
 						slog.Info("starting malicious packages database sync")
 						now := time.Now()
@@ -149,7 +138,7 @@ Use --databases flag to sync specific sources only.`,
 			return app.Stop(stopCtx)
 		},
 	}
-	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, cisa-kev, osv, dsa, malicious-packages")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: exploitdb, github-poc, cwe, epss, cisa-kev, osv, malicious-packages")
 
 	return &syncCmd
 }

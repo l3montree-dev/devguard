@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -813,19 +814,23 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		return dtos.ScanResponse{}, err
 	}
 
-	vulnDTOs := make([]dtos.DependencyVulnDTO, len(vulns))
-	for i, v := range vulns {
-		vulnDTOs[i] = dtos.DependencyVulnDTO{
-			CVEID:                 v.CVEID,
-			CVE:                   transformer.CVEToDTO(v.CVE),
-			ComponentPurl:         v.Purl.String(),
-			ComponentFixedVersion: v.FixedVersion,
-			State:                 dtos.VulnStateOpen,
+	vulnDTOs := make([]dtos.DependencyVulnDTO, 0, len(vulns))
+	for _, v := range vulns {
+		dependencyVulns := transformer.VulnInPackageToDependencyVulnsWithoutArtifact(v, normalized, uuid.Nil, "")
+		for _, dv := range dependencyVulns {
+			vulnDTOs = append(vulnDTOs, dtos.DependencyVulnDTO{
+				CVEID:                 dv.CVEID,
+				CVE:                   transformer.CVEToDTO(dv.CVE),
+				ComponentPurl:         dv.ComponentPurl,
+				ComponentFixedVersion: dv.ComponentFixedVersion,
+				VulnerabilityPath:     dv.VulnerabilityPath,
+				State:                 dtos.VulnStateOpen,
+			})
 		}
 	}
 
 	return dtos.ScanResponse{
-		AmountOpened:    len(vulns),
+		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
 }
