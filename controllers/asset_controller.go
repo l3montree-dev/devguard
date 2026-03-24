@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"time"
@@ -391,37 +392,36 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 			if !ok {
 				return ctx.NoContent(404)
 			}
-			return ctx.JSON(200, configContent)
+			return ctx.String(200, configContent.(string))
 		}
-		return ctx.JSON(200, configContent)
+		return ctx.String(200, configContent.(string))
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
 }
 
 func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+	configID := ctx.Param("config-file")
 
-	var req struct {
-		ConfigID string `json:"configId"`
-		Content  any    `json:"content"`
+	// read the body as string
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
-
-	if err := ctx.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
-	}
+	configContent := string(body)
 
 	if asset.ConfigFiles == nil {
 		asset.ConfigFiles = make(map[string]any)
 	}
 
-	asset.ConfigFiles[req.ConfigID] = req.Content
+	asset.ConfigFiles[configID] = configContent
 
-	err := a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
+	err = a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
 	if err != nil {
-		return fmt.Errorf("error updating asset config file: %v", err)
+		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
 	}
 
-	return ctx.NoContent(200)
+	return ctx.String(200, configContent)
 }
 
 func (a *AssetController) GetBadges(ctx shared.Context) error {

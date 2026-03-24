@@ -52,6 +52,7 @@ func NewProjectRouter(
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
+	projectRouter.PUT("/config-files/:configID/", projectController.UpdateConfigFile)
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)
 	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.VEXJSON)

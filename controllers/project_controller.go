@@ -18,6 +18,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -439,7 +440,29 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 		if !ok {
 			return ctx.NoContent(404)
 		}
-		return ctx.JSON(200, configContent)
+		return ctx.String(200, configContent.(string))
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
+}
+
+func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
+	project := shared.GetProject(ctx)
+	configID := ctx.Param("configID")
+
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
+	}
+
+	configContent := string(body)
+
+	if project.ConfigFiles == nil {
+		project.ConfigFiles = make(map[string]any)
+	}
+	project.ConfigFiles[configID] = configContent
+	err = ProjectController.projectRepository.Update(ctx.Request().Context(), nil, &project)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
+	}
+	return ctx.String(200, configContent)
 }

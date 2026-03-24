@@ -19,6 +19,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -383,40 +384,21 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 
 	configContent, ok := organization.ConfigFiles[configID]
 	if !ok {
-		// read the default config file from the embedded filesystem
-		data, err := defaultConfigFiles.ReadFile("default-config-files/" + configID + ".json")
-		if err != nil {
-			return ctx.NoContent(404)
-		}
-
-		var defaultContent any
-		if err := json.Unmarshal(data, &defaultContent); err != nil {
-			return echo.NewHTTPError(500, "could not parse default config file").WithInternal(err)
-		}
-
-		// save it to the organization
-		if organization.ConfigFiles == nil {
-			organization.ConfigFiles = make(map[string]any)
-		}
-		organization.ConfigFiles[configID] = defaultContent
-
-		if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
-			return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
-		}
-
-		return ctx.JSON(200, defaultContent)
+		return ctx.NoContent(404)
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
 }
 
 func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
 
-	var configContent any
-	if err := ctx.Bind(&configContent); err != nil {
-		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	// read the body as string
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
+	configContent := string(body)
 
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)
@@ -427,7 +409,7 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
 	}
 
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent)
 }
 
 // @Summary List organization members
