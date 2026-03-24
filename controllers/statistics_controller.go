@@ -274,7 +274,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		func() (any, error) { // 0: distribution
 			results, err := c.statisticsRepository.VulnClassificationByOrg(reqCtx, nil, org.ID)
 			if err != nil {
-				return results, fmt.Errorf("could not get vuln classification:  %w", err)
+				return results, fmt.Errorf("could not get vuln classification: %w", err)
 			}
 			return results, nil
 		},
