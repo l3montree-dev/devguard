@@ -28,6 +28,7 @@ import (
 type CSAFController struct {
 	csafService              shared.CSAFService
 	dependencyVulnRepository shared.DependencyVulnRepository
+	dependencyVulnService    shared.DependencyVulnService
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	assetRepository          shared.AssetRepository
@@ -36,10 +37,11 @@ type CSAFController struct {
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
 	return &CSAFController{
 		csafService:              csafService,
 		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetRepository:          assetRepository,
@@ -252,13 +254,17 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return fmt.Errorf("invalid year format")
 	}
 
-	allVulns, err := controller.csafService.GetCSAFVulnsForAsset(ctx.Request().Context(), asset.ID)
+	getOldestVuln := func(leader, newVuln models.DependencyVuln) bool {
+		return newVuln.CreatedAt.Before(leader.CreatedAt)
+	}
+
+	allVulns, err := controller.dependencyVulnService.GetAllUniqueCVEsForAsset(ctx.Request().Context(), asset.ID, getOldestVuln)
 	if err != nil {
 		return err
 	}
 
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
-		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
+		return vuln.CreatedAt.Year() == yearNumber
 	})
 
 	// sort reports alphabetically by CVEID for better usability

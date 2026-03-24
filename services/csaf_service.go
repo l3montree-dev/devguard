@@ -1435,19 +1435,6 @@ func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 	return signature, nil
 }
 
-func (service csafService) GetCSAFVulnsForAsset(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	allVulns, err := service.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	// deduplicate Slice to avoid listing the same CVEs
-	allVulns = utils.DeduplicateSlice(allVulns, func(vuln models.DependencyVuln) string {
-		return vuln.CVEID
-	})
-	return allVulns, nil
-}
-
 func GenerateDocumentTitle(assetName, cveID string) *string {
 	return utils.Ptr(fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName))
 }
