@@ -1,7 +1,8 @@
 package repositories
 
 import (
-	"fmt"
+	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -21,20 +22,19 @@ func NewTrustedEntityRepository(db *gorm.DB) *trustedEntityRepository {
 	}
 }
 
-func (r *trustedEntityRepository) UpsertOrganizationTrust(tx *gorm.DB, organizationID uuid.UUID, trustScore float64) error {
-	db := r.GetDB(tx)
+func (r *trustedEntityRepository) UpsertOrganizationTrust(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, trustScore float64) error {
+	db := r.GetDB(ctx, tx)
 
 	// Try to find existing entry
 	var existing models.TrustedEntity
-	err := db.Where("organization_id = ? AND entity_type = ?", organizationID, "organization").First(&existing).Error
+	err := db.Where("organization_id = ?", organizationID, "organization").First(&existing).Error
 
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// Create new entry
 		trustedEntity := models.TrustedEntity{
 			OrganizationID: &organizationID,
 			ProjectID:      nil,
-			EntityType:     "organization",
-			Trustscore:     trustScore,
+			TrustScore:     trustScore,
 		}
 		return db.Create(&trustedEntity).Error
 	} else if err != nil {
@@ -48,20 +48,19 @@ func (r *trustedEntityRepository) UpsertOrganizationTrust(tx *gorm.DB, organizat
 	}).Error
 }
 
-func (r *trustedEntityRepository) UpsertProjectTrust(tx *gorm.DB, projectID uuid.UUID, trustScore float64) error {
-	db := r.GetDB(tx)
+func (r *trustedEntityRepository) UpsertProjectTrust(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, trustScore float64) error {
+	db := r.GetDB(ctx, tx)
 
 	// Try to find existing entry
 	var existing models.TrustedEntity
-	err := db.Where("project_id = ? AND entity_type = ?", projectID, "project").First(&existing).Error
+	err := db.Where("project_id = ?", projectID, "project").First(&existing).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// Create new entry
 		trustedEntity := models.TrustedEntity{
 			OrganizationID: nil,
 			ProjectID:      &projectID,
-			EntityType:     "project",
-			Trustscore:     trustScore,
+			TrustScore:     trustScore,
 		}
 		return db.Create(&trustedEntity).Error
 	} else if err != nil {
@@ -77,7 +76,7 @@ func (r *trustedEntityRepository) UpsertProjectTrust(tx *gorm.DB, projectID uuid
 
 func (r *trustedEntityRepository) GetOrganizationTrust(organizationID uuid.UUID) (*models.TrustedEntity, error) {
 	var entity models.TrustedEntity
-	err := r.db.Where("organization_id = ? AND entity_type = ?", organizationID, "organization").First(&entity).Error
+	err := r.db.Where("organization_id = ?", organizationID, "organization").First(&entity).Error
 	if err != nil {
 		return nil, err
 	}
@@ -86,31 +85,23 @@ func (r *trustedEntityRepository) GetOrganizationTrust(organizationID uuid.UUID)
 
 func (r *trustedEntityRepository) GetProjectTrust(projectID uuid.UUID) (*models.TrustedEntity, error) {
 	var entity models.TrustedEntity
-	err := r.db.Where("project_id = ? AND entity_type = ?", projectID, "project").First(&entity).Error
+	err := r.db.Where("project_id = ?", projectID, "project").First(&entity).Error
 	if err != nil {
 		return nil, err
 	}
 	return &entity, nil
 }
 
-func (r *trustedEntityRepository) DeleteOrganizationTrust(tx *gorm.DB, organizationID uuid.UUID) error {
-	return r.GetDB(tx).Where("organization_id = ? AND entity_type = ?", organizationID, "organization").Delete(&models.TrustedEntity{}).Error
+func (r *trustedEntityRepository) DeleteOrganizationTrust(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID) error {
+	return r.GetDB(ctx, tx).Where("organization_id = ?", organizationID, "organization").Delete(&models.TrustedEntity{}).Error
 }
 
-func (r *trustedEntityRepository) DeleteProjectTrust(tx *gorm.DB, projectID uuid.UUID) error {
-	return r.GetDB(tx).Where("project_id = ? AND entity_type = ?", projectID, "project").Delete(&models.TrustedEntity{}).Error
+func (r *trustedEntityRepository) DeleteProjectTrust(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) error {
+	return r.GetDB(ctx, tx).Where("project_id = ?", projectID, "project").Delete(&models.TrustedEntity{}).Error
 }
 
 func (r *trustedEntityRepository) ListAllTrustedEntities() ([]models.TrustedEntity, error) {
 	var entities []models.TrustedEntity
 	err := r.db.Find(&entities).Error
 	return entities, err
-}
-
-// ValidateTrustScore ensures the trust score is within valid range
-func ValidateTrustScore(score float64) error {
-	if score < 0 || score > 1 {
-		return fmt.Errorf("trust score must be between 0.0 and 1.0, got %f", score)
-	}
-	return nil
 }

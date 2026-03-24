@@ -694,13 +694,13 @@ const (
 
 type TrustedEntityRepository interface {
 	utils.Repository[uuid.UUID, models.TrustedEntity, DB]
-	UpsertOrganizationTrust(tx DB, organizationID uuid.UUID, trustScore float64) error
-	UpsertProjectTrust(tx DB, projectID uuid.UUID, trustScore float64) error
-	GetOrganizationTrust(organizationID uuid.UUID) (*models.TrustedEntity, error)
-	GetProjectTrust(projectID uuid.UUID) (*models.TrustedEntity, error)
-	DeleteOrganizationTrust(tx DB, organizationID uuid.UUID) error
-	DeleteProjectTrust(tx DB, projectID uuid.UUID) error
-	ListAllTrustedEntities() ([]models.TrustedEntity, error)
+	UpsertOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID, trustScore float64) error
+	UpsertProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID, trustScore float64) error
+	GetOrganizationTrust(ctx context.Context, organizationID uuid.UUID) (*models.TrustedEntity, error)
+	GetProjectTrust(ctx context.Context, projectID uuid.UUID) (*models.TrustedEntity, error)
+	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
+	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
+	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
 }
 
 type Object string

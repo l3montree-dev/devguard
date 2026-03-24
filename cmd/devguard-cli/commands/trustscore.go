@@ -50,7 +50,7 @@ func NewTrustScoreCommand() *cobra.Command {
 
 			shared.LoadConfig() // nolint
 
-			return assignTrustScore(entityType, entityID, score)
+			return assignTrustScore(cmd.Context(), entityType, entityID, score)
 		},
 	}
 	trustscore.Flags().StringP("type", "t", "organization", "Type of ID that is passed. Can be 'organization' or 'project'")
@@ -64,24 +64,29 @@ func NewTrustScoreCommand() *cobra.Command {
 	return trustscore
 }
 
-func assignTrustScore(inType string, inEntityID string, inScore float64) error {
-	// Validate trust score
-	if err := repositories.ValidateTrustScore(inScore); err != nil {
+// ValidateTrustScore ensures the trust score is within valid range
+func validateTrustScore(score float64) error {
+	if score < 0 || score > 1 {
+		return fmt.Errorf("trust score must be between 0.0 and 1.0, got %f", score)
+	}
+	return nil
+}
+
+func assignTrustScore(ctx context.Context, entityType string, entityID string, score float64) error {
+	if err := validateTrustScore(score); err != nil {
 		slog.Error("invalid trust score", "error", err)
 		return err
 	}
 
-	// Parse UUID
-	entityUUID, err := uuid.Parse(inEntityID)
+	entityUUID, err := uuid.Parse(entityID)
 	if err != nil {
-		slog.Error("invalid entity ID format", "entityID", inEntityID, "error", err)
+		slog.Error("invalid entity ID format", "entityID", entityID, "error", err)
 		return fmt.Errorf("invalid entity ID format: %w", err)
 	}
 
-	// Validate entity type
-	if inType != "organization" && inType != "project" {
-		slog.Error("invalid entity type", "type", inType)
-		return fmt.Errorf("invalid entity type: %s. Must be 'organization' or 'project'", inType)
+	if entityType != "organization" && entityType != "project" {
+		slog.Error("invalid entity type", "type", entityType)
+		return fmt.Errorf("invalid entity type: %s. Must be 'organization' or 'project'", entityType)
 	}
 
 	var assignErr error
@@ -96,50 +101,54 @@ func assignTrustScore(inType string, inEntityID string, inScore float64) error {
 			orgRepo shared.OrganizationRepository,
 			projectRepo shared.ProjectRepository,
 		) error {
-			ctx := context.Background()
-			_ = ctx
-
-			// Verify entity exists before assigning trust score
-			if inType == "organization" {
-				_, err := orgRepo.Read(entityUUID)
+			tx := trustedEntityRepo.GetDB(ctx, nil).Begin()
+			defer func() {
+				if r := recover(); r != nil {
+					tx.Rollback()
+				}
+			}()
+			switch entityType {
+			case "organization":
+				_, err := orgRepo.Read(ctx, tx, entityUUID)
 				if err != nil {
 					slog.Error("organization not found", "organizationID", entityUUID, "error", err)
+					tx.Rollback()
 					return fmt.Errorf("organization with ID %s not found: %w", entityUUID, err)
 				}
 
-				// Upsert trust score
-				err = trustedEntityRepo.UpsertOrganizationTrust(nil, entityUUID, inScore)
+				err = trustedEntityRepo.UpsertOrganizationTrust(ctx, tx, entityUUID, score)
 				if err != nil {
 					slog.Error("failed to assign trust score to organization", "organizationID", entityUUID, "error", err)
+					tx.Rollback()
 					return fmt.Errorf("failed to assign trust score: %w", err)
 				}
 
 				slog.Info("successfully assigned trust score to organization",
 					"organizationID", entityUUID,
-					"trustScore", inScore)
-				fmt.Printf("Successfully assigned trust score %.2f to organization %s\n", inScore, entityUUID)
+					"trustScore", score)
+				fmt.Printf("Successfully assigned trust score %.2f to organization %s\n", score, entityUUID)
 
-			} else if inType == "project" {
-				_, err := projectRepo.Read(entityUUID)
+			case "project":
+				_, err := projectRepo.Read(ctx, tx, entityUUID)
 				if err != nil {
 					slog.Error("project not found", "projectID", entityUUID, "error", err)
+					tx.Rollback()
 					return fmt.Errorf("project with ID %s not found: %w", entityUUID, err)
 				}
 
-				// Upsert trust score
-				err = trustedEntityRepo.UpsertProjectTrust(nil, entityUUID, inScore)
+				err = trustedEntityRepo.UpsertProjectTrust(ctx, tx, entityUUID, score)
 				if err != nil {
 					slog.Error("failed to assign trust score to project", "projectID", entityUUID, "error", err)
+					tx.Rollback()
 					return fmt.Errorf("failed to assign trust score: %w", err)
 				}
 
 				slog.Info("successfully assigned trust score to project",
 					"projectID", entityUUID,
-					"trustScore", inScore)
-				fmt.Printf("Successfully assigned trust score %.2f to project %s\n", inScore, entityUUID)
+					"trustScore", score)
+				fmt.Printf("Successfully assigned trust score %.2f to project %s\n", score, entityUUID)
 			}
-
-			return nil
+			return tx.Commit().Error
 		}),
 	)
 
@@ -156,7 +165,7 @@ func assignTrustScore(inType string, inEntityID string, inScore float64) error {
 	return assignErr
 }
 
-func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffected []models.VEXRule, inTrustedEntities []models.TrustedEntity) ([]CrowdResult, error) {
+func CalculateConfidenceScoreForPath(ctx context.Context, rules []models.VEXRule, markedAsAffected []models.VEXRule, trustedEntities []models.TrustedEntity) ([]CrowdResult, error) {
 	var result []CrowdResult
 	var confidenceValues = make(map[string]float64)
 	var assignErr error
@@ -171,21 +180,20 @@ func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffecte
 			assetRepo shared.AssetRepository,
 		) error {
 
-			for _, rule := range inRules {
-				//Are the rule paths using unique Ids?
-				rulaPath := strings.Join(rule.PathPattern, "")
+			for _, rule := range rules {
+				rulaPath := strings.Join(rule.PathPattern, "->")
 
-				asset, err := assetRepo.Read(rule.AssetID)
+				asset, err := assetRepo.Read(ctx, nil, rule.AssetID)
 				if err != nil {
 					slog.Error("failed to read asset for VEX rule", "assetID", rule.AssetID, "error", err)
 					continue
 				}
-				project, err := projectRepo.Read(asset.ProjectID)
+				project, err := projectRepo.Read(ctx, nil, asset.ProjectID)
 				if err != nil {
 					slog.Error("failed to read project for asset", "projectID", asset.ProjectID, "error", err)
 					continue
 				}
-				org, err := orgRepo.Read(project.OrganizationID)
+				org, err := orgRepo.Read(ctx, nil, project.OrganizationID)
 				if err != nil {
 					slog.Error("failed to read organization for project", "organizationID", project.OrganizationID, "error", err)
 					continue
@@ -193,11 +201,11 @@ func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffecte
 				organizationTrustscore := 0.0
 				projectTrustscore := 0.0
 
-				for _, te := range inTrustedEntities {
-					if *te.OrganizationID == org.ID {
-						organizationTrustscore = te.Trustscore
-					} else if *te.ProjectID == project.ID {
-						projectTrustscore = te.Trustscore
+				for _, te := range trustedEntities {
+					if te.OrganizationID != nil && *te.OrganizationID == org.ID {
+						organizationTrustscore = te.TrustScore
+					} else if te.ProjectID != nil && *te.ProjectID == project.ID {
+						projectTrustscore = te.TrustScore
 					}
 				}
 
@@ -205,20 +213,20 @@ func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffecte
 				confidenceValues[rulaPath] += ruleConfidence
 			}
 
-			for _, rule := range inMarkedAsAffected {
+			for _, rule := range markedAsAffected {
 				rulaPath := strings.Join(rule.PathPattern, "")
 
-				asset, err := assetRepo.Read(rule.AssetID)
+				asset, err := assetRepo.Read(ctx, nil, rule.AssetID)
 				if err != nil {
 					slog.Error("failed to read asset for VEX rule", "assetID", rule.AssetID, "error", err)
 					continue
 				}
-				project, err := projectRepo.Read(asset.ProjectID)
+				project, err := projectRepo.Read(ctx, nil, asset.ProjectID)
 				if err != nil {
 					slog.Error("failed to read project for asset", "projectID", asset.ProjectID, "error", err)
 					continue
 				}
-				org, err := orgRepo.Read(project.OrganizationID)
+				org, err := orgRepo.Read(ctx, nil, project.OrganizationID)
 				if err != nil {
 					slog.Error("failed to read organization for project", "organizationID", project.OrganizationID, "error", err)
 					continue
@@ -226,11 +234,11 @@ func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffecte
 				organizationTrustscore := 0.0
 				projectTrustscore := 0.0
 
-				for _, te := range inTrustedEntities {
-					if *te.OrganizationID == org.ID {
-						organizationTrustscore = te.Trustscore
-					} else if *te.ProjectID == project.ID {
-						projectTrustscore = te.Trustscore
+				for _, te := range trustedEntities {
+					if te.OrganizationID != nil && *te.OrganizationID == org.ID {
+						organizationTrustscore = te.TrustScore
+					} else if te.ProjectID != nil && *te.ProjectID == project.ID {
+						projectTrustscore = te.TrustScore
 					}
 				}
 
@@ -238,10 +246,12 @@ func CalculateConfidenceScoreForPath(inRules []models.VEXRule, inMarkedAsAffecte
 				confidenceValues[rulaPath] += ruleConfidence
 			}
 
-			//Calculate sum of all paths and percentages
 			totalConfidence := 0.0
 			for _, conf := range confidenceValues {
 				totalConfidence += conf
+			}
+			if totalConfidence == 0 {
+				return nil
 			}
 			for key, value := range confidenceValues {
 				result = append(result, CrowdResult{
