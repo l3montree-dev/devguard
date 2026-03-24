@@ -47,6 +47,10 @@ type DaemonRunner interface {
 	Start(ctx context.Context)
 }
 
+type FixedVersionResolver interface {
+	ResolveFixedVersions(path []packageurl.PackageURL, fixedVersion string) (string, error)
+}
+
 type LeaderElector interface {
 	IsLeader() bool
 }
@@ -139,6 +143,7 @@ type ArtifactRepository interface {
 	DeleteArtifact(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID string) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
+	CleanupOrphanedRecords(ctx context.Context) error
 }
 
 type ReleaseRepository interface {
@@ -687,6 +692,17 @@ const (
 	ActionUpdate Action = "update"
 	ActionDelete Action = "delete"
 )
+
+type TrustedEntityRepository interface {
+	utils.Repository[uuid.UUID, models.TrustedEntity, DB]
+	UpsertOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID, trustScore float64) error
+	UpsertProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID, trustScore float64) error
+	GetOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) (*models.TrustedEntity, error)
+	GetProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) (*models.TrustedEntity, error)
+	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
+	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
+	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
+}
 
 type Object string
 

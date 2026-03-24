@@ -79,6 +79,7 @@ require (
 	gorm.io/gorm v1.31.1
 	gorm.io/plugin/opentelemetry v0.1.16
 	oras.land/oras-go/v2 v2.6.0
+	pault.ag/go/debian v0.19.0
 )
 
 require (
@@ -501,6 +502,7 @@ require (
 	modernc.org/sqlite v1.46.1 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/zappy v1.0.0 // indirect
+	pault.ag/go/topsort v0.1.1 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/release-utils v0.12.3 // indirect

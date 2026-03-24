@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -113,7 +114,8 @@ type TestApp struct {
 	VulnDBImportService  shared.VulnDBImportService
 
 	// Daemons
-	DaemonRunner shared.DaemonRunner
+	DaemonRunner         shared.DaemonRunner
+	FixedVersionResolver shared.FixedVersionResolver
 }
 
 // TestAppOptions configures the test application
@@ -154,6 +156,7 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		// Use the same modules as production
 		repositories.Module,
 		services.ServiceModule,
+		fixedversion.Module,
 		daemons.Module,
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,

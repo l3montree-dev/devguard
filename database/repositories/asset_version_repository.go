@@ -31,13 +31,15 @@ import (
 
 type assetVersionRepository struct {
 	db *gorm.DB
+	utils.FireAndForgetSynchronizer
 	utils.Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
 }
 
-func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {
+func NewAssetVersionRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchronizer) *assetVersionRepository {
 	return &assetVersionRepository{
-		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
+		db:                        db,
+		Repository:                newGormRepository[uuid.UUID, models.AssetVersion](db),
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
@@ -78,10 +80,12 @@ func (repository *assetVersionRepository) Delete(ctx context.Context, tx *gorm.D
 		return err
 	}
 
-	err = repository.GetDB(ctx, tx).Exec(CleanupOrphanedRecordsSQL).Error
-	if err != nil {
-		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-	}
+	linkedCtx := shared.CreateLinkedCtx(ctx)
+	repository.FireAndForget(func() {
+		if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
+			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+		}
+	})
 
 	return nil
 }
@@ -282,13 +286,12 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Con
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.GetDB(ctx, tx).Exec(sql).Error
-			if err != nil {
+		linkedCtx := shared.CreateLinkedCtx(ctx)
+		repository.FireAndForget(func() {
+			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
 				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 			}
-		}() //nolint:errcheck
+		})
 
 	}
 
@@ -342,13 +345,12 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx cont
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.GetDB(ctx, tx).Exec(sql).Error
-			if err != nil {
+		linkedCtx := shared.CreateLinkedCtx(ctx)
+		repository.FireAndForget(func() {
+			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
 				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 			}
-		}() //nolint:errcheck
+		})
 	}
 	return count, nil
 }

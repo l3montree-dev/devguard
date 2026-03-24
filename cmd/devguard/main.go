@@ -31,6 +31,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -124,6 +125,7 @@ func main() {
 		integrations.Module,
 		vulndb.Module,
 		daemons.Module,
+		fixedversion.Module,
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),

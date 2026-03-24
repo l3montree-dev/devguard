@@ -54,7 +54,7 @@ type VEXRule struct {
 	EventType               dtos.VulnEventType               `json:"eventType" gorm:"type:text;not null;"`
 
 	// PathPattern stores the path patterns for this VEX rule.
-	// Supports wildcards: "*" matches any single element, "**" matches any number of elements.
+	// Supports wildcards: "*" matches any element.
 	PathPattern []string `json:"pathPattern" gorm:"type:jsonb;not null;serializer:json"`
 	CreatedByID string   `json:"createdById" gorm:"type:text;not null"`
 
