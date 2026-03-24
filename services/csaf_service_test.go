@@ -27,10 +27,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestGenerateProductTree(t *testing.T) {
@@ -542,9 +544,9 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 
 	cve1.AffectedComponents = append(cve1.AffectedComponents, affectedComponent1, affectedComponent2, affectedComponent3)
 
-	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVE: cve1}
-	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVE: cve1}
-	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVE: cve1}
+	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: cve1}
+	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVEID: cve1.CVE, CVE: cve1}
+	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: cve1}
 
 	vuln1Depth0.Artifacts = append(vuln1Depth0.Artifacts, artifact)
 	vuln1Depth1.Artifacts = append(vuln1Depth1.Artifacts, artifact)
@@ -563,4 +565,43 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	asset.AssetVersions = append(asset.AssetVersions, assetVersion)
 
 	return asset, assetVersion, artifact, []models.DependencyVuln{vuln1Depth0, vuln1Depth1, vuln2Depth0}
+}
+
+func TestGetOldestVulnPerUniqueCVE(t *testing.T) {
+	asset, _, _, vulns := setUpVulns()
+	t.Run("multiple vulns per CVE with different created_at timestamps should return slice with only the oldest vuln per CVE", func(t *testing.T) {
+		allVulns := vulns
+		// this is the vuln we should get as leader for this CVE
+		allVulns[0].CreatedAt = allVulns[0].CreatedAt.Add(-2 * time.Hour)
+		differentCVEVuln := vulns[0]
+		differentCVEVuln.CVEID = "CVE-TEST-12345"
+		allVulns = append(allVulns, differentCVEVuln)
+
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
+		dependencyVulnRepository.On("GetAllVulnsByAssetID", mock.Anything, mock.Anything, mock.Anything).Return(allVulns, nil)
+
+		csafService := csafService{
+			dependencyVulnService: &DependencyVulnService{
+				dependencyVulnRepository: dependencyVulnRepository,
+			},
+		}
+
+		filteredVulns, err := csafService.GetOldestVulnPerUniqueCVE(context.Background(), asset.ID)
+
+		assert.NoError(t, err)
+		assert.Len(t, filteredVulns, 2, "3 vulns with 2 different CVEs should be deduplicated to 2 vulns with different CVEs")
+
+		vulnAmountPerCVE := make(map[string]int, len(filteredVulns))
+		for _, vuln := range filteredVulns {
+			vulnAmountPerCVE[vuln.CVEID]++
+			if vuln.CVEID == "CVE-TEST-12345" {
+				assert.True(t, differentCVEVuln.CreatedAt.Equal(vuln.CreatedAt), "only 1 vuln for the new CVE should return its timestamp")
+			} else if vuln.CVEID == "GO-2026-4309" {
+				assert.True(t, allVulns[0].CreatedAt.Equal(vuln.CreatedAt), "2 vulns for this CVE, should return the older one")
+			}
+		}
+		assert.Len(t, vulnAmountPerCVE, 2, "2 different CVEs")
+		assert.Equal(t, 1, vulnAmountPerCVE["CVE-TEST-12345"], "both CVEs should only appear once")
+		assert.Equal(t, 1, vulnAmountPerCVE["GO-2026-4309"], "both CVEs should only appear once")
+	})
 }

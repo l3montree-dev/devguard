@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -149,7 +150,14 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 				year := yearAndMaybeVersionParts[0]
 				version := ""
 				if len(yearAndMaybeVersionParts) > 1 {
-					version = yearAndMaybeVersionParts[1]
+					_, after, found := strings.Cut(yearAndMaybeVersionParts[1], "Security advisory for vulnerability ")
+					if !found {
+						slog.Error("CSAF report naming scheme changed! Adjust this logic")
+						t.FailNow()
+					}
+					fields := strings.Fields(after)
+					version = fields[0]
+					slog.Info(version)
 				}
 
 				ctx := app.NewContext(r, w)
