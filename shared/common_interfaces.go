@@ -230,6 +230,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsForTagsAndDefaultBranchInAsset(ctx context.Context, tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
+	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -371,6 +372,7 @@ type DependencyVulnService interface {
 	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
+	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error)
 }
 
 type AssetVersionService interface {

@@ -405,3 +405,7 @@ func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.As
 	}
 	return nil
 }
+
+func (s *DependencyVulnService) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error) {
+	return s.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx, nil, packageName)
+}
