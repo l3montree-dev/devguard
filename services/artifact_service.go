@@ -92,14 +92,6 @@ func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID,
 		return err
 	}
 
-	// Run orphan cleanup after the transaction commits so it sees the committed state.
-	// Uses FireAndForget: goroutine in production, synchronous in tests.
-	s.synchronizer.FireAndForget(func() {
-		if err := s.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
-			slog.Error("failed to clean up orphaned records", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
-		}
-	})
-
 	return nil
 }
 
