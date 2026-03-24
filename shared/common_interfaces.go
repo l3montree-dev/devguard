@@ -696,8 +696,8 @@ type TrustedEntityRepository interface {
 	utils.Repository[uuid.UUID, models.TrustedEntity, DB]
 	UpsertOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID, trustScore float64) error
 	UpsertProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID, trustScore float64) error
-	GetOrganizationTrust(ctx context.Context, organizationID uuid.UUID) (*models.TrustedEntity, error)
-	GetProjectTrust(ctx context.Context, projectID uuid.UUID) (*models.TrustedEntity, error)
+	GetOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) (*models.TrustedEntity, error)
+	GetProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) (*models.TrustedEntity, error)
 	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
 	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
 	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
