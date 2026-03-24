@@ -60,8 +60,22 @@ func (runner *DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
 	return nil
 }
 
+func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
+	if err := runner.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
+		slog.Error("failed to clean up orphaned records", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (runner *DaemonRunner) runDaemons() {
 	ctx := context.Background()
+	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
+		return runner.CleanupOrphanedRecords(ctx)
+	}); err != nil {
+		slog.Error("could not clean up orphaned records", "err", err)
+	}
+
 	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", func() error {
 		return runner.UpdateOpenSourceInsightInformation(ctx)
 	}); err != nil {
