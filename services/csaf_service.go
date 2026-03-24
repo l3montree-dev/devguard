@@ -57,16 +57,18 @@ import (
 type csafService struct {
 	client                   http.Client
 	dependencyVulnRepository shared.DependencyVulnRepository
+	dependencyVulnService    shared.DependencyVulnService
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafService {
+func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafService {
 	return &csafService{
 		client:                   client,
 		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
 		cveRepository:            cveRepository,
@@ -1437,4 +1439,12 @@ func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 
 func GenerateDocumentTitle(assetName, cveID string) *string {
 	return utils.Ptr(fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName))
+}
+
+func (service *csafService) GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	getOldestVuln := func(leader, newVuln models.DependencyVuln) bool {
+		return newVuln.CreatedAt.Before(leader.CreatedAt)
+	}
+
+	return service.dependencyVulnService.GetAllUniqueCVEsForAsset(ctx, assetID, getOldestVuln)
 }

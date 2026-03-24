@@ -62,20 +62,16 @@ func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository 
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt [get]
 func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
+	vulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
 
 	// then write each revision entry version to the index string
 	index := ""
-	for _, v := range vulns {
-		// get the created at of the first event
-		if len(v.Events) == 0 {
-			continue
-		}
-		year := v.Events[0].CreatedAt.Year()
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(v.CVEID))
+	for _, vuln := range vulns {
+		year := vuln.CreatedAt.Year()
+		fileName := fmt.Sprintf("%s.json", *services.GenerateDocumentTitle(asset.Name, vuln.CVEID))
 		index += fmt.Sprintf("%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
@@ -92,22 +88,21 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv [get]
 func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
+	vulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
 
 	// then write each revision entry version to the index string
 	csvContents := ""
-	for _, v := range vulns {
-		// get the created at of the first event
-		if len(v.Events) == 0 {
+	for _, vuln := range vulns {
+		if len(vuln.Events) == 0 {
 			continue
 		}
-		year := v.Events[0].CreatedAt.Year()
+		year := vuln.CreatedAt.Year()
 		// get the last event
-		entry := v.Events[len(v.Events)-1]
-		fileName := fmt.Sprintf("%s.json", strings.ToLower(v.CVEID))
+		entry := vuln.Events[len(vuln.Events)-1]
+		fileName := fmt.Sprintf("%s.json", *services.GenerateDocumentTitle(asset.Name, vuln.CVEID))
 		// then write each entry to the csv string and return the result
 		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
@@ -254,11 +249,7 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return fmt.Errorf("invalid year format")
 	}
 
-	getOldestVuln := func(leader, newVuln models.DependencyVuln) bool {
-		return newVuln.CreatedAt.Before(leader.CreatedAt)
-	}
-
-	allVulns, err := controller.dependencyVulnService.GetAllUniqueCVEsForAsset(ctx.Request().Context(), asset.ID, getOldestVuln)
+	allVulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
@@ -301,11 +292,11 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 <pre>
 <a href="../">../</a>
 {{ range .Filenames }}
-<a href="{{ .Href }}" > {{ .Title }}.json</a>
+<a href="{{ .Href }}">{{ .Title }}.json</a>
 {{ if $.HasOpenPGPKeys }}
-<a href="{{ .Href }}.asc" >{{ .Title }}.asc</a>
+<a href="{{ .Href }}.asc">{{ .Title }}.asc</a>
 {{ end -}}
-<a href="{{ .Href }}.sha256" >{{ .Title }}.sha256</a>
+<a href="{{ .Href }}.sha256">{{ .Title }}.sha256</a>
 <a href="{{ .Href }}.sha512">{{ .Title }}.sha512</a>
 {{ end }}
 </pre>

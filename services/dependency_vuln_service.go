@@ -386,7 +386,7 @@ func (s *DependencyVulnService) GetAllUniqueCVEsForAsset(ctx context.Context, as
 	}
 
 	// clear old slice contents and fill it with the filtered vulns
-	allVulns = allVulns[:]
+	allVulns = allVulns[:0]
 	for _, vuln := range cveIDToOldestVuln {
 		allVulns = append(allVulns, vuln)
 	}
