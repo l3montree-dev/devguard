@@ -102,7 +102,8 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 
 	// Roll back to savepoint so the transaction is still usable for retries.
 	if rbErr := db.RollbackTo(sp).Error; rbErr != nil {
-		return rbErr
+		// Preserve both the original save error and the rollback error for diagnostics.
+		return fmt.Errorf("failed to rollback to savepoint after SaveBatchBestEffort error: %w (rollback error: %v)", err, rbErr)
 	}
 
 	// Base case: single row
