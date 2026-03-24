@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [unstable]
 
+## [v1.1.1] - 2026-03-23
+
+### Fixed
+
+- Vulnerability state incorrectly inherited `fixed` status from other branches — `fixed` events from other asset version branches are no longer applied to a vulnerability that is still actively detected on the current branch
+- `SaveBatchBestEffort` failed repeatedly after the first PostgreSQL "extended protocol limited to 65535 parameters" error because the transaction was left in an aborted state — savepoints are now used so the transaction remains usable for split-and-retry attempts
+
 ## General notes
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

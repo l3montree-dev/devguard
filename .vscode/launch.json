@@ -28,9 +28,9 @@
             "args": [
                 "daemon",
                 "runPipeline",
-                "e1f24270-6e68-4571-9168-9c151c639c97",
+                "4381b801-2b27-4569-bba6-5a14591e4eb5",
                 "--assetVersionSlug",
-                "main"
+                "develop"
             ],
         },
         {

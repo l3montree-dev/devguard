@@ -18,7 +18,10 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/in-toto/go-witness/log"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/l3montree-dev/devguard/utils"
@@ -76,6 +79,7 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 	return db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
+// it does not save any associations, so it is the caller's responsibility to save them separately if needed
 func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 	ctx context.Context,
 	tx *gorm.DB,
@@ -85,9 +89,21 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 		return nil
 	}
 
-	err := g.GetDB(ctx, tx).Save(ts).Error
+	db := g.GetDB(ctx, tx)
+	sp := fmt.Sprintf("sp%s", strings.ReplaceAll(uuid.NewString(), "-", ""))
+	if err := db.SavePoint(sp).Error; err != nil {
+		return err
+	}
+
+	err := db.Omit(clause.Associations).Save(ts).Error
 	if err == nil {
 		return nil
+	}
+
+	// Roll back to savepoint so the transaction is still usable for retries.
+	if rbErr := db.RollbackTo(sp).Error; rbErr != nil {
+		// Preserve both the original save error and the rollback error for diagnostics.
+		return fmt.Errorf("failed to rollback to savepoint after SaveBatchBestEffort error: %w (rollback error: %v)", err, rbErr)
 	}
 
 	// Base case: single row
@@ -101,10 +117,6 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 
 	// Split and retry
 	half := len(ts) / 2
-	if half == 0 {
-		return err
-	}
-
 	if err := g.SaveBatchBestEffort(ctx, tx, ts[:half]); err != nil {
 		return err
 	}
