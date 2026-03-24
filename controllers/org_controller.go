@@ -16,7 +16,6 @@
 package controllers
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,9 +29,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
-
-//go:embed default-config-files/*
-var defaultConfigFiles embed.FS
 
 type OrgController struct {
 	organizationRepository shared.OrganizationRepository
@@ -393,6 +389,10 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
 
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
+
 	// read the body as string
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -403,7 +403,13 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)
 	}
-	organization.ConfigFiles[configID] = configContent
+
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(organization.ConfigFiles, configID)
+	} else {
+		organization.ConfigFiles[configID] = configContent
+	}
 
 	if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
 		return echo.NewHTTPError(500, "could not save config file").WithInternal(err)

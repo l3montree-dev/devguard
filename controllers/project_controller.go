@@ -447,7 +447,11 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 
 func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
-	configID := ctx.Param("configID")
+	configID := ctx.Param("config-file")
+
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
 
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -459,7 +463,13 @@ func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	if project.ConfigFiles == nil {
 		project.ConfigFiles = make(map[string]any)
 	}
-	project.ConfigFiles[configID] = configContent
+
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(project.ConfigFiles, configID)
+	} else {
+		project.ConfigFiles[configID] = configContent
+	}
 	err = ProjectController.projectRepository.Update(ctx.Request().Context(), nil, &project)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)

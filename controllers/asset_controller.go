@@ -403,6 +403,10 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	configID := ctx.Param("config-file")
 
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
+
 	// read the body as string
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -414,8 +418,12 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 		asset.ConfigFiles = make(map[string]any)
 	}
 
-	asset.ConfigFiles[configID] = configContent
-
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(asset.ConfigFiles, configID)
+	} else {
+		asset.ConfigFiles[configID] = configContent
+	}
 	err = a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
