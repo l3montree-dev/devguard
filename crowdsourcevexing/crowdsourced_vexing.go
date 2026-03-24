@@ -99,15 +99,14 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 	return math.Round(1e12*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e12
 }
 
-func PathToString(inVexRule VexRule) string {
-	//Adding the assessment to the path will make it possible to distinguish between false-positives and marked-as-affected for the voting count map
-	stringPath := strings.Join(append(inVexRule.PathPattern, []string{inVexRule.Assessment}...), "-->")
+func PathToString(vexRule VexRule) string {
+	stringPath := strings.Join(append(vexRule.PathPattern, []string{vexRule.Assessment}...), "->")
 	return stringPath
 }
 
-func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, bool) {
-	for _, rule := range inVexRules {
-		if PathToString(rule) == inVexRulePath {
+func findVexRuleFromPath(vexRulePath string, vexRules []VexRule) (VexRule, bool) {
+	for _, rule := range vexRules {
+		if PathToString(rule) == vexRulePath {
 			return rule, true
 		}
 	}
@@ -140,22 +139,22 @@ func findVexRuleFromPath(inVexRulePath string, inVexRules []VexRule) (VexRule, b
 // Some more requirements to consider:
 // Application / Creation of vex rules counts as a vote
 
-func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRule, inOrganizations []Organization, inProjects []Project, inAssets []Asset) (VexRule, error) {
+func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, organizations []Organization, projects []Project, assets []Asset) (VexRule, error) {
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
 
 	var assetMap = make(map[string]Asset)
-	for _, asst := range inAssets {
+	for _, asst := range assets {
 		assetMap[asst.ID] = asst
 	}
 
 	var projectMap = make(map[string]Project)
-	for _, proj := range inProjects {
+	for _, proj := range projects {
 		projectMap[proj.ID] = proj
 	}
 
 	var organizationMap = make(map[string]Organization)
-	for _, org := range inOrganizations {
+	for _, org := range organizations {
 		organizationMap[org.ID] = org
 	}
 
@@ -170,12 +169,12 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 	//     "packageA@1.0.0": {Dependecy: "packageA@1.0.0", Children: []},
 	//     "packageB@2.0.0": {Dependecy: "packageB@2.0.0", Children: []},
 	//   }
-	// - inVexRules contain every VexRule created by a user (full database list)
+	// - vexRules contain every VexRule created by a user (full database list)
 
 	// Filtering for VexRules that apply to the dependecy tree
 	// Deduplucate VexRules based on organizationn and project to avoid replay
 	// (every combination of organization and project will be allow to have one non-contradicting VexRule for a Path submitted)
-	for _, rule := range inVexRules {
+	for _, rule := range vexRules {
 
 		// For each VexRule, find organization and project id
 		rulePath := PathToString(rule)
@@ -207,7 +206,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 			continue
 		}
 
-		if rule.PathPattern.MatchesSuffix(inDependencyPath) && rule.CVE.CVE == inCVE.CVE {
+		if rule.PathPattern.MatchesSuffix(dependencyPath) && rule.CVE.CVE == cve.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if rule.Assessment == Affected || rule.Assessment == FalsePositive {
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
@@ -292,7 +291,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 			// 1. It should'nt really matter whom's VexRule we recommend as long as the data is correct
 			// 2. We can strip out the assetID or only return the relevant data to create a new VexRule with the AssetID of the user who needed the recommendation
 			crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
-			crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
+			crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, vexRules)
 			if !found {
 				slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
 				return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
@@ -302,7 +301,7 @@ func CrowdsourcedVexing(inDependencyPath []string, inCVE CVE, inVexRules []VexRu
 	} else {
 		// Only one VexRule, so we can return it without worrying about ties
 		crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
-		crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, inVexRules)
+		crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, vexRules)
 		if !found {
 			slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
 			return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
