@@ -29,6 +29,7 @@ type ModelWriter[ID any, T Tabler, Tx any] interface {
 	Save(ctx context.Context, tx Tx, t *T) error
 	Delete(ctx context.Context, tx Tx, id ID) error
 	Activate(ctx context.Context, tx Tx, id ID) error
+	CleanupOrphanedRecords(ctx context.Context) error
 }
 
 type ModelReader[ID any, T Tabler, Tx any] interface {
