@@ -26,15 +26,19 @@ type VulnDBController struct {
 	affectedComponentRepository shared.AffectedComponentRepository
 	componentRepository         shared.ComponentRepository
 	componentService            shared.ComponentService
+	fixedVersionResolver        shared.FixedVersionResolver
+	dependencyVulnRepository    shared.DependencyVulnRepository
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, fixedVersionResolver shared.FixedVersionResolver, dependencyVulnRepository shared.DependencyVulnRepository) *VulnDBController {
 	return &VulnDBController{
 		cveRepository:               cveRepository,
 		maliciousPackageChecker:     maliciousPackageChecker,
 		affectedComponentRepository: affectedComponentRepository,
 		componentRepository:         componentRepository,
 		componentService:            componentService,
+		fixedVersionResolver:        fixedVersionResolver,
+		dependencyVulnRepository:    dependencyVulnRepository,
 	}
 }
 

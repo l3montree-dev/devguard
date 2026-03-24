@@ -18,9 +18,12 @@ type DependencyVuln struct {
 	CVE   CVE    `json:"cve"`
 	CVEID string `json:"cveId" gorm:"type:text;"`
 
-	ComponentPurl         string   `json:"componentPurl" gorm:"type:text;"`
-	ComponentFixedVersion *string  `json:"componentFixedVersion" gorm:"default:null;"`
-	VulnerabilityPath     []string `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]';serializer:json"`
+	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
+	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
+
+	DirectDependencyFixedVersion *string `json:"directDependencyFixedVersion" gorm:"default:null;"`
+
+	VulnerabilityPath []string `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]';serializer:json"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`

@@ -177,6 +177,12 @@ func expandAndObfuscateSnippet(sarifScan *sarif.SarifSchema210Json, path string)
 				// obfuscate the snippet
 				obfuscateSnippet := scanner.ObfuscateString(expandedSnippet)
 
+				// discard snippets exceeding 10 KB to prevent oversized reports
+				if len(obfuscateSnippet) > 10*1024 {
+					slog.Warn("snippet exceeds 10 KB, discarding", "uri", utils.OrDefault(location.PhysicalLocation.ArtifactLocation.URI, ""), "startLine", startLine)
+					continue
+				}
+
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = &obfuscateSnippet
 

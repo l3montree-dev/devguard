@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -137,6 +138,7 @@ func triggerDaemon(selectedDaemons []string) error {
 		integrations.Module,
 		vulndb.Module,
 		daemons.Module,
+		fixedversion.Module,
 
 		// Invoke the daemon trigger function with all dependencies
 		fx.Invoke(func(

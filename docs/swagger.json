@@ -483,6 +483,55 @@
                 },
                 "type": "object"
             },
+            "dtos.AverageRemediationTimes": {
+                "properties": {
+                    "criticalCVSSAverage": {
+                        "type": "number"
+                    },
+                    "criticalRiskAverage": {
+                        "type": "number"
+                    },
+                    "highCVSSAverage": {
+                        "type": "number"
+                    },
+                    "highRiskAverage": {
+                        "type": "number"
+                    },
+                    "lowCVSSAverage": {
+                        "type": "number"
+                    },
+                    "lowRiskAverage": {
+                        "type": "number"
+                    },
+                    "mediumCVSSAverage": {
+                        "type": "number"
+                    },
+                    "mediumRiskAverage": {
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.AverageVulnEventsPerWeek": {
+                "properties": {
+                    "averageAcceptedEvents": {
+                        "type": "number"
+                    },
+                    "averageDetectedEvents": {
+                        "type": "number"
+                    },
+                    "averageFalsePositiveEvents": {
+                        "type": "number"
+                    },
+                    "averageFixedEvents": {
+                        "type": "number"
+                    },
+                    "averageReopenedEvents": {
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.CVEDTO": {
                 "properties": {
                     "cisaActionDue": {
@@ -552,6 +601,20 @@
                 },
                 "type": "object"
             },
+            "dtos.CVEOccurrencesAcrossOrg": {
+                "properties": {
+                    "cveID": {
+                        "type": "string"
+                    },
+                    "cvss": {
+                        "type": "number"
+                    },
+                    "totalAmount": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.CandidatesResponseDTO": {
                 "properties": {
                     "artifacts": {
@@ -601,6 +664,17 @@
                     "ComponentTypeOS",
                     "ComponentTypePlatform"
                 ]
+            },
+            "dtos.ComponentUsageAcrossOrg": {
+                "properties": {
+                    "purl": {
+                        "type": "string"
+                    },
+                    "totalAmount": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
             },
             "dtos.DependencyVulnDTO": {
                 "properties": {
@@ -858,6 +932,73 @@
                 },
                 "type": "object"
             },
+            "dtos.Distribution": {
+                "properties": {
+                    "critical": {
+                        "type": "integer"
+                    },
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "high": {
+                        "type": "integer"
+                    },
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.EcosystemUsage": {
+                "properties": {
+                    "ecosystem": {
+                        "type": "string"
+                    },
+                    "relativeAmount": {
+                        "type": "number"
+                    },
+                    "totalCount": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.ExploitDTO": {
                 "properties": {
                     "author": {
@@ -1090,6 +1231,26 @@
                 },
                 "type": "object"
             },
+            "dtos.MaliciousPackageInOrg": {
+                "properties": {
+                    "assetName": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "component": {
+                        "type": "string"
+                    },
+                    "maliciousPackageID": {
+                        "type": "string"
+                    },
+                    "projectName": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.MechanicalJustificationType": {
                 "enum": [
                     "component_not_present",
@@ -1268,6 +1429,91 @@
                 },
                 "type": "object"
             },
+            "dtos.OrgOverview": {
+                "properties": {
+                    "averageAgeOfDependencies": {
+                        "type": "integer"
+                    },
+                    "averageOpenCodeRisksPerProject": {
+                        "type": "number"
+                    },
+                    "averageRemediationTimes": {
+                        "$ref": "#/components/schemas/dtos.AverageRemediationTimes"
+                    },
+                    "maliciousPackages": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.MaliciousPackageInOrg"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "orgRiskHistory": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.OrgRiskHistory"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "projectOpenVulnAverage": {
+                        "$ref": "#/components/schemas/dtos.ProjectVulnCountAverageBySeverity"
+                    },
+                    "remediationTypeDistribution": {
+                        "$ref": "#/components/schemas/dtos.RemediationTypeDistribution"
+                    },
+                    "structure": {
+                        "$ref": "#/components/schemas/dtos.OrgStructureDistribution"
+                    },
+                    "topArtifacts": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.VulnDistributionInStructure"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "topAssets": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.VulnDistributionInStructure"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "topCVEs": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.CVEOccurrencesAcrossOrg"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "topComponents": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ComponentUsageAcrossOrg"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "topEcosystems": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.EcosystemUsage"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "topProjects": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.VulnDistributionInStructure"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "vulnDistribution": {
+                        "$ref": "#/components/schemas/dtos.Distribution"
+                    },
+                    "vulnEventAverage": {
+                        "$ref": "#/components/schemas/dtos.AverageVulnEventsPerWeek"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.OrgPatchRequest": {
                 "properties": {
                     "configFiles": {
@@ -1312,6 +1558,52 @@
                     },
                     "shareVulnInformation": {
                         "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.OrgRiskHistory": {
+                "properties": {
+                    "criticalCVSS": {
+                        "type": "integer"
+                    },
+                    "criticalRisk": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "type": "string"
+                    },
+                    "highCVSS": {
+                        "type": "integer"
+                    },
+                    "highRisk": {
+                        "type": "integer"
+                    },
+                    "lowCVSS": {
+                        "type": "integer"
+                    },
+                    "lowRisk": {
+                        "type": "integer"
+                    },
+                    "mediumCVSS": {
+                        "type": "integer"
+                    },
+                    "mediumRisk": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.OrgStructureDistribution": {
+                "properties": {
+                    "numArtifacts": {
+                        "type": "integer"
+                    },
+                    "numAssets": {
+                        "type": "integer"
+                    },
+                    "numProjects": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1521,6 +1813,35 @@
                 },
                 "type": "object"
             },
+            "dtos.ProjectVulnCountAverageBySeverity": {
+                "properties": {
+                    "cvssCriticalAverage": {
+                        "type": "number"
+                    },
+                    "cvssHighAverage": {
+                        "type": "number"
+                    },
+                    "cvssLowAverage": {
+                        "type": "number"
+                    },
+                    "cvssMediumAverage": {
+                        "type": "number"
+                    },
+                    "riskCriticalAverage": {
+                        "type": "number"
+                    },
+                    "riskHighAverage": {
+                        "type": "number"
+                    },
+                    "riskLowAverage": {
+                        "type": "number"
+                    },
+                    "riskMediumAverage": {
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.RelationshipDTO": {
                 "properties": {
                     "relationshipType": {
@@ -1625,6 +1946,49 @@
                 },
                 "type": "object"
             },
+            "dtos.RemediationTimeAverages": {
+                "properties": {
+                    "cvssAvgCritical": {
+                        "type": "number"
+                    },
+                    "cvssAvgHigh": {
+                        "type": "number"
+                    },
+                    "cvssAvgLow": {
+                        "type": "number"
+                    },
+                    "cvssAvgMedium": {
+                        "type": "number"
+                    },
+                    "riskAvgCritical": {
+                        "type": "number"
+                    },
+                    "riskAvgHigh": {
+                        "type": "number"
+                    },
+                    "riskAvgLow": {
+                        "type": "number"
+                    },
+                    "riskAvgMedium": {
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.RemediationTypeDistribution": {
+                "properties": {
+                    "acceptedPercentage": {
+                        "type": "number"
+                    },
+                    "falsePositivePercentage": {
+                        "type": "number"
+                    },
+                    "fixedPercentage": {
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.RequirementLevel": {
                 "enum": [
                     "low",
@@ -1647,6 +2011,102 @@
                 "required": [
                     "privkey"
                 ],
+                "type": "object"
+            },
+            "dtos.RiskHistoryDTO": {
+                "properties": {
+                    "artifactName": {
+                        "type": "string"
+                    },
+                    "assetId": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "averageClosedRisk": {
+                        "type": "number"
+                    },
+                    "averageOpenRisk": {
+                        "type": "number"
+                    },
+                    "critical": {
+                        "type": "integer"
+                    },
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
+                        "type": "string"
+                    },
+                    "fixedDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "high": {
+                        "type": "integer"
+                    },
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "maxClosedRisk": {
+                        "type": "number"
+                    },
+                    "maxOpenRisk": {
+                        "type": "number"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
+                        "type": "integer"
+                    },
+                    "minClosedRisk": {
+                        "type": "number"
+                    },
+                    "minOpenRisk": {
+                        "type": "number"
+                    },
+                    "openDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "sumClosedRisk": {
+                        "type": "number"
+                    },
+                    "sumOpenRisk": {
+                        "type": "number"
+                    }
+                },
                 "type": "object"
             },
             "dtos.RiskMetrics": {
@@ -1765,6 +2225,74 @@
                         "type": "string"
                     },
                     "vexSource": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.VulnDistributionInStructure": {
+                "properties": {
+                    "assetSlug": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "critical": {
+                        "type": "integer"
+                    },
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "high": {
+                        "type": "integer"
+                    },
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "projectSlug": {
+                        "type": "string"
+                    },
+                    "slug": {
                         "type": "string"
                     }
                 },
@@ -4803,6 +5331,66 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/number-of-exploits/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/models.CVE"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get CVEs with known exploits for an asset",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs": {
             "get": {
                 "parameters": [
@@ -6084,6 +6672,249 @@
                 "summary": "Get asset version metrics",
                 "tags": [
                     "Asset Versions"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/average-fixing-time/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Restrict results to a specific artifact",
+                        "in": "query",
+                        "name": "artifactName",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RemediationTimeAverages"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get average fixing times for an asset version",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/component-risk/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Restrict results to a specific artifact",
+                        "in": "query",
+                        "name": "artifactName",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get component risk distribution for an asset version",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/risk-history/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Restrict results to a specific artifact",
+                        "in": "query",
+                        "name": "artifactName",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Start date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "start",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "End date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "end",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.RiskHistoryDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get risk history for an asset version",
+                "tags": [
+                    "Statistics"
                 ]
             }
         },
@@ -7453,6 +8284,141 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Release ID",
+                        "in": "path",
+                        "name": "releaseID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RemediationTimeAverages"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get average remediation times for a release",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Release ID",
+                        "in": "path",
+                        "name": "releaseID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Start date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "start",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "End date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "end",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.RiskHistoryDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get risk history for a release",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.json": {
             "get": {
                 "parameters": [
@@ -7620,6 +8586,70 @@
                 "summary": "List first-party vulnerabilities by project",
                 "tags": [
                     "Vulnerabilities"
+                ]
+            }
+        },
+        "/organizations/{organization}/stats/vuln-statistics/": {
+            "get": {
+                "description": "Returns aggregated security statistics for an organization, including vulnerability distribution, top vulnerable projects/assets/artifacts, most used components, common CVEs, risk history, remediation metrics, and ecosystem usage. All queries are executed in parallel.",
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Max number of top vulnerable projects/assets/artifacts to return (default: 5)",
+                        "in": "query",
+                        "name": "orgComponentsLimit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Max number of top CVEs to return (default: 5)",
+                        "in": "query",
+                        "name": "topCVEsLimit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Max number of top components to return (default: 5)",
+                        "in": "query",
+                        "name": "topComponentsLimit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Max number of top ecosystems to return (default: 5)",
+                        "in": "query",
+                        "name": "topEcosystemsLimit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.OrgOverview"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "Get organization statistics overview",
+                "tags": [
+                    "Organizations"
                 ]
             }
         },

@@ -47,7 +47,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = dtos.VulnState("Example State")
 
-		output := dependencyVulnToTableRow(pURL, v, true, false, false)
+		output := dependencyVulnToTableRow(pURL, v, false, false)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 		assert.Equal(t, 2, count, "should be equal")
@@ -72,7 +72,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = dtos.VulnState("Example State")
 
-		output := dependencyVulnToTableRow(pURL, v, true, false, false)
+		output := dependencyVulnToTableRow(pURL, v, false, false)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 
@@ -80,7 +80,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 	})
 
-	t.Run("should not show purl when showPurl is false", func(t *testing.T) {
+	t.Run("should always show library name", func(t *testing.T) {
 		pURL := packageurl.PackageURL{}
 		pURL.Type = "npm"
 		pURL.Namespace = "example"
@@ -91,8 +91,8 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 5.0})
 		v.State = dtos.VulnState("open")
 
-		output := dependencyVulnToTableRow(pURL, v, false, false, false)
-		assert.Equal(t, "", output[0], "library name should be empty when showPurl is false")
+		output := dependencyVulnToTableRow(pURL, v, false, false)
+		assert.NotEmpty(t, output[0], "library name should always be shown")
 	})
 
 	t.Run("should color row red when failed is true", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.RawRiskAssessment = &risk
 		v.State = dtos.VulnState("open")
 
-		output := dependencyVulnToTableRow(pURL, v, true, true, true)
+		output := dependencyVulnToTableRow(pURL, v, true, true)
 		// The CVEID should be colored red (contains ANSI escape codes)
 		cveStr := fmt.Sprint(output[1])
 		assert.Contains(t, cveStr, "CVE-2023-12345", "should contain CVE ID")

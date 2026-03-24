@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ArtifactService struct {
@@ -20,13 +21,14 @@ type ArtifactService struct {
 	assetVersionService    shared.AssetVersionService
 	dependencyVulnService  shared.DependencyVulnService
 	scanService            shared.ScanService
+	synchronizer           utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ArtifactService = (*ArtifactService)(nil) // Ensure ArtifactService implements shared.ArtifactService interface
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
 	return &ArtifactService{
 		csafService:            csafService,
 		artifactRepository:     artifactRepository,
@@ -36,6 +38,7 @@ func NewArtifactService(artifactRepository shared.ArtifactRepository,
 		assetVersionService:    assetVersionService,
 		dependencyVulnService:  dependencyVulnService,
 		scanService:            scanService,
+		synchronizer:           synchronizer,
 	}
 }
 
@@ -59,7 +62,7 @@ func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID,
 	}
 
 	// Execute deletion in a transaction
-	return s.componentRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
+	if err := s.componentRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
 		// Load the full SBOM graph before deletion
 		wholeAssetGraph, err := s.assetVersionService.LoadFullSBOMGraph(ctx, tx, assetVersion)
 		if err != nil {
@@ -85,7 +88,19 @@ func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID,
 
 		slog.Info("artifact deleted successfully", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName)
 		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Run orphan cleanup after the transaction commits so it sees the committed state.
+	// Uses FireAndForget: goroutine in production, synchronous in tests.
+	s.synchronizer.FireAndForget(func() {
+		if err := s.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
+			slog.Error("failed to clean up orphaned records", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+		}
 	})
+
+	return nil
 }
 
 func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
