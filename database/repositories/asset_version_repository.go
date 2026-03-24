@@ -78,11 +78,6 @@ func (repository *assetVersionRepository) Delete(ctx context.Context, tx *gorm.D
 		return err
 	}
 
-	err = repository.GetDB(ctx, tx).Exec(CleanupOrphanedRecordsSQL).Error
-	if err != nil {
-		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-	}
-
 	return nil
 }
 
@@ -282,14 +277,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Con
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.GetDB(ctx, tx).Exec(sql).Error
-			if err != nil {
-				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-			}
-		}() //nolint:errcheck
-
 	}
 
 	return count, nil
@@ -342,13 +329,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx cont
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.GetDB(ctx, tx).Exec(sql).Error
-			if err != nil {
-				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-			}
-		}() //nolint:errcheck
 	}
 	return count, nil
 }
