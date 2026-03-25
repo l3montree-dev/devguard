@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestHTTPControllerGetConfigFile(t *testing.T) {
+func TestAssetControllerGetConfigFile(t *testing.T) {
 	e := echo.New()
 
 	t.Run("returns 200 with asset config file", func(t *testing.T) {
@@ -46,23 +46,17 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		shared.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "organization-config-content",
-				},
+				"config1": "organization-config-content",
 			},
 		})
 		shared.SetProject(ctx, models.Project{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "project-config-content",
-				},
+				"config1": "project-config-content",
 			},
 		})
 		shared.SetAsset(ctx, models.Asset{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "asset-config-content",
-				},
+				"config1": "asset-config-content",
 			},
 		})
 
@@ -70,10 +64,9 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		err := controller.GetConfigFile(ctx)
 
-		// Assertions
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "{\"value\":\"asset-config-content\"}\n", rec.Body.String())
+		assert.Equal(t, "asset-config-content", rec.Body.String())
 	})
 
 	t.Run("should return project config file if asset config file is not found", func(t *testing.T) {
@@ -85,16 +78,12 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		shared.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "organization-config-content",
-				},
+				"config1": "organization-config-content",
 			},
 		})
 		shared.SetProject(ctx, models.Project{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "project-config-content",
-				},
+				"config1": "project-config-content",
 			},
 		})
 		shared.SetAsset(ctx, models.Asset{
@@ -107,7 +96,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "{\"value\":\"project-config-content\"}\n", rec.Body.String())
+		assert.Equal(t, "project-config-content", rec.Body.String())
 	})
 
 	t.Run("should return organization config file if asset and project config files are not found", func(t *testing.T) {
@@ -119,9 +108,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		shared.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
-				"config1": map[string]any{
-					"value": "organization-config-content",
-				},
+				"config1": "organization-config-content",
 			},
 		})
 		shared.SetProject(ctx, models.Project{
@@ -137,7 +124,7 @@ func TestHTTPControllerGetConfigFile(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, "{\"value\":\"organization-config-content\"}\n", rec.Body.String())
+		assert.Equal(t, "organization-config-content", rec.Body.String())
 	})
 }
 

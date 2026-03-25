@@ -248,7 +248,7 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
+		sarifResult, err := executeCodeScan(cmd.Context(), scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -323,13 +323,31 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {
+func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {
 	switch scannerID {
 	case "secret-scanning":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			if err := config.GetAndWriteConfigFile(ctx, "gitleaks.toml", config.RuntimeBaseConfig.AssetName); err != nil {
+				slog.Warn("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
+			}
+		}
 		return secretScan(path, outputPath)
 	case "sast":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			if err := config.GetAndWriteConfigFile(ctx, ".semgrep.yaml", config.RuntimeBaseConfig.AssetName); err != nil {
+				slog.Warn("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
+			}
+		}
 		return sastScan(path, outputPath)
 	case "iac":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			if err := config.GetAndWriteConfigFile(ctx, ".checkov.yml", config.RuntimeBaseConfig.AssetName); err != nil {
+				slog.Warn("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
+			}
+		}
 		return iacScan(path, outputPath)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
