@@ -2044,6 +2044,66 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 	})
 }
 
+// TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
+// When a component is missing from the components table (e.g. deleted externally,
+// or evicted by a concurrent transaction), a rescan must still succeed by
+// re-inserting the missing component before creating the dependency edge.
+func TestTrivyDebianSBOMRescan(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+
+		doScan := func(label string) error {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/scan", bytes.NewReader(sbomBytes))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "trivy-debian-image")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "trivy")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			if err := controller.ScanDependencyVulnFromProject(ctx); err != nil {
+				return fmt.Errorf("%s: controller error: %w", label, err)
+			}
+			if recorder.Code != 200 {
+				return fmt.Errorf("%s: expected 200, got %d, body: %s", label, recorder.Code, recorder.Body.String())
+			}
+			return nil
+		}
+
+		// First scan: populates the components table.
+		assert.NoError(t, doScan("scan 1"))
+
+		// Delete one of the components with a %2B-encoded PURL from the DB to
+		// simulate the state that causes the FK violation on the next scan.
+		// The libc6 component has PURL pkg:deb/debian/libc6@2.36-9+deb12u10?...
+		// (stored decoded with '+'); removing it means the next scan must
+		// re-insert it before creating the edge.
+		libc6Purl := "pkg:deb/debian/libc6@2.36-9+deb12u10?arch=amd64&distro=debian-12.11"
+		result := f.DB.Exec("DELETE FROM components WHERE id = ?", libc6Purl)
+		assert.NoError(t, result.Error)
+		assert.Equal(t, int64(1), result.RowsAffected, "libc6 component should have been deleted")
+
+		// Second scan: must succeed even though libc6 is missing from components.
+		assert.NoError(t, doScan("scan 2 (after component deleted)"))
+	})
+}
+
 func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
