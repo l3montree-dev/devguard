@@ -24,6 +24,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
@@ -256,7 +257,7 @@ func SetXAssetHeaders(req *http.Request) {
 	}
 }
 
-func GetSlugsFromAssetName(assetName string) (string, string, string, error) {
+func getSlugsFromAssetName(assetName string) (string, string, string, error) {
 	// split the asset name
 	assetParts := strings.Split(assetName, "/")
 	if len(assetParts) == 5 {
@@ -273,9 +274,25 @@ func GetSlugsFromAssetName(assetName string) (string, string, string, error) {
 	return assetParts[0], assetParts[1], assetParts[2], nil
 }
 
+func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) error {
+	configContent, err := GetConfigFile(ctx, configFileName, assetName)
+
+	if err != nil {
+		slog.Warn("could not get config file, using default trivy config", "err", err)
+	} else {
+		// write the config to a file
+		err = os.WriteFile(configFileName, []byte(configContent), 0644)
+		if err != nil {
+			slog.Warn("could not write config file, using default trivy config", "err", err)
+		}
+	}
+
+	return nil
+}
+
 func GetConfigFile(ctx context.Context, configID string, assetName string) (string, error) {
 	// get the organization, project and asset slug from the asset name
-	org, project, asset, err := GetSlugsFromAssetName(assetName)
+	org, project, asset, err := getSlugsFromAssetName(assetName)
 	if err != nil {
 		return "", err
 	}
