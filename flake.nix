@@ -137,7 +137,6 @@
             pkgsLinux.trivy
             pkgsLinux.checkov
             pkgsLinux.semgrep
-            pkgsLinux.cosign
             pkgsLinux.crane
             pkgsLinux.gitleaks
           ];
