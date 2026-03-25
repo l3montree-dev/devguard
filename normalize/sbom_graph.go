@@ -500,22 +500,12 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 		}
 	}
 
-	for id := range beforeNodes {
-		if !afterNodes[id] {
-			if node := g.nodes[id]; node != nil {
-				diff.RemovedNodes = append(diff.RemovedNodes, node)
-			}
-		}
+	afterEdges := make(map[[2]string]bool)
+	for parent, child := range g.Edges() {
+		afterEdges[[2]string{parent, child}] = true
 	}
 	for edge := range beforeEdges {
-		found := false
-		for parent, child := range g.Edges() {
-			if [2]string{parent, child} == edge {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !afterEdges[edge] {
 			diff.RemovedEdges = append(diff.RemovedEdges, edge)
 		}
 	}
