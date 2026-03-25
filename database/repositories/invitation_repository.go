@@ -15,6 +15,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -34,12 +36,12 @@ func NewInvitationRepository(db *gorm.DB) *InvitationRepository {
 	}
 }
 
-func (g *InvitationRepository) FindByCode(code string) (models.Invitation, error) {
+func (g *InvitationRepository) FindByCode(ctx context.Context, tx *gorm.DB, code string) (models.Invitation, error) {
 	var t models.Invitation
-	err := g.db.Model(models.Invitation{}).Preload("Organization").Where("code = ?", code).First(&t).Error
+	err := g.GetDB(ctx, tx).Model(models.Invitation{}).Preload("Organization").Where("code = ?", code).First(&t).Error
 	return t, err
 }
 
-func (g *InvitationRepository) Save(db *gorm.DB, invitation *models.Invitation) error {
-	return g.Repository.GetDB(db).Omit(clause.Associations).Save(invitation).Error
+func (g *InvitationRepository) Save(ctx context.Context, tx *gorm.DB, invitation *models.Invitation) error {
+	return g.Repository.GetDB(ctx, tx).Omit(clause.Associations).Save(invitation).Error
 }

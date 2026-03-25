@@ -16,12 +16,16 @@
 package daemons
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
+
+var daemonTracer = otel.Tracer("devguard.daemon")
 
 type DebugOptions struct {
 	LimitToAssetVersionSlug string
@@ -58,7 +62,8 @@ type DaemonRunner struct {
 	vulnDBImportService          shared.VulnDBImportService
 	vexRuleService               shared.VEXRuleService
 
-	debugOptions DebugOptions
+	debugOptions         DebugOptions
+	fixedVersionResolver shared.FixedVersionResolver
 }
 
 func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
@@ -99,6 +104,7 @@ func NewDaemonRunner(
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBImportService,
 	vexRuleService shared.VEXRuleService,
+	fixedVersionResolver shared.FixedVersionResolver,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -129,11 +135,12 @@ func NewDaemonRunner(
 		maliciousPackageChecker:      maliciousPackageChecker,
 		vulnDBImportService:          vulnDBImportService,
 		vexRuleService:               vexRuleService,
+		fixedVersionResolver:         fixedVersionResolver,
 	}
 }
 
 // Start initiates all background daemons
-func (runner *DaemonRunner) Start() {
+func (runner *DaemonRunner) Start(ctx context.Context) {
 	go func() {
 		runner.tick()
 		ticker := time.NewTicker(5 * time.Minute)
@@ -148,7 +155,7 @@ func (runner *DaemonRunner) tick() {
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()
-		runner.RunAssetPipeline(false)
+		runner.RunAssetPipeline(context.Background(), false)
 	} else {
 		slog.Info("not the leader - skipping background jobs")
 	}

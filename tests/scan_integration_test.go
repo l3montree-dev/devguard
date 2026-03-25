@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -325,7 +326,7 @@ func TestScanning(t *testing.T) {
 			assert.Nil(t, err)
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			// Find the vuln on main to accept it
@@ -339,7 +340,7 @@ func TestScanning(t *testing.T) {
 			assert.NotNil(t, mainVuln, "should have a vuln on main branch")
 
 			acceptedEvent := models.NewAcceptedEvent(mainVuln.ID, mainVuln.GetType(), "abc", "accepting the vulnerability", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, mainVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, mainVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			// Now scan on a different branch
@@ -357,7 +358,7 @@ func TestScanning(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			var newVuln models.DependencyVuln
@@ -417,7 +418,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -436,7 +437,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -444,10 +445,10 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing state management", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			branchAVuln = vulns[0]
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
@@ -466,7 +467,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -499,7 +500,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -518,7 +519,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -539,7 +540,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -561,7 +562,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 			var branchAFinalVuln, branchBVuln models.DependencyVuln
@@ -605,7 +606,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		t.Run("should copy all events when vulnerability is found on different branches - complete lifecycle test", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -624,7 +625,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -632,14 +633,14 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "This is a test comment for lifecycle verification", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -660,7 +661,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -729,7 +730,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 3)
 
@@ -748,7 +749,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		t.Run("should handle false positive events in lifecycle management", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -766,13 +767,13 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			err := controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchDVuln := vulns[0]
 
 			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchDVuln, &fpEvent)
 			assert.Nil(t, err)
 
 			recorder = httptest.NewRecorder()
@@ -788,7 +789,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			err = controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -835,7 +836,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 
 		t.Run("should copy all events when first party vulnerability is found on different branches", func(t *testing.T) {
 
-			vulns, _ := firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -854,7 +855,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -862,14 +863,14 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing", false)
-			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = firstPartyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Test comment for lifecycle verification", false)
-			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+			err = firstPartyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			branchAVuln = vulns[0]
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
@@ -889,7 +890,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -1593,7 +1594,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 			assert.Equal(t, 2, response.AmountOpened, "should have created 2 vulnerabilities with different paths")
 
 			// Get the vulnerabilities from DB
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -1617,7 +1618,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 			assert.Equal(t, 201, recorder.Code)
 
 			// Re-fetch the vulnerabilities to check their state after VEX rule is applied
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			falsePositiveCount := 0
@@ -1670,7 +1671,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Get the vulnerability
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.GreaterOrEqual(t, len(vulns), 1)
 
@@ -1718,7 +1719,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Get all vulns again
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			// Find the new vulns (those with path-a or path-b in their path)
@@ -2040,6 +2041,66 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 			assert.NotNil(t, bom.Metadata.Component)
 			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header is invalid (falls back to asset default=false)")
 		})
+	})
+}
+
+// TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
+// When a component is missing from the components table (e.g. deleted externally,
+// or evicted by a concurrent transaction), a rescan must still succeed by
+// re-inserting the missing component before creating the dependency edge.
+func TestTrivyDebianSBOMRescan(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+
+		doScan := func(label string) error {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/scan", bytes.NewReader(sbomBytes))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "trivy-debian-image")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "trivy")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			if err := controller.ScanDependencyVulnFromProject(ctx); err != nil {
+				return fmt.Errorf("%s: controller error: %w", label, err)
+			}
+			if recorder.Code != 200 {
+				return fmt.Errorf("%s: expected 200, got %d, body: %s", label, recorder.Code, recorder.Body.String())
+			}
+			return nil
+		}
+
+		// First scan: populates the components table.
+		assert.NoError(t, doScan("scan 1"))
+
+		// Delete one of the components with a %2B-encoded PURL from the DB to
+		// simulate the state that causes the FK violation on the next scan.
+		// The libc6 component has PURL pkg:deb/debian/libc6@2.36-9+deb12u10?...
+		// (stored decoded with '+'); removing it means the next scan must
+		// re-insert it before creating the edge.
+		libc6Purl := "pkg:deb/debian/libc6@2.36-9+deb12u10?arch=amd64&distro=debian-12.11"
+		result := f.DB.Exec("DELETE FROM components WHERE id = ?", libc6Purl)
+		assert.NoError(t, result.Error)
+		assert.Equal(t, int64(1), result.RowsAffected, "libc6 component should have been deleted")
+
+		// Second scan: must succeed even though libc6 is missing from components.
+		assert.NoError(t, doScan("scan 2 (after component deleted)"))
 	})
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
 
@@ -24,7 +25,7 @@ func NewCISAKEVService(cveRepository shared.CveRepository, cveRelationshipReposi
 	return cisaKEVService{
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		httpClient:                &http.Client{},
+		httpClient:                &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
@@ -111,16 +112,17 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-func (s cisaKEVService) Mirror() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	cves, err := s.fetchJSON(ctx)
+func (s cisaKEVService) Mirror(ctx context.Context) error {
+	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	cves, err := s.fetchJSON(fetchCtx)
 	cancel()
 	if err != nil {
 		slog.Error("could not fetch CISA KEV data", "error", err)
 		return err
 	}
 
-	tx := s.cveRepository.Begin()
+	tx := s.cveRepository.Begin(ctx)
+	defer tx.Rollback()
 
 	// build a map of CVE ID -> KEV data for quick lookup
 	kevMap := make(map[string]models.CVE, len(cves))
@@ -136,7 +138,7 @@ func (s cisaKEVService) Mirror() error {
 	var relationships []models.CVERelationship
 	for i := 0; i < len(cveIDs); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(tx, cveIDs[i:end])
+		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(ctx, tx, cveIDs[i:end])
 		if err != nil {
 			slog.Error("could not fetch CVE relationships", "error", err)
 			return err
@@ -167,7 +169,7 @@ func (s cisaKEVService) Mirror() error {
 	// process the CVEs in batches
 	for i := 0; i < len(cves); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cves))
-		err := s.cveRepository.UpdateCISAKEVBatch(tx, cves[i:end])
+		err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end])
 		if err != nil {
 			slog.Error("error when trying to save CISA KEV information batch")
 			return err

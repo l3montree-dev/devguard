@@ -36,7 +36,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 
@@ -45,7 +45,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -63,7 +63,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.Error(t, err)
@@ -87,7 +87,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.NoError(t, err)
@@ -95,7 +95,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -127,7 +127,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 
@@ -143,7 +143,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				ID: "abc",
 			},
@@ -155,24 +155,24 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
-		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoID string) (shared.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
-			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+			facade.On("CreateIssue", mock.Anything, "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
+			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "risk:"+"high", &github.Label{
 				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
+			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "devguard", &github.Label{
 				Description: github.String("DevGuard"),
 				Color:       github.String("182654"),
 			}).Return(nil, nil, nil)
-			facade.On("EditIssue", context.TODO(), "repo", "1", 0, &github.IssueRequest{
+			facade.On("EditIssue", mock.Anything, "repo", "1", 0, &github.IssueRequest{
 				State: github.String("closed"),
 			}).Return(nil, nil, fmt.Errorf("could not close issue"))
-			facade.On(("CreateIssueComment"), context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
+			facade.On("CreateIssueComment", mock.Anything, "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 
@@ -200,7 +200,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("abc")
 		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.Error(t, err)
@@ -228,8 +228,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
-		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(expectDependencyVuln, nil)
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
@@ -247,16 +247,16 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		githubClientFactory := func(repoID string) (shared.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
-			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+			facade.On("CreateIssue", mock.Anything, "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
+			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "risk:"+"high", &github.Label{
 				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
+			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "devguard", &github.Label{
 				Description: github.String("DevGuard"),
 				Color:       github.String("182654"),
 			}).Return(nil, nil, nil)
-			facade.On("CreateIssueComment", context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
+			facade.On("CreateIssueComment", mock.Anything, "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 
@@ -284,7 +284,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("1")
 		shared.SetSession(ctx, authSession)
 
-		err := githubIntegration.HandleEvent(shared.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
 		})
 		assert.NoError(t, err)
@@ -422,7 +422,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.True(t, isAuthorized)
 	})
@@ -433,7 +433,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Nil(t, err)
 		assert.False(t, isAuthorized)
 	})
@@ -444,7 +444,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the github api was blown into pieces"))
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "the github api was blown into pieces", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -453,7 +453,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Repo: &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -462,7 +462,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Sender: &github.User{ID: utils.Ptr(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
@@ -472,12 +472,12 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 			Sender: &github.User{ID: utils.Ptr(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
-		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
-		isAuthorized, err := isGithubUserAuthorized(nil, nil)
+		isAuthorized, err := isGithubUserAuthorized(context.Background(), nil, nil)
 		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})

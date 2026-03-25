@@ -2206,6 +2206,188 @@ func TestScoping(t *testing.T) {
 	})
 }
 
+func TestTrivyDebianSBOMNoForeignKeyViolation(t *testing.T) {
+	// Regression test for FK violation on component_dependencies.dependency_id.
+	// When Trivy produces PURLs with URL-encoded characters (e.g. %2B for +),
+	// the BOMRef in the SBOM is the encoded form but AddComponent decodes the
+	// PackageURL.  On a re-scan the existing graph stores the node under the
+	// decoded key, while the new SBOM graph stores it under the encoded key.
+	// After MergeGraph the encoded BOMRef appears as a new node and its edges
+	// appear as new edges.  HandleStateDiff must insert the decoded PackageURL
+	// into component_dependencies.dependency_id — that value must already exist
+	// in the components table (created via AddedNodes) or the INSERT violates
+	// the FK constraint.
+	//
+	// This test mirrors the logic in HandleStateDiff without a real database:
+	// it collects all PackageURLs that would be present in components after
+	// CreateBatch, then asserts that every AddedEdge's DependencyID is in
+	// that set.
+	t.Run("all AddedEdge dependency PURLs must be covered by AddedNodes on first scan", func(t *testing.T) {
+		f, err := os.Open("testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+		defer f.Close()
+
+		var bom cdx.BOM
+		assert.NoError(t, cdx.NewBOMDecoder(f, cdx.BOMFileFormatJSON).Decode(&bom))
+
+		newGraph, err := SBOMGraphFromCycloneDX(&bom, "test-artifact", "trivy", false)
+		assert.NoError(t, err)
+
+		// Simulate first scan: existing graph is empty.
+		existingGraph := NewSBOMGraph()
+		diff := existingGraph.MergeGraph(newGraph)
+
+		// Build the set of PackageURLs that CreateBatch would insert into
+		// the components table (mirrors HandleStateDiff step 1).
+		insertedComponents := make(map[string]struct{})
+		for _, node := range diff.AddedNodes {
+			if node.Component != nil && node.Component.PackageURL != "" {
+				insertedComponents[node.Component.PackageURL] = struct{}{}
+			}
+		}
+
+		// Every AddedEdge's DependencyID must be in insertedComponents
+		// (mirrors HandleStateDiff step 4 — the FK check).
+		for _, edge := range diff.AddedEdges {
+			node := existingGraph.Node(edge[1])
+			if node == nil || node.Component == nil {
+				continue
+			}
+			depPURL := node.Component.PackageURL
+			if depPURL == "" {
+				continue
+			}
+			_, ok := insertedComponents[depPURL]
+			assert.True(t, ok,
+				"AddedEdge target %q has PackageURL %q which is not in AddedNodes — would cause FK violation",
+				edge[1], depPURL)
+		}
+	})
+
+	t.Run("all AddedEdge dependency PURLs must be covered on re-scan", func(t *testing.T) {
+		f, err := os.Open("testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+		defer f.Close()
+
+		var bom cdx.BOM
+		assert.NoError(t, cdx.NewBOMDecoder(f, cdx.BOMFileFormatJSON).Decode(&bom))
+
+		newGraph, err := SBOMGraphFromCycloneDX(&bom, "test-artifact", "trivy", false)
+		assert.NoError(t, err)
+
+		// Simulate a re-scan: existing graph was built from the same SBOM
+		// but stored with decoded PURLs (as the DB would after the first scan).
+		existingGraph := NewSBOMGraph()
+		existingGraph.MergeGraph(newGraph) // first scan — populates existingGraph
+
+		// Second scan with the same SBOM.
+		f2, err := os.Open("testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+		defer f2.Close()
+
+		var bom2 cdx.BOM
+		assert.NoError(t, cdx.NewBOMDecoder(f2, cdx.BOMFileFormatJSON).Decode(&bom2))
+
+		newGraph2, err := SBOMGraphFromCycloneDX(&bom2, "test-artifact", "trivy", false)
+		assert.NoError(t, err)
+
+		// Collect the PackageURLs already in the DB (simulates the components
+		// that exist from the first scan — keyed by decoded PURL).
+		existingComponents := make(map[string]struct{})
+		for id, node := range existingGraph.nodes {
+			if node != nil && node.Component != nil {
+				existingComponents[id] = struct{}{}
+				existingComponents[node.Component.PackageURL] = struct{}{}
+			}
+		}
+
+		diff := existingGraph.MergeGraph(newGraph2)
+
+		// Newly added nodes would be inserted by CreateBatch.
+		insertedComponents := make(map[string]struct{})
+		for purl := range existingComponents {
+			insertedComponents[purl] = struct{}{}
+		}
+		for _, node := range diff.AddedNodes {
+			if node.Component != nil && node.Component.PackageURL != "" {
+				insertedComponents[node.Component.PackageURL] = struct{}{}
+			}
+		}
+
+		for _, edge := range diff.AddedEdges {
+			node := existingGraph.Node(edge[1])
+			if node == nil || node.Component == nil {
+				continue
+			}
+			depPURL := node.Component.PackageURL
+			if depPURL == "" {
+				continue
+			}
+			_, ok := insertedComponents[depPURL]
+			assert.True(t, ok,
+				"AddedEdge target %q has PackageURL %q which is not in components — would cause FK violation on re-scan",
+				edge[1], depPURL)
+		}
+	})
+}
+
+func TestMergeGraphRemovals(t *testing.T) {
+	t.Run("colliding info source ID triggers subtree replacement and reports removed edges", func(t *testing.T) {
+		// Base graph:
+		//   ROOT
+		//   └── artifact:app
+		//       └── sbom:s1@app
+		//           ├── pkg:npm/old@1.0.0     (will be replaced)
+		//           └── pkg:npm/common@1.0.0  (will survive)
+		base := NewSBOMGraph()
+		artID := base.AddArtifact("app")
+		srcID := base.AddInfoSource(artID, "s1", InfoSourceSBOM) // "sbom:s1@app"
+		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/old@1.0.0", PackageURL: "pkg:npm/old@1.0.0", Name: "old"})
+		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/common@1.0.0", PackageURL: "pkg:npm/common@1.0.0", Name: "common"})
+		base.AddEdge(srcID, "pkg:npm/old@1.0.0")
+		base.AddEdge(srcID, "pkg:npm/common@1.0.0")
+
+		// Incoming graph reuses the same info source ID — triggers subtree replacement.
+		//   ROOT
+		//   └── artifact:app
+		//       └── sbom:s1@app
+		//           ├── pkg:npm/new@1.0.0     (newly introduced)
+		//           └── pkg:npm/common@1.0.0  (kept)
+		incoming := NewSBOMGraph()
+		artID2 := incoming.AddArtifact("app")
+		srcID2 := incoming.AddInfoSource(artID2, "s1", InfoSourceSBOM)
+		incoming.AddComponent(cdx.Component{BOMRef: "pkg:npm/new@1.0.0", PackageURL: "pkg:npm/new@1.0.0", Name: "new"})
+		incoming.AddComponent(cdx.Component{BOMRef: "pkg:npm/common@1.0.0", PackageURL: "pkg:npm/common@1.0.0", Name: "common"})
+		incoming.AddEdge(srcID2, "pkg:npm/new@1.0.0")
+		incoming.AddEdge(srcID2, "pkg:npm/common@1.0.0")
+
+		// Both info sources resolve to the same ID, confirming a collision.
+		assert.Equal(t, srcID, srcID2)
+
+		diff := base.MergeGraph(incoming)
+
+		// Edge from info source to the dropped component must appear in RemovedEdges.
+		assert.Contains(t, diff.RemovedEdges, [2]string{srcID, "pkg:npm/old@1.0.0"},
+			"edge to old component should be reported as removed")
+
+		// Edge to the surviving component must NOT appear as removed.
+		assert.NotContains(t, diff.RemovedEdges, [2]string{srcID, "pkg:npm/common@1.0.0"},
+			"edge to common component should not be removed")
+
+		// The new component must be reported as an added node.
+		addedRefs := make([]string, 0, len(diff.AddedNodes))
+		for _, n := range diff.AddedNodes {
+			addedRefs = append(addedRefs, n.BOMRef)
+		}
+		assert.Contains(t, addedRefs, "pkg:npm/new@1.0.0",
+			"new component should be reported as added")
+
+		// The replaced component must no longer be reachable in the merged graph.
+		assert.Nil(t, base.Node("pkg:npm/old@1.0.0"),
+			"old component should no longer be reachable after subtree replacement")
+	})
+}
+
 func TestDependencyGraph(t *testing.T) {
 	t.Run("loading the sbom-dependency-tree.json should have only two direct dependencies", func(t *testing.T) {
 		b, err := os.Open("testdata/sbom-dependency-tree.json")

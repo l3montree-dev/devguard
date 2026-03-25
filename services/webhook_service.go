@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/l3montree-dev/devguard/utils"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -48,24 +50,26 @@ const (
 )
 
 type webhookClient struct {
-	URL    string
-	Secret *string
+	URL        string
+	Secret     *string
+	httpClient *http.Client
 }
 
 func NewWebhookService(url string, secret *string) *webhookClient {
 	return &webhookClient{
-		URL:    url,
-		Secret: secret,
+		URL:        url,
+		Secret:     secret,
+		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
-func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http.Response, error) {
+func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, body io.Reader) (*http.Response, error) {
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	// Retry logic with delays: 1s, 5s, 10s
@@ -85,7 +89,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err = http.DefaultClient.Do(req)
+		resp, err = c.httpClient.Do(req)
 
 		if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return resp, nil
@@ -103,7 +107,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 
 }
 
-func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -121,7 +125,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project sha
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}
@@ -136,7 +140,7 @@ func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project sha
 	return nil
 }
 
-func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
+func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
 	return nil
 
 	/*body := WebhookStruct{
@@ -166,7 +170,7 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVuln
 	return nil*/
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 
 	body := WebhookStruct{
 		Organization: org,
@@ -184,7 +188,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVuln
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}
@@ -199,7 +203,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVuln
 	return nil
 }
 
-func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
+func (c *webhookClient) SendTest(ctx context.Context, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
 
 	var payload any
 	var webhookType WebhookType
@@ -247,7 +251,7 @@ func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObj
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@
 package repositories
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 
@@ -31,8 +32,8 @@ type affectedCmpRepository struct {
 	utils.Repository[string, models.AffectedComponent, *gorm.DB]
 }
 
-func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.AffectedComponent) error {
-	return g.GetDB(tx).Clauses(
+func (g *affectedCmpRepository) Save(ctx context.Context, tx *gorm.DB, affectedComponents *models.AffectedComponent) error {
+	return g.GetDB(ctx, tx).Clauses(
 		clause.OnConflict{
 			UpdateAll: true,
 		},
@@ -48,20 +49,20 @@ func NewAffectedComponentRepository(db *gorm.DB) *affectedCmpRepository {
 
 // DeleteAll deletes all affected components whose ecosystem name starts with the provided string.
 // This uses a prefix match (SQL LIKE 'ecosystem%') to handle versioned ecosystems,
-func (g *affectedCmpRepository) DeleteAll(tx *gorm.DB, ecosystem string) error {
-	return g.GetDB(tx).Where("ecosystem LIKE ?", ecosystem+"%").Delete(&models.AffectedComponent{}).Error
+func (g *affectedCmpRepository) DeleteAll(ctx context.Context, tx *gorm.DB, ecosystem string) error {
+	return g.GetDB(ctx, tx).Where("ecosystem LIKE ?", ecosystem+"%").Delete(&models.AffectedComponent{}).Error
 }
 
-func (g *affectedCmpRepository) GetAllAffectedComponentsID() ([]string, error) {
+func (g *affectedCmpRepository) GetAllAffectedComponentsID(ctx context.Context, tx *gorm.DB) ([]string, error) {
 	var affectedComponents []string
-	err := g.db.Model(&models.AffectedComponent{}).
+	err := g.GetDB(ctx, tx).Model(&models.AffectedComponent{}).
 		Pluck("id", &affectedComponents).
 		Error
 	return affectedComponents, err
 }
 
-func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.AffectedComponent, batchSize int) error {
-	err := g.GetDB(tx).Session(
+func (g *affectedCmpRepository) createInBatches(ctx context.Context, tx *gorm.DB, pkgs []models.AffectedComponent, batchSize int) error {
+	err := g.GetDB(ctx, tx).Session(
 		&gorm.Session{
 			Logger: logger.Default.LogMode(logger.Silent),
 		}).Clauses(
@@ -77,7 +78,7 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 			// lets try to save the CVEs one by one
 			// this will be slow but it will work
 			for _, pkg := range pkgs {
-				if err := g.GetDB(tx).Session(
+				if err := g.GetDB(ctx, tx).Session(
 					&gorm.Session{
 						// Logger: logger.Default.LogMode(logger.Silent),
 					}).Clauses(
@@ -92,16 +93,16 @@ func (g *affectedCmpRepository) createInBatches(tx *gorm.DB, pkgs []models.Affec
 			return nil
 		}
 		slog.Warn("protocol error, trying to reduce batch size", "newBatchSize", newBatchSize, "oldBatchSize", batchSize, "err", err)
-		return g.createInBatches(tx, pkgs, newBatchSize)
+		return g.createInBatches(ctx, tx, pkgs, newBatchSize)
 	}
 	return err
 }
 
-func (g *affectedCmpRepository) SaveBatch(tx *gorm.DB, affectedPkgs []models.AffectedComponent) error {
-	return g.createInBatches(tx, affectedPkgs, 1000)
+func (g *affectedCmpRepository) SaveBatch(ctx context.Context, tx *gorm.DB, affectedPkgs []models.AffectedComponent) error {
+	return g.createInBatches(ctx, tx, affectedPkgs, 1000)
 }
 
-func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB, components []models.AffectedComponent) error {
+func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(ctx context.Context, tx *gorm.DB, components []models.AffectedComponent) error {
 	if len(components) == 0 {
 		return nil
 	}
@@ -173,5 +174,5 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(tx *gorm.DB,
 			unnest($15::text[])
 			ON CONFLICT (id) DO NOTHING`
 
-	return g.GetDB(tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
+	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
 }

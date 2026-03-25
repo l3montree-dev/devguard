@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -95,8 +97,8 @@ func (_c *OrgService_CreateOrganization_Call) RunAndReturn(run func(ctx shared.C
 }
 
 // ReadBySlug provides a mock function for the type OrgService
-func (_mock *OrgService) ReadBySlug(slug string) (*models.Org, error) {
-	ret := _mock.Called(slug)
+func (_mock *OrgService) ReadBySlug(ctx context.Context, slug string) (*models.Org, error) {
+	ret := _mock.Called(ctx, slug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadBySlug")
@@ -104,18 +106,18 @@ func (_mock *OrgService) ReadBySlug(slug string) (*models.Org, error) {
 
 	var r0 *models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (*models.Org, error)); ok {
-		return returnFunc(slug)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*models.Org, error)); ok {
+		return returnFunc(ctx, slug)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) *models.Org); ok {
-		r0 = returnFunc(slug)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *models.Org); ok {
+		r0 = returnFunc(ctx, slug)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(slug)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, slug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -128,19 +130,25 @@ type OrgService_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
+//   - ctx context.Context
 //   - slug string
-func (_e *OrgService_Expecter) ReadBySlug(slug interface{}) *OrgService_ReadBySlug_Call {
-	return &OrgService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", slug)}
+func (_e *OrgService_Expecter) ReadBySlug(ctx interface{}, slug interface{}) *OrgService_ReadBySlug_Call {
+	return &OrgService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, slug)}
 }
 
-func (_c *OrgService_ReadBySlug_Call) Run(run func(slug string)) *OrgService_ReadBySlug_Call {
+func (_c *OrgService_ReadBySlug_Call) Run(run func(ctx context.Context, slug string)) *OrgService_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -151,7 +159,7 @@ func (_c *OrgService_ReadBySlug_Call) Return(org *models.Org, err error) *OrgSer
 	return _c
 }
 
-func (_c *OrgService_ReadBySlug_Call) RunAndReturn(run func(slug string) (*models.Org, error)) *OrgService_ReadBySlug_Call {
+func (_c *OrgService_ReadBySlug_Call) RunAndReturn(run func(ctx context.Context, slug string) (*models.Org, error)) *OrgService_ReadBySlug_Call {
 	_c.Call.Return(run)
 	return _c
 }

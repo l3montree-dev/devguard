@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -38,16 +40,16 @@ func (_m *AssetService) EXPECT() *AssetService_Expecter {
 }
 
 // BootstrapAsset provides a mock function for the type AssetService
-func (_mock *AssetService) BootstrapAsset(rbac shared.AccessControl, asset *models.Asset) error {
-	ret := _mock.Called(rbac, asset)
+func (_mock *AssetService) BootstrapAsset(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error {
+	ret := _mock.Called(ctx, rbac, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BootstrapAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.AccessControl, *models.Asset) error); ok {
-		r0 = returnFunc(rbac, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, *models.Asset) error); ok {
+		r0 = returnFunc(ctx, rbac, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -60,25 +62,31 @@ type AssetService_BootstrapAsset_Call struct {
 }
 
 // BootstrapAsset is a helper method to define mock.On call
+//   - ctx context.Context
 //   - rbac shared.AccessControl
 //   - asset *models.Asset
-func (_e *AssetService_Expecter) BootstrapAsset(rbac interface{}, asset interface{}) *AssetService_BootstrapAsset_Call {
-	return &AssetService_BootstrapAsset_Call{Call: _e.mock.On("BootstrapAsset", rbac, asset)}
+func (_e *AssetService_Expecter) BootstrapAsset(ctx interface{}, rbac interface{}, asset interface{}) *AssetService_BootstrapAsset_Call {
+	return &AssetService_BootstrapAsset_Call{Call: _e.mock.On("BootstrapAsset", ctx, rbac, asset)}
 }
 
-func (_c *AssetService_BootstrapAsset_Call) Run(run func(rbac shared.AccessControl, asset *models.Asset)) *AssetService_BootstrapAsset_Call {
+func (_c *AssetService_BootstrapAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, asset *models.Asset)) *AssetService_BootstrapAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.AccessControl
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.AccessControl)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Asset
+		var arg1 shared.AccessControl
 		if args[1] != nil {
-			arg1 = args[1].(*models.Asset)
+			arg1 = args[1].(shared.AccessControl)
+		}
+		var arg2 *models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(*models.Asset)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -89,14 +97,14 @@ func (_c *AssetService_BootstrapAsset_Call) Return(err error) *AssetService_Boot
 	return _c
 }
 
-func (_c *AssetService_BootstrapAsset_Call) RunAndReturn(run func(rbac shared.AccessControl, asset *models.Asset) error) *AssetService_BootstrapAsset_Call {
+func (_c *AssetService_BootstrapAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, asset *models.Asset) error) *AssetService_BootstrapAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateAsset provides a mock function for the type AssetService
-func (_mock *AssetService) CreateAsset(rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error) {
-	ret := _mock.Called(rbac, currentUserID, asset)
+func (_mock *AssetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error) {
+	ret := _mock.Called(ctx, rbac, currentUserID, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAsset")
@@ -104,18 +112,18 @@ func (_mock *AssetService) CreateAsset(rbac shared.AccessControl, currentUserID 
 
 	var r0 *models.Asset
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.AccessControl, string, models.Asset) (*models.Asset, error)); ok {
-		return returnFunc(rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, models.Asset) (*models.Asset, error)); ok {
+		return returnFunc(ctx, rbac, currentUserID, asset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.AccessControl, string, models.Asset) *models.Asset); ok {
-		r0 = returnFunc(rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, models.Asset) *models.Asset); ok {
+		r0 = returnFunc(ctx, rbac, currentUserID, asset)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.AccessControl, string, models.Asset) error); ok {
-		r1 = returnFunc(rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, string, models.Asset) error); ok {
+		r1 = returnFunc(ctx, rbac, currentUserID, asset)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -128,31 +136,37 @@ type AssetService_CreateAsset_Call struct {
 }
 
 // CreateAsset is a helper method to define mock.On call
+//   - ctx context.Context
 //   - rbac shared.AccessControl
 //   - currentUserID string
 //   - asset models.Asset
-func (_e *AssetService_Expecter) CreateAsset(rbac interface{}, currentUserID interface{}, asset interface{}) *AssetService_CreateAsset_Call {
-	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", rbac, currentUserID, asset)}
+func (_e *AssetService_Expecter) CreateAsset(ctx interface{}, rbac interface{}, currentUserID interface{}, asset interface{}) *AssetService_CreateAsset_Call {
+	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", ctx, rbac, currentUserID, asset)}
 }
 
-func (_c *AssetService_CreateAsset_Call) Run(run func(rbac shared.AccessControl, currentUserID string, asset models.Asset)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset)) *AssetService_CreateAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.AccessControl
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.AccessControl)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AccessControl
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AccessControl)
 		}
-		var arg2 models.Asset
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(models.Asset)
+			arg2 = args[2].(string)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -163,22 +177,22 @@ func (_c *AssetService_CreateAsset_Call) Return(asset1 *models.Asset, err error)
 	return _c
 }
 
-func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetCVSSBadgeSVG provides a mock function for the type AssetService
-func (_mock *AssetService) GetCVSSBadgeSVG(results []models.ArtifactRiskHistory) string {
-	ret := _mock.Called(results)
+func (_mock *AssetService) GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string {
+	ret := _mock.Called(ctx, results)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCVSSBadgeSVG")
 	}
 
 	var r0 string
-	if returnFunc, ok := ret.Get(0).(func([]models.ArtifactRiskHistory) string); ok {
-		r0 = returnFunc(results)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.ArtifactRiskHistory) string); ok {
+		r0 = returnFunc(ctx, results)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -191,19 +205,25 @@ type AssetService_GetCVSSBadgeSVG_Call struct {
 }
 
 // GetCVSSBadgeSVG is a helper method to define mock.On call
+//   - ctx context.Context
 //   - results []models.ArtifactRiskHistory
-func (_e *AssetService_Expecter) GetCVSSBadgeSVG(results interface{}) *AssetService_GetCVSSBadgeSVG_Call {
-	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", results)}
+func (_e *AssetService_Expecter) GetCVSSBadgeSVG(ctx interface{}, results interface{}) *AssetService_GetCVSSBadgeSVG_Call {
+	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", ctx, results)}
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(results []models.ArtifactRiskHistory)) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(ctx context.Context, results []models.ArtifactRiskHistory)) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []models.ArtifactRiskHistory
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]models.ArtifactRiskHistory)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []models.ArtifactRiskHistory
+		if args[1] != nil {
+			arg1 = args[1].([]models.ArtifactRiskHistory)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -214,22 +234,22 @@ func (_c *AssetService_GetCVSSBadgeSVG_Call) Return(s string) *AssetService_GetC
 	return _c
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(results []models.ArtifactRiskHistory) string) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(ctx context.Context, results []models.ArtifactRiskHistory) string) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateAssetRequirements provides a mock function for the type AssetService
-func (_mock *AssetService) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
-	ret := _mock.Called(asset, responsible, justification)
+func (_mock *AssetService) UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error {
+	ret := _mock.Called(ctx, asset, responsible, justification)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAssetRequirements")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, string, string) error); ok {
-		r0 = returnFunc(asset, responsible, justification)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, string) error); ok {
+		r0 = returnFunc(ctx, asset, responsible, justification)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -242,31 +262,37 @@ type AssetService_UpdateAssetRequirements_Call struct {
 }
 
 // UpdateAssetRequirements is a helper method to define mock.On call
+//   - ctx context.Context
 //   - asset models.Asset
 //   - responsible string
 //   - justification string
-func (_e *AssetService_Expecter) UpdateAssetRequirements(asset interface{}, responsible interface{}, justification interface{}) *AssetService_UpdateAssetRequirements_Call {
-	return &AssetService_UpdateAssetRequirements_Call{Call: _e.mock.On("UpdateAssetRequirements", asset, responsible, justification)}
+func (_e *AssetService_Expecter) UpdateAssetRequirements(ctx interface{}, asset interface{}, responsible interface{}, justification interface{}) *AssetService_UpdateAssetRequirements_Call {
+	return &AssetService_UpdateAssetRequirements_Call{Call: _e.mock.On("UpdateAssetRequirements", ctx, asset, responsible, justification)}
 }
 
-func (_c *AssetService_UpdateAssetRequirements_Call) Run(run func(asset models.Asset, responsible string, justification string)) *AssetService_UpdateAssetRequirements_Call {
+func (_c *AssetService_UpdateAssetRequirements_Call) Run(run func(ctx context.Context, asset models.Asset, responsible string, justification string)) *AssetService_UpdateAssetRequirements_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 models.Asset
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(models.Asset)
 		}
 		var arg2 string
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -277,7 +303,7 @@ func (_c *AssetService_UpdateAssetRequirements_Call) Return(err error) *AssetSer
 	return _c
 }
 
-func (_c *AssetService_UpdateAssetRequirements_Call) RunAndReturn(run func(asset models.Asset, responsible string, justification string) error) *AssetService_UpdateAssetRequirements_Call {
+func (_c *AssetService_UpdateAssetRequirements_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, responsible string, justification string) error) *AssetService_UpdateAssetRequirements_Call {
 	_c.Call.Return(run)
 	return _c
 }

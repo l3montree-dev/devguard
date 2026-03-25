@@ -18,6 +18,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -110,7 +111,7 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 	}
 
 	if updated {
-		err := controller.organizationRepository.Update(nil, &organization)
+		err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not update organization").WithInternal(err)
 		}
@@ -136,7 +137,7 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 	organizationID := shared.GetOrg(ctx).GetID()
 
 	// delete the organization
-	err := controller.organizationRepository.Delete(nil, organizationID)
+	err := controller.organizationRepository.Delete(ctx.Request().Context(), nil, organizationID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
@@ -168,7 +169,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 		return p.ID.String()
 	})
 
-	return ctx.JSON(200, controller.organizationRepository.ContentTree(organization.GetID(), projects))
+	return ctx.JSON(200, controller.organizationRepository.ContentTree(ctx.Request().Context(), nil, organization.GetID(), projects))
 }
 
 // @Summary Accept organization invitation
@@ -179,6 +180,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 // @Success 200
 // @Router /accept-invitation [post]
 func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 	// get the code and the org id from the path
 	var req dtos.AcceptInvitationRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -192,7 +194,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	code := req.Code
 
 	// find the invitation
-	invitation, err := controller.invitationRepository.FindByCode(code)
+	invitation, err := controller.invitationRepository.FindByCode(reqCtx, nil, code)
 	if err != nil {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
@@ -203,7 +205,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, err := authAdminClient.GetIdentity(ctx.Request().Context(), userID)
+	m, err := authAdminClient.GetIdentity(reqCtx, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
@@ -216,13 +218,13 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the rbac from the context
 	rbac := controller.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
 	// grant the user the role of member
-	err = rbac.GrantRole(userID, "member")
+	err = rbac.GrantRole(reqCtx, userID, "member")
 	if err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
 	// delete the invitation
-	err = controller.invitationRepository.Delete(nil, invitation.ID)
+	err = controller.invitationRepository.Delete(reqCtx, nil, invitation.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
 	}
@@ -262,7 +264,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	}
 
 	// save the model
-	err := controller.invitationRepository.Save(nil, &model)
+	err := controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
 	}
@@ -280,6 +282,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/members/{userID} [put]
 func (controller *OrgController) ChangeRole(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 	// get the user id from the request
 	var req dtos.OrgChangeRoleRequest
 
@@ -304,10 +307,10 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	rbac := shared.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(userID, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
 
-	if err := rbac.GrantRole(userID, shared.Role(req.Role)); err != nil {
+	if err := rbac.GrantRole(reqCtx, userID, shared.Role(req.Role)); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -323,6 +326,7 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/members/{userID} [delete]
 func (controller *OrgController) RemoveMember(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
 	// get the user id from the request
 	userID := ctx.Param("userID")
 
@@ -330,18 +334,18 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	rbac := shared.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(userID, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
+	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := controller.projectService.ListProjectsByOrganizationID(shared.GetOrg(ctx).GetID())
+	projects, err := controller.projectService.ListProjectsByOrganizationID(reqCtx, shared.GetOrg(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
 	for _, project := range projects {
-		rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
-		rbac.RevokeRoleInProject(userID, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
+		rbac.RevokeRoleInProject(reqCtx, userID, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
+		rbac.RevokeRoleInProject(reqCtx, userID, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
 	}
 
 	return ctx.NoContent(200)
@@ -368,7 +372,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 // @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
-// @Success 200 {object} object
+// @Success 200 {string} string
 // @Router /organizations/{organization}/config-files/{config-file} [get]
 func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
@@ -378,7 +382,49 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	if !ok {
 		return ctx.NoContent(404)
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
+}
+
+// @Summary Update organization config file
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param config-file path string true "Config file ID"
+// @Param body string true "Config file content"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/config-files/{config-file} [put]
+func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
+	organization := shared.GetOrg(ctx)
+	configID := ctx.Param("config-file")
+
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
+
+	// read the body as string
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
+	}
+	configContent := string(body)
+
+	if organization.ConfigFiles == nil {
+		organization.ConfigFiles = make(map[string]any)
+	}
+
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(organization.ConfigFiles, configID)
+	} else {
+		organization.ConfigFiles[configID] = configContent
+	}
+
+	if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
+		return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
+	}
+
+	return ctx.String(200, configContent)
 }
 
 // @Summary List organization members
@@ -449,7 +495,7 @@ func (controller *OrgController) List(ctx shared.Context) error {
 	}
 
 	// get the organizations from the database
-	organizations, err := controller.organizationRepository.List(organizationIDs)
+	organizations, err := controller.organizationRepository.List(ctx.Request().Context(), nil, organizationIDs)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}

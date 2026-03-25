@@ -50,7 +50,7 @@ func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 	}
 
 	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
 			return p.GetID().String()
@@ -82,7 +82,7 @@ func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		project.ID,
 
 		shared.GetPageInfo(ctx),
@@ -116,7 +116,7 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
-	if err = thirdPartyIntegrations.HandleEvent(shared.ManualMitigateEvent{
+	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Justification: j.Justification,
 		Ctx:           ctx,
 	}); err != nil {
@@ -124,7 +124,7 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	}
 
 	// fetch the firstPartyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the vuln.
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
@@ -145,7 +145,7 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
@@ -168,7 +168,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
@@ -190,12 +190,12 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification)
+	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification)
 	if err != nil {
 		return err
 	}
 
-	err = thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
 	})
@@ -224,7 +224,7 @@ func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetVersionPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		shared.GetPageInfo(ctx),
@@ -257,7 +257,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	vulns, err := c.firstPartyVulnRepository.GetByAssetVersion(
-		nil,
+		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 	)

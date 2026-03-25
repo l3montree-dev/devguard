@@ -1,6 +1,7 @@
 package accesscontrol
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestIsAllowed(t *testing.T) {
@@ -77,7 +79,7 @@ func TestIsAllowed(t *testing.T) {
 
 			// Only mock rootAccessControl if we expect it to be called
 			if tc.userID != "admin-token" && tc.object != shared.ObjectOrganization {
-				rootAccessControl.On("IsAllowed", tc.userID, tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
+				rootAccessControl.On("IsAllowed", mock.Anything, tc.userID, tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
 			}
 
 			rbac := NewExternalEntityProviderRBAC(
@@ -88,7 +90,7 @@ func TestIsAllowed(t *testing.T) {
 				tc.adminToken,
 			)
 
-			result, err := rbac.IsAllowed(tc.userID, tc.object, tc.action)
+			result, err := rbac.IsAllowed(context.Background(), tc.userID, tc.object, tc.action)
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -113,7 +115,7 @@ func TestHasAccess(t *testing.T) {
 			utils.Ptr("admin-token"),
 		)
 
-		hasAccess, err := rbac.HasAccess("admin-token")
+		hasAccess, err := rbac.HasAccess(context.Background(), "admin-token")
 		assert.NoError(t, err)
 		assert.True(t, hasAccess)
 	})
@@ -132,7 +134,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 		)
 
-		hasAccess, err := rbac.HasAccess("user1")
+		hasAccess, err := rbac.HasAccess(context.Background(), "user1")
 		assert.NoError(t, err)
 		assert.True(t, hasAccess)
 	})
@@ -151,7 +153,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 		)
 
-		hasAccess, err := rbac.HasAccess("user1")
+		hasAccess, err := rbac.HasAccess(context.Background(), "user1")
 		assert.NoError(t, err)
 		assert.False(t, hasAccess)
 	})

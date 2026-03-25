@@ -1,4 +1,4 @@
-FROM golang:1.25.6-trixie@sha256:0032c99f1682c40dca54932e2fe0156dc575ed12c6a4fdec94df9db7a0c17ab0 AS golang-builder
+FROM golang:1.25.7-trixie@sha256:2b174ffcf56c7ad0c47d30d2630693265639ddf2a5141149c2da34db921791b4 AS golang-builder
 
 # set the working directory
 WORKDIR /app
@@ -15,13 +15,11 @@ ENV CRANE_VERSION=v0.20.7
 ENV OS=Linux
 ENV ARCH=x86_64
 ENV TRIVY_VERSION=v0.69.2
-ENV COSIGN_VERSION=v2.6.2
 ENV GITLEAKS_VERSION=v8.30.0
 
 # Expected checksums for security verification
 ENV CRANE_CHECKSUM=8ef3564d264e6b5ca93f7b7f5652704c4dd29d33935aff6947dd5adefd05953e
 ENV TRIVY_CHECKSUM=affa59a1e37d86e4b8ab2cd02f0ab2e63d22f1bf9cf6a7aa326c884e25e26ce3
-ENV COSIGN_CHECKSUM=d437b8f0d30f5dec169337607fcfa0238de1348503e175f1bb5b94330b1ee409
 ENV GITLEAKS_CHECKSUM=79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
 
 # install crane with checksum verification
@@ -35,12 +33,6 @@ RUN curl -sL "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VE
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c - && \
     tar -zxvf trivy.tar.gz -C /usr/local/bin/ trivy && \
     rm trivy.tar.gz
-
-# install cosign with checksum verification
-RUN curl -sL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" > cosign-linux-amd64 && \
-    echo "${COSIGN_CHECKSUM}  cosign-linux-amd64" | sha256sum -c - && \
-    mv cosign-linux-amd64 /usr/local/bin/cosign && \
-    chmod +x /usr/local/bin/cosign
 
 # install gitleaks with checksum verification
 RUN curl -sL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_$(echo ${GITLEAKS_VERSION} | sed 's/v//')_linux_x64.tar.gz" > gitleaks.tar.gz && \
@@ -90,7 +82,6 @@ ENV PATH="/usr/local/go/bin:$PATH"
 
 COPY --from=golang-builder /app/devguard-scanner /usr/local/bin/devguard-scanner
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
-COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 

@@ -15,7 +15,6 @@ import (
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Copyright (C) 2025 l3montree GmbH
@@ -175,7 +174,6 @@ func NewAPIV1Router(srv api.Server,
 		return c.JSON(200, resp)
 	})
 
-	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 	apiV1Router.GET("/health/", func(ctx echo.Context) error {
 		// Check database connectivity
 		sqlDB, err := db.DB()

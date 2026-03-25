@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -37,49 +38,49 @@ func NewOrgRepository(db *gorm.DB) *orgRepository {
 	}
 }
 
-func (g *orgRepository) Create(tx *gorm.DB, org *models.Org) error {
-	firstFreeSlug, err := g.firstFreeSlug(org.Slug)
+func (g *orgRepository) Create(ctx context.Context, tx *gorm.DB, org *models.Org) error {
+	firstFreeSlug, err := g.firstFreeSlug(ctx, tx, org.Slug)
 	if err != nil {
 		return fmt.Errorf("could not generate next slug: %w", err)
 	}
 	org.Slug = firstFreeSlug
 
-	return g.GetDB(tx).Create(org).Error
+	return g.GetDB(ctx, tx).Create(org).Error
 }
 
-func (g *orgRepository) Save(tx *gorm.DB, org *models.Org) error {
+func (g *orgRepository) Save(ctx context.Context, tx *gorm.DB, org *models.Org) error {
 	// if the slug is empty, generate a new one
 	if org.ID == uuid.Nil {
-		firstFreeSlug, err := g.firstFreeSlug(org.Name)
+		firstFreeSlug, err := g.firstFreeSlug(ctx, tx, org.Name)
 		if err != nil {
 			return fmt.Errorf("could not generate next slug: %w", err)
 		}
 		org.Slug = firstFreeSlug
 	}
 
-	return g.GetDB(tx).Save(org).Error
+	return g.GetDB(ctx, tx).Save(org).Error
 }
 
-func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
+func (g *orgRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, slug string) (models.Org, error) {
 	var t models.Org
-	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
 
-func (g *orgRepository) List(ids []uuid.UUID) ([]models.Org, error) {
+func (g *orgRepository) List(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Org, error) {
 	var ts []models.Org
-	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
 	return ts, err
 }
 
-func (g *orgRepository) Update(tx *gorm.DB, org *models.Org) error {
-	return g.GetDB(tx).Save(org).Error
+func (g *orgRepository) Update(ctx context.Context, tx *gorm.DB, org *models.Org) error {
+	return g.GetDB(ctx, tx).Save(org).Error
 }
 
-func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []any {
+func (g *orgRepository) ContentTree(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projects []string) []any {
 	var projectModels []models.Project
 
-	g.GetDB(nil).Preload("Assets").Where(`projects.id IN (?) AND projects.organization_id = ?`, projects, orgID).Find(&projectModels)
+	g.GetDB(ctx, tx).Preload("Assets").Where(`projects.id IN (?) AND projects.organization_id = ?`, projects, orgID).Find(&projectModels)
 
 	result := make([]any, 0, len(projectModels))
 	for _, p := range projectModels {
@@ -88,15 +89,15 @@ func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []any {
 	return result
 }
 
-func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
+func (g *orgRepository) GetOrgByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Org, error) {
 	var org models.Org
-	err := g.db.Model(models.Org{}).Where("id = ?", id).First(&org).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id = ?", id).First(&org).Error
 	return org, err
 }
 
-func (g *orgRepository) firstFreeSlug(organizationSlug string) (string, error) {
+func (g *orgRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, organizationSlug string) (string, error) {
 	var slugs []string
-	err := g.db.Model(&models.Org{}).
+	err := g.GetDB(ctx, tx).Model(&models.Org{}).
 		Where("slug LIKE ?", organizationSlug+"%").
 		Pluck("slug", &slugs).Error
 	if err != nil {
@@ -124,9 +125,9 @@ func (g *orgRepository) firstFreeSlug(organizationSlug string) (string, error) {
 	}
 }
 
-func (g *orgRepository) GetOrgsWithVulnSharingAssets() ([]models.Org, error) {
+func (g *orgRepository) GetOrgsWithVulnSharingAssets(ctx context.Context, tx *gorm.DB) ([]models.Org, error) {
 	var orgs []models.Org
-	err := g.db.Model(&models.Org{}).
+	err := g.GetDB(ctx, tx).Model(&models.Org{}).
 		Where("EXISTS (SELECT 1 FROM projects WHERE projects.organization_id = organizations.id AND EXISTS (SELECT 1 FROM assets WHERE assets.project_id = projects.id AND assets.shares_information = true))").Find(&orgs).Error
 	return orgs, err
 }

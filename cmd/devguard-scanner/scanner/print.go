@@ -139,7 +139,11 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 	tw := table.NewWriter()
 	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status", "Path"})
+	tw.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, AutoMerge: true},
+		{Number: 8, AutoMerge: true},
+	})
 	for _, v := range dependencyVulnsByPurl {
 		//order the vulnerabilities in each group by their risk
 		slices.SortFunc(v, func(a, b dtos.DependencyVulnDTO) int {
@@ -171,7 +175,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 			}
 		}
 
-		for i, vuln := range v {
+		for _, vuln := range v {
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(vuln.ComponentPurl)
@@ -183,10 +187,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 				}
 			}
 
-			// Show purl only for the first vulnerability in the group
-			// Color purl red if any vulnerability in the group has failed
-			showPurl := i == 0
-			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, showPurl, vulnFailed[vuln.CVEID], groupHasFailed))
+			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, vulnFailed[vuln.CVEID], groupHasFailed))
 		}
 		tw.AppendSeparator()
 	}
@@ -228,22 +229,22 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	return nil
 }
 
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO, showPurl bool, failed bool, groupHasFailed bool) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
 	cvss := v.CVE.CVSS
 
+	// Keep vulnPath plain so AutoMerge can collapse identical paths across rows in the same group.
+	vulnPath := strings.Join(v.VulnerabilityPath, "\n v \n")
+
 	var libraryName string
-	if showPurl {
-		if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-			libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
-		} else {
-			libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
-		}
-		// Color purl red if any vulnerability in the group has failed
-		if groupHasFailed {
-			libraryName = text.FgRed.Sprint(libraryName)
-		}
+	if pURL.Namespace == "" {
+		libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
 	} else {
-		libraryName = ""
+		libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
+	}
+	// Color the library name red only when this specific vuln triggered the threshold,
+	// so AutoMerge can still collapse the identical plain-string across non-failed rows.
+	if failed {
+		libraryName = text.FgRed.Sprint(libraryName)
 	}
 
 	if failed {
@@ -255,8 +256,9 @@ func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnD
 			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
 			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
 			text.FgRed.Sprint(v.State),
+			vulnPath,
 		}
 	}
 
-	return table.Row{libraryName, v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+	return table.Row{libraryName, v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, vulnPath}
 }

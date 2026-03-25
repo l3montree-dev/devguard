@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"maps"
 	"net/url"
 	"strings"
@@ -96,7 +97,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 		defaultBranch = &body.Name
 	}
 
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(body.Name, asset.ID, body.Tag, defaultBranch)
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, body.Name, asset.ID, body.Tag, defaultBranch)
 	if err != nil {
 		return err
 	}
@@ -115,7 +116,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [delete]
 func (a *AssetVersionController) Delete(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)                //Get the asset provided in the context / URL
-	err := a.assetVersionRepository.Delete(nil, &assetVersion) //Call delete on the returned assetVersion
+	err := a.assetVersionRepository.Delete(ctx.Request().Context(), nil, &assetVersion) //Call delete on the returned assetVersion
 	if err != nil {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
@@ -135,7 +136,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(asset.ID)
+	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,7 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	artifactName := ctx.QueryParam("artifactName")
 
 	assetVersion := shared.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, utils.EmptyThenNil(artifactName))
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return err
 	}
@@ -156,13 +157,13 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID)
+func (a *AssetVersionController) getComponentsAndDependencyVulns(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+	components, err := a.componentRepository.LoadComponents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -172,7 +173,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 
-	sbom, err := a.assetVersionService.LoadFullSBOMGraph(app)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, app)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -209,7 +210,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	artifactName := ctx.QueryParam("artifactName")
 
 	// Load the full SBOM and find paths using in-memory tree traversal
-	sbom, err := a.assetVersionService.LoadFullSBOMGraph(assetVersion)
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 	}
@@ -262,7 +263,7 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	   	}
 	*/
 	// check if in-toto is enabled
-	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetID)
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return err
 	}
@@ -280,7 +281,7 @@ func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
 
-	_, err := a.componentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.EmptyThenNil(artifactName), true)
+	_, err := a.componentService.GetAndSaveLicenseInformation(ctx.Request().Context(), nil, assetVersion, utils.EmptyThenNil(artifactName), true)
 	if err != nil {
 		return err
 	}
@@ -314,7 +315,7 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, assetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
 	}
@@ -325,7 +326,7 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 func (a *AssetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	err := a.assetVersionRepository.UpdateAssetDefaultBranch(assetVersion.AssetID, assetVersion.Name)
+	err := a.assetVersionRepository.UpdateAssetDefaultBranch(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -361,15 +362,16 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}
 	// fetch all root nodes
+	reqCtx := ctx.Request().Context()
 	errgroup := utils.ErrGroup[map[string][]dtos.InformationSourceDTO](10)
 	for _, artifact := range artifacts {
 		errgroup.Go(func() (map[string][]dtos.InformationSourceDTO, error) {
-			rootNodes, err := a.componentService.FetchInformationSources(&artifact)
+			rootNodes, err := a.componentService.FetchInformationSources(reqCtx, nil, &artifact)
 			if err != nil {
 				return nil, err
 			}

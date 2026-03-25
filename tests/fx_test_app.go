@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -77,6 +78,7 @@ type TestApp struct {
 	CSAFController              *controllers.CSAFController
 	VEXRuleController           *controllers.VEXRuleController
 	ExternalReferenceController *controllers.ExternalReferenceController
+	StatisticsController        *controllers.StatisticsController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
@@ -112,7 +114,8 @@ type TestApp struct {
 	VulnDBImportService  shared.VulnDBImportService
 
 	// Daemons
-	DaemonRunner shared.DaemonRunner
+	DaemonRunner         shared.DaemonRunner
+	FixedVersionResolver shared.FixedVersionResolver
 }
 
 // TestAppOptions configures the test application
@@ -153,6 +156,7 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		// Use the same modules as production
 		repositories.Module,
 		services.ServiceModule,
+		fixedversion.Module,
 		daemons.Module,
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
@@ -236,30 +240,30 @@ func createMockedComponentService(t testing.TB, realCS shared.ComponentService) 
 	mockCS := &mocks.ComponentService{}
 
 	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
-	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]models.Component{}, nil)
 
 	// Mock other methods to delegate to real implementation
-	mockCS.On("GetLicense", mock.Anything).
-		Return(func(component models.Component) models.Component {
-			result, _ := realCS.GetLicense(component)
+	mockCS.On("GetLicense", mock.Anything, mock.Anything).
+		Return(func(ctx context.Context, component models.Component) models.Component {
+			result, _ := realCS.GetLicense(ctx, component)
 			return result
 		}, nil)
 
-	mockCS.On("FetchInformationSources", mock.Anything).
-		Return(func(artifact *models.Artifact) []models.ComponentDependency {
-			result, _ := realCS.FetchInformationSources(artifact)
+	mockCS.On("FetchInformationSources", mock.Anything, mock.Anything, mock.Anything).
+		Return(func(ctx context.Context, tx shared.DB, artifact *models.Artifact) []models.ComponentDependency {
+			result, _ := realCS.FetchInformationSources(ctx, tx, artifact)
 			return result
 		}, nil)
 
-	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything).
-		Return(func(artifact *models.Artifact, rootNodePurls []string) error {
-			return realCS.RemoveInformationSources(artifact, rootNodePurls)
+	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(func(ctx context.Context, tx shared.DB, artifact *models.Artifact, rootNodePurls []string) error {
+			return realCS.RemoveInformationSources(ctx, tx, artifact, rootNodePurls)
 		})
 
-	mockCS.On("RefreshComponentProjectInformation", mock.Anything).
-		Return(func(project models.ComponentProject) {
-			realCS.RefreshComponentProjectInformation(project)
+	mockCS.On("RefreshComponentProjectInformation", mock.Anything, mock.Anything).
+		Return(func(ctx context.Context, project models.ComponentProject) {
+			realCS.RefreshComponentProjectInformation(ctx, project)
 		})
 
 	return mockCS

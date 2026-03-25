@@ -2,6 +2,7 @@ package commonint
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -534,9 +535,9 @@ func pathsToMermaid(paths [][]string) string {
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, pURL string) (string, error) {
+func RenderPathToComponent(ctx context.Context, componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, pURL string) (string, error) {
 	// Load all components for the asset version
-	components, err := componentRepository.LoadComponents(nil, assetVersionName, assetID)
+	components, err := componentRepository.LoadComponents(ctx, nil, assetVersionName, assetID)
 	if err != nil {
 		return "", err
 	}

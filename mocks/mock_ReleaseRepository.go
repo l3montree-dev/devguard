@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *ReleaseRepository) EXPECT() *ReleaseRepository_Expecter {
 }
 
 // Activate provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Activate(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ReleaseRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type ReleaseRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Activate(tx interface{}, id interface{}) *ReleaseRepository_Activate_Call {
-	return &ReleaseRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *ReleaseRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Activate_Call {
+	return &ReleaseRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *ReleaseRepository_Activate_Call {
+func (_c *ReleaseRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *ReleaseRepository_Activate_Call) Return(err error) *ReleaseRepository_
 	return _c
 }
 
-func (_c *ReleaseRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *ReleaseRepository_Activate_Call {
+func (_c *ReleaseRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *ReleaseRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) All() ([]models.Release, error) {
-	ret := _mock.Called()
+func (_mock *ReleaseRepository) All(ctx context.Context, tx shared.DB) ([]models.Release, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *ReleaseRepository) All() ([]models.Release, error) {
 
 	var r0 []models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Release, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Release, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Release); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Release); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type ReleaseRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *ReleaseRepository_Expecter) All() *ReleaseRepository_All_Call {
-	return &ReleaseRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *ReleaseRepository_Expecter) All(ctx interface{}, tx interface{}) *ReleaseRepository_All_Call {
+	return &ReleaseRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *ReleaseRepository_All_Call) Run(run func()) *ReleaseRepository_All_Call {
+func (_c *ReleaseRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *ReleaseRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *ReleaseRepository_All_Call) Return(releases []models.Release, err erro
 	return _c
 }
 
-func (_c *ReleaseRepository_All_Call) RunAndReturn(run func() ([]models.Release, error)) *ReleaseRepository_All_Call {
+func (_c *ReleaseRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Release, error)) *ReleaseRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *ReleaseRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type ReleaseRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *ReleaseRepository_Expecter) Begin() *ReleaseRepository_Begin_Call {
-	return &ReleaseRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *ReleaseRepository_Expecter) Begin(ctx interface{}) *ReleaseRepository_Begin_Call {
+	return &ReleaseRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *ReleaseRepository_Begin_Call) Run(run func()) *ReleaseRepository_Begin_Call {
+func (_c *ReleaseRepository_Begin_Call) Run(run func(ctx context.Context)) *ReleaseRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,73 @@ func (_c *ReleaseRepository_Begin_Call) Return(v shared.DB) *ReleaseRepository_B
 	return _c
 }
 
-func (_c *ReleaseRepository_Begin_Call) RunAndReturn(run func() shared.DB) *ReleaseRepository_Begin_Call {
+func (_c *ReleaseRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *ReleaseRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type ReleaseRepository
+func (_mock *ReleaseRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ReleaseRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type ReleaseRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ReleaseRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ReleaseRepository_CleanupOrphanedRecords_Call {
+	return &ReleaseRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *ReleaseRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *ReleaseRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ReleaseRepository_CleanupOrphanedRecords_Call) Return(err error) *ReleaseRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ReleaseRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *ReleaseRepository_CleanupOrphanedRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Create(tx shared.DB, t *models.Release) error {
-	ret := _mock.Called(tx, t)
+func (_mock *ReleaseRepository) Create(ctx context.Context, tx shared.DB, t *models.Release) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Release) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,25 +299,31 @@ type ReleaseRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Release
-func (_e *ReleaseRepository_Expecter) Create(tx interface{}, t interface{}) *ReleaseRepository_Create_Call {
-	return &ReleaseRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *ReleaseRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ReleaseRepository_Create_Call {
+	return &ReleaseRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *ReleaseRepository_Create_Call) Run(run func(tx shared.DB, t *models.Release)) *ReleaseRepository_Create_Call {
+func (_c *ReleaseRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Release)) *ReleaseRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Release
+		if args[2] != nil {
+			arg2 = args[2].(*models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -249,22 +334,22 @@ func (_c *ReleaseRepository_Create_Call) Return(err error) *ReleaseRepository_Cr
 	return _c
 }
 
-func (_c *ReleaseRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Release) error) *ReleaseRepository_Create_Call {
+func (_c *ReleaseRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Release) error) *ReleaseRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) CreateBatch(tx shared.DB, ts []models.Release) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *ReleaseRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.Release) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Release) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,25 +362,31 @@ type ReleaseRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ReleaseRepository_CreateBatch_Call {
-	return &ReleaseRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *ReleaseRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_CreateBatch_Call {
+	return &ReleaseRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *ReleaseRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Release)) *ReleaseRepository_CreateBatch_Call {
+func (_c *ReleaseRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Release)) *ReleaseRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Release
+		if args[2] != nil {
+			arg2 = args[2].([]models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -306,22 +397,22 @@ func (_c *ReleaseRepository_CreateBatch_Call) Return(err error) *ReleaseReposito
 	return _c
 }
 
-func (_c *ReleaseRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Release) error) *ReleaseRepository_CreateBatch_Call {
+func (_c *ReleaseRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Release) error) *ReleaseRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateReleaseItem provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) CreateReleaseItem(tx shared.DB, item *models.ReleaseItem) error {
-	ret := _mock.Called(tx, item)
+func (_mock *ReleaseRepository) CreateReleaseItem(ctx context.Context, tx shared.DB, item *models.ReleaseItem) error {
+	ret := _mock.Called(ctx, tx, item)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateReleaseItem")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.ReleaseItem) error); ok {
-		r0 = returnFunc(tx, item)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.ReleaseItem) error); ok {
+		r0 = returnFunc(ctx, tx, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -334,25 +425,31 @@ type ReleaseRepository_CreateReleaseItem_Call struct {
 }
 
 // CreateReleaseItem is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - item *models.ReleaseItem
-func (_e *ReleaseRepository_Expecter) CreateReleaseItem(tx interface{}, item interface{}) *ReleaseRepository_CreateReleaseItem_Call {
-	return &ReleaseRepository_CreateReleaseItem_Call{Call: _e.mock.On("CreateReleaseItem", tx, item)}
+func (_e *ReleaseRepository_Expecter) CreateReleaseItem(ctx interface{}, tx interface{}, item interface{}) *ReleaseRepository_CreateReleaseItem_Call {
+	return &ReleaseRepository_CreateReleaseItem_Call{Call: _e.mock.On("CreateReleaseItem", ctx, tx, item)}
 }
 
-func (_c *ReleaseRepository_CreateReleaseItem_Call) Run(run func(tx shared.DB, item *models.ReleaseItem)) *ReleaseRepository_CreateReleaseItem_Call {
+func (_c *ReleaseRepository_CreateReleaseItem_Call) Run(run func(ctx context.Context, tx shared.DB, item *models.ReleaseItem)) *ReleaseRepository_CreateReleaseItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.ReleaseItem
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.ReleaseItem)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.ReleaseItem
+		if args[2] != nil {
+			arg2 = args[2].(*models.ReleaseItem)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -363,22 +460,22 @@ func (_c *ReleaseRepository_CreateReleaseItem_Call) Return(err error) *ReleaseRe
 	return _c
 }
 
-func (_c *ReleaseRepository_CreateReleaseItem_Call) RunAndReturn(run func(tx shared.DB, item *models.ReleaseItem) error) *ReleaseRepository_CreateReleaseItem_Call {
+func (_c *ReleaseRepository_CreateReleaseItem_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, item *models.ReleaseItem) error) *ReleaseRepository_CreateReleaseItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ReleaseRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -391,25 +488,31 @@ type ReleaseRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Delete(tx interface{}, id interface{}) *ReleaseRepository_Delete_Call {
-	return &ReleaseRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *ReleaseRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Delete_Call {
+	return &ReleaseRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *ReleaseRepository_Delete_Call {
+func (_c *ReleaseRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -420,22 +523,22 @@ func (_c *ReleaseRepository_Delete_Call) Return(err error) *ReleaseRepository_De
 	return _c
 }
 
-func (_c *ReleaseRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *ReleaseRepository_Delete_Call {
+func (_c *ReleaseRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *ReleaseRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) DeleteBatch(tx shared.DB, ids []models.Release) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *ReleaseRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.Release) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Release) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -448,25 +551,31 @@ type ReleaseRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Release
-func (_e *ReleaseRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ReleaseRepository_DeleteBatch_Call {
-	return &ReleaseRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *ReleaseRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ReleaseRepository_DeleteBatch_Call {
+	return &ReleaseRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *ReleaseRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Release)) *ReleaseRepository_DeleteBatch_Call {
+func (_c *ReleaseRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.Release)) *ReleaseRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Release
+		if args[2] != nil {
+			arg2 = args[2].([]models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -477,22 +586,22 @@ func (_c *ReleaseRepository_DeleteBatch_Call) Return(err error) *ReleaseReposito
 	return _c
 }
 
-func (_c *ReleaseRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Release) error) *ReleaseRepository_DeleteBatch_Call {
+func (_c *ReleaseRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Release) error) *ReleaseRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteReleaseItem provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) DeleteReleaseItem(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *ReleaseRepository) DeleteReleaseItem(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteReleaseItem")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -505,25 +614,31 @@ type ReleaseRepository_DeleteReleaseItem_Call struct {
 }
 
 // DeleteReleaseItem is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) DeleteReleaseItem(tx interface{}, id interface{}) *ReleaseRepository_DeleteReleaseItem_Call {
-	return &ReleaseRepository_DeleteReleaseItem_Call{Call: _e.mock.On("DeleteReleaseItem", tx, id)}
+func (_e *ReleaseRepository_Expecter) DeleteReleaseItem(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_DeleteReleaseItem_Call {
+	return &ReleaseRepository_DeleteReleaseItem_Call{Call: _e.mock.On("DeleteReleaseItem", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_DeleteReleaseItem_Call) Run(run func(tx shared.DB, id uuid.UUID)) *ReleaseRepository_DeleteReleaseItem_Call {
+func (_c *ReleaseRepository_DeleteReleaseItem_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_DeleteReleaseItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -534,14 +649,14 @@ func (_c *ReleaseRepository_DeleteReleaseItem_Call) Return(err error) *ReleaseRe
 	return _c
 }
 
-func (_c *ReleaseRepository_DeleteReleaseItem_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *ReleaseRepository_DeleteReleaseItem_Call {
+func (_c *ReleaseRepository_DeleteReleaseItem_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *ReleaseRepository_DeleteReleaseItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByProjectID provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) GetByProjectID(projectID uuid.UUID) ([]models.Release, error) {
-	ret := _mock.Called(projectID)
+func (_mock *ReleaseRepository) GetByProjectID(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Release, error) {
+	ret := _mock.Called(ctx, tx, projectID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByProjectID")
@@ -549,18 +664,18 @@ func (_mock *ReleaseRepository) GetByProjectID(projectID uuid.UUID) ([]models.Re
 
 	var r0 []models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.Release, error)); ok {
-		return returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Release, error)); ok {
+		return returnFunc(ctx, tx, projectID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.Release); ok {
-		r0 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Release); ok {
+		r0 = returnFunc(ctx, tx, projectID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, projectID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -573,19 +688,31 @@ type ReleaseRepository_GetByProjectID_Call struct {
 }
 
 // GetByProjectID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ReleaseRepository_Expecter) GetByProjectID(projectID interface{}) *ReleaseRepository_GetByProjectID_Call {
-	return &ReleaseRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", projectID)}
+func (_e *ReleaseRepository_Expecter) GetByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *ReleaseRepository_GetByProjectID_Call {
+	return &ReleaseRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", ctx, tx, projectID)}
 }
 
-func (_c *ReleaseRepository_GetByProjectID_Call) Run(run func(projectID uuid.UUID)) *ReleaseRepository_GetByProjectID_Call {
+func (_c *ReleaseRepository_GetByProjectID_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID)) *ReleaseRepository_GetByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -596,14 +723,14 @@ func (_c *ReleaseRepository_GetByProjectID_Call) Return(releases []models.Releas
 	return _c
 }
 
-func (_c *ReleaseRepository_GetByProjectID_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Release, error)) *ReleaseRepository_GetByProjectID_Call {
+func (_c *ReleaseRepository_GetByProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Release, error)) *ReleaseRepository_GetByProjectID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByProjectIDPaged provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) GetByProjectIDPaged(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
-	ret := _mock.Called(tx, projectID, pageInfo, search, filter, sort)
+func (_mock *ReleaseRepository) GetByProjectIDPaged(ctx context.Context, tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
+	ret := _mock.Called(ctx, tx, projectID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByProjectIDPaged")
@@ -611,16 +738,16 @@ func (_mock *ReleaseRepository) GetByProjectIDPaged(tx shared.DB, projectID uuid
 
 	var r0 shared.Paged[models.Release]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.Release], error)); ok {
-		return returnFunc(tx, projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.Release], error)); ok {
+		return returnFunc(ctx, tx, projectID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.Release]); ok {
-		r0 = returnFunc(tx, projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.Release]); ok {
+		r0 = returnFunc(ctx, tx, projectID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[models.Release])
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(tx, projectID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, projectID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -633,41 +760,46 @@ type ReleaseRepository_GetByProjectIDPaged_Call struct {
 }
 
 // GetByProjectIDPaged is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - pageInfo shared.PageInfo
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ReleaseRepository_Expecter) GetByProjectIDPaged(tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseRepository_GetByProjectIDPaged_Call {
-	return &ReleaseRepository_GetByProjectIDPaged_Call{Call: _e.mock.On("GetByProjectIDPaged", tx, projectID, pageInfo, search, filter, sort)}
+func (_e *ReleaseRepository_Expecter) GetByProjectIDPaged(ctx interface{}, tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseRepository_GetByProjectIDPaged_Call {
+	return &ReleaseRepository_GetByProjectIDPaged_Call{Call: _e.mock.On("GetByProjectIDPaged", ctx, tx, projectID, pageInfo, search, filter, sort)}
 }
 
-func (_c *ReleaseRepository_GetByProjectIDPaged_Call) Run(run func(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ReleaseRepository_GetByProjectIDPaged_Call {
+func (_c *ReleaseRepository_GetByProjectIDPaged_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ReleaseRepository_GetByProjectIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 shared.PageInfo
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(shared.PageInfo)
+			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
+		var arg3 shared.PageInfo
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(shared.PageInfo)
 		}
-		var arg4 []shared.FilterQuery
+		var arg4 string
 		if args[4] != nil {
-			arg4 = args[4].([]shared.FilterQuery)
+			arg4 = args[4].(string)
 		}
-		var arg5 []shared.SortQuery
+		var arg5 []shared.FilterQuery
 		if args[5] != nil {
-			arg5 = args[5].([]shared.SortQuery)
+			arg5 = args[5].([]shared.FilterQuery)
+		}
+		var arg6 []shared.SortQuery
+		if args[6] != nil {
+			arg6 = args[6].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -676,6 +808,7 @@ func (_c *ReleaseRepository_GetByProjectIDPaged_Call) Run(run func(tx shared.DB,
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -686,14 +819,14 @@ func (_c *ReleaseRepository_GetByProjectIDPaged_Call) Return(paged shared.Paged[
 	return _c
 }
 
-func (_c *ReleaseRepository_GetByProjectIDPaged_Call) RunAndReturn(run func(tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error)) *ReleaseRepository_GetByProjectIDPaged_Call {
+func (_c *ReleaseRepository_GetByProjectIDPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error)) *ReleaseRepository_GetByProjectIDPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetCandidateItemsForRelease provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
-	ret := _mock.Called(projectID, releaseID)
+func (_mock *ReleaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx shared.DB, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
+	ret := _mock.Called(ctx, tx, projectID, releaseID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCandidateItemsForRelease")
@@ -702,25 +835,25 @@ func (_mock *ReleaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID,
 	var r0 []models.Artifact
 	var r1 []models.Release
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, *uuid.UUID) ([]models.Artifact, []models.Release, error)); ok {
-		return returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID) ([]models.Artifact, []models.Release, error)); ok {
+		return returnFunc(ctx, tx, projectID, releaseID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, *uuid.UUID) []models.Artifact); ok {
-		r0 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, projectID, releaseID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, *uuid.UUID) []models.Release); ok {
-		r1 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID) []models.Release); ok {
+		r1 = returnFunc(ctx, tx, projectID, releaseID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(uuid.UUID, *uuid.UUID) error); ok {
-		r2 = returnFunc(projectID, releaseID)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID) error); ok {
+		r2 = returnFunc(ctx, tx, projectID, releaseID)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -733,25 +866,37 @@ type ReleaseRepository_GetCandidateItemsForRelease_Call struct {
 }
 
 // GetCandidateItemsForRelease is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - projectID uuid.UUID
 //   - releaseID *uuid.UUID
-func (_e *ReleaseRepository_Expecter) GetCandidateItemsForRelease(projectID interface{}, releaseID interface{}) *ReleaseRepository_GetCandidateItemsForRelease_Call {
-	return &ReleaseRepository_GetCandidateItemsForRelease_Call{Call: _e.mock.On("GetCandidateItemsForRelease", projectID, releaseID)}
+func (_e *ReleaseRepository_Expecter) GetCandidateItemsForRelease(ctx interface{}, tx interface{}, projectID interface{}, releaseID interface{}) *ReleaseRepository_GetCandidateItemsForRelease_Call {
+	return &ReleaseRepository_GetCandidateItemsForRelease_Call{Call: _e.mock.On("GetCandidateItemsForRelease", ctx, tx, projectID, releaseID)}
 }
 
-func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) Run(run func(projectID uuid.UUID, releaseID *uuid.UUID)) *ReleaseRepository_GetCandidateItemsForRelease_Call {
+func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID, releaseID *uuid.UUID)) *ReleaseRepository_GetCandidateItemsForRelease_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -762,22 +907,22 @@ func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) Return(artifacts [
 	return _c
 }
 
-func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) RunAndReturn(run func(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)) *ReleaseRepository_GetCandidateItemsForRelease_Call {
+func (_c *ReleaseRepository_GetCandidateItemsForRelease_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)) *ReleaseRepository_GetCandidateItemsForRelease_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *ReleaseRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -792,19 +937,25 @@ type ReleaseRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *ReleaseRepository_Expecter) GetDB(tx interface{}) *ReleaseRepository_GetDB_Call {
-	return &ReleaseRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *ReleaseRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ReleaseRepository_GetDB_Call {
+	return &ReleaseRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *ReleaseRepository_GetDB_Call) Run(run func(tx shared.DB)) *ReleaseRepository_GetDB_Call {
+func (_c *ReleaseRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *ReleaseRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -815,14 +966,14 @@ func (_c *ReleaseRepository_GetDB_Call) Return(v shared.DB) *ReleaseRepository_G
 	return _c
 }
 
-func (_c *ReleaseRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *ReleaseRepository_GetDB_Call {
+func (_c *ReleaseRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *ReleaseRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) List(ids []uuid.UUID) ([]models.Release, error) {
-	ret := _mock.Called(ids)
+func (_mock *ReleaseRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Release, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -830,18 +981,18 @@ func (_mock *ReleaseRepository) List(ids []uuid.UUID) ([]models.Release, error) 
 
 	var r0 []models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.Release, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.Release, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.Release); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.Release); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Release)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -854,19 +1005,31 @@ type ReleaseRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *ReleaseRepository_Expecter) List(ids interface{}) *ReleaseRepository_List_Call {
-	return &ReleaseRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *ReleaseRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ReleaseRepository_List_Call {
+	return &ReleaseRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *ReleaseRepository_List_Call) Run(run func(ids []uuid.UUID)) *ReleaseRepository_List_Call {
+func (_c *ReleaseRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *ReleaseRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -877,14 +1040,14 @@ func (_c *ReleaseRepository_List_Call) Return(releases []models.Release, err err
 	return _c
 }
 
-func (_c *ReleaseRepository_List_Call) RunAndReturn(run func(ids []uuid.UUID) ([]models.Release, error)) *ReleaseRepository_List_Call {
+func (_c *ReleaseRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Release, error)) *ReleaseRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Read(id uuid.UUID) (models.Release, error) {
-	ret := _mock.Called(id)
+func (_mock *ReleaseRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -892,16 +1055,16 @@ func (_mock *ReleaseRepository) Read(id uuid.UUID) (models.Release, error) {
 
 	var r0 models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Release, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Release, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Release); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Release); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Release)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -914,19 +1077,31 @@ type ReleaseRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Read(id interface{}) *ReleaseRepository_Read_Call {
-	return &ReleaseRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *ReleaseRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Read_Call {
+	return &ReleaseRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_Read_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_Read_Call {
+func (_c *ReleaseRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -937,14 +1112,14 @@ func (_c *ReleaseRepository_Read_Call) Return(release models.Release, err error)
 	return _c
 }
 
-func (_c *ReleaseRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.Release, error)) *ReleaseRepository_Read_Call {
+func (_c *ReleaseRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error)) *ReleaseRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadRecursive provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) {
-	ret := _mock.Called(id)
+func (_mock *ReleaseRepository) ReadRecursive(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadRecursive")
@@ -952,16 +1127,16 @@ func (_mock *ReleaseRepository) ReadRecursive(id uuid.UUID) (models.Release, err
 
 	var r0 models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Release, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Release, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Release); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Release); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Release)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -974,19 +1149,31 @@ type ReleaseRepository_ReadRecursive_Call struct {
 }
 
 // ReadRecursive is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) ReadRecursive(id interface{}) *ReleaseRepository_ReadRecursive_Call {
-	return &ReleaseRepository_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", id)}
+func (_e *ReleaseRepository_Expecter) ReadRecursive(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_ReadRecursive_Call {
+	return &ReleaseRepository_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_ReadRecursive_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_ReadRecursive_Call {
+func (_c *ReleaseRepository_ReadRecursive_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_ReadRecursive_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -997,14 +1184,14 @@ func (_c *ReleaseRepository_ReadRecursive_Call) Return(release models.Release, e
 	return _c
 }
 
-func (_c *ReleaseRepository_ReadRecursive_Call) RunAndReturn(run func(id uuid.UUID) (models.Release, error)) *ReleaseRepository_ReadRecursive_Call {
+func (_c *ReleaseRepository_ReadRecursive_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error)) *ReleaseRepository_ReadRecursive_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadWithItems provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) ReadWithItems(id uuid.UUID) (models.Release, error) {
-	ret := _mock.Called(id)
+func (_mock *ReleaseRepository) ReadWithItems(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadWithItems")
@@ -1012,16 +1199,16 @@ func (_mock *ReleaseRepository) ReadWithItems(id uuid.UUID) (models.Release, err
 
 	var r0 models.Release
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Release, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Release, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Release); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Release); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Release)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1034,19 +1221,31 @@ type ReleaseRepository_ReadWithItems_Call struct {
 }
 
 // ReadWithItems is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) ReadWithItems(id interface{}) *ReleaseRepository_ReadWithItems_Call {
-	return &ReleaseRepository_ReadWithItems_Call{Call: _e.mock.On("ReadWithItems", id)}
+func (_e *ReleaseRepository_Expecter) ReadWithItems(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_ReadWithItems_Call {
+	return &ReleaseRepository_ReadWithItems_Call{Call: _e.mock.On("ReadWithItems", ctx, tx, id)}
 }
 
-func (_c *ReleaseRepository_ReadWithItems_Call) Run(run func(id uuid.UUID)) *ReleaseRepository_ReadWithItems_Call {
+func (_c *ReleaseRepository_ReadWithItems_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ReleaseRepository_ReadWithItems_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1057,22 +1256,22 @@ func (_c *ReleaseRepository_ReadWithItems_Call) Return(release models.Release, e
 	return _c
 }
 
-func (_c *ReleaseRepository_ReadWithItems_Call) RunAndReturn(run func(id uuid.UUID) (models.Release, error)) *ReleaseRepository_ReadWithItems_Call {
+func (_c *ReleaseRepository_ReadWithItems_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Release, error)) *ReleaseRepository_ReadWithItems_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Save(tx shared.DB, t *models.Release) error {
-	ret := _mock.Called(tx, t)
+func (_mock *ReleaseRepository) Save(ctx context.Context, tx shared.DB, t *models.Release) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Release) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1085,25 +1284,31 @@ type ReleaseRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Release
-func (_e *ReleaseRepository_Expecter) Save(tx interface{}, t interface{}) *ReleaseRepository_Save_Call {
-	return &ReleaseRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+func (_e *ReleaseRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ReleaseRepository_Save_Call {
+	return &ReleaseRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *ReleaseRepository_Save_Call) Run(run func(tx shared.DB, t *models.Release)) *ReleaseRepository_Save_Call {
+func (_c *ReleaseRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Release)) *ReleaseRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Release
+		if args[2] != nil {
+			arg2 = args[2].(*models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1114,22 +1319,22 @@ func (_c *ReleaseRepository_Save_Call) Return(err error) *ReleaseRepository_Save
 	return _c
 }
 
-func (_c *ReleaseRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Release) error) *ReleaseRepository_Save_Call {
+func (_c *ReleaseRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Release) error) *ReleaseRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) SaveBatch(tx shared.DB, ts []models.Release) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *ReleaseRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.Release) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Release) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1142,25 +1347,31 @@ type ReleaseRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ReleaseRepository_SaveBatch_Call {
-	return &ReleaseRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *ReleaseRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_SaveBatch_Call {
+	return &ReleaseRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *ReleaseRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Release)) *ReleaseRepository_SaveBatch_Call {
+func (_c *ReleaseRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Release)) *ReleaseRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Release
+		if args[2] != nil {
+			arg2 = args[2].([]models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1171,22 +1382,22 @@ func (_c *ReleaseRepository_SaveBatch_Call) Return(err error) *ReleaseRepository
 	return _c
 }
 
-func (_c *ReleaseRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Release) error) *ReleaseRepository_SaveBatch_Call {
+func (_c *ReleaseRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Release) error) *ReleaseRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Release) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *ReleaseRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Release) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Release) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Release) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1199,25 +1410,31 @@ type ReleaseRepository_SaveBatchBestEffort_Call struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *ReleaseRepository_SaveBatchBestEffort_Call {
-	return &ReleaseRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *ReleaseRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_SaveBatchBestEffort_Call {
+	return &ReleaseRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *ReleaseRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Release)) *ReleaseRepository_SaveBatchBestEffort_Call {
+func (_c *ReleaseRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Release)) *ReleaseRepository_SaveBatchBestEffort_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Release
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Release)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Release
+		if args[2] != nil {
+			arg2 = args[2].([]models.Release)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1228,22 +1445,22 @@ func (_c *ReleaseRepository_SaveBatchBestEffort_Call) Return(err error) *Release
 	return _c
 }
 
-func (_c *ReleaseRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Release) error) *ReleaseRepository_SaveBatchBestEffort_Call {
+func (_c *ReleaseRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Release) error) *ReleaseRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *ReleaseRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1256,19 +1473,25 @@ type ReleaseRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *ReleaseRepository_Expecter) Transaction(fn interface{}) *ReleaseRepository_Transaction_Call {
-	return &ReleaseRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *ReleaseRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ReleaseRepository_Transaction_Call {
+	return &ReleaseRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *ReleaseRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *ReleaseRepository_Transaction_Call {
+func (_c *ReleaseRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *ReleaseRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1279,22 +1502,22 @@ func (_c *ReleaseRepository_Transaction_Call) Return(err error) *ReleaseReposito
 	return _c
 }
 
-func (_c *ReleaseRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *ReleaseRepository_Transaction_Call {
+func (_c *ReleaseRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *ReleaseRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type ReleaseRepository
-func (_mock *ReleaseRepository) Upsert(t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *ReleaseRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Release, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Release, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1307,31 +1530,43 @@ type ReleaseRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - t *[]*models.Release
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *ReleaseRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ReleaseRepository_Upsert_Call {
-	return &ReleaseRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *ReleaseRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ReleaseRepository_Upsert_Call {
+	return &ReleaseRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *ReleaseRepository_Upsert_Call) Run(run func(t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string)) *ReleaseRepository_Upsert_Call {
+func (_c *ReleaseRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string)) *ReleaseRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Release
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Release)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 *[]*models.Release
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*models.Release)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1342,7 +1577,7 @@ func (_c *ReleaseRepository_Upsert_Call) Return(err error) *ReleaseRepository_Up
 	return _c
 }
 
-func (_c *ReleaseRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string) error) *ReleaseRepository_Upsert_Call {
+func (_c *ReleaseRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Release, conflictingColumns []clause.Column, updateOnly []string) error) *ReleaseRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }
