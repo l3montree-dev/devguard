@@ -363,3 +363,20 @@ func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(ctx
 	}
 	return assetVersions, nil
 }
+
+func (repository *assetVersionRepository) GetAmountOfAssetVersionsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (int, error) {
+	var totalAmount int
+	err := repository.GetDB(ctx, tx).Raw(`
+	SELECT 
+		COUNT(*) as totalAmount
+	FROM 
+		asset_versions
+	JOIN
+		assets ON assets.id = asset_versions.asset_id
+	JOIN 
+		projects ON projects.id = assets.project_id
+	WHERE 
+		projects.organization_id = ?;
+	`, orgID).Find(&totalAmount).Error
+	return totalAmount, err
+}
