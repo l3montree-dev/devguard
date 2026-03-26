@@ -567,6 +567,224 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	return asset, assetVersion, artifact, []models.DependencyVuln{vuln1Depth0, vuln1Depth1, vuln2Depth0}
 }
 
+func TestBelongsToSamePackage(t *testing.T) {
+	t.Run("same type, namespace and name should match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different versions should still match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:npm/lodash@4.17.20")
+		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different name should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different type should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:npm/debug@3.0.0")
+		purl2, _ := packageurl.FromString("pkg:pypi/debug@3.0.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different namespace should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.0.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/other/testify@v1.0.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("case insensitive matching on type", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:NPM/lodash@4.17.20")
+		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+}
+
+func TestBelongsToSomeSamePackage(t *testing.T) {
+	target, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+	t.Run("should find match in list", func(t *testing.T) {
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
+		}
+		assert.True(t, belongsToSomeSamePackage(target, purls))
+	})
+	t.Run("should return false for empty list", func(t *testing.T) {
+		assert.False(t, belongsToSomeSamePackage(target, []packageurl.PackageURL{}))
+	})
+	t.Run("should return false when no package matches", func(t *testing.T) {
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
+			must(packageurl.FromString("pkg:pypi/requests@2.28.0")),
+		}
+		assert.False(t, belongsToSomeSamePackage(target, purls))
+	})
+}
+
+func TestHasExactFit(t *testing.T) {
+	t.Run("exact same package and version should match", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")),
+		}
+		assert.True(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("same package but different version should not match", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
+		}
+		assert.False(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("different package should not match even with same version", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")),
+		}
+		assert.False(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("should return false for empty list", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		assert.False(t, hasExactFit(vulnPurl, []packageurl.PackageURL{}))
+	})
+	t.Run("should find match among multiple purls", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:npm/debug@v3.1.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@v4.17.21")),
+			must(packageurl.FromString("pkg:npm/debug@v3.1.0")),
+			must(packageurl.FromString("pkg:npm/express@v4.18.0")),
+		}
+		assert.True(t, hasExactFit(vulnPurl, purls))
+	})
+}
+
+func TestArtifactNameAndComponentPurlToProductID(t *testing.T) {
+	t.Run("should combine artifact name and component purl with pipe separator", func(t *testing.T) {
+		result := artifactNameAndComponentPurlToProductID("pkg:oci/myapp@v1.0.0", "pkg:npm/debug@3.0.0")
+		assert.Equal(t, csaf.ProductID("pkg:oci/myapp@v1.0.0|pkg:npm/debug@3.0.0"), result)
+	})
+	t.Run("should handle realistic devguard artifact names", func(t *testing.T) {
+		result := artifactNameAndComponentPurlToProductID(
+			normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main"),
+			"pkg:golang/github.com/stretchr/testify@v1.8.0",
+		)
+		expected := normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main") + "|pkg:golang/github.com/stretchr/testify@v1.8.0"
+		assert.Equal(t, csaf.ProductID(expected), result)
+	})
+}
+
+func TestEmptySliceThenNil(t *testing.T) {
+	t.Run("nil input should return nil", func(t *testing.T) {
+		assert.Nil(t, emptySliceThenNil(nil))
+	})
+	t.Run("empty slice should return nil", func(t *testing.T) {
+		empty := csaf.Products{}
+		assert.Nil(t, emptySliceThenNil(&empty))
+	})
+	t.Run("non-empty slice should be returned as-is", func(t *testing.T) {
+		id := csaf.ProductID("pkg:npm/debug@3.0.0")
+		products := csaf.Products{&id}
+		result := emptySliceThenNil(&products)
+		assert.NotNil(t, result)
+		assert.Len(t, *result, 1)
+		assert.Equal(t, &id, (*result)[0])
+	})
+}
+
+func TestGenerateDocumentTitle(t *testing.T) {
+	t.Run("should handle realistic asset name and CVE", func(t *testing.T) {
+		title := GenerateDocumentTitle("CSAF Test Asset", "GO-2026-4309")
+		assert.NotNil(t, title)
+		assert.Equal(t, "Security advisory for vulnerability GO-2026-4309 in asset CSAF Test Asset", *title)
+	})
+}
+
+func TestGenerateSummaryForEvent(t *testing.T) {
+	t.Run("single detected path in single artifact", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeDetected, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Detected 1 path in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("multiple detected paths in single artifact", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeDetected, 3, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Detected 3 paths in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("single path in multiple artifacts", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeFixed, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/app-a@v1.0.0", "pkg:oci/app-b@v2.0.0"})
+		assert.Contains(t, result, "Fixed 1 path")
+		assert.Contains(t, result, "artifacts:")
+	})
+	t.Run("multiple paths in multiple artifacts", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeAccepted, 5, "pkg:golang/github.com/lib/pq@v1.10.0", []string{"pkg:oci/api@v1.0.0", "pkg:oci/worker@v1.0.0"})
+		assert.Contains(t, result, "Accepted 5 paths")
+		assert.Contains(t, result, "artifacts:")
+	})
+	t.Run("false positive event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeFalsePositive, 2, "pkg:npm/lodash@4.17.20", []string{"pkg:oci/frontend@v3.0.0"})
+		assert.Equal(t, "Marked 2 paths as false positive in package pkg:npm/lodash@4.17.20 (artifact: pkg:oci/frontend@v3.0.0)", result)
+	})
+	t.Run("reopened event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeReopened, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Reopened 1 path in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("unknown event type returns empty string", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.VulnEventType("unknown"), 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestIsInVersionRange(t *testing.T) {
+	makePurl := func(version string) packageurl.PackageURL {
+		return packageurl.PackageURL{Type: "golang", Namespace: "github.com/stretchr", Name: "testify", Version: version}
+	}
+	t.Run("version equal to lower bound should match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.5.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.5.0", result.Version)
+	})
+	t.Run("version between bounds should match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.7.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.7.0", result.Version)
+	})
+	t.Run("version equal to upper bound should not match (exclusive)", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v2.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("version above upper bound should not match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v3.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("version below lower bound should not match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("should find matching purl among multiple candidates", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v0.9.0"), makePurl("v1.8.0"), makePurl("v3.0.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.8.0", result.Version)
+	})
+	t.Run("non-semver versions should be skipped", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("not-semver")}
+		_, err := isInVersionRange(purls, makePurl("v1.0.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("empty purls list should return error", func(t *testing.T) {
+		_, err := isInVersionRange([]packageurl.PackageURL{}, makePurl("v1.0.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+}
+
+// helper to unwrap packageurl.FromString in test data setup
+func must(p packageurl.PackageURL, _ error) packageurl.PackageURL {
+	return p
+}
+
 func TestGetOldestVulnPerUniqueCVE(t *testing.T) {
 	asset, _, _, vulns := setUpVulns()
 	t.Run("multiple vulns per CVE with different created_at timestamps should return slice with only the oldest vuln per CVE", func(t *testing.T) {
