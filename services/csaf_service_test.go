@@ -812,9 +812,10 @@ func TestGetOldestVulnPerUniqueCVE(t *testing.T) {
 		vulnAmountPerCVE := make(map[string]int, len(filteredVulns))
 		for _, vuln := range filteredVulns {
 			vulnAmountPerCVE[vuln.CVEID]++
-			if vuln.CVEID == "CVE-TEST-12345" {
+			switch vuln.CVEID {
+			case "CVE-TEST-12345":
 				assert.True(t, differentCVEVuln.CreatedAt.Equal(vuln.CreatedAt), "only 1 vuln for the new CVE should return its timestamp")
-			} else if vuln.CVEID == "GO-2026-4309" {
+			case "GO-2026-4309":
 				assert.True(t, allVulns[0].CreatedAt.Equal(vuln.CreatedAt), "2 vulns for this CVE, should return the older one")
 			}
 		}
