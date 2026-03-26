@@ -19,8 +19,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -179,19 +179,7 @@ func CheckIfDeleted(name string) bool {
 	return strings.Contains(name, "-deletion_scheduled-")
 }
 
+// checks if a given string is a valid CVE
 func IsCVE(str string) bool {
-	sections := strings.Split(str, "-")
-	if len(sections) != 3 {
-		return false
-	}
-	if sections[0] != "CVE" {
-		return false
-	}
-	if year, err := strconv.Atoi(sections[1]); err != nil || year < 1999 {
-		return false
-	}
-	if _, err := strconv.Atoi(sections[2]); err != nil {
-		return false
-	}
-	return true
+	return regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$").MatchString(str)
 }

@@ -824,3 +824,15 @@ func TestGetOldestVulnPerUniqueCVE(t *testing.T) {
 		assert.Equal(t, 1, vulnAmountPerCVE["GO-2026-4309"], "both CVEs should only appear once")
 	})
 }
+
+func TestIsCVE(t *testing.T) {
+	t.Run("invalid CVE should return false", func(t *testing.T) {
+		assert.False(t, utils.IsCVE("Vulnerability 3492"))
+	})
+	t.Run("not official CVE should return false", func(t *testing.T) {
+		assert.False(t, utils.IsCVE("GO-2025-4135"))
+	})
+	t.Run("valid CVE should return true", func(t *testing.T) {
+		assert.True(t, utils.IsCVE("CVE-2025-4135"))
+	})
+}
