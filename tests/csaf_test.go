@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -146,18 +145,11 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 				pathParts := strings.Split(r.URL.Path, "/white/")
 				fmt.Println(r.URL.Path)
 				yearAndMaybeVersion := pathParts[1]
-				yearAndMaybeVersionParts := strings.Split(yearAndMaybeVersion, "/")
-				year := yearAndMaybeVersionParts[0]
+				parts := strings.SplitN(yearAndMaybeVersion, "/", 2)
+				year := parts[0]
 				version := ""
-				if len(yearAndMaybeVersionParts) > 1 {
-					_, after, found := strings.Cut(yearAndMaybeVersionParts[1], "Security advisory for vulnerability ")
-					if !found {
-						slog.Error("CSAF report naming scheme changed! Adjust this logic")
-						t.FailNow()
-					}
-					fields := strings.Fields(after)
-					version = fields[0]
-					slog.Info(version)
+				if len(parts) > 1 {
+					version = parts[1]
 				}
 
 				ctx := app.NewContext(r, w)

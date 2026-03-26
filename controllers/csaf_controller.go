@@ -71,7 +71,7 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	index := ""
 	for _, vuln := range vulns {
 		year := vuln.CreatedAt.Year()
-		fileName := fmt.Sprintf("%s.json", strings.ToLower(*services.GenerateDocumentTitle(asset.Name, vuln.CVEID)))
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		index += fmt.Sprintf("%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
@@ -102,7 +102,7 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 		year := vuln.CreatedAt.Year()
 		// get the last event
 		entry := vuln.Events[len(vuln.Events)-1]
-		fileName := fmt.Sprintf("%s.json", strings.ToLower(*services.GenerateDocumentTitle(asset.Name, vuln.CVEID)))
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		// then write each entry to the csv string and return the result
 		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
