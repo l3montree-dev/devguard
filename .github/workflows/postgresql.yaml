@@ -2,8 +2,6 @@ name: DevGuard PostgreSQL Workflow
 
 on:
   push:
-    tags:
-    - '*'
 
 jobs:
   postgresql-pipeline:

@@ -285,10 +285,40 @@
               echo "Done: ${outFile}"
             '';
           };
+
+        # PostgreSQL has no Go modules — SBOM is the Nix closure only.
+        sbomPostgresqlRuntime = let
+            outFile = "devguard-postgresql-sbom.cdx.json";
+          in pkgs.writeShellApplication {
+            name = "sbomPostgresqlRuntime";
+            runtimeInputs = [ sbomnixPkgs.sbomnix ];
+            text = ''
+              set -euo pipefail
+              store_path=$(nix path-info .#devguardPostgresqlOCI)
+              sbomnix "$store_path" --cdx="${outFile}"
+              echo "Done: ${outFile}"
+            '';
+          };
+
+        sbomPostgresqlBuildtime = let
+            outFile = "devguard-postgresql-sbom-buildtime.cdx.json";
+          in pkgs.writeShellApplication {
+            name = "sbomPostgresqlBuildtime";
+            runtimeInputs = [ sbomnixPkgs.sbomnix ];
+            text = ''
+              set -euo pipefail
+              store_path=$(nix path-info --derivation .#devguardPostgresqlOCI)
+              sbomnix "$store_path" --buildtime --cdx="${outFile}"
+              echo "Done: ${outFile}"
+            '';
+          };
+
       in {
         packages = {
           inherit devguard devguardCLI devguardScanner devguardOCI
-            devguardScannerOCI devguardPostgresqlOCI sbomRuntime sbomBuildtime;
+            devguardScannerOCI devguardPostgresqlOCI
+            sbomRuntime sbomBuildtime
+            sbomPostgresqlRuntime sbomPostgresqlBuildtime;
           default = devguardOCI;
         };
 
@@ -300,6 +330,14 @@
           sbom-buildtime = {
             type = "app";
             program = "${sbomBuildtime}/bin/sbomBuildtime";
+          };
+          sbom-postgresql-runtime = {
+            type = "app";
+            program = "${sbomPostgresqlRuntime}/bin/sbomPostgresqlRuntime";
+          };
+          sbom-postgresql-buildtime = {
+            type = "app";
+            program = "${sbomPostgresqlBuildtime}/bin/sbomPostgresqlBuildtime";
           };
         };
 
