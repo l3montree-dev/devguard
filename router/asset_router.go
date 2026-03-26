@@ -53,6 +53,7 @@ func NewAssetRouter(
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
+	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)

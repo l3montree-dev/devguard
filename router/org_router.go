@@ -40,6 +40,7 @@ func NewOrgRouter(
 	orgService shared.OrgService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 	casbinRBACProvider shared.RBACProvider,
+	statisticsController *controllers.StatisticsController,
 ) OrgRouter {
 	/**
 	Organization router
@@ -59,7 +60,10 @@ func NewOrgRouter(
 
 	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
+	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
+
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)
 	organizationRouter.GET("/", orgController.Read)
 	organizationRouter.GET("/metrics/", orgController.Metrics)
