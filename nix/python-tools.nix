@@ -13,11 +13,58 @@
   lib,
   python3,
   fetchFromGitHub,
+  fetchPypi,
 }:
 
 let
   py = python3.override {
     packageOverrides = self: super: {
+
+      # CVE fix: urllib3 2.5.0 has GHSA-2xpw-w6gg-jr37 / GHSA-gm62-xv2j-4w53 /
+      # GHSA-38jv-5279-wg99 — pin to 2.6.3+ which fixes all three.
+      urllib3 = super.urllib3.overridePythonAttrs (_: rec {
+        version = "2.6.3";
+        src = fetchPypi {
+          inherit version;
+          pname = "urllib3";
+          hash = "sha256-G2K2iElEpX2+MhUJq5T9TTswcHXgwurpkaxx7hWtOO0=";
+        };
+        # nixpkgs backports CVE-2025-66471 as a patch onto the older version;
+        # 2.6.3 already ships with the fix, so the patch would conflict.
+        patches = [];
+        # nixpkgs postPatch strips a setuptools-scm pin that no longer exists
+        # in 2.6.3's pyproject.toml — clear it to avoid a substitution error.
+        postPatch = "";
+      });
+
+      # CVE fixes for transitive Python deps — pin to versions that contain the fix.
+      python-multipart = super.python-multipart.overridePythonAttrs (_: rec {
+        version = "0.0.22";
+        src = fetchPypi { inherit version; pname = "python_multipart"; hash = "sha256-c0C++Zp+ADJhP1bcNgJ7lZ/Tswp4ftYtMQ6VH3w6Olg="; };
+        patches = [];
+        postPatch = "";
+      });
+
+      starlette = super.starlette.overridePythonAttrs (_: rec {
+        version = "0.49.1";
+        src = fetchPypi { inherit version; pname = "starlette"; hash = "sha256-SBpDtx4k7YxDsR6gL1NT13hA4BSAiBuMtaJrjK5kqMs="; };
+        patches = [];
+        postPatch = "";
+      });
+
+      wheel = super.wheel.overridePythonAttrs (_: rec {
+        version = "0.46.2";
+        src = fetchPypi { inherit version; pname = "wheel"; hash = "sha256-PXnkj96YR2GKWhgfPMNXZMNJx1Li/pEeZfoX+quYCbA="; };
+        patches = [];
+        postPatch = "";
+      });
+
+      mcp = super.mcp.overridePythonAttrs (_: rec {
+        version = "1.23.0";
+        src = fetchPypi { inherit version; pname = "mcp"; hash = "sha256-hODCkxbQqM8K/9GW/QAEh6xRKqP3cbY7Lqhk4ilhdys="; };
+        patches = [];
+        postPatch = "";
+      });
 
       # checkov requires cyclonedx-python-lib >=6,<8 but nixpkgs ships a
       # newer version whose `serializable` import was renamed `py_serializable`.
