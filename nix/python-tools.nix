@@ -59,6 +59,13 @@ let
         postPatch = "";
       });
 
+      # jupyter-packaging 0.12.3 imports wheel.bdist_wheel which was removed
+      # in wheel 0.46.2 — its tests fail at collection time. The package itself
+      # installs fine; only the test suite triggers the import.
+      jupyter-packaging = super.jupyter-packaging.overridePythonAttrs (_: {
+        doCheck = false;
+      });
+
       mcp = super.mcp.overridePythonAttrs (_: rec {
         version = "1.23.0";
         src = fetchPypi { inherit version; pname = "mcp"; hash = "sha256-hODCkxbQqM8K/9GW/QAEh6xRKqP3cbY7Lqhk4ilhdys="; };

@@ -18,6 +18,7 @@ jobs:
           persist-credentials: false
 
       - name: Mirror to GitLab
+        continue-on-error: true
         run: |
           git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_REPO}.git"
           git push --mirror gitlab
