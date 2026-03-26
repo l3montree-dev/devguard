@@ -107,8 +107,6 @@
         postgresqlEntrypoint  = pkgsLinux.callPackage ./nix/postgresql-entrypoint.nix {};
         postgresqlConfig = pkgsLinux.runCommand "postgresql-config" {} ''
           install -D -m 0644 ${./nix/postgresql.conf} $out/etc/postgresql/postgresql.conf
-          install -D -m 0755 ${./nix/postgresql-initdb.sh} \
-            $out/docker-entrypoint-initdb.d/initdb.sh
         '';
 
         # Runtime config files — arch-independent data, built with pkgsLinux so
@@ -174,7 +172,7 @@
             pkgsLinux.glibcLocales  # en_US.UTF-8 locale support
             postgresqlWithExts
             postgresqlEntrypoint
-            postgresqlConfig      # postgresql.conf + initdb.sh
+            postgresqlConfig      # postgresql.conf
             pkgsLinux.bash
             pkgsLinux.coreutils
           ];
