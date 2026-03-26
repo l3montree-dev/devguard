@@ -73,10 +73,6 @@ let
           "schema"
           "termcolor"
           "urllib3"
-        ];
-
-        pythonRemoveDeps = [
-          # not in nixpkgs python3Packages
           "pycep-parser"
         ];
 
@@ -113,6 +109,7 @@ let
           packaging
           policyuniverse
           prettytable
+          pycep-parser
           pyyaml
           pydantic
           rustworkx

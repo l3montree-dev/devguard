@@ -156,6 +156,13 @@
             gitleaksFromSource
           ];
 
+          fakeRootCommands = ''
+            mkdir -p tmp
+            chmod 1777 tmp
+          '';
+
+          enableFakechroot = true;
+
           config = {
             Cmd = [ "/bin/devguard-scanner" ];
             User = "53111:53111";
