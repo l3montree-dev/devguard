@@ -73,6 +73,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
       nix-target: devguardOCI
       image-name: ghcr.io/${{ github.repository }}
@@ -91,6 +92,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
       nix-target: devguardScannerOCI
       image-name: ghcr.io/${{ github.repository }}/scanner

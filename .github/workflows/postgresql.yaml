@@ -9,6 +9,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
       nix-target: devguardPostgresqlOCI
       image-name: ghcr.io/${{ github.repository }}/postgresql
