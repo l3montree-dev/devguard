@@ -30,3 +30,4 @@ vulndb-tmp-*
 cert.pem
 key.pem
 cache
+result

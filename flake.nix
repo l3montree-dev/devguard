@@ -2,7 +2,7 @@
   description = "DevGuard";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
     # sbomnix walks the full Nix derivation graph (build + runtime closure)
     # and emits CycloneDX / SPDX SBOMs — including the Go compiler, stdlib,
@@ -44,7 +44,7 @@
         # Shared build arguments for all three binaries.
         commonArgs = {
           src = ./.;
-          vendorHash = "sha256-hzSzrB0e0TDYCMRKoZxmS1NPipBf+FMm/TSEbG5IPPw=";
+          vendorHash = "sha256-gTD/NuT2bL6z5o+aG0PAE5BNxsoKfcW27Yio8pwLBhc=";
           inherit ldflags;
           buildFlags =
             [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
@@ -93,6 +93,24 @@
           subPackages = [ "cmd/devguard-scanner" ];
         });
 
+        # ---------------------------------------------------------------------------
+        # Third-party tools built from source — used in the scanner OCI image.
+        # ---------------------------------------------------------------------------
+        craneFromSource    = pkgsLinux.callPackage ./nix/crane.nix {};
+        gitleaksFromSource = pkgsLinux.callPackage ./nix/gitleaks.nix {};
+        trivyFromSource    = pkgsLinux.callPackage ./nix/trivy.nix {};
+        # Single Python env containing semgrep + checkov.
+        # semgrep-core is the pre-built OCaml binary distributed via nixpkgs;
+        # the Python CLI and checkov are compiled from source.
+        pythonTools        = pkgsLinux.callPackage ./nix/python-tools.nix {};
+        postgresqlWithExts    = pkgsLinux.callPackage ./nix/postgresql.nix {};
+        postgresqlEntrypoint  = pkgsLinux.callPackage ./nix/postgresql-entrypoint.nix {};
+        postgresqlConfig = pkgsLinux.runCommand "postgresql-config" {} ''
+          install -D -m 0644 ${./nix/postgresql.conf} $out/etc/postgresql/postgresql.conf
+          install -D -m 0755 ${./nix/postgresql-initdb.sh} \
+            $out/docker-entrypoint-initdb.d/initdb.sh
+        '';
+
         # Runtime config files — arch-independent data, built with pkgsLinux so
         # the store path stays within the Linux closure.
         appConfig = pkgsLinux.runCommand "devguard-app-config" { } ''
@@ -134,17 +152,59 @@
           contents = [
             pkgsLinux.cacert  # TLS root certificates (needed for outbound HTTPS)
             devguardScannerLinux
-            pkgsLinux.trivy
-            pkgsLinux.checkov
-            pkgsLinux.semgrep
-            pkgsLinux.crane
-            pkgsLinux.gitleaks
+            trivyFromSource
+            pythonTools       # semgrep + checkov in one Python env
+            craneFromSource
+            gitleaksFromSource
           ];
 
           config = {
             Cmd = [ "/bin/devguard-scanner" ];
             User = "53111:53111";
             Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" ];
+          };
+        };
+
+        devguardPostgresqlOCI = pkgsLinux.dockerTools.buildLayeredImage {
+          name = "devguard-postgresql";
+          tag = "16";
+
+          contents = [
+            pkgsLinux.cacert
+            pkgsLinux.glibcLocales  # en_US.UTF-8 locale support
+            postgresqlWithExts
+            postgresqlEntrypoint
+            postgresqlConfig      # postgresql.conf + initdb.sh
+            pkgsLinux.bash
+            pkgsLinux.coreutils
+          ];
+
+          # Create the postgres user (uid/gid 999, matching the official image),
+          # the data directory, and the unix socket directory.
+          fakeRootCommands = ''
+            mkdir -p etc
+            echo 'postgres:x:999:999:PostgreSQL Server:/var/lib/postgresql:/bin/bash' \
+              >> etc/passwd
+            echo 'postgres:x:999:' >> etc/group
+            mkdir -p var/lib/postgresql/data
+            mkdir -p var/run/postgresql
+            chown -R 999:999 var/lib/postgresql var/run/postgresql
+          '';
+          enableFakechroot = true;
+
+          config = {
+            Entrypoint = [ "/bin/docker-entrypoint.sh" ];
+            Cmd = [ "postgres" "-c" "config_file=/etc/postgresql/postgresql.conf" ];
+            User = "999:999";
+            Env = [
+              "LANG=en_US.UTF-8"
+              "LC_ALL=en_US.UTF-8"
+              "PGDATA=/var/lib/postgresql/data"
+              "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+              # Tell glibc where the locale archive is inside the Nix store.
+              "LOCALE_ARCHIVE=${pkgsLinux.glibcLocales}/lib/locale/locale-archive"
+            ];
+            Volumes = { "/var/lib/postgresql/data" = {}; };
           };
         };
 
@@ -228,7 +288,7 @@
       in {
         packages = {
           inherit devguard devguardCLI devguardScanner devguardOCI
-            devguardScannerOCI sbomRuntime sbomBuildtime;
+            devguardScannerOCI devguardPostgresqlOCI sbomRuntime sbomBuildtime;
           default = devguardOCI;
         };
 
