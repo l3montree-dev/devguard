@@ -301,7 +301,7 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	}
 
 	// Check for duplicate vulnerability IDs in the list
-	seen := make(map[string]int)
+	seen := make(map[uuid.UUID]int)
 	for _, vuln := range vulnList {
 		seen[vuln.ID]++
 	}
@@ -316,7 +316,7 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 
 func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
 	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
-	vulnMap := make(map[string]models.DependencyVuln)
+	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
 	for _, vuln := range vulnList {
 		if _, exists := vulnMap[vuln.ID]; !exists {
 			vulnMap[vuln.ID] = vuln

@@ -146,7 +146,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					ID:               "vuln-1",
+					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 					AssetVersionName: "feature-branch",
 					AssetID:          assetID,
 					Events:           []models.VulnEvent{},
@@ -158,7 +158,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					ID:               "vuln-2",
+					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe"),
 					AssetVersionName: "main",
 					AssetID:          assetID,
 					Events: []models.VulnEvent{{Type: dtos.EventTypeDetected},

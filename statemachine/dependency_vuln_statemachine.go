@@ -47,13 +47,13 @@ type ScanDiff struct {
 }
 
 type VulnSet struct {
-	byHash map[string]models.DependencyVuln
+	byHash map[uuid.UUID]models.DependencyVuln
 }
 
 // NewVulnSet creates a new vulnerability set
 func NewVulnSet(vulns []models.DependencyVuln) *VulnSet {
 	set := &VulnSet{
-		byHash: make(map[string]models.DependencyVuln, len(vulns)),
+		byHash: make(map[uuid.UUID]models.DependencyVuln, len(vulns)),
 	}
 	for _, vuln := range vulns {
 		set.Add(vuln)
@@ -202,7 +202,7 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 			currentHash := currentVuln.CalculateHash()
 			eventsWithCorrectHash := make([]models.VulnEvent, len(events))
 			for i, ev := range events {
-				ev.VulnID = currentHash
+				models.SetVulnIDOnEvent(&ev, currentHash, currentVuln.GetType())
 				// Clear the ID so GORM creates a new event instead of updating the old one
 				ev.ID = uuid.Nil
 				eventsWithCorrectHash[i] = ev
@@ -264,9 +264,7 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeLicenseDecision:
 		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
 		if !ok {
-			slog.Error("could not parse final license decision", "dependencyVulnID",
-
-				event.VulnID)
+			slog.Error("could not parse final license decision", "vulnEventID", event.ID)
 			return
 		}
 		v := vuln.(*models.LicenseRisk)
@@ -307,7 +305,7 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeRawRiskAssessmentUpdated:
 		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
+			slog.Error("could not parse risk assessment", "vulnEventID", event.ID)
 			return
 		}
 		vuln.SetRawRiskAssessment(f)

@@ -3,6 +3,8 @@ package models
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -11,6 +13,9 @@ import (
 
 type FirstPartyVuln struct {
 	Vulnerability
+
+	Events []VulnEvent `gorm:"foreignKey:FirstPartyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+
 	// the scanner which was used to detect this firstPartyVuln
 	ScannerIDs      string              `json:"scannerIds" gorm:"not null;column:scanner_ids"` //List of scanner ids separated by a white space
 	Fingerprint     string              `json:"fingerprint" gorm:"type:text;"`
@@ -57,15 +62,14 @@ func (firstPartyVuln FirstPartyVuln) TableName() string {
 	return "first_party_vulnerabilities"
 }
 
-func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
-	hash := firstPartyVuln.Fingerprint
-	if hash == "" {
-		stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
-		hash = utils.HashString(stringToHash)
+func (firstPartyVuln *FirstPartyVuln) CalculateHash() uuid.UUID {
+	stringToHash := firstPartyVuln.Fingerprint
+	if stringToHash == "" {
+		stringToHash = firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
 	}
-	firstPartyVuln.ID = hash
-	// to remain backwards compatible we cannot change the algorithm to calculate the hash but since we only need 128 bit hash we truncate the later half
-	return hash[:16]
+	id := utils.HashToUUID(stringToHash)
+	firstPartyVuln.ID = id
+	return id
 }
 
 func (firstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {
@@ -83,8 +87,7 @@ func (firstPartyVuln FirstPartyVuln) GetEvents() []VulnEvent {
 }
 
 func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
-	hash := firstPartyVuln.CalculateHash()
-	firstPartyVuln.ID = hash
+	firstPartyVuln.ID = firstPartyVuln.CalculateHash()
 	return nil
 }
 

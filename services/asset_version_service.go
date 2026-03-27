@@ -383,13 +383,13 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				event.Type == dtos.EventTypeFalsePositive ||
 				event.Type == dtos.EventTypeMarkedForTransfer ||
 				event.Type == dtos.EventTypeComment {
-				if event.UpdatedAt.After(lastUpdated) {
-					lastUpdated = event.UpdatedAt
+				if event.CreatedAt.After(lastUpdated) {
+					lastUpdated = event.CreatedAt
 				}
 				if firstResponded.IsZero() {
-					firstResponded = event.UpdatedAt
-				} else if event.UpdatedAt.Before(firstResponded) {
-					firstResponded = event.UpdatedAt
+					firstResponded = event.CreatedAt
+				} else if event.CreatedAt.Before(firstResponded) {
+					firstResponded = event.CreatedAt
 				}
 			}
 		}

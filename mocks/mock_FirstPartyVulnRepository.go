@@ -42,7 +42,7 @@ func (_m *FirstPartyVulnRepository) EXPECT() *FirstPartyVulnRepository_Expecter 
 }
 
 // Activate provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+func (_mock *FirstPartyVulnRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -50,7 +50,7 @@ func (_mock *FirstPartyVulnRepository) Activate(ctx context.Context, tx shared.D
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -66,12 +66,12 @@ type FirstPartyVulnRepository_Activate_Call struct {
 // Activate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Activate_Call {
 	return &FirstPartyVulnRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *FirstPartyVulnRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FirstPartyVulnRepository_Activate_Call {
+func (_c *FirstPartyVulnRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FirstPartyVulnRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -81,9 +81,9 @@ func (_c *FirstPartyVulnRepository_Activate_Call) Run(run func(ctx context.Conte
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -99,7 +99,7 @@ func (_c *FirstPartyVulnRepository_Activate_Call) Return(err error) *FirstPartyV
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *FirstPartyVulnRepository_Activate_Call {
+func (_c *FirstPartyVulnRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *FirstPartyVulnRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -421,7 +421,7 @@ func (_c *FirstPartyVulnRepository_CreateBatch_Call) RunAndReturn(run func(ctx c
 }
 
 // Delete provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+func (_mock *FirstPartyVulnRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -429,7 +429,7 @@ func (_mock *FirstPartyVulnRepository) Delete(ctx context.Context, tx shared.DB,
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -445,12 +445,12 @@ type FirstPartyVulnRepository_Delete_Call struct {
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Delete_Call {
 	return &FirstPartyVulnRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *FirstPartyVulnRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FirstPartyVulnRepository_Delete_Call {
+func (_c *FirstPartyVulnRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FirstPartyVulnRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -460,9 +460,9 @@ func (_c *FirstPartyVulnRepository_Delete_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -478,7 +478,7 @@ func (_c *FirstPartyVulnRepository_Delete_Call) Return(err error) *FirstPartyVul
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *FirstPartyVulnRepository_Delete_Call {
+func (_c *FirstPartyVulnRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *FirstPartyVulnRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1148,7 +1148,7 @@ func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) 
 }
 
 // List provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.FirstPartyVuln, error) {
+func (_mock *FirstPartyVulnRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.FirstPartyVuln, error) {
 	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
@@ -1157,17 +1157,17 @@ func (_mock *FirstPartyVulnRepository) List(ctx context.Context, tx shared.DB, i
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.FirstPartyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
 		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.FirstPartyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.FirstPartyVuln); ok {
 		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -1183,12 +1183,12 @@ type FirstPartyVulnRepository_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ids []string
+//   - ids []uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *FirstPartyVulnRepository_List_Call {
 	return &FirstPartyVulnRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *FirstPartyVulnRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *FirstPartyVulnRepository_List_Call {
+func (_c *FirstPartyVulnRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *FirstPartyVulnRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1198,9 +1198,9 @@ func (_c *FirstPartyVulnRepository_List_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 []uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
@@ -1216,7 +1216,7 @@ func (_c *FirstPartyVulnRepository_List_Call) Return(firstPartyVulns []models.Fi
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_List_Call {
+func (_c *FirstPartyVulnRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1394,7 +1394,7 @@ func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_C
 }
 
 // Read provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) Read(ctx context.Context, tx shared.DB, id string) (models.FirstPartyVuln, error) {
+func (_mock *FirstPartyVulnRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.FirstPartyVuln, error) {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -1403,15 +1403,15 @@ func (_mock *FirstPartyVulnRepository) Read(ctx context.Context, tx shared.DB, i
 
 	var r0 models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.FirstPartyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.FirstPartyVuln, error)); ok {
 		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.FirstPartyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.FirstPartyVuln); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.FirstPartyVuln)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -1427,12 +1427,12 @@ type FirstPartyVulnRepository_Read_Call struct {
 // Read is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Read_Call {
 	return &FirstPartyVulnRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *FirstPartyVulnRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FirstPartyVulnRepository_Read_Call {
+func (_c *FirstPartyVulnRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FirstPartyVulnRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1442,9 +1442,9 @@ func (_c *FirstPartyVulnRepository_Read_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -1460,7 +1460,7 @@ func (_c *FirstPartyVulnRepository_Read_Call) Return(firstPartyVuln models.First
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.FirstPartyVuln, error)) *FirstPartyVulnRepository_Read_Call {
+func (_c *FirstPartyVulnRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.FirstPartyVuln, error)) *FirstPartyVulnRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }

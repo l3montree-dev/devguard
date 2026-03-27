@@ -178,7 +178,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Verify vuln events are of correct type
 			for _, event := range vulnEvents {
-				assert.Equal(t, dtos.VulnTypeLicenseRisk, event.VulnType)
+				assert.NotNil(t, event.LicenseRiskID)
 				assert.Equal(t, dtos.EventTypeDetected, event.Type)
 				assert.Equal(t, "system", event.UserID)
 			}

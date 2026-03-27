@@ -294,7 +294,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 	slog.Info("Grouped vulnerabilities", "totalGroups", len(purlGroups), "totalOldVulns", len(allResults))
 
 	// Phase 2: Prepare all data for bulk operations
-	createdVulnIDs := make(map[string]bool)
+	createdVulnIDs := make(map[uuid.UUID]bool)
 	copiedTicketIDs := make(map[string]bool) // Track which ticket IDs have already been assigned
 	var vulnsToCreate []models.DependencyVuln
 	var eventsToCreate []models.VulnEvent
@@ -341,7 +341,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			// copyStateFrom is guaranteed to be non-nil now (we filter above)
 			for _, event := range create.copyStateFrom.Events {
 				event.ID = uuid.New() // Generate new ID to avoid duplicates
-				event.VulnID = vulnHash
+				event.DependencyVulnID = utils.Ptr(vulnHash)
 				eventsToCreate = append(eventsToCreate, event)
 			}
 		}
@@ -616,7 +616,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			return fmt.Errorf("failed to delete dependency_vulns: %w", err)
 		}
 
-		createdVulnIDs := make(map[string]bool)
+		createdVulnIDs := make(map[uuid.UUID]bool)
 		copiedTicketIDs := make(map[string]bool)
 
 		// Process each asset version independently, flushing to DB each iteration
@@ -671,7 +671,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 							vulnsToCreate = append(vulnsToCreate, newVuln)
 							for _, event := range oldVuln.Events {
 								event.ID = uuid.New()
-								event.VulnID = newVuln.ID
+								event.DependencyVulnID = utils.Ptr(newVuln.ID)
 								eventsToCreate = append(eventsToCreate, event)
 							}
 						}
@@ -692,7 +692,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 								vulnsToCreate = append(vulnsToCreate, newVuln)
 								for _, event := range oldVuln.Events {
 									event.ID = uuid.New()
-									event.VulnID = newVuln.ID
+									event.DependencyVulnID = utils.Ptr(newVuln.ID)
 									eventsToCreate = append(eventsToCreate, event)
 								}
 							}

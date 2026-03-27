@@ -702,19 +702,19 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 			assert.NotEmpty(t, copiedDetectedEvent)
 			assert.Equal(t, dtos.EventTypeDetected, copiedDetectedEvent.Type)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedDetectedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedDetectedEvent.DependencyVulnID)
 
 			assert.NotEmpty(t, copiedAcceptedEvent)
 			assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 			assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 			assert.Equal(t, "Accepting this vulnerability for testing lifecycle management", *copiedAcceptedEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedAcceptedEvent.DependencyVulnID)
 
 			assert.NotEmpty(t, copiedCommentEvent)
 			assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 			assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 			assert.Equal(t, "This is a test comment for lifecycle verification", *copiedCommentEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedCommentEvent.DependencyVulnID)
 
 			recorder = httptest.NewRecorder()
 			sbomFile = sbomWithVulnerability()
@@ -920,13 +920,13 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 			assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 			assert.Equal(t, "Accepted for lifecycle testing", *copiedAcceptedEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedAcceptedEvent.FirstPartyVulnID)
 
 			assert.NotEmpty(t, copiedCommentEvent.ID)
 			assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 			assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 			assert.Equal(t, "Test comment for lifecycle verification", *copiedCommentEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedCommentEvent.FirstPartyVulnID)
 		})
 	})
 }

@@ -3,6 +3,7 @@ package models_test
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -11,7 +12,7 @@ import (
 
 func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 	t.Run("should store the old risk and other fields in the event", func(t *testing.T) {
-		vulnID := "vuln123"
+		vulnID := uuid.New()
 		userID := "user123"
 		justification := "justification text"
 		oldRisk := 0.5
@@ -22,7 +23,7 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
 
 		assert.Equal(t, dtos.EventTypeRawRiskAssessmentUpdated, event.Type)
-		assert.Equal(t, vulnID, event.VulnID)
+		assert.Equal(t, vulnID, event.DependencyVulnID)
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
 

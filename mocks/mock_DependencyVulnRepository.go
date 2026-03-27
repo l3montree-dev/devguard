@@ -44,7 +44,7 @@ func (_m *DependencyVulnRepository) EXPECT() *DependencyVulnRepository_Expecter 
 }
 
 // Activate provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+func (_mock *DependencyVulnRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -52,7 +52,7 @@ func (_mock *DependencyVulnRepository) Activate(ctx context.Context, tx shared.D
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -68,12 +68,12 @@ type DependencyVulnRepository_Activate_Call struct {
 // Activate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *DependencyVulnRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Activate_Call {
 	return &DependencyVulnRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *DependencyVulnRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *DependencyVulnRepository_Activate_Call {
+func (_c *DependencyVulnRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *DependencyVulnRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -83,9 +83,9 @@ func (_c *DependencyVulnRepository_Activate_Call) Run(run func(ctx context.Conte
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -101,7 +101,7 @@ func (_c *DependencyVulnRepository_Activate_Call) Return(err error) *DependencyV
 	return _c
 }
 
-func (_c *DependencyVulnRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *DependencyVulnRepository_Activate_Call {
+func (_c *DependencyVulnRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *DependencyVulnRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -423,7 +423,7 @@ func (_c *DependencyVulnRepository_CreateBatch_Call) RunAndReturn(run func(ctx c
 }
 
 // Delete provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+func (_mock *DependencyVulnRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -431,7 +431,7 @@ func (_mock *DependencyVulnRepository) Delete(ctx context.Context, tx shared.DB,
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -447,12 +447,12 @@ type DependencyVulnRepository_Delete_Call struct {
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *DependencyVulnRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Delete_Call {
 	return &DependencyVulnRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *DependencyVulnRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *DependencyVulnRepository_Delete_Call {
+func (_c *DependencyVulnRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *DependencyVulnRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -462,9 +462,9 @@ func (_c *DependencyVulnRepository_Delete_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -480,7 +480,7 @@ func (_c *DependencyVulnRepository_Delete_Call) Return(err error) *DependencyVul
 	return _c
 }
 
-func (_c *DependencyVulnRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *DependencyVulnRepository_Delete_Call {
+func (_c *DependencyVulnRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *DependencyVulnRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2130,7 +2130,7 @@ func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) RunAndRet
 }
 
 // List provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.DependencyVuln, error) {
+func (_mock *DependencyVulnRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
@@ -2139,17 +2139,17 @@ func (_mock *DependencyVulnRepository) List(ctx context.Context, tx shared.DB, i
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.DependencyVuln, error)); ok {
 		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.DependencyVuln); ok {
 		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -2165,12 +2165,12 @@ type DependencyVulnRepository_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ids []string
+//   - ids []uuid.UUID
 func (_e *DependencyVulnRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *DependencyVulnRepository_List_Call {
 	return &DependencyVulnRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *DependencyVulnRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *DependencyVulnRepository_List_Call {
+func (_c *DependencyVulnRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *DependencyVulnRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2180,9 +2180,9 @@ func (_c *DependencyVulnRepository_List_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 []uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
@@ -2198,7 +2198,7 @@ func (_c *DependencyVulnRepository_List_Call) Return(dependencyVulns []models.De
 	return _c
 }
 
-func (_c *DependencyVulnRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_List_Call {
+func (_c *DependencyVulnRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2370,7 +2370,7 @@ func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) RunAn
 }
 
 // Read provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) Read(ctx context.Context, tx shared.DB, id string) (models.DependencyVuln, error) {
+func (_mock *DependencyVulnRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -2379,15 +2379,15 @@ func (_mock *DependencyVulnRepository) Read(ctx context.Context, tx shared.DB, i
 
 	var r0 models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.DependencyVuln, error)); ok {
 		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.DependencyVuln); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.DependencyVuln); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.DependencyVuln)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -2403,12 +2403,12 @@ type DependencyVulnRepository_Read_Call struct {
 // Read is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id string
+//   - id uuid.UUID
 func (_e *DependencyVulnRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Read_Call {
 	return &DependencyVulnRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *DependencyVulnRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *DependencyVulnRepository_Read_Call {
+func (_c *DependencyVulnRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *DependencyVulnRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2418,9 +2418,9 @@ func (_c *DependencyVulnRepository_Read_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -2436,7 +2436,7 @@ func (_c *DependencyVulnRepository_Read_Call) Return(dependencyVuln models.Depen
 	return _c
 }
 
-func (_c *DependencyVulnRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.DependencyVuln, error)) *DependencyVulnRepository_Read_Call {
+func (_c *DependencyVulnRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.DependencyVuln, error)) *DependencyVulnRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }

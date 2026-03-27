@@ -173,13 +173,13 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			switch i {
 			case 1:
 				newVuln.State = dtos.VulnStateFixed
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
+				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Type: dtos.EventTypeFixed})
 			case 2:
 				newVuln.State = dtos.VulnStateAccepted
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is accepted"), Type: dtos.EventTypeAccepted})
+				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Justification: utils.Ptr("This is accepted"), Type: dtos.EventTypeAccepted})
 			case 3:
 				newVuln.State = dtos.VulnStateFalsePositive
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 			}
 			testVulns = append(testVulns, newVuln)
 		}
@@ -233,12 +233,12 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{CreatedAt: eventTime, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
-		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{CreatedAt: eventTime, Type: dtos.EventTypeFixed})
 
 		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
 		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
@@ -311,10 +311,10 @@ func TestGetMostRecentJustification(t *testing.T) {
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeEarlier}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{CreatedAt: eventTimeEarlier, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{CreatedAt: eventTimeLatest, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
 		justification := getMostRecentJustification(vulns)
 		assert.Equal(t, "this information is up to date", *justification)
@@ -351,12 +351,12 @@ func TestGenerateTrackingObject(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeFalsePositives}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{CreatedAt: eventTimeFalsePositives, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
-		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeFixed}, Type: dtos.EventTypeFixed})
+		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{CreatedAt: eventTimeFixed, Type: dtos.EventTypeFixed})
 
 		// calculate all vuln ID so we can sort by it
 		for i := range testVulnsArtifact1 {
@@ -528,9 +528,9 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	vuln1Depth1.Artifacts = append(vuln1Depth1.Artifacts, artifact)
 	vuln2Depth0.Artifacts = append(vuln2Depth0.Artifacts, artifact)
 
-	vuln10Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln1Depth0.CalculateHash(), Model: models.Model{CreatedAt: time2}}
-	vuln11Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln1Depth1.CalculateHash(), Model: models.Model{CreatedAt: time2}}
-	vuln20Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, VulnID: vuln2Depth0.CalculateHash(), Model: models.Model{CreatedAt: time2}}
+	vuln10Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, DependencyVulnID: utils.Ptr(vuln1Depth0.CalculateHash()), CreatedAt: time2}
+	vuln11Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, DependencyVulnID: utils.Ptr(vuln1Depth1.CalculateHash()), CreatedAt: time2}
+	vuln20Event1 := models.VulnEvent{Type: dtos.EventTypeDetected, DependencyVulnID: utils.Ptr(vuln2Depth0.CalculateHash()), CreatedAt: time2}
 
 	vuln1Depth0.Events = append(vuln1Depth0.Events, vuln10Event1)
 	vuln1Depth1.Events = append(vuln1Depth1.Events, vuln11Event1)

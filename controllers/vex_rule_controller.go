@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -78,7 +79,11 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 
 	vulnID := ctx.QueryParam("vulnId")
 	if vulnID != "" {
-		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, vulnID)
+		vulnIDParsed, err := uuid.Parse(vulnID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
+		}
+		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, vulnIDParsed)
 		if err != nil {
 			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 		}

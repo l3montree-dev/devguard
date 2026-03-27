@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v62/github"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -145,7 +146,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
 		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				ID: "abc",
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
 			CVE: models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -213,7 +214,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		expectDependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				ID:        "abc",
+				ID:        uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 				TicketID:  utils.Ptr("github:0"),
 				TicketURL: utils.Ptr(""),
 			},

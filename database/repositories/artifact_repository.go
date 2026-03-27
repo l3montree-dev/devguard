@@ -65,7 +65,7 @@ func (r *artifactRepository) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
-func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 	err := r.Repository.GetDB(ctx, tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 
@@ -108,14 +108,14 @@ AND NOT EXISTS (
 );
 
 DELETE FROM vuln_events ve WHERE ve.vuln_type = 'dependencyVuln' AND NOT EXISTS (
-    SELECT dependency_vulns.id FROM dependency_vulns WHERE dependency_vulns.id = ve.vuln_id
+    SELECT dependency_vulns.id FROM dependency_vulns WHERE dependency_vulns.id = ve.dependency_vuln_id
 );
 
 DELETE FROM vuln_events ve WHERE ve.vuln_type = 'firstPartyVuln' AND NOT EXISTS(
-	SELECT first_party_vulnerabilities.id FROM first_party_vulnerabilities WHERE first_party_vulnerabilities.id = ve.vuln_id
+	SELECT first_party_vulnerabilities.id FROM first_party_vulnerabilities WHERE first_party_vulnerabilities.id = ve.first_party_vuln_id
 );
 
 DELETE FROM vuln_events ve WHERE ve.vuln_type = 'licenseRisk' AND NOT EXISTS(
-	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.vuln_id
+	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.license_risk_id
 );
 `
