@@ -66,6 +66,7 @@ include:
 
   - remote: "https://gitlab.com/l3montree/devguard/-/raw/nix/templates/container-lifecycle-nix.yml"
     inputs:
+      version: nix
       nix_target: devguardOCI
       devguard_asset_name: "$DEVGUARD_ASSET_NAME"
       devguard_api_url: "$DEVGUARD_API_URL"
