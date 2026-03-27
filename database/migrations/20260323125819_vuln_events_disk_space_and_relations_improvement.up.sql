@@ -11,7 +11,7 @@ ALTER TABLE vuln_events
 
 -- then transform and copy the old values into the new columns
 
-UPDATE vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'dependencyVulns';
+UPDATE vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'dependencyVuln';
 UPDATE vuln_events SET license_risk_id     = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'licenseRisk';
 UPDATE vuln_events SET first_party_vuln_id = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'firstPartyVuln';
 
@@ -26,5 +26,5 @@ ALTER TABLE vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
 -- lastly drop the old column
 
 ALTER TABLE vuln_events
-  DROP COLUMN vuln_id;
+  DROP COLUMN vuln_id,
   DROP COLUMN vuln_type;
