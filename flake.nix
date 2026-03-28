@@ -9,9 +9,20 @@
     # every build tool, and all Go module dependencies.
     sbomnix.url = "github:tiiuae/sbomnix";
     sbomnix.inputs.nixpkgs.follows = "nixpkgs"; # share the same nixpkgs pin
+    # uv2nix + pyproject-nix: build the scanner Python env from uv.lock,
+    # replacing manual overridePythonAttrs for semgrep + checkov.
+    pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
+    pyproject-nix.inputs.nixpkgs.follows = "nixpkgs";
+    uv2nix.url = "github:pyproject-nix/uv2nix";
+    uv2nix.inputs.pyproject-nix.follows = "pyproject-nix";
+    uv2nix.inputs.nixpkgs.follows = "nixpkgs";
+    pyproject-build-systems.url = "github:pyproject-nix/build-system-pkgs";
+    pyproject-build-systems.inputs.pyproject-nix.follows = "pyproject-nix";
+    pyproject-build-systems.inputs.uv2nix.follows = "uv2nix";
+    pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, sbomnix }:
+  outputs = { self, nixpkgs, flake-utils, sbomnix, uv2nix, pyproject-nix, pyproject-build-systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         # Host packages — used for the dev shell and SBOM scripts that run
@@ -102,7 +113,9 @@
         # Single Python env containing semgrep + checkov.
         # semgrep-core is the pre-built OCaml binary distributed via nixpkgs;
         # the Python CLI and checkov are compiled from source.
-        pythonTools        = pkgsLinux.callPackage ./nix/python-tools.nix {};
+        pythonTools        = pkgsLinux.callPackage ./nix/python-tools.nix {
+          inherit uv2nix pyproject-nix pyproject-build-systems;
+        };
         postgresqlWithExts    = pkgsLinux.callPackage ./nix/postgresql.nix {};
         postgresqlEntrypoint  = pkgsLinux.callPackage ./nix/postgresql-entrypoint.nix {};
         postgresqlConfig = pkgsLinux.runCommand "postgresql-config" {} ''
@@ -166,7 +179,7 @@
           config = {
             Cmd = [ "/bin/devguard-scanner" ];
             User = "53111:53111";
-            Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" ];
+            Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" ];
           };
         };
 
