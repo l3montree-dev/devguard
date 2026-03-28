@@ -75,6 +75,10 @@ include:
       fail_on_cvss: "high"
       build_stage: "oci-image"
       attest_stage: "attestation"
+      nix_cache_substituter: "https://nix.garage.l3montree.cloud"
+      nix_cache_public_key: "nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k="
+      nix_cache_s3_bucket: "nix"
+      nix_cache_region: "garage"
 
 # ── scanner-pipeline (mirrors scanner-pipeline in devguard-scanner.yaml) ──────
 
@@ -91,3 +95,7 @@ include:
       fail_on_cvss: "high"
       build_stage: "oci-image"
       attest_stage: "attestation"
+      nix_cache_substituter: "https://nix.garage.l3montree.cloud"
+      nix_cache_public_key: "nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k="
+      nix_cache_s3_bucket: "nix"
+      nix_cache_region: "garage"

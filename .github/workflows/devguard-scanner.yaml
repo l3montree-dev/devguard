@@ -82,6 +82,10 @@ jobs:
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
@@ -102,6 +106,10 @@ jobs:
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
