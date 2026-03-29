@@ -69,13 +69,13 @@ jobs:
 
 
   api-pipeline:
-    uses: l3montree-dev/devguard-action/.github/workflows/container-lifecycle-nix.yml@nix
+    uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
       packages: write
-      security-events: write
     with:
-      nix-target: devguardOCI
+      nix-target-amd64: devguard-0-amd64
+      nix-target-arm64: devguard-0-arm64
       image-name: ghcr.io/${{ github.repository }}
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -89,16 +89,15 @@ jobs:
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
-
   scanner-pipeline:
     needs: [tests]
-    uses: l3montree-dev/devguard-action/.github/workflows/container-lifecycle-nix.yml@nix
+    uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
       packages: write
-      security-events: write
     with:
-      nix-target: devguardScannerOCI
+      nix-target-amd64: devguard-scanner-0-amd64
+      nix-target-arm64: devguard-scanner-0-arm64
       image-name: ghcr.io/${{ github.repository }}/scanner
       artifact-name-suffix: scanner
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard

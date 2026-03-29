@@ -17,9 +17,7 @@
   uv2nix,
   pyproject-nix,
   pyproject-build-systems,
-}:
-
-let
+}: rec {
   workspace = uv2nix.lib.workspace.loadWorkspace {
     workspaceRoot = ./python-tools;
   };
@@ -36,5 +34,6 @@ let
     pyproject-build-systems.overlays.default
     overlay
   ]);
-in
-pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default
+  venv = pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default;
+}
+
