@@ -1,0 +1,109 @@
+{ pkgs, self }: rec {
+  devguardBinaries = import ./devguard.nix { inherit self; buildGoModule = pkgs.buildGoModule; };
+
+  craneFromSource = import ./crane.nix {};
+  gitleaksFromSource = import ./gitleaks.nix {};
+  trivyFromSource = import ./trivy.nix {};
+  common = import ./common.nix { inherit self; };
+  postgresql = import ./postgresql.nix {};
+  pythonTools = import ./python-tools.nix {};
+
+  appConfig = pkgs.runCommand "devguard-app-config" { } ''
+    install -D -m 0644 ${
+      ../config/rbac_model.conf
+    } $out/app/config/rbac_model.conf
+    install -D -m 0644 ${
+      ../intoto-public-key.pem
+    }  $out/app/intoto-public-key.pem
+    install -D -m 0644 ${../cosign.pub}             $out/app/cosign.pub
+  '';
+
+  devguardOCI = pkgs.dockerTools.buildLayeredImage {
+    name = "devguard";
+    tag = common.version;
+
+    contents = [
+      pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
+      devguardBinaries.devguard
+      devguardBinaries.devguardCLI
+      appConfig
+    ];
+
+    config = {
+      Cmd = [ "/bin/devguard" ];
+      WorkingDir = "/app";
+      User = "53111:53111";
+      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ];
+    };
+  };
+
+  devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
+    name = "devguard-scanner";
+    tag = common.version;
+
+    contents = [
+      pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
+      devguardBinaries.devguardScanner
+      trivyFromSource
+      pythonTools.venv
+      craneFromSource
+      gitleaksFromSource
+    ];
+
+    fakeRootCommands = ''
+      mkdir -p tmp
+      chmod 1777 tmp
+    '';
+
+    enableFakechroot = true;
+
+    config = {
+      Cmd = [ "/bin/devguard-scanner" ];
+      User = "53111:53111";
+      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" ];
+    };
+  };
+
+  postgresqlOCI = pkgs.dockerTools.buildLayeredImage {
+    name = "devguard-postgresql";
+    tag = "16";
+
+    contents = [
+      pkgs.cacert
+      pkgs.glibcLocales  # en_US.UTF-8 locale support
+      postgresql.psql
+      postgresql.entrypoint
+      postgresql.config
+      pkgs.bash
+      pkgs.coreutils
+    ];
+
+    # Create the postgres user (uid/gid 999, matching the official image),
+    # the data directory, and the unix socket directory.
+    fakeRootCommands = ''
+      mkdir -p etc
+      echo 'postgres:x:999:999:PostgreSQL Server:/var/lib/postgresql:/bin/bash' \
+        >> etc/passwd
+      echo 'postgres:x:999:' >> etc/group
+      mkdir -p var/lib/postgresql/data
+      mkdir -p var/run/postgresql
+      chown -R 999:999 var/lib/postgresql var/run/postgresql
+    '';
+    enableFakechroot = true;
+
+    config = {
+      Entrypoint = [ "/bin/docker-entrypoint.sh" ];
+      Cmd = [ "postgres" "-c" "config_file=/etc/postgresql/postgresql.conf" ];
+      User = "999:999";
+      Env = [
+        "LANG=en_US.UTF-8"
+        "LC_ALL=en_US.UTF-8"
+        "PGDATA=/var/lib/postgresql/data"
+        "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+        # Tell glibc where the locale archive is inside the Nix store.
+        "LOCALE_ARCHIVE=${pkgs.glibcLocales}/lib/locale/locale-archive"
+      ];
+      Volumes = { "/var/lib/postgresql/data" = {}; };
+    };
+  };
+}

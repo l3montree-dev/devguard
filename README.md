@@ -146,6 +146,19 @@ docker pull ghcr.io/l3montree-dev/devguard-scanner:latest
 
 ### Building from Source
 
+#### Nix Binary Cache
+
+Build outputs are cached at `https://nix.garage.l3montree.cloud`. To push all local derivations to the cache (requires credentials):
+
+```bash
+AWS_ACCESS_KEY_ID=<access-key> \
+AWS_SECRET_ACCESS_KEY=<secret-key> \
+nix copy $(nix-store -qR $(nix path-info --derivation .#devguardOCI)) \
+  --to 's3://nix?endpoint=s3.garage.l3montree.cloud&region=garage&scheme=https&secret-key=/etc/nix/cache-priv-key.pem'
+```
+
+
+
 ```bash
 # Clone the repository
 git clone https://github.com/l3montree-dev/devguard.git

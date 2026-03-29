@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: AGPL-3.0
+# GitLab CI for the devguard repository (mirrored from GitHub).
+# Mirrors the structure of .github/workflows/devguard-scanner.yaml.
+
+stages:
+  - test
+  - scan
+  - oci-image
+  - attestation
+
+variables:
+  DEVGUARD_ASSET_NAME: "l3montree-cybersecurity/projects/devguard/assets/devguard"
+  DEVGUARD_API_URL: "https://api.main.devguard.org"
+  DEVGUARD_WEB_UI: "https://main.devguard.org"
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+
+lint:
+  stage: test
+  image: golang:1.25
+  before_script:
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh
+  script:
+    - golangci-lint run --timeout=30m
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+tests:
+  stage: test
+  image: golang:1.25
+  script:
+    - go test $(go list ./... | grep -v "/mocks") -coverprofile=coverage.out
+    - go tool cover -func=coverage.out
+  artifacts:
+    name: code-coverage
+    paths:
+      - coverage.out
+    expire_in: 1 week
+
+# ── Code scanning ─────────────────────────────────────────────────────────────
+
+include:
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/secret-scanning.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "$DEVGUARD_WEB_UI"
+
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/software-composition-analysis.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "$DEVGUARD_WEB_UI"
+      fail_on_risk: "high"
+      fail_on_cvss: "high"
+
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/static-application-security-testing.yml"
+    inputs:
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_api_url: "$DEVGUARD_API_URL"
+      devguard_web_ui: "$DEVGUARD_WEB_UI"
+
+# ── api-pipeline ──────────────────────────────────────────────────────────────
+
+  - component: $CI_SERVER_FQDN/l3montree/container-hardening-work-bench/full-nix@main
+    inputs:
+      package_name: "devguard"
+      versions: ["0"]
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_api_url: "$DEVGUARD_API_URL"
+
+# ── scanner-pipeline ──────────────────────────────────────────────────────────
+
+  - component: $CI_SERVER_FQDN/l3montree/container-hardening-work-bench/full-nix@main
+    inputs:
+      package_name: "devguard-scanner"
+      versions: ["0"]
+      image_suffix: "scanner"
+      devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+      devguard_api_url: "$DEVGUARD_API_URL"
