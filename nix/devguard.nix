@@ -11,7 +11,7 @@
 
   # Shared build arguments for all three binaries.
   commonArgs = {
-    src = ./.;
+    src = ../.;
     vendorHash = "sha256-gTD/NuT2bL6z5o+aG0PAE5BNxsoKfcW27Yio8pwLBhc=";
     inherit ldflags;
     buildFlags =

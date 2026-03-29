@@ -29,13 +29,12 @@
         sbomnixPkgs = sbomnix.packages.${system};
 
         targetPkgsAmd64 = nixpkgs.legacyPackages.${system}.pkgsCross.gnu64;
-        targetPkgsArm64 = nixpkgs.legacyPackages.${system}.pkgsCross.aarch64-linux;
+        targetPkgsArm64 = nixpkgs.legacyPackages.${system}.pkgsCross.aarch64-multiplatform;
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; inherit self; };
         ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self; };
         ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self; };
 
-        upstreamVersion = "0";
         # Host packages — used for the dev shell and SBOM scripts that run
         # directly on the developer's machine.
         # Third-party tools built from source — used in the scanner OCI image.
