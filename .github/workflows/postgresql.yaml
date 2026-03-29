@@ -5,13 +5,14 @@ on:
 
 jobs:
   postgresql-pipeline:
-    uses: l3montree-dev/devguard-action/.github/workflows/container-lifecycle-nix.yml@nix
+    uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
       packages: write
       security-events: write
     with:
-      nix-target: devguardPostgresqlOCI
+      nix-target-amd64: postgresql-0-amd64
+      nix-target-arm64: postgresql-0-arm64
       image-name: ghcr.io/${{ github.repository }}/postgresql
       artifact-name-suffix: postgresql
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
@@ -19,5 +20,9 @@ jobs:
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}

@@ -70,6 +70,8 @@
           devguard-scanner-0-amd64 = ociImagesAmd64.devguardScannerOCI;
           devguard-0-arm64 = ociImagesArm64.devguardOCI;
           devguard-scanner-0-arm64 = ociImagesArm64.devguardScannerOCI;
+          postgresql-0-amd64 = ociImagesAmd64.postgresqlOCI;
+          postgresql-0-arm64 = ociImagesArm64.postgresqlOCI;
         };
 
         devShells.default =

@@ -73,6 +73,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
       nix-target-amd64: devguard-0-amd64
       nix-target-arm64: devguard-0-arm64
@@ -95,6 +96,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
       nix-target-amd64: devguard-scanner-0-amd64
       nix-target-arm64: devguard-scanner-0-arm64

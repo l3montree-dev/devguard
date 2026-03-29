@@ -64,7 +64,7 @@
     };
   };
 
-  devguardPostgresqlOCI = pkgs: pkgs.dockerTools.buildLayeredImage {
+  postgresqlOCI = pkgs.dockerTools.buildLayeredImage {
     name = "devguard-postgresql";
     tag = "16";
 
