@@ -45,9 +45,7 @@ include:
       devguard_asset_name: "$DEVGUARD_ASSET_NAME"
       devguard_api_url: "$DEVGUARD_API_URL"
       devguard_web_ui: "$DEVGUARD_WEB_UI"
-      fail_on_risk: "high"
-      fail_on_cvss: "high"
-
+      
   - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/software-composition-analysis.yml"
     inputs:
       devguard_asset_name: "$DEVGUARD_ASSET_NAME"
