@@ -190,7 +190,7 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
+func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
 	// get all vex rules for this asset version
 	// this way, we can again match them against the vulns and add more information about any false positive path
 	vexRules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)

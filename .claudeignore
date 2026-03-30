@@ -1,9 +1,19 @@
+mocks/
+docs/
+config/
+compliance/
+scripts/
+database/migrations/
+
+go.sum
+package-lock.json
+
 venv
 .env
 report.sarif
 bom.json
 osv
-.DS_Store
+.DS*Store
 helm/charts/*.tgz
 sbom.json
 .git-template
@@ -11,7 +21,7 @@ csv
 datascience.ipynb
 bom.xml
 .kratos/kratos.yml
-*.private-key.pem
+\_.private-key.pem
 node_modules
 cvelistV5*
 image.tar
@@ -30,6 +40,3 @@ vulndb-tmp-*
 cert.pem
 key.pem
 cache
-CLAUDE.md
-.claudeignore
-result

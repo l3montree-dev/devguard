@@ -405,3 +405,31 @@ func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.As
 	}
 	return nil
 }
+
+// returns 1 vuln for each unique CVE in the asset. The chosen vuln per CVE-ID is determined by compareFunc (if compareFunc = true , newVuln will be the new leader)
+func (s *DependencyVulnService) GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error) {
+	allVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, assetID)
+	if err != nil {
+		return nil, err
+	}
+
+	// deduplicate slice by CVE-ID and use the compare Func to filter the leader per CVE
+	cveIDToOldestVuln := make(map[string]models.DependencyVuln, len(allVulns))
+	for _, newVuln := range allVulns {
+		currentVulnForCVE, ok := cveIDToOldestVuln[newVuln.CVEID]
+		if !ok {
+			cveIDToOldestVuln[newVuln.CVEID] = newVuln
+		} else {
+			if compareFunc(currentVulnForCVE, newVuln) {
+				cveIDToOldestVuln[newVuln.CVEID] = newVuln
+			}
+		}
+	}
+
+	// clear old slice contents and fill it with the filtered vulns
+	allVulns = allVulns[:0]
+	for _, vuln := range cveIDToOldestVuln {
+		allVulns = append(allVulns, vuln)
+	}
+	return allVulns, nil
+}

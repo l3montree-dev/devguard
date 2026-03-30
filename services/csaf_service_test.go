@@ -36,14 +36,9 @@ import (
 )
 
 func TestGenerateProductTree(t *testing.T) {
-	asset1, assetVersion1, artifact1, vulns := setUpVulns()
+	asset1, _, artifact1, vulns := setUpVulns()
 	t.Run("test for trivial product tree consisting of 1 asset -> 1 assetVersion -> 1 artifact", func(t *testing.T) {
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, vulns)
+		tree, err := generateProductTree(context.Background(), asset1.ID, vulns)
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
@@ -73,7 +68,7 @@ func TestGenerateProductTree(t *testing.T) {
 
 		for _, component := range expectedComponents {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
 	})
@@ -85,13 +80,7 @@ func TestGenerateProductTree(t *testing.T) {
 		newVuln.Artifacts = []models.Artifact{artifact2}
 		newVuln.ComponentPurl = "pkg:golang/github.com/sigstore/rekor@v1.3.10"
 
-		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
-		mockArtifactRepository := mocks.NewArtifactRepository(t)
-
-		mockAssetVersionRepository.On("GetAllTagsAndDefaultBranchForAsset", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{assetVersion1}, nil)
-		mockArtifactRepository.On("GetByAssetVersions", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.Artifact{artifact1, artifact2}, nil)
-
-		tree, err := generateProductTree(context.Background(), asset1, mockAssetVersionRepository, mockArtifactRepository, append(vulns, newVuln))
+		tree, err := generateProductTree(context.Background(), asset1.ID, append(vulns, newVuln))
 		assert.NoError(t, err)
 
 		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}
@@ -118,10 +107,10 @@ func TestGenerateProductTree(t *testing.T) {
 		// check if all relationships are present and correctly formatted
 		for _, component := range expectedComponents[:len(expectedComponents)-1] {
 			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, component)
+			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
 			assert.Contains(t, allRelationshipIDs, id)
 		}
-		idNew := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, newVuln.ComponentPurl)
+		idNew := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), newVuln.ComponentPurl)
 		assert.Contains(t, allRelationshipIDs, idNew)
 	})
 }
@@ -134,9 +123,10 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 	}
 	t.Run("generate basic test with 1 dependency vuln for this CVE", func(t *testing.T) {
 		testVuln := vulns[0]
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVuln.AssetVersionName, testVuln.ComponentPurl)
+		artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+		productID := artifactNameAndComponentPurlToProductID(artifactPurl, testVuln.ComponentPurl)
 		// only pass first vuln
-		productStatus, distributions, remediations := calculateVulnStateInformation([]models.DependencyVuln{testVuln})
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// TEST PRODUCT STATUS
@@ -157,6 +147,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		// TEST remediations
 		// we expect 0 remediations if only unhandled vulns are passed
 		assert.Len(t, remediations, 0)
+
+		assert.Len(t, flags, 0, "since the vulnerability is not handled as falsePositive we expect no flags")
 	})
 	t.Run("multiple different paths inside a vuln which are all handled differently should result in a correct distribution and a correct classification as accepted", func(t *testing.T) {
 		baseVuln := vulns[len(vulns)-1]
@@ -184,9 +176,9 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			testVulns = append(testVulns, newVuln)
 		}
 
-		productID := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, testVulns[0].AssetVersionName, testVulns[0].ComponentPurl)
+		productID := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, testVulns[0].AssetVersionName), testVulns[0].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(testVulns)
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// since at least 1 path has been marked as accepted the risks is actually present and exploitable
@@ -212,6 +204,8 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		}
 		assert.Len(t, affected, 1)
 		assert.Equal(t, string(productID), affected[0])
+
+		assert.Len(t, flags, 0, "since the vuln should be classified as accepted we expect no false Positive flags")
 	})
 	t.Run("CVE in multiple different components each with multiple differently handled paths", func(t *testing.T) {
 		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
@@ -233,20 +227,20 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
 		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTime}, Type: dtos.EventTypeFixed})
 
-		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[0].ComponentPurl)
-		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(artifact1.ArtifactName, artifact1.AssetVersionName, testVulnsArtifact1[2].ComponentPurl)
+		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[0].ComponentPurl)
+		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[2].ComponentPurl)
 
-		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[0].ComponentPurl)
-		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(artifact2.ArtifactName, artifact2.AssetVersionName, testVulnsArtifact2[2].ComponentPurl)
+		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[0].ComponentPurl)
+		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[2].ComponentPurl)
 
-		productStatus, distributions, remediations := calculateVulnStateInformation(append(testVulnsArtifact1, testVulnsArtifact2...))
+		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
 		// first test the distributions
@@ -279,11 +273,16 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 			}
 		}
 
-		// now test for correct remediations (we expect 1 for artifact2 comp2 -> false positive)
-		assert.Len(t, remediations, 1)
-		assert.Equal(t, csaf.CSAFRemediationCategoryMitigation, *remediations[0].Category)
-		assert.True(t, strings.Contains(*remediations[0].Details, "marked as false positive. Justification: This is a false positive"))
-		assert.Equal(t, string(artifact2ProductID2), string(*(*remediations[0].ProductIds)[0]))
+		assert.Len(t, remediations, 0, "we do not have any vulns classified as accepted -> no remediations")
+
+		assert.Len(t, flags, 1, "since 1 vuln is classified as false Positive we expect 1 flag")
+		flag := flags[0]
+		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, *flag.MechanicalJustification)
+		assert.Len(t, flag.ProductIDs, 1)
+		assert.Equal(t, eventTime, *flag.Date)
+
+		product := flag.ProductIDs[0]
+		assert.Equal(t, artifact2ProductID2, *product)
 
 		// finally test the productStatus classifications
 		assert.Empty(t, affected)
@@ -292,37 +291,61 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
 
 		assert.Len(t, underInvestigation, 2)
+
 	})
 }
 
-func TestGetMostRecentJustification(t *testing.T) {
+func TestGetMostRecentJustifications(t *testing.T) {
 	_, _, _, vulns := setUpVulns()
-	eventTimeLatest, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
+	eventTimeT1, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	eventTimeEarlier, err := time.Parse(time.RFC3339, "2026-02-10T11:11:11+00:00")
+	eventTimeT2, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	t.Run("should return nil if no justification can be found", func(t *testing.T) {
-		justification := getMostRecentJustification(vulns)
-		assert.Nil(t, justification)
+	eventTimeT3, err := time.Parse(time.RFC3339, "2026-02-12T11:11:11+00:00")
+	if err != nil {
+		panic(err)
+	}
+
+	t.Run("should return all nil if no justifications can be found", func(t *testing.T) {
+		justification, mechanicalJustification, timeStamp := getMostRecentJustifications(vulns)
+		assert.Nil(t, justification, timeStamp, mechanicalJustification)
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeEarlier}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeLatest}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
-		justification := getMostRecentJustification(vulns)
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
 		assert.Equal(t, "this information is up to date", *justification)
+		assert.Nil(t, mechanicalJustification, "since we did not provide a mechanical justification we should not find one")
+		assert.Equal(t, eventTimeT2, *timestamp)
+	})
+	t.Run("should return the latest justification and the latest mechanical justification if both are present and in different events", func(t *testing.T) {
+		vulns[0].State = dtos.VulnStateFalsePositive
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT1}, Type: dtos.EventTypeFalsePositive, MechanicalJustification: dtos.ComponentNotPresent, Justification: utils.Ptr("this information is outdated")})
+
+		vulns[1].State = dtos.VulnStateFalsePositive
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT2}, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+
+		// latest event has no justifications
+		vulns[2].State = dtos.VulnStateFixed
+		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT3}, Type: dtos.EventTypeFixed})
+
+		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
+		assert.Equal(t, "this information is up to date", *justification)
+		assert.Equal(t, *mechanicalJustification, dtos.ComponentNotPresent)
+		assert.Equal(t, eventTimeT2, *timestamp, "the justification at T2 was the after the mechanical justification at T1")
 	})
 }
 
 func TestGenerateTrackingObject(t *testing.T) {
-	_, _, artifact1, vulns := setUpVulns()
+	asset, _, artifact1, vulns := setUpVulns()
 	eventTimeFalsePositives, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
@@ -366,7 +389,7 @@ func TestGenerateTrackingObject(t *testing.T) {
 			testVulnsArtifact2[i].ID = testVulnsArtifact2[i].CalculateHash()
 		}
 
-		tracking, err := generateTrackingObject(append(testVulnsArtifact1, testVulnsArtifact2...))
+		tracking, err := generateTrackingObject(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...), asset.Name, testVulnsArtifact1[0].CVEID)
 		assert.NoError(t, err)
 
 		// the current release date should be the timestamp of the latest event
@@ -374,13 +397,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, eventTimeFixed.Equal(currentRelease))
 
-		// 7 vulns each has a detected event + 1 fix event + 3 false positive events = we expect 11 entries
-		assert.Len(t, tracking.RevisionHistory, 11)
+		// 7 vulns each has a detected event (grouped to 2) + 3 false positive events (grouped to 2) + 1 fix event  = we expect 5 entries
+		assert.Len(t, tracking.RevisionHistory, 5)
 		// the version number should match the number of entries
 		assert.Equal(t, strconv.Itoa(len(tracking.RevisionHistory)), string(*tracking.Version))
 
 		// all detected Events should happen the earliest
-		detectedEntries := tracking.RevisionHistory[:7]
+		detectedEntries := tracking.RevisionHistory[:2]
 		detectionTime := vulns[0].Events[0].CreatedAt
 		for i, entry := range detectedEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
@@ -388,18 +411,18 @@ func TestGenerateTrackingObject(t *testing.T) {
 			assert.True(t, detectionTime.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Detected path in package"))
+			assert.True(t, strings.Contains(*entry.Summary, "Detected"))
 		}
 
 		// then we should find all the false positives events
-		falsePositiveEntries := tracking.RevisionHistory[7:10]
+		falsePositiveEntries := tracking.RevisionHistory[2 : len(tracking.RevisionHistory)-1]
 		for i, entry := range falsePositiveEntries {
 			date, err := time.Parse(time.RFC3339, *entry.Date)
 			assert.NoError(t, err)
 			assert.True(t, eventTimeFalsePositives.Equal(date))
 
 			assert.Equal(t, strconv.Itoa(i+1+len(detectedEntries)), string(*entry.Number))
-			assert.True(t, strings.Contains(*entry.Summary, "Marked path as false positive"))
+			assert.True(t, strings.Contains(*entry.Summary, "as false positive"))
 		}
 
 		// lastly check for the fixed event as the last entry
@@ -409,20 +432,21 @@ func TestGenerateTrackingObject(t *testing.T) {
 		assert.True(t, eventTimeFixed.Equal(date))
 
 		assert.Equal(t, strconv.Itoa(len(detectedEntries)+len(falsePositiveEntries)+1), string(*entry.Number))
-		assert.True(t, strings.Contains(*entry.Summary, "Fixed path in package"))
+		assert.True(t, strings.Contains(*entry.Summary, "Fixed"))
 
-		amountPurl1 := 0
-		amountPurl2 := 0
+		// lastly check if we have correct amount of components and artifact in our revisions
+		amountPurlKotlin := 0
+		amountPurlDebug := 0
 
 		amountArtifact1 := 0
 		amountArtifact2 := 0
 
 		for _, entry := range tracking.RevisionHistory {
 			if strings.Contains(*entry.Summary, "pkg:github.com/jetbrains/kotlin@v872") {
-				amountPurl1++
+				amountPurlKotlin++
 			}
 			if strings.Contains(*entry.Summary, "pkg:rpm/redhat/openssh-debugsource@v1.0.1") {
-				amountPurl2++
+				amountPurlDebug++
 			}
 			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
 				amountArtifact1++
@@ -432,13 +456,13 @@ func TestGenerateTrackingObject(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, len(tracking.RevisionHistory), amountArtifact1+amountArtifact2, amountPurl1+amountPurl2)
+		assert.Equal(t, len(tracking.RevisionHistory), amountPurlKotlin+amountPurlDebug)
 		// 3 detected events 1 fixed event
-		assert.Equal(t, 3+1, amountArtifact1)
+		assert.Equal(t, 3, amountArtifact1)
 		// 4 detected events 3 falsePositives
-		assert.Equal(t, 4+3, amountArtifact2)
-		assert.Equal(t, 5, amountPurl1)
-		assert.Equal(t, 6, amountPurl2)
+		assert.Equal(t, 4, amountArtifact2)
+		assert.Equal(t, 2, amountPurlKotlin)
+		assert.Equal(t, 3, amountPurlDebug)
 
 	})
 }
@@ -520,9 +544,9 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 
 	cve1.AffectedComponents = append(cve1.AffectedComponents, affectedComponent1, affectedComponent2, affectedComponent3)
 
-	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVE: cve1}
-	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVE: cve1}
-	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVE: cve1}
+	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: cve1}
+	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVEID: cve1.CVE, CVE: cve1}
+	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: cve1}
 
 	vuln1Depth0.Artifacts = append(vuln1Depth0.Artifacts, artifact)
 	vuln1Depth1.Artifacts = append(vuln1Depth1.Artifacts, artifact)
@@ -541,4 +565,274 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	asset.AssetVersions = append(asset.AssetVersions, assetVersion)
 
 	return asset, assetVersion, artifact, []models.DependencyVuln{vuln1Depth0, vuln1Depth1, vuln2Depth0}
+}
+
+func TestBelongsToSamePackage(t *testing.T) {
+	t.Run("same type, namespace and name should match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different versions should still match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:npm/lodash@4.17.20")
+		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different name should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different type should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:npm/debug@3.0.0")
+		purl2, _ := packageurl.FromString("pkg:pypi/debug@3.0.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("different namespace should not match", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.0.0")
+		purl2, _ := packageurl.FromString("pkg:golang/github.com/other/testify@v1.0.0")
+		assert.False(t, belongsToSamePackage(purl1, purl2))
+	})
+	t.Run("case insensitive matching on type", func(t *testing.T) {
+		purl1, _ := packageurl.FromString("pkg:NPM/lodash@4.17.20")
+		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
+		assert.True(t, belongsToSamePackage(purl1, purl2))
+	})
+}
+
+func TestBelongsToSomeSamePackage(t *testing.T) {
+	target, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+	t.Run("should find match in list", func(t *testing.T) {
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
+		}
+		assert.True(t, belongsToSomeSamePackage(target, purls))
+	})
+	t.Run("should return false for empty list", func(t *testing.T) {
+		assert.False(t, belongsToSomeSamePackage(target, []packageurl.PackageURL{}))
+	})
+	t.Run("should return false when no package matches", func(t *testing.T) {
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
+			must(packageurl.FromString("pkg:pypi/requests@2.28.0")),
+		}
+		assert.False(t, belongsToSomeSamePackage(target, purls))
+	})
+}
+
+func TestHasExactFit(t *testing.T) {
+	t.Run("exact same package and version should match", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")),
+		}
+		assert.True(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("same package but different version should not match", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
+		}
+		assert.False(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("different package should not match even with same version", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")),
+		}
+		assert.False(t, hasExactFit(vulnPurl, purls))
+	})
+	t.Run("should return false for empty list", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
+		assert.False(t, hasExactFit(vulnPurl, []packageurl.PackageURL{}))
+	})
+	t.Run("should find match among multiple purls", func(t *testing.T) {
+		vulnPurl, _ := packageurl.FromString("pkg:npm/debug@v3.1.0")
+		purls := []packageurl.PackageURL{
+			must(packageurl.FromString("pkg:npm/lodash@v4.17.21")),
+			must(packageurl.FromString("pkg:npm/debug@v3.1.0")),
+			must(packageurl.FromString("pkg:npm/express@v4.18.0")),
+		}
+		assert.True(t, hasExactFit(vulnPurl, purls))
+	})
+}
+
+func TestArtifactNameAndComponentPurlToProductID(t *testing.T) {
+	t.Run("should combine artifact name and component purl with pipe separator", func(t *testing.T) {
+		result := artifactNameAndComponentPurlToProductID("pkg:oci/myapp@v1.0.0", "pkg:npm/debug@3.0.0")
+		assert.Equal(t, csaf.ProductID("pkg:oci/myapp@v1.0.0|pkg:npm/debug@3.0.0"), result)
+	})
+	t.Run("should handle realistic devguard artifact names", func(t *testing.T) {
+		result := artifactNameAndComponentPurlToProductID(
+			normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main"),
+			"pkg:golang/github.com/stretchr/testify@v1.8.0",
+		)
+		expected := normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main") + "|pkg:golang/github.com/stretchr/testify@v1.8.0"
+		assert.Equal(t, csaf.ProductID(expected), result)
+	})
+}
+
+func TestEmptySliceThenNil(t *testing.T) {
+	t.Run("nil input should return nil", func(t *testing.T) {
+		assert.Nil(t, emptySliceThenNil(nil))
+	})
+	t.Run("empty slice should return nil", func(t *testing.T) {
+		empty := csaf.Products{}
+		assert.Nil(t, emptySliceThenNil(&empty))
+	})
+	t.Run("non-empty slice should be returned as-is", func(t *testing.T) {
+		id := csaf.ProductID("pkg:npm/debug@3.0.0")
+		products := csaf.Products{&id}
+		result := emptySliceThenNil(&products)
+		assert.NotNil(t, result)
+		assert.Len(t, *result, 1)
+		assert.Equal(t, &id, (*result)[0])
+	})
+}
+
+func TestGenerateDocumentTitle(t *testing.T) {
+	t.Run("should handle realistic asset name and CVE", func(t *testing.T) {
+		title := GenerateDocumentTitle("CSAF Test Asset", "GO-2026-4309")
+		assert.NotNil(t, title)
+		assert.Equal(t, "Security advisory for vulnerability GO-2026-4309 in asset CSAF Test Asset", *title)
+	})
+}
+
+func TestGenerateSummaryForEvent(t *testing.T) {
+	t.Run("single detected path in single artifact", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeDetected, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Detected 1 path in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("multiple detected paths in single artifact", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeDetected, 3, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Detected 3 paths in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("single path in multiple artifacts", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeFixed, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/app-a@v1.0.0", "pkg:oci/app-b@v2.0.0"})
+		assert.Contains(t, result, "Fixed 1 path")
+		assert.Contains(t, result, "artifacts:")
+	})
+	t.Run("multiple paths in multiple artifacts", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeAccepted, 5, "pkg:golang/github.com/lib/pq@v1.10.0", []string{"pkg:oci/api@v1.0.0", "pkg:oci/worker@v1.0.0"})
+		assert.Contains(t, result, "Accepted 5 paths")
+		assert.Contains(t, result, "artifacts:")
+	})
+	t.Run("false positive event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeFalsePositive, 2, "pkg:npm/lodash@4.17.20", []string{"pkg:oci/frontend@v3.0.0"})
+		assert.Equal(t, "Marked 2 paths as false positive in package pkg:npm/lodash@4.17.20 (artifact: pkg:oci/frontend@v3.0.0)", result)
+	})
+	t.Run("reopened event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeReopened, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Reopened 1 path in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
+	})
+	t.Run("unknown event type returns empty string", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.VulnEventType("unknown"), 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestIsInVersionRange(t *testing.T) {
+	makePurl := func(version string) packageurl.PackageURL {
+		return packageurl.PackageURL{Type: "golang", Namespace: "github.com/stretchr", Name: "testify", Version: version}
+	}
+	t.Run("version equal to lower bound should match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.5.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.5.0", result.Version)
+	})
+	t.Run("version between bounds should match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.7.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.7.0", result.Version)
+	})
+	t.Run("version equal to upper bound should not match (exclusive)", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v2.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("version above upper bound should not match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v3.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("version below lower bound should not match", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v1.0.0")}
+		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("should find matching purl among multiple candidates", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("v0.9.0"), makePurl("v1.8.0"), makePurl("v3.0.0")}
+		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
+		assert.NoError(t, err)
+		assert.Equal(t, "v1.8.0", result.Version)
+	})
+	t.Run("non-semver versions should be skipped", func(t *testing.T) {
+		purls := []packageurl.PackageURL{makePurl("not-semver")}
+		_, err := isInVersionRange(purls, makePurl("v1.0.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+	t.Run("empty purls list should return error", func(t *testing.T) {
+		_, err := isInVersionRange([]packageurl.PackageURL{}, makePurl("v1.0.0"), makePurl("v2.0.0"))
+		assert.Error(t, err)
+	})
+}
+
+// helper to unwrap packageurl.FromString in test data setup
+func must(p packageurl.PackageURL, _ error) packageurl.PackageURL {
+	return p
+}
+
+func TestGetOldestVulnPerUniqueCVE(t *testing.T) {
+	asset, _, _, vulns := setUpVulns()
+	t.Run("multiple vulns per CVE with different created_at timestamps should return slice with only the oldest vuln per CVE", func(t *testing.T) {
+		allVulns := vulns
+		// this is the vuln we should get as leader for this CVE
+		allVulns[0].CreatedAt = allVulns[0].CreatedAt.Add(-2 * time.Hour)
+		differentCVEVuln := vulns[0]
+		differentCVEVuln.CVEID = "CVE-TEST-12345"
+		allVulns = append(allVulns, differentCVEVuln)
+
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
+		dependencyVulnRepository.On("GetAllVulnsByAssetID", mock.Anything, mock.Anything, mock.Anything).Return(allVulns, nil)
+
+		csafService := csafService{
+			dependencyVulnService: &DependencyVulnService{
+				dependencyVulnRepository: dependencyVulnRepository,
+			},
+		}
+
+		filteredVulns, err := csafService.GetOldestVulnPerUniqueCVE(context.Background(), asset.ID)
+
+		assert.NoError(t, err)
+		assert.Len(t, filteredVulns, 2, "3 vulns with 2 different CVEs should be deduplicated to 2 vulns with different CVEs")
+
+		vulnAmountPerCVE := make(map[string]int, len(filteredVulns))
+		for _, vuln := range filteredVulns {
+			vulnAmountPerCVE[vuln.CVEID]++
+			switch vuln.CVEID {
+			case "CVE-TEST-12345":
+				assert.True(t, differentCVEVuln.CreatedAt.Equal(vuln.CreatedAt), "only 1 vuln for the new CVE should return its timestamp")
+			case "GO-2026-4309":
+				assert.True(t, allVulns[0].CreatedAt.Equal(vuln.CreatedAt), "2 vulns for this CVE, should return the older one")
+			}
+		}
+		assert.Len(t, vulnAmountPerCVE, 2, "2 different CVEs")
+		assert.Equal(t, 1, vulnAmountPerCVE["CVE-TEST-12345"], "both CVEs should only appear once")
+		assert.Equal(t, 1, vulnAmountPerCVE["GO-2026-4309"], "both CVEs should only appear once")
+	})
+}
+
+func TestIsCVE(t *testing.T) {
+	t.Run("invalid CVE should return false", func(t *testing.T) {
+		assert.False(t, utils.IsCVE("Vulnerability 3492"))
+	})
+	t.Run("not official CVE should return false", func(t *testing.T) {
+		assert.False(t, utils.IsCVE("GO-2025-4135"))
+	})
+	t.Run("valid CVE should return true", func(t *testing.T) {
+		assert.True(t, utils.IsCVE("CVE-2025-4135"))
+	})
 }
