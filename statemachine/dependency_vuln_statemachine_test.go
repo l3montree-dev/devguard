@@ -432,7 +432,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		copiedEvent := diffResult.ExistingOnOtherBranches[0].EventsToCopy[0]
 		assert.Equal(t, uuid.Nil, copiedEvent.ID, "event ID must be cleared so GORM creates a new row")
 		expectedVulnID := diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.CalculateHash()
-		assert.Equal(t, expectedVulnID, copiedEvent.DependencyVulnID, "VulnID must point to the current branch vuln")
+		assert.Equal(t, expectedVulnID, *copiedEvent.DependencyVulnID, "VulnID must point to the current branch vuln")
 	})
 
 	t.Run("should sort events by CreatedAt including equal timestamps", func(t *testing.T) {

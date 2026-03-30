@@ -46,7 +46,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")).Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -62,7 +62,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
-		ctx.SetParamValues("1", "test", "test")
+		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff", "test", "test")
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
@@ -96,7 +96,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
-		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{}, nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")).Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -122,7 +122,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		shared.SetProject(ctx, models.Project{})
 
 		ctx.SetParamNames("dependencyVulnID")
-		ctx.SetParamValues("1")
+		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
 
@@ -144,7 +144,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(models.DependencyVuln{
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")).Return(models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
@@ -195,7 +195,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		shared.SetProjectSlug(ctx, "test")
 		shared.SetAssetSlug(ctx, "test")
 		ctx.SetParamNames("dependencyVulnID")
-		ctx.SetParamValues("1")
+		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -229,7 +229,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
-		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, "1").Return(expectDependencyVuln, nil)
+		dependencyVulnRepository.On("Read", mock.Anything, mock.Anything, uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")).Return(expectDependencyVuln, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
@@ -279,7 +279,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		shared.SetProjectSlug(ctx, "test")
 		shared.SetAssetSlug(ctx, "test")
 		ctx.SetParamNames("dependencyVulnID")
-		ctx.SetParamValues("1")
+		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("1")
