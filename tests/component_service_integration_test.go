@@ -172,7 +172,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Verify that corresponding vuln events were created
 			var vulnEvents []models.VulnEvent
-			err = f.DB.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&vulnEvents).Error
+			err = f.DB.Where("license_risk_id IS NOT NULL").Find(&vulnEvents).Error
 			assert.NoError(t, err)
 			assert.Equal(t, expectedRiskCount, len(vulnEvents))
 

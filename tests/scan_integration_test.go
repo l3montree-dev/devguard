@@ -420,6 +420,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			dependencyVulnRepository := f.App.DependencyVulnRepository
 			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -502,6 +503,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			dependencyVulnRepository := f.App.DependencyVulnRepository
 			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -608,6 +610,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			dependencyVulnRepository := f.App.DependencyVulnRepository
 			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -751,6 +754,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			dependencyVulnRepository := f.App.DependencyVulnRepository
 			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -1026,7 +1030,7 @@ func TestTicketHandling(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			gitlabClientFacade.On("EditIssue", mock.Anything, 123, 789, mock.Anything).Return(nil, nil, nil).Once()
+			gitlabClientFacade.On("EditIssue", mock.Anything, 123, 789, mock.Anything).Return(nil, nil, nil)
 
 			err = controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
@@ -1073,7 +1077,9 @@ func TestTicketHandling(t *testing.T) {
 			}
 			err = f.DB.Save(&cve).Error
 			assert.Nil(t, err)
-
+			if err := f.DB.Exec("DELETE FROM artifact_dependency_vulns adv USING dependency_vulns dv WHERE adv.dependency_vuln_id = dv.id AND dv.cve_id = ?;", "CVE-2025-46569").Error; err != nil {
+				panic(err)
+			}
 			if err := f.DB.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
 				panic(err)
 			}
@@ -1167,7 +1173,7 @@ func TestTicketHandling(t *testing.T) {
 			assert.Contains(t, desc, "artifact-4")
 			assert.Contains(t, desc, "artifact-component")
 			assert.Contains(t, desc, "### Recommended fix")
-			assert.Contains(t, desc, vuln.ID)
+			assert.Contains(t, desc, vuln.ID.String())
 		})
 	})
 }
