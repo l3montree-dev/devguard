@@ -454,7 +454,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			if err := f.DB.Delete(&models.VulnEvent{}, "vuln_id = ? AND type = ?", vuln2.ID, "fixed").Error; err != nil {
+			if err := f.DB.Delete(&models.VulnEvent{}, "dependency_vuln_id = ? AND type = ?", vuln2.ID, "fixed").Error; err != nil {
 				panic(err)
 			}
 

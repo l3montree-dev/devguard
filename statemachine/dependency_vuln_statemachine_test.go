@@ -149,8 +149,8 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 					AssetVersionName: "feature-branch",
 					AssetID:          assetID,
-					Events:           []models.VulnEvent{},
 				},
+				Events: []models.VulnEvent{},
 			},
 		}
 
@@ -161,9 +161,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe"),
 					AssetVersionName: "main",
 					AssetID:          assetID,
-					Events: []models.VulnEvent{{Type: dtos.EventTypeDetected},
-						{Type: dtos.EventTypeComment}},
 				},
+				Events: []models.VulnEvent{{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeComment}},
 				Artifacts: []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: "feature-branch", AssetID: assetID},
 					{ArtifactName: "artifact2", AssetVersionName: "feature-branch", AssetID: assetID}},
 			},
@@ -227,10 +227,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
-					Events: []models.VulnEvent{
-						{
-							Type: dtos.EventTypeAccepted,
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type: dtos.EventTypeAccepted,
 					},
 				},
 			},
@@ -260,10 +260,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
-					Events: []models.VulnEvent{
-						{
-							Type: dtos.EventTypeComment,
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type: dtos.EventTypeComment,
 					},
 				},
 			},
@@ -271,10 +271,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "develop",
-					Events: []models.VulnEvent{
-						{
-							Type: dtos.EventTypeComment,
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type: dtos.EventTypeComment,
 					},
 				},
 			},
@@ -305,15 +305,15 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
-					Events: []models.VulnEvent{
-						{
-							Type:                     dtos.EventTypeDetected,
-							OriginalAssetVersionName: nil, // original event
-						},
-						{
-							Type:                     dtos.EventTypeAccepted,
-							OriginalAssetVersionName: utils.Ptr("other-branch"), // already copied event
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type:                     dtos.EventTypeDetected,
+						OriginalAssetVersionName: nil, // original event
+					},
+					{
+						Type:                     dtos.EventTypeAccepted,
+						OriginalAssetVersionName: utils.Ptr("other-branch"), // already copied event
 					},
 				},
 			},
@@ -356,10 +356,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0002",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
-					Events: []models.VulnEvent{
-						{
-							Type: dtos.EventTypeDetected,
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type: dtos.EventTypeDetected,
 					},
 				},
 			},

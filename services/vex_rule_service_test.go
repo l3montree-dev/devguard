@@ -215,9 +215,7 @@ func TestIsVexEventAlreadyApplied_PointerComparison(t *testing.T) {
 	}
 
 	vuln := models.DependencyVuln{
-		Vulnerability: models.Vulnerability{
-			Events: []models.VulnEvent{existingEvent},
-		},
+		Events: []models.VulnEvent{existingEvent},
 	}
 
 	// This SHOULD return true (same type + same justification string),

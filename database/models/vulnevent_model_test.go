@@ -12,7 +12,7 @@ import (
 
 func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 	t.Run("should store the old risk and other fields in the event", func(t *testing.T) {
-		vulnID := uuid.New()
+		vulnID := uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		userID := "user123"
 		justification := "justification text"
 		oldRisk := 0.5
@@ -23,7 +23,7 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
 
 		assert.Equal(t, dtos.EventTypeRawRiskAssessmentUpdated, event.Type)
-		assert.Equal(t, vulnID, event.DependencyVulnID)
+		assert.Equal(t, vulnID, *event.DependencyVulnID)
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
 
