@@ -2332,6 +2332,89 @@ func TestTrivyDebianSBOMNoForeignKeyViolation(t *testing.T) {
 }
 
 func TestMergeGraphRemovals(t *testing.T) {
+	t.Run("it should replace the subtree but the others should survive", func(t *testing.T) {
+		// Base graph:
+		//   ROOT
+		//   └── artifact:app
+		//       └── sbom:s1@app
+		//           └── pkg:npm/old@1.0.0     (will be replaced)
+		//           └── pkg:npm/common@1.0.0  (will survive)
+		//   └── artifact:app-other
+		// 	 	 └── sbom:s2@app-other
+		//	          └── pkg:npm/other@1.0.0  (will survive)
+		base := NewSBOMGraph()
+		artID := base.AddArtifact("app")
+		srcID := base.AddInfoSource(artID, "s1", InfoSourceSBOM) // "sbom:s1@app"
+		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/old@1.0.0", PackageURL: "pkg:npm/old@1.0.0", Name: "old"})
+		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/common@1.0.0", PackageURL: "pkg:npm/common@1.0.0", Name: "common"})
+		base.AddEdge(srcID, "pkg:npm/old@1.0.0")
+		base.AddEdge(srcID, "pkg:npm/common@1.0.0")
+
+		base.AddArtifact("app-other")
+		srcIDOther := base.AddInfoSource(base.AddArtifact("app-other"), "s1", InfoSourceSBOM)
+		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/other@1.0.0", PackageURL: "pkg:npm/other@1.0.0", Name: "other"})
+		base.AddEdge(srcIDOther, "pkg:npm/other@1.0.0")
+
+		// Incoming graph reuses the same info source ID — triggers subtree replacement.
+		//   ROOT
+		//   └── artifact:app
+		//       └── sbom:s1@app
+		//           ├── pkg:npm/new@1.0.0     (newly introduced)
+		//           └── pkg:npm/common@1.0.0  (kept)
+		incoming := NewSBOMGraph()
+		artID2 := incoming.AddArtifact("app")
+		srcID2 := incoming.AddInfoSource(artID2, "s1", InfoSourceSBOM)
+		incoming.AddComponent(cdx.Component{BOMRef: "pkg:npm/new@1.0.0", PackageURL: "pkg:npm/new@1.0.0", Name: "new"})
+		incoming.AddComponent(cdx.Component{BOMRef: "pkg:npm/common@1.0.0", PackageURL: "pkg:npm/common@1.0.0", Name: "common"})
+		incoming.AddEdge(srcID2, "pkg:npm/new@1.0.0")
+		incoming.AddEdge(srcID2, "pkg:npm/common@1.0.0")
+
+		// Both info sources resolve to the same ID, confirming a collision.
+		assert.Equal(t, srcID, srcID2)
+
+		diff := base.MergeGraph(incoming)
+
+		// Edge from info source to the dropped component must appear in RemovedEdges.
+		assert.Contains(t, diff.RemovedEdges, [2]string{srcID, "pkg:npm/old@1.0.0"},
+			"edge to old component should be reported as removed")
+
+		// Edge to the surviving component must NOT appear as removed.
+		assert.NotContains(t, diff.RemovedEdges, [2]string{srcID, "pkg:npm/common@1.0.0"},
+			"edge to common component should not be removed")
+
+		// The new component must be reported as an added node.
+		addedRefs := make([]string, 0, len(diff.AddedNodes))
+		for _, n := range diff.AddedNodes {
+			addedRefs = append(addedRefs, n.BOMRef)
+		}
+		assert.Contains(t, addedRefs, "pkg:npm/new@1.0.0",
+			"new component should be reported as added")
+
+		// The replaced component must no longer be reachable in the merged graph.
+		assert.Nil(t, base.Node("pkg:npm/old@1.0.0"),
+			"old component should no longer be reachable after subtree replacement")
+
+		// The other subtree should be unaffected.
+		assert.NotNil(t, base.Node("pkg:npm/other@1.0.0"),
+			"other component should still be reachable after subtree replacement")
+
+		// The edge from the other info source must not appear as removed.
+		assert.NotContains(t, diff.RemovedEdges, [2]string{srcIDOther, "pkg:npm/other@1.0.0"},
+			"edge from other info source to its component should not be removed")
+
+		// The edge must still exist in the merged graph.
+		otherEdgeExists := false
+		for parent, child := range base.Edges() {
+			if parent == srcIDOther && child == "pkg:npm/other@1.0.0" {
+				otherEdgeExists = true
+				break
+			}
+		}
+		assert.True(t, otherEdgeExists,
+			"edge from other info source to its component should still exist in merged graph")
+
+	})
+
 	t.Run("colliding info source ID triggers subtree replacement and reports removed edges", func(t *testing.T) {
 		// Base graph:
 		//   ROOT
