@@ -207,6 +207,73 @@ func TestScanning(t *testing.T) {
 			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
 		})
 
+		t.Run("should close the vulnerability if it's not detected anymore for the same artifact and origin and stay closed when the asset daemon is run", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "test-origin")        // set the origin header
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			var response dtos.ScanResponse
+
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 1, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 1)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
+
+			// Scan again with other SBOM without the vulnerability, but with the same artifact and origin - should close the vulnerability
+
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "test-origin")        // set the same origin header
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 0, response.AmountOpened)
+			assert.Equal(t, 1, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 0)
+
+			//start the asset daemon and make sure the vulnerability is still closed
+
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+
+			// Reload the vulnerability from the database to check its state
+			var vulns []models.DependencyVuln
+			err = f.DB.Where("asset_id = ?", asset.ID).Find(&vulns).Error
+			assert.Nil(t, err)
+			assert.Len(t, vulns, 1)
+			assert.Equal(t, dtos.VulnStateFixed, vulns[0].State)
+			assert.Equal(t, "CVE-2025-46569", vulns[0].CVEID)
+
+		})
+
 		t.Run("should add the artifact, if the vulnerability is found with another artifact", func(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
