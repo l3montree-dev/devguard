@@ -111,9 +111,9 @@ func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name s
 	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionName, assetID)
 }
 
-func (c *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+func (s *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	// get all associated dependencyVulns
-	dependencyVulns, err := c.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	dependencyVulns, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (c *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx conte
 	}
 
 	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = c.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
+	defaultVulns, err = s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
