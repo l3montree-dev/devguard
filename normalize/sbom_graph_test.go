@@ -2350,8 +2350,8 @@ func TestMergeGraphRemovals(t *testing.T) {
 		base.AddEdge(srcID, "pkg:npm/old@1.0.0")
 		base.AddEdge(srcID, "pkg:npm/common@1.0.0")
 
-		base.AddArtifact("app-other")
-		srcIDOther := base.AddInfoSource(base.AddArtifact("app-other"), "s1", InfoSourceSBOM)
+		artIDOther := base.AddArtifact("app-other")
+		srcIDOther := base.AddInfoSource(artIDOther, "s1", InfoSourceSBOM)
 		base.AddComponent(cdx.Component{BOMRef: "pkg:npm/other@1.0.0", PackageURL: "pkg:npm/other@1.0.0", Name: "other"})
 		base.AddEdge(srcIDOther, "pkg:npm/other@1.0.0")
 

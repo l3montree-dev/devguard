@@ -180,9 +180,6 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
 	}
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
-	}
 
 	sbom := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
 
