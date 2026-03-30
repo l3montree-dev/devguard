@@ -19,6 +19,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -176,4 +177,9 @@ func DeduplicateSlice[T any](slice []T, idFunc func(t T) string) []T {
 
 func CheckIfDeleted(name string) bool {
 	return strings.Contains(name, "-deletion_scheduled-")
+}
+
+// checks if a given string is a valid CVE
+func IsCVE(str string) bool {
+	return regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$").MatchString(str)
 }

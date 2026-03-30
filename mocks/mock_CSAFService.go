@@ -8,6 +8,9 @@ import (
 	"context"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/gocsaf/csaf/v3/csaf"
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -37,6 +40,158 @@ type CSAFService_Expecter struct {
 
 func (_m *CSAFService) EXPECT() *CSAFService_Expecter {
 	return &CSAFService_Expecter{mock: &_m.Mock}
+}
+
+// GenerateCSAFReport provides a mock function for the type CSAFService
+func (_mock *CSAFService) GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error) {
+	ret := _mock.Called(ctx, orgName, assetID, assetName, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCSAFReport")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uuid.UUID, string, string) (csaf.Advisory, error)); ok {
+		return returnFunc(ctx, orgName, assetID, assetName, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uuid.UUID, string, string) csaf.Advisory); ok {
+		r0 = returnFunc(ctx, orgName, assetID, assetName, cveID)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(ctx, orgName, assetID, assetName, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GenerateCSAFReport_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCSAFReport'
+type CSAFService_GenerateCSAFReport_Call struct {
+	*mock.Call
+}
+
+// GenerateCSAFReport is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orgName string
+//   - assetID uuid.UUID
+//   - assetName string
+//   - cveID string
+func (_e *CSAFService_Expecter) GenerateCSAFReport(ctx interface{}, orgName interface{}, assetID interface{}, assetName interface{}, cveID interface{}) *CSAFService_GenerateCSAFReport_Call {
+	return &CSAFService_GenerateCSAFReport_Call{Call: _e.mock.On("GenerateCSAFReport", ctx, orgName, assetID, assetName, cveID)}
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) Run(run func(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string)) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) Return(advisory csaf.Advisory, err error) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Return(advisory, err)
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReport_Call) RunAndReturn(run func(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReport_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOldestVulnPerUniqueCVE provides a mock function for the type CSAFService
+func (_mock *CSAFService) GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOldestVulnPerUniqueCVE")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GetOldestVulnPerUniqueCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOldestVulnPerUniqueCVE'
+type CSAFService_GetOldestVulnPerUniqueCVE_Call struct {
+	*mock.Call
+}
+
+// GetOldestVulnPerUniqueCVE is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetID uuid.UUID
+func (_e *CSAFService_Expecter) GetOldestVulnPerUniqueCVE(ctx interface{}, assetID interface{}) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
+	return &CSAFService_GetOldestVulnPerUniqueCVE_Call{Call: _e.mock.On("GetOldestVulnPerUniqueCVE", ctx, assetID)}
+}
+
+func (_c *CSAFService_GetOldestVulnPerUniqueCVE_Call) Run(run func(ctx context.Context, assetID uuid.UUID)) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GetOldestVulnPerUniqueCVE_Call) Return(dependencyVulns []models.DependencyVuln, err error) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *CSAFService_GetOldestVulnPerUniqueCVE_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetVexFromCsafProvider provides a mock function for the type CSAFService

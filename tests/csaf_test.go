@@ -145,11 +145,11 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 				pathParts := strings.Split(r.URL.Path, "/white/")
 				fmt.Println(r.URL.Path)
 				yearAndMaybeVersion := pathParts[1]
-				yearAndMaybeVersionParts := strings.Split(yearAndMaybeVersion, "/")
-				year := yearAndMaybeVersionParts[0]
+				parts := strings.SplitN(yearAndMaybeVersion, "/", 2)
+				year := parts[0]
 				version := ""
-				if len(yearAndMaybeVersionParts) > 1 {
-					version = yearAndMaybeVersionParts[1]
+				if len(parts) > 1 {
+					version = parts[1]
 				}
 
 				ctx := app.NewContext(r, w)
