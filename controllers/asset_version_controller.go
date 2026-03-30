@@ -150,7 +150,7 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 
 	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
 
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -175,13 +175,16 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "FRONTEND_URL not set in environment variables")
 	}
 
-	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx.Request().Context(), nil, assetVersion.AssetID, nil)
+	// get the dependency vulns for this asset version, including resolved marking based on default branch
+	dependencyVulns, err := a.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, nil)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
+	}
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
 	}
 
-	sbom := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, defaultVulns)
+	sbom := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
 
 	ctx.Response().Header().Set("Content-Type", "application/json")
 

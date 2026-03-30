@@ -2,43 +2,47 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ArtifactService struct {
-	csafService            shared.CSAFService
-	artifactRepository     shared.ArtifactRepository
-	cveRepository          shared.CveRepository
-	componentRepository    shared.ComponentRepository
-	assetVersionRepository shared.AssetVersionRepository
-	assetVersionService    shared.AssetVersionService
-	dependencyVulnService  shared.DependencyVulnService
-	scanService            shared.ScanService
-	synchronizer           utils.FireAndForgetSynchronizer
+	csafService              shared.CSAFService
+	artifactRepository       shared.ArtifactRepository
+	cveRepository            shared.CveRepository
+	componentRepository      shared.ComponentRepository
+	assetVersionRepository   shared.AssetVersionRepository
+	assetVersionService      shared.AssetVersionService
+	dependencyVulnService    shared.DependencyVulnService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	scanService              shared.ScanService
+	synchronizer             utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ArtifactService = (*ArtifactService)(nil) // Ensure ArtifactService implements shared.ArtifactService interface
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, dependencyVulnRepository shared.DependencyVulnRepository, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
 	return &ArtifactService{
-		csafService:            csafService,
-		artifactRepository:     artifactRepository,
-		cveRepository:          cveRepository,
-		componentRepository:    componentRepository,
-		assetVersionRepository: assetVersionRepository,
-		assetVersionService:    assetVersionService,
-		dependencyVulnService:  dependencyVulnService,
-		scanService:            scanService,
-		synchronizer:           synchronizer,
+		csafService:              csafService,
+		artifactRepository:       artifactRepository,
+		cveRepository:            cveRepository,
+		componentRepository:      componentRepository,
+		assetVersionRepository:   assetVersionRepository,
+		assetVersionService:      assetVersionService,
+		dependencyVulnService:    dependencyVulnService,
+		dependencyVulnRepository: dependencyVulnRepository,
+		scanService:              scanService,
+		synchronizer:             synchronizer,
 	}
 }
 
@@ -105,4 +109,40 @@ func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID,
 
 func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
 	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionName, assetID)
+}
+
+func (c *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+	// get all associated dependencyVulns
+	dependencyVulns, err := c.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var defaultVulns []models.DependencyVuln
+	if assetVersion.DefaultBranch {
+		return dependencyVulns, nil
+	}
+
+	// get the dependency vulns for the default asset version to check if any are resolved already
+	defaultVulns, err = c.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
+	m := make(map[string]bool)
+	for _, v := range defaultVulns {
+		if v.State == dtos.VulnStateFixed {
+			m[fmt.Sprintf("%s/%s", v.CVEID, v.ComponentPurl)] = true
+		}
+	}
+
+	// mark all vulns as fixed if they are in the map
+	for i := range dependencyVulns {
+		if m[fmt.Sprintf("%s/%s", dependencyVulns[i].CVEID, dependencyVulns[i].ComponentPurl)] {
+			dependencyVulns[i].State = dtos.VulnStateFixed
+		}
+	}
+	return dependencyVulns, nil
 }
