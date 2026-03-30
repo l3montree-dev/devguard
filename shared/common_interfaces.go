@@ -362,6 +362,7 @@ type ArtifactService interface {
 	SaveArtifact(ctx context.Context, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -378,7 +379,7 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
+	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
