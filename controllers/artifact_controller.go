@@ -586,7 +586,7 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 		return nil, err
 	}
 
-	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
+	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns), nil
 }
 
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
@@ -630,7 +630,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				return nil, fmt.Errorf("FRONTEND_URL is not set")
 			}
 
-			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact, dependencyVulns)
+			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))

@@ -341,7 +341,7 @@ func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(ctx, nil, frontendURL, orgName, orgSlug, projectSlug, asset, av, *item.ArtifactName, depVulns)
+		bom := h.assetVersionService.BuildVeX(ctx, nil, frontendURL, orgName, orgSlug, projectSlug, asset, av, depVulns)
 		if bom != nil {
 			boms = append(boms, bom)
 		}

@@ -124,16 +124,16 @@ func (_c *AssetVersionService_BuildOpenVeX_Call) RunAndReturn(run func(ctx conte
 }
 
 // BuildVeX provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) BuildVeX(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
-	ret := _mock.Called(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)
+func (_mock *AssetVersionService) BuildVeX(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
+	ret := _mock.Called(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildVeX")
 	}
 
 	var r0 *normalize.SBOMGraph
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, string, string, models.Asset, models.AssetVersion, string, []models.DependencyVuln) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, string, string, models.Asset, models.AssetVersion, []models.DependencyVuln) *normalize.SBOMGraph); ok {
+		r0 = returnFunc(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.SBOMGraph)
@@ -156,13 +156,12 @@ type AssetVersionService_BuildVeX_Call struct {
 //   - projectSlug string
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
-//   - artifactName string
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, frontendURL interface{}, orgName interface{}, orgSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
-	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, artifactName, dependencyVulns)}
+func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, frontendURL interface{}, orgName interface{}, orgSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
+	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)}
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -196,13 +195,9 @@ func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, t
 		if args[7] != nil {
 			arg7 = args[7].(models.AssetVersion)
 		}
-		var arg8 string
+		var arg8 []models.DependencyVuln
 		if args[8] != nil {
-			arg8 = args[8].(string)
-		}
-		var arg9 []models.DependencyVuln
-		if args[9] != nil {
-			arg9 = args[9].([]models.DependencyVuln)
+			arg8 = args[8].([]models.DependencyVuln)
 		}
 		run(
 			arg0,
@@ -214,7 +209,6 @@ func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, t
 			arg6,
 			arg7,
 			arg8,
-			arg9,
 		)
 	})
 	return _c
@@ -225,7 +219,7 @@ func (_c *AssetVersionService_BuildVeX_Call) Return(sBOMGraph *normalize.SBOMGra
 	return _c
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Return(run)
 	return _c
 }

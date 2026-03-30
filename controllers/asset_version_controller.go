@@ -4,8 +4,10 @@ import (
 	"context"
 	"maps"
 	"net/url"
+	"os"
 	"strings"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -115,7 +117,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [delete]
 func (a *AssetVersionController) Delete(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)                //Get the asset provided in the context / URL
+	assetVersion := shared.GetAssetVersion(ctx)                                         //Get the asset provided in the context / URL
 	err := a.assetVersionRepository.Delete(ctx.Request().Context(), nil, &assetVersion) //Call delete on the returned assetVersion
 	if err != nil {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
@@ -141,6 +143,51 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 		return err
 	}
 	return ctx.JSON(200, assetVersions)
+}
+
+func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
+	assetVersion := shared.GetAssetVersion(ctx)
+
+	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
+	if err != nil {
+		return err
+	}
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(500, "FRONTEND_URL not set in environment variables")
+	}
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+}
+
+func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
+	project := shared.GetProject(ctx)
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	org := shared.GetOrg(ctx)
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		return echo.NewHTTPError(500, "FRONTEND_URL not set in environment variables")
+	}
+
+	// get the dependency vulns for the default asset version to check if any are resolved already
+	defaultVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx.Request().Context(), nil, assetVersion.AssetID, nil)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
+	}
+
+	sbom := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, defaultVulns)
+
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
+	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
