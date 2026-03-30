@@ -195,6 +195,11 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 			})
 
 			for _, ev := range events {
+				// if we find a fixed event - we should NOT apply it.
+				// since the vulnerability is still detected on the current branch, we should not let fixed events from other branches override that.
+				if ev.Type == dtos.EventTypeFixed {
+					continue
+				}
 				Apply(currentVuln, ev)
 			}
 

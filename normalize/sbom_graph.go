@@ -499,6 +499,16 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 			diff.AddedEdges = append(diff.AddedEdges, edge)
 		}
 	}
+
+	afterEdges := make(map[[2]string]bool)
+	for parent, child := range g.Edges() {
+		afterEdges[[2]string{parent, child}] = true
+	}
+	for edge := range beforeEdges {
+		if !afterEdges[edge] {
+			diff.RemovedEdges = append(diff.RemovedEdges, edge)
+		}
+	}
 	// add vulnerabilities
 	maps.Copy(g.vulnerabilities, other.vulnerabilities)
 	return diff

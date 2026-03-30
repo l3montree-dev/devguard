@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,6 +48,39 @@ func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepo
 		vulnEventRepository:      vulnEventRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
 	}
+}
+
+// saveArtifactAssociations bulk-inserts rows into artifact_dependency_vulns.
+// SaveBatchBestEffort omits associations, so callers that create new vulns with
+// artifacts must call this explicitly.
+func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error {
+	type row struct {
+		ArtifactName        string
+		ArtifactVersionName string
+		ArtifactAssetID     uuid.UUID
+		DependencyVulnID    string
+	}
+
+	rows := make([]row, 0, len(vulns))
+	for _, v := range vulns {
+		hash := v.CalculateHash()
+		for _, a := range v.Artifacts {
+			rows = append(rows, row{a.ArtifactName, a.AssetVersionName, a.AssetID, hash})
+		}
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+
+	placeholders := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?),", len(rows)), ",")
+	return tx.Exec(
+		"INSERT INTO artifact_dependency_vulns (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) VALUES "+
+			placeholders+
+			" ON CONFLICT DO NOTHING",
+		utils.Flat(utils.Map(rows, func(r row) []any {
+			return []any{r.ArtifactName, r.ArtifactVersionName, r.ArtifactAssetID, r.DependencyVulnID}
+		}))...,
+	).Error
 }
 
 func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
@@ -89,6 +123,10 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx co
 		return err
 	}
 
+	if err := saveArtifactAssociations(tx, vulns); err != nil {
+		return err
+	}
+
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
@@ -117,6 +155,9 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	// run the updates in the transaction to keep a valid state
 	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
 	if err != nil {
+		return err
+	}
+	if err := saveArtifactAssociations(tx, dependencyVulns); err != nil {
 		return err
 	}
 	err = s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
@@ -363,4 +404,32 @@ func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.As
 		return err
 	}
 	return nil
+}
+
+// returns 1 vuln for each unique CVE in the asset. The chosen vuln per CVE-ID is determined by compareFunc (if compareFunc = true , newVuln will be the new leader)
+func (s *DependencyVulnService) GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error) {
+	allVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, assetID)
+	if err != nil {
+		return nil, err
+	}
+
+	// deduplicate slice by CVE-ID and use the compare Func to filter the leader per CVE
+	cveIDToOldestVuln := make(map[string]models.DependencyVuln, len(allVulns))
+	for _, newVuln := range allVulns {
+		currentVulnForCVE, ok := cveIDToOldestVuln[newVuln.CVEID]
+		if !ok {
+			cveIDToOldestVuln[newVuln.CVEID] = newVuln
+		} else {
+			if compareFunc(currentVulnForCVE, newVuln) {
+				cveIDToOldestVuln[newVuln.CVEID] = newVuln
+			}
+		}
+	}
+
+	// clear old slice contents and fill it with the filtered vulns
+	allVulns = allVulns[:0]
+	for _, vuln := range cveIDToOldestVuln {
+		allVulns = append(allVulns, vuln)
+	}
+	return allVulns, nil
 }

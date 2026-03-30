@@ -18,6 +18,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -371,7 +372,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 // @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
-// @Success 200 {object} object
+// @Success 200 {string} string
 // @Router /organizations/{organization}/config-files/{config-file} [get]
 func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
@@ -381,7 +382,49 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	if !ok {
 		return ctx.NoContent(404)
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
+}
+
+// @Summary Update organization config file
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param config-file path string true "Config file ID"
+// @Param body string true "Config file content"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/config-files/{config-file} [put]
+func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
+	organization := shared.GetOrg(ctx)
+	configID := ctx.Param("config-file")
+
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
+
+	// read the body as string
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
+	}
+	configContent := string(body)
+
+	if organization.ConfigFiles == nil {
+		organization.ConfigFiles = make(map[string]any)
+	}
+
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(organization.ConfigFiles, configID)
+	} else {
+		organization.ConfigFiles[configID] = configContent
+	}
+
+	if err := controller.organizationRepository.Update(ctx.Request().Context(), nil, &organization); err != nil {
+		return echo.NewHTTPError(500, "could not save config file").WithInternal(err)
+	}
+
+	return ctx.String(200, configContent)
 }
 
 // @Summary List organization members

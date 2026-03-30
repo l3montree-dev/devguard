@@ -16,6 +16,7 @@ package statemachine
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -327,6 +328,150 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		assert.Len(t, diffResult.ExistingOnOtherBranches[0].EventsToCopy, 1) // only the original event, not the copied one
 		assert.Equal(t, dtos.EventTypeDetected, diffResult.ExistingOnOtherBranches[0].EventsToCopy[0].Type)
 		assert.Equal(t, "main", *diffResult.ExistingOnOtherBranches[0].EventsToCopy[0].OriginalAssetVersionName)
+	})
+
+	t.Run("should NOT apply fixed event from other branch to current vuln state", func(t *testing.T) {
+		assetID := uuid.New()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+					State:            dtos.VulnStateOpen,
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					AssetID:          assetID,
+					Events: []models.VulnEvent{
+						{Type: dtos.EventTypeDetected},
+						{Type: dtos.EventTypeFixed}, // should be skipped during Apply
+					},
+				},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		// Fixed event must NOT have changed the current branch vuln's state
+		assert.Equal(t, dtos.VulnStateOpen, diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.GetState())
+		// Both events are still copied (fixed event is not filtered from EventsToCopy)
+		assert.Len(t, diffResult.ExistingOnOtherBranches[0].EventsToCopy, 2)
+	})
+
+	t.Run("should apply non-fixed events to current branch vuln state", func(t *testing.T) {
+		assetID := uuid.New()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+					State:            dtos.VulnStateOpen,
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					AssetID:          assetID,
+					Events: []models.VulnEvent{
+						{Type: dtos.EventTypeAccepted},
+					},
+				},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		assert.Equal(t, dtos.VulnStateAccepted, diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.GetState())
+	})
+
+	t.Run("should clear event ID and set VulnID to current branch hash in EventsToCopy", func(t *testing.T) {
+		assetID := uuid.New()
+		existingEventID := uuid.New()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					AssetID:          assetID,
+					Events: []models.VulnEvent{
+						{Model: models.Model{ID: existingEventID}, Type: dtos.EventTypeAccepted},
+					},
+				},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		copiedEvent := diffResult.ExistingOnOtherBranches[0].EventsToCopy[0]
+		assert.Equal(t, uuid.Nil, copiedEvent.ID, "event ID must be cleared so GORM creates a new row")
+		expectedVulnID := diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.CalculateHash()
+		assert.Equal(t, expectedVulnID, copiedEvent.VulnID, "VulnID must point to the current branch vuln")
+	})
+
+	t.Run("should sort events by CreatedAt including equal timestamps", func(t *testing.T) {
+		assetID := uuid.New()
+		sameTime := time.Now()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					AssetID:          assetID,
+					Events: []models.VulnEvent{
+						{Model: models.Model{CreatedAt: sameTime.Add(time.Second)}, Type: dtos.EventTypeAccepted},
+						{Model: models.Model{CreatedAt: sameTime}, Type: dtos.EventTypeDetected},
+						{Model: models.Model{CreatedAt: sameTime}, Type: dtos.EventTypeComment}, // equal timestamp
+					},
+				},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		events := diffResult.ExistingOnOtherBranches[0].EventsToCopy
+		assert.Len(t, events, 3)
+		// Accepted event must be last (latest timestamp)
+		assert.Equal(t, dtos.EventTypeAccepted, events[2].Type)
 	})
 
 	t.Run("should handle mixed scenario with new and existing vulnerabilities", func(t *testing.T) {
