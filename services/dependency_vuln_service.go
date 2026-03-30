@@ -58,7 +58,7 @@ func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error
 		ArtifactName        string
 		ArtifactVersionName string
 		ArtifactAssetID     uuid.UUID
-		DependencyVulnID    string
+		DependencyVulnID    uuid.UUID
 	}
 
 	rows := make([]row, 0, len(vulns))

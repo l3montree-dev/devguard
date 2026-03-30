@@ -316,14 +316,14 @@ func TestGetMostRecentJustifications(t *testing.T) {
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{CreatedAt: eventTimeEarlier, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{CreatedAt: eventTimeT1, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{CreatedAt: eventTimeLatest, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{CreatedAt: eventTimeT2, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
 
 		// latest event has no justifications
 		vulns[2].State = dtos.VulnStateFixed
-		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{Model: models.Model{CreatedAt: eventTimeT3}, Type: dtos.EventTypeFixed})
+		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{CreatedAt: eventTimeT3, Type: dtos.EventTypeFixed})
 
 		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
 		assert.Equal(t, "this information is up to date", *justification)

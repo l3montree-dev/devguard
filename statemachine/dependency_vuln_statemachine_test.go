@@ -350,10 +350,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					AssetID:          assetID,
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeDetected},
-						{Type: dtos.EventTypeFixed}, // should be skipped during Apply
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeFixed}, // should be skipped during Apply
 				},
 			},
 		}
@@ -387,9 +387,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					AssetID:          assetID,
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeAccepted},
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeAccepted},
 				},
 			},
 		}
@@ -419,10 +419,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
-					AssetID:          assetID,
-					Events: []models.VulnEvent{
-						{Model: models.Model{ID: existingEventID}, Type: dtos.EventTypeAccepted},
-					},
+					AssetID:          assetID},
+				Events: []models.VulnEvent{
+					{ID: existingEventID, Type: dtos.EventTypeAccepted},
 				},
 			},
 		}
@@ -433,7 +432,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		copiedEvent := diffResult.ExistingOnOtherBranches[0].EventsToCopy[0]
 		assert.Equal(t, uuid.Nil, copiedEvent.ID, "event ID must be cleared so GORM creates a new row")
 		expectedVulnID := diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.CalculateHash()
-		assert.Equal(t, expectedVulnID, copiedEvent.VulnID, "VulnID must point to the current branch vuln")
+		assert.Equal(t, expectedVulnID, copiedEvent.DependencyVulnID, "VulnID must point to the current branch vuln")
 	})
 
 	t.Run("should sort events by CreatedAt including equal timestamps", func(t *testing.T) {
@@ -456,11 +455,11 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: "main",
 					AssetID:          assetID,
-					Events: []models.VulnEvent{
-						{Model: models.Model{CreatedAt: sameTime.Add(time.Second)}, Type: dtos.EventTypeAccepted},
-						{Model: models.Model{CreatedAt: sameTime}, Type: dtos.EventTypeDetected},
-						{Model: models.Model{CreatedAt: sameTime}, Type: dtos.EventTypeComment}, // equal timestamp
-					},
+				},
+				Events: []models.VulnEvent{
+					{CreatedAt: sameTime.Add(time.Second), Type: dtos.EventTypeAccepted},
+					{CreatedAt: sameTime, Type: dtos.EventTypeDetected},
+					{CreatedAt: sameTime, Type: dtos.EventTypeComment}, // equal timestamp
 				},
 			},
 		}
