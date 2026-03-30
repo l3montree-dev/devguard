@@ -191,7 +191,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			"userID")
 		assert.NoError(t, err)
 		assert.Len(t, r, 1)
-		assert.Equal(t, "test-fingerprint", r[0].ID)
+		assert.Equal(t, "ffffffff-ffff-ffff-ffff-ffffffffffff", r[0].ID.String())
 	})
 
 }

@@ -107,15 +107,15 @@ AND NOT EXISTS (
     AND a.asset_id = cd.asset_id
 );
 
-DELETE FROM vuln_events ve WHERE ve.vuln_type = 'dependencyVuln' AND NOT EXISTS (
+DELETE FROM vuln_events ve WHERE ve.dependency_vuln_id IS NOT NULL AND NOT EXISTS (
     SELECT dependency_vulns.id FROM dependency_vulns WHERE dependency_vulns.id = ve.dependency_vuln_id
 );
 
-DELETE FROM vuln_events ve WHERE ve.vuln_type = 'firstPartyVuln' AND NOT EXISTS(
+DELETE FROM vuln_events ve WHERE ve.first_party_vuln_id IS NOT NULL  AND NOT EXISTS(
 	SELECT first_party_vulnerabilities.id FROM first_party_vulnerabilities WHERE first_party_vulnerabilities.id = ve.first_party_vuln_id
 );
 
-DELETE FROM vuln_events ve WHERE ve.vuln_type = 'licenseRisk' AND NOT EXISTS(
+DELETE FROM vuln_events ve WHERE ve.license_risk_id IS NOT NULL AND NOT EXISTS(
 	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.license_risk_id
 );
 `

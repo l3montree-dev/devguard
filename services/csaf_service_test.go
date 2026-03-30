@@ -227,7 +227,7 @@ func TestCalculateVulnStateInformation(t *testing.T) {
 		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
 		for _, vulnPtr := range falsePositiveVulns {
 			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{CreatedAt: eventTime, Justification: utils.Ptr("This is a false positive"), Type: dtos.EventTypeFalsePositive})
+			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{CreatedAt: eventTime, Justification: utils.Ptr("This is a false positive"), MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Type: dtos.EventTypeFalsePositive})
 		}
 
 		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
@@ -316,19 +316,19 @@ func TestGetMostRecentJustifications(t *testing.T) {
 	})
 	t.Run("should return the latest justification if multiple are present", func(t *testing.T) {
 		vulns[0].State = dtos.VulnStateFalsePositive
-		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{CreatedAt: eventTimeT1, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is outdated")})
+		vulns[0].Events = append(vulns[0].Events, models.VulnEvent{CreatedAt: eventTimeT1, Type: dtos.EventTypeFalsePositive, MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Justification: utils.Ptr("this information is outdated")})
 
 		vulns[1].State = dtos.VulnStateFalsePositive
-		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{CreatedAt: eventTimeT2, Type: dtos.EventTypeFalsePositive, Justification: utils.Ptr("this information is up to date")})
+		vulns[1].Events = append(vulns[1].Events, models.VulnEvent{CreatedAt: eventTimeT2, Type: dtos.EventTypeFalsePositive, MechanicalJustification: dtos.ComponentNotPresent, Justification: utils.Ptr("this information is up to date")})
 
 		// latest event has no justifications
 		vulns[2].State = dtos.VulnStateFixed
 		vulns[2].Events = append(vulns[2].Events, models.VulnEvent{CreatedAt: eventTimeT3, Type: dtos.EventTypeFixed})
 
 		justification, mechanicalJustification, timestamp := getMostRecentJustifications(vulns)
-		assert.Equal(t, "this information is up to date", *justification)
-		assert.Equal(t, *mechanicalJustification, dtos.ComponentNotPresent)
-		assert.Equal(t, eventTimeT2, *timestamp, "the justification at T2 was the after the mechanical justification at T1")
+		assert.Equal(t, "this information is up to date", *justification, "use the most recently provided justification")
+		assert.Equal(t, *mechanicalJustification, dtos.ComponentNotPresent, "also take the latest mechanical justification at t2")
+		assert.Equal(t, eventTimeT2, *timestamp, "timestamps should also match the one from the events")
 	})
 }
 
