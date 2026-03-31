@@ -56,4 +56,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewCveRelationshipRepository, fx.As(new(shared.CVERelationshipRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRepository, fx.As(new(shared.VEXRuleRepository)))),
 	fx.Provide(fx.Annotate(NewExternalReferenceRepository, fx.As(new(shared.ExternalReferenceRepository)))),
+	fx.Provide(fx.Annotate(NewTrustedEntityRepository, fx.As(new(shared.TrustedEntityRepository)))),
 )

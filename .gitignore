@@ -30,3 +30,6 @@ vulndb-tmp-*
 cert.pem
 key.pem
 cache
+CLAUDE.md
+.claudeignore
+result

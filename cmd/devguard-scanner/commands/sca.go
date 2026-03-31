@@ -88,6 +88,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	sbomFile := filepath.Join(workDir, filename)
 
 	var trivyCmd *exec.Cmd
+
 	if isImage {
 		image := pathOrImage
 		// login in to docker registry first before we try to run trivy
@@ -343,6 +344,13 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		config.RuntimeBaseConfig.Image = args[0]
 	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
 		config.RuntimeBaseConfig.Path = args[0]
+	}
+
+	if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+		// download any config file if exists
+		if err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName); err != nil {
+			slog.Warn("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
+		}
 	}
 
 	// in case it's a docker image we need to scan the image and try to download attestations

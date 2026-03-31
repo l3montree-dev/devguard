@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"time"
@@ -391,11 +392,44 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 			if !ok {
 				return ctx.NoContent(404)
 			}
-			return ctx.JSON(200, configContent)
+			return ctx.String(200, configContent.(string))
 		}
-		return ctx.JSON(200, configContent)
+		return ctx.String(200, configContent.(string))
 	}
-	return ctx.JSON(200, configContent)
+	return ctx.String(200, configContent.(string))
+}
+
+func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+	configID := ctx.Param("config-file")
+
+	if configID == "" {
+		return echo.NewHTTPError(400, "config file id is required")
+	}
+
+	// read the body as string
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
+	}
+	configContent := string(body)
+
+	if asset.ConfigFiles == nil {
+		asset.ConfigFiles = make(map[string]any)
+	}
+
+	if configContent == "" {
+		// if the content is empty, we want to delete the config file
+		delete(asset.ConfigFiles, configID)
+	} else {
+		asset.ConfigFiles[configID] = configContent
+	}
+	err = a.assetRepository.Update(ctx.Request().Context(), nil, &asset)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
+	}
+
+	return ctx.String(200, configContent)
 }
 
 func (a *AssetController) GetBadges(ctx shared.Context) error {

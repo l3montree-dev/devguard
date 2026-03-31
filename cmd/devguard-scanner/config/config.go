@@ -17,14 +17,20 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -249,4 +255,74 @@ func SetXAssetHeaders(req *http.Request) {
 	if RuntimeBaseConfig.DefaultBranch != "" {
 		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
 	}
+}
+
+func getSlugsFromAssetName(assetName string) (string, string, string, error) {
+	// split the asset name
+	assetParts := strings.Split(assetName, "/")
+	if len(assetParts) == 5 {
+		// the user probably provided the full url
+		// check if projects and assets is part of the asset parts - if so, remove them
+		// <organization>/projects/<project>/assets/<asset>
+		if assetParts[1] == "projects" && assetParts[3] == "assets" {
+			assetParts = []string{assetParts[0], assetParts[2], assetParts[4]}
+		}
+	}
+	if len(assetParts) != 3 {
+		return "", "", "", fmt.Errorf("invalid asset name: %s", assetName)
+	}
+	return assetParts[0], assetParts[1], assetParts[2], nil
+}
+
+func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) error {
+	configContent, err := GetConfigFile(ctx, configFileName, assetName)
+
+	if err != nil {
+		slog.Warn("could not get config file, using default trivy config", "err", err)
+	} else {
+		// write the config to a file
+		err = os.WriteFile(configFileName, []byte(configContent), 0644)
+		if err != nil {
+			slog.Warn("could not write config file, using default trivy config", "err", err)
+		}
+	}
+
+	return nil
+}
+
+func GetConfigFile(ctx context.Context, configID string, assetName string) (string, error) {
+	// get the organization, project and asset slug from the asset name
+	org, project, asset, err := getSlugsFromAssetName(assetName)
+	if err != nil {
+		return "", err
+	}
+
+	// download the config file from the server
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/api/v1/organizations/%s/projects/%s/assets/%s/config-files/%s", RuntimeBaseConfig.APIURL, org, project, asset, configID), nil)
+	if err != nil {
+		return "", errors.Wrap(err, "could not create request")
+	}
+	SetXAssetHeaders(req)
+
+	client, err := devguard.NewHTTPClient(RuntimeBaseConfig.Token, RuntimeBaseConfig.APIURL)
+	if err != nil {
+		return "", errors.Wrap(err, "could not create HTTP client")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.Wrap(err, "could not send request")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("could not get config file: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "could not read response body")
+	}
+
+	return string(body), nil
 }

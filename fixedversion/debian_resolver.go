@@ -148,15 +148,14 @@ var distroToSuite = map[string]string{
 }
 
 func NewDebianResolver() *DebianResolver {
-	d := DebianResolver{}
+	d := DebianResolver{
+		index:      make(map[distroArch]*packageIndex),
+		timestamps: make(map[distroArch]time.Time),
+	}
 	return &d
 }
 
 func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error) {
-	if d.index == nil {
-		d.index = make(map[distroArch]*packageIndex)
-	}
-
 	key := distroArch{suite, arch}
 	if idx, exists := d.index[key]; exists {
 		// check if older than 12h

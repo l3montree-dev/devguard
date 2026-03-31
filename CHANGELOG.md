@@ -2,7 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unstable]
+## [v1.2.0] - 2026-03-30
+
+### Added
+
+- New VEX and SBOM endpoints on asset versions — clients can now retrieve VEX documents and SBOM data directly from asset version routes; the artifact service was updated to collect and surface VEX information alongside SBOM graphs
+- `MergeGraph` now tracks removed nodes and edges so callers can detect deletions when merging two SBOM graphs
+- Config-file management endpoints for asset, organization, and project controllers — authenticated clients can read and update their DevGuard config files via the API; the scanner gained matching support for writing config files to disk
+- RBAC authorization added to the organization overview dashboard endpoint
+- Crowdsourced VEX algorithm: calculates a confidence/trust score for VEX justifications based on community signals, using an exponential-decay diminishing function and tie-breaking logic; includes a new CLI command to generate trust scores for organizations and projects
+- Quick Fix feature: given a vulnerable PURL, the API resolves recommended fixed versions by querying upstream package registries (NPM, Debian) and walking the dependency tree to find the closest safe version; supports semver constraints and optional dependencies
+
+### Changed
+
+- CSAF HTML index: unified title generation and vulnerability fetching across yearly index pages; events are now chunked together for more coherent report sections; index entries are cached for 12 hours to reduce redundant database queries
+- CSAF report title logic and tracking ID generation revised; revision entry ordering corrected; textual summary of revision history entries updated
+- NPM fixed-version resolver migrated to full semver parsing and constraint evaluation; no longer writes a `package.json` to disk as a side effect
+- Debian package mapping: `packages.xz` parsing memory footprint reduced from ~70 MB to ~9 MB by using a single arena allocation and token-based lookup instead of building a full map
+- Vulnerability code snippets exceeding 10 KB are now dropped before storage to prevent excessive database bloat
+- Jsonnet user mapper updated to fall back to GitHub login when no explicit name is available
+- `isCVE` helper function rewritten to use a regex for stricter CVE-ID validation
+- Orphaned record cleanup (`CleanupOrphanedRecordsSQL`) is now managed by a dedicated background daemon, replacing the previous fire-and-forget goroutine
+
+### Fixed
+
+- Nil pointer panic in the Debian package resolver when processing packages without version information; Debian package mapping files removed as they are no longer used
+- Double asset-version entries created when processing PURLs with identical coordinates
+- Inconsistent product-ID construction in CSAF reports leading to mismatched references
+- Incorrect SQL `COALESCE` syntax in statistics queries
+- Null values appearing in average-score aggregations
+- Total-count query returning incorrect results for vulnerability statistics
+- Org risk history endpoint returning stale or incorrect data
 
 ## [v1.1.1] - 2026-03-23
 

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
@@ -75,6 +76,8 @@ type PersonalAccessTokenService interface {
 
 type CSAFService interface {
 	GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
+	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
+	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
 type SBOMScanner interface {
@@ -360,6 +363,7 @@ type ArtifactService interface {
 	SaveArtifact(ctx context.Context, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
+	GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -372,11 +376,11 @@ type DependencyVulnService interface {
 	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
-	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error)
+	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
 }
 
 type AssetVersionService interface {
-	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, artifactName string, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
+	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
@@ -401,6 +405,7 @@ type AssetVersionRepository interface {
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
 	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 }
 
 type FirstPartyVulnService interface {
@@ -693,6 +698,17 @@ const (
 	ActionUpdate Action = "update"
 	ActionDelete Action = "delete"
 )
+
+type TrustedEntityRepository interface {
+	utils.Repository[uuid.UUID, models.TrustedEntity, DB]
+	UpsertOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID, trustScore float64) error
+	UpsertProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID, trustScore float64) error
+	GetOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) (*models.TrustedEntity, error)
+	GetProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) (*models.TrustedEntity, error)
+	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
+	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
+	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
+}
 
 type Object string
 

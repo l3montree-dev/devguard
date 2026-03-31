@@ -525,48 +525,12 @@ func (c *ArtifactController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return vex.VEX{}, err
 	}
 
 	return c.assetVersionService.BuildOpenVeX(ctx.Request().Context(), nil, asset, assetVersion, org.Slug, dependencyVulns), nil
-}
-
-func (c *ArtifactController) gatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	// get all associated dependencyVulns
-	dependencyVulns, err := c.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var defaultVulns []models.DependencyVuln
-	if assetVersion.DefaultBranch {
-		return dependencyVulns, nil
-	}
-
-	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = c.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
-	if err != nil {
-		return nil, err
-	}
-
-	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
-	m := make(map[string]bool)
-	for _, v := range defaultVulns {
-		if v.State == dtos.VulnStateFixed {
-			m[fmt.Sprintf("%s/%s", v.CVEID, v.ComponentPurl)] = true
-		}
-	}
-
-	// mark all vulns as fixed if they are in the map
-	for i := range dependencyVulns {
-		if m[fmt.Sprintf("%s/%s", dependencyVulns[i].CVEID, dependencyVulns[i].ComponentPurl)] {
-			dependencyVulns[i].State = dtos.VulnStateFixed
-		}
-	}
-	return dependencyVulns, nil
 }
 
 func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph, error) {
@@ -581,12 +545,12 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact.ArtifactName, dependencyVulns), nil
+	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns), nil
 }
 
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
@@ -621,7 +585,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := c.gatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
+			dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
 			if err != nil {
 				return nil, err
 			}
@@ -630,7 +594,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				return nil, fmt.Errorf("FRONTEND_URL is not set")
 			}
 
-			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, artifact, dependencyVulns)
+			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))
