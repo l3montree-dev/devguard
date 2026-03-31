@@ -41,7 +41,7 @@ include:
 
 # ── api-pipeline ──────────────────────────────────────────────────────────────
 
-  - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/full-nix.yml
+  - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/full-nix.yml
     inputs:
       devguard_asset_name: "$DEVGUARD_ASSET_NAME"
       devguard_api_url: "$DEVGUARD_API_URL"
@@ -49,10 +49,11 @@ include:
       nix_target_amd64: "devguard-0-amd64"
       nix_target_arm64: "devguard-0-arm64"
       arm64_runner_tag: "arm"
+      version: nix
 
 # ── scanner-pipeline ──────────────────────────────────────────────────────────
 
-  - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/full-nix.yml
+  - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/full-nix.yml
     inputs:
       image_suffix: "scanner"
       devguard_asset_name: "$DEVGUARD_ASSET_NAME"
@@ -62,3 +63,4 @@ include:
       nix_target_arm64: "devguard-scanner-0-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":scanner"
+      version: nix
