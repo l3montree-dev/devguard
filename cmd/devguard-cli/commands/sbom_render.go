@@ -36,8 +36,11 @@ func newRenderCommand() *cobra.Command {
 		inputFile                     string
 		outputFile                    string
 		format                        string
+		layout                        string
+		fromBOMRef                    string
 		maxDepth                      int
 		showVulns                     bool
+		includeFiles                  bool
 		keepOriginalSbomRootComponent bool
 	)
 
@@ -45,8 +48,8 @@ func newRenderCommand() *cobra.Command {
 		Use:   "render",
 		Short: "Render a CycloneDX SBOM as a graphviz diagram",
 		Long: `Render a CycloneDX SBOM as a graphviz diagram.
-		
-This command reads a CycloneDX SBOM file and generates a visualization using graphviz. 
+
+This command reads a CycloneDX SBOM file and generates a visualization using graphviz.
 The graph shows the dependency tree and can optionally include vulnerability information.
 
 Examples:
@@ -63,17 +66,23 @@ Examples:
   devguard-cli sbom render -i sbom.json --show-vulns -o diagram.pdf
 
   # Limit depth to avoid huge graphs
-  devguard-cli sbom render -i sbom.json --max-depth 5 -o diagram.pdf`,
+  devguard-cli sbom render -i sbom.json --max-depth 5 -o diagram.pdf
+
+  # Render only the subgraph rooted at a specific component
+  devguard-cli sbom render -i sbom.json --from '/nix/store/h19kjqi10ynjk0i6scllhv82gx45p58w-go-1.25.5.drv' -o go.svg`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return renderSBOM(inputFile, outputFile, format, maxDepth, showVulns, keepOriginalSbomRootComponent)
+			return renderSBOM(inputFile, outputFile, format, layout, fromBOMRef, maxDepth, showVulns, includeFiles, keepOriginalSbomRootComponent)
 		},
 	}
 
 	renderCmd.Flags().StringVarP(&inputFile, "input", "i", "", "Input CycloneDX SBOM file (JSON format)")
 	renderCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file (pdf, png, svg, or dot)")
 	renderCmd.Flags().StringVarP(&format, "format", "f", "", "Output format (auto-detected from file extension, or specify: dot, svg, png, pdf)")
+	renderCmd.Flags().StringVarP(&layout, "layout", "l", "twopi", "Graphviz layout engine: dot (hierarchical tree, slow on large graphs), twopi (radial tree, best for SBOMs), sfdp (force-directed), fdp, circo")
+	renderCmd.Flags().StringVar(&fromBOMRef, "from", "", "Start the graph from this BOM ref instead of the root (renders only the subgraph reachable from this node)")
 	renderCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
 	renderCmd.Flags().BoolVarP(&showVulns, "show-vulns", "v", false, "Show vulnerabilities in the graph")
+	renderCmd.Flags().BoolVar(&includeFiles, "include-files", false, "Include 'file' type components (source tarballs, scripts — skipped by default as they cannot match CVEs)")
 	renderCmd.Flags().BoolVarP(&keepOriginalSbomRootComponent, "keep-root-component", "", false, "Keep the original SBOM root component instead of replacing it with an info source node")
 
 	if err := renderCmd.MarkFlagRequired("input"); err != nil {
@@ -83,7 +92,7 @@ Examples:
 	return renderCmd
 }
 
-func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, keepOriginalSbomRootComponent bool) error {
+func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles, keepOriginalSbomRootComponent bool) error {
 	// Read the SBOM file
 	data, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -103,7 +112,10 @@ func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, k
 	}
 
 	// Generate DOT format
-	dotContent := generateDOT(graph, maxDepth, showVulns)
+	dotContent, err := generateDOT(graph, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
+	if err != nil {
+		return err
+	}
 
 	// Determine output format
 	if format == "" && outputFile != "" {
@@ -132,13 +144,12 @@ func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, k
 		return nil
 	}
 
-	// For other formats (pdf, png, svg), call dot command
-	if err := checkGraphvizInstalled(); err != nil {
-		return fmt.Errorf("graphviz is required for %s output: %w\nInstall with: brew install graphviz (macOS) or apt-get install graphviz (Linux)", format, err)
+	// For other formats (pdf, png, svg), call the chosen layout engine binary
+	if _, err := exec.LookPath(layout); err != nil {
+		return fmt.Errorf("graphviz layout engine %q not found in PATH\nInstall with: brew install graphviz (macOS) or apt-get install graphviz (Linux)", layout)
 	}
 
-	// Call dot command to generate the output
-	cmd := exec.Command("dot", "-T"+format, "-o", outputFile)
+	cmd := exec.Command(layout, "-T"+format, "-o", outputFile)
 	cmd.Stdin = strings.NewReader(dotContent)
 
 	var stderr bytes.Buffer
@@ -152,22 +163,36 @@ func renderSBOM(inputFile, outputFile, format string, maxDepth int, showVulns, k
 	return nil
 }
 
-func checkGraphvizInstalled() error {
-	_, err := exec.LookPath("dot")
-	if err != nil {
-		return fmt.Errorf("graphviz 'dot' command not found in PATH")
-	}
-	return nil
-}
-
-func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) string {
+func generateDOT(graph *normalize.SBOMGraph, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) (string, error) {
 	var sb strings.Builder
 
-	// Start digraph
 	sb.WriteString("digraph SBOM {\n")
-	sb.WriteString("  rankdir=TB;\n")
-	sb.WriteString("  node [shape=box, style=rounded];\n")
-	sb.WriteString("  edge [color=gray];\n\n")
+
+	// Graph-level attributes tuned per layout engine.
+	// concentrate=true merges parallel edges (shared deps), which dramatically
+	// reduces visual noise in large SBOMs regardless of layout.
+	sb.WriteString("  concentrate=true;\n")
+	sb.WriteString("  overlap=false;\n")
+	sb.WriteString("  splines=curved;\n")
+	switch layout {
+	case "dot":
+		// Hierarchical — respects rankdir, good for small/medium graphs
+		sb.WriteString("  rankdir=TB;\n")
+		sb.WriteString("  ranksep=0.8;\n")
+		sb.WriteString("  nodesep=0.4;\n")
+	case "twopi":
+		// Radial tree — root in centre, deps fan outward; scales to 1000+ nodes
+		sb.WriteString("  ranksep=3;\n")
+	case "circo":
+		// Circular — good when all nodes have similar importance
+		sb.WriteString("  ranksep=1.5;\n")
+	default:
+		// sfdp / fdp — force-directed; add spring tuning to reduce clumping
+		sb.WriteString("  K=0.8;\n")
+		sb.WriteString("  repulsiveforce=2.0;\n")
+	}
+	sb.WriteString("  node [shape=box, style=rounded, fontsize=9, width=0.3, height=0.2];\n")
+	sb.WriteString("  edge [color=gray60, arrowsize=0.6];\n\n")
 
 	visited := make(map[string]bool)
 	depths := make(map[string]int)
@@ -326,30 +351,56 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 		}
 	}
 
-	// BFS traversal to build the graph
-	var traverse func(node *normalize.GraphNode, depth int)
-	traverse = func(node *normalize.GraphNode, depth int) {
+	// Traversal builds the DOT graph.
+	//
+	// effectiveParentID is the sanitized ID of the nearest rendered ancestor.
+	// When a file-type node is elided we pass the effectiveParentID unchanged
+	// to its children, so that A → B(file) → C is rendered as A → C.
+	var traverse func(node *normalize.GraphNode, depth int, effectiveParentID string)
+	traverse = func(node *normalize.GraphNode, depth int, effectiveParentID string) {
 		if node == nil || (maxDepth > 0 && depth > maxDepth) {
 			return
 		}
 
-		if visited[node.BOMRef] {
+		isFileNode := !includeFiles &&
+			node.Type == normalize.GraphNodeTypeComponent &&
+			node.Component != nil &&
+			node.Component.Type == cdx.ComponentTypeFile
+
+		if isFileNode {
+			// Elide this node: don't render it, but keep traversing its
+			// children with the same effectiveParentID so transitive deps
+			// are still connected (A → file → C becomes A → C).
+			if visited[node.BOMRef] {
+				return // already processed this file node, avoid cycles
+			}
+			visited[node.BOMRef] = true
+			for child := range graph.Children(node.BOMRef) {
+				traverse(child, depth+1, effectiveParentID)
+			}
 			return
+		}
+
+		sanitizedID := sanitizeID(node.BOMRef)
+
+		// Draw the incoming edge from the effective parent (if any).
+		if effectiveParentID != "" {
+			fmt.Fprintf(&sb, "  \"%s\" -> \"%s\";\n", effectiveParentID, sanitizedID)
+		}
+
+		if visited[node.BOMRef] {
+			return // node already rendered, edge drawn above, stop here
 		}
 		visited[node.BOMRef] = true
 		depths[node.BOMRef] = depth
 
-		// Add node
-		sanitizedID := sanitizeID(node.BOMRef)
+		// Render this node.
 		label := escapeLabel(getLabel(node))
 		color := getNodeColor(node)
-
-		// Use different node attributes for better PURL visualization
 		var nodeAttrs string
 		if node.Type == normalize.GraphNodeTypeComponent {
 			pkgType := getPkgType(node)
 			if pkgType != "" {
-				// Monospace font for package names
 				nodeAttrs = fmt.Sprintf("label=\"%s\", fillcolor=\"%s\", style=\"rounded,filled\", fontname=\"Courier\"", label, color)
 			} else {
 				nodeAttrs = fmt.Sprintf("label=\"%s\", fillcolor=\"%s\", style=\"rounded,filled\"", label, color)
@@ -357,20 +408,23 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 		} else {
 			nodeAttrs = fmt.Sprintf("label=\"%s\", fillcolor=\"%s\", style=\"rounded,filled\"", label, color)
 		}
-
 		fmt.Fprintf(&sb, "  \"%s\" [%s];\n", sanitizedID, nodeAttrs)
 
-		// Add edges to children
 		for child := range graph.Children(node.BOMRef) {
-			childSanitizedID := sanitizeID(child.BOMRef)
-			fmt.Fprintf(&sb, "  \"%s\" -> \"%s\";\n", sanitizedID, childSanitizedID)
-			traverse(child, depth+1)
+			traverse(child, depth+1, sanitizedID)
 		}
 	}
 
-	// Start from root
-	rootNode := graph.Node(normalize.GraphRootNodeID)
-	traverse(rootNode, 0)
+	// Resolve the starting node.
+	startBOMRef := normalize.GraphRootNodeID
+	if fromBOMRef != "" {
+		startBOMRef = fromBOMRef
+	}
+	startNode := graph.Node(startBOMRef)
+	if startNode == nil {
+		return "", fmt.Errorf("BOM ref %q not found in SBOM", startBOMRef)
+	}
+	traverse(startNode, 0, "")
 
 	// Optionally add vulnerability information
 	if showVulns {
@@ -396,5 +450,5 @@ func generateDOT(graph *normalize.SBOMGraph, maxDepth int, showVulns bool) strin
 	}
 
 	sb.WriteString("}\n")
-	return sb.String()
+	return sb.String(), nil
 }
