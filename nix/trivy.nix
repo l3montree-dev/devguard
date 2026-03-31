@@ -35,19 +35,14 @@ buildGoModule rec {
 
   nativeBuildInputs = [ installShellFiles ];
 
-  postInstall = ''
-    installShellCompletion --cmd trivy \
-      --bash <($out/bin/trivy completion bash) \
-      --fish <($out/bin/trivy completion fish) \
-      --zsh  <($out/bin/trivy completion zsh)
-  '';
+  postInstall = "";
 
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "A comprehensive and versatile security scanner";
     homepage = "https://github.com/aquasecurity/trivy";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
     mainProgram = "trivy";
   };
 }

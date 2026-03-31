@@ -3,8 +3,9 @@
 # Mirrors the structure of .github/workflows/devguard-scanner.yaml.
 
 stages:
+  - .pre
+  - build
   - test
-  - scan
   - oci-image
   - attestation
 

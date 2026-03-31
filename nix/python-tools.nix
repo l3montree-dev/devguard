@@ -31,7 +31,7 @@
   pythonSet = (callPackage pyproject-nix.build.packages {
     python = python313;
   }).overrideScope (lib.composeManyExtensions [
-    pyproject-build-systems.overlays.default
+    pyproject-build-systems.overlays.wheel
     overlay
   ]);
   venv = pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default;

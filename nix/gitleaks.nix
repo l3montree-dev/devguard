@@ -23,12 +23,7 @@ buildGoModule rec {
 
   nativeBuildInputs = [ installShellFiles ];
 
-  postInstall = ''
-    installShellCompletion --cmd gitleaks \
-      --bash <($out/bin/gitleaks completion bash) \
-      --fish <($out/bin/gitleaks completion fish) \
-      --zsh  <($out/bin/gitleaks completion zsh)
-  '';
+  postInstall = "";
 
   doCheck = false;
 

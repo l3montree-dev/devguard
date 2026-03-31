@@ -52,26 +52,9 @@ NIX_CACHE_REGION     ?= garage
 NIX_CACHE_SECRET_KEY ?= /etc/nix/cache-priv-key.pem
 
 nix-cache-push::
-	@echo "Building all Nix targets..."
-	nix build --no-link \
-		.#packages.x86_64-linux.trivyFromSource \
-		.#packages.x86_64-linux.craneFromSource \
-		.#packages.x86_64-linux.pythonTools \
-		.#packages.x86_64-linux.gitleaksFromSource \
-		.#packages.aarch64-linux.trivyFromSource \
-		.#packages.aarch64-linux.craneFromSource \
-		.#packages.aarch64-linux.pythonTools \
-		.#packages.aarch64-linux.gitleaksFromSource
-	@echo "Collecting full closures (build + runtime) for all targets..."
+	@echo "Building dependency bundles..."
+	nix build --no-link .#deps
+	@echo "Pushing closures to S3 cache..."
 	nix copy \
-		$$(nix path-info -r \
-			.#packages.x86_64-linux.trivyFromSource \
-			.#packages.x86_64-linux.craneFromSource \
-			.#packages.x86_64-linux.pythonTools \
-			.#packages.x86_64-linux.gitleaksFromSource \
-			.#packages.aarch64-linux.trivyFromSource \
-			.#packages.aarch64-linux.craneFromSource \
-			.#packages.aarch64-linux.pythonTools \
-			.#packages.aarch64-linux.gitleaksFromSource \
-		) \
+		$$(nix path-info -r .#deps) \
 		--to 's3://$(NIX_CACHE_BUCKET)?endpoint=$(NIX_CACHE_ENDPOINT)&region=$(NIX_CACHE_REGION)&scheme=https&profile=garage&secret-key=$(NIX_CACHE_SECRET_KEY)'

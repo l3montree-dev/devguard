@@ -1,12 +1,26 @@
-{ pkgs, self }: rec {
+{ pkgs, self, pyproject-nix, uv2nix, pyproject-build-systems }: rec {
   devguardBinaries = import ./devguard.nix { inherit self; buildGoModule = pkgs.buildGoModule; };
 
-  craneFromSource = import ./crane.nix {};
-  gitleaksFromSource = import ./gitleaks.nix {};
-  trivyFromSource = import ./trivy.nix {};
+  args = { 
+    lib = pkgs.lib; 
+    buildGoModule = pkgs.buildGoModule; 
+    fetchFromGitHub = pkgs.fetchFromGitHub; 
+    installShellFiles = pkgs.installShellFiles; 
+  };
+
+  craneFromSource = import ./crane.nix args;
+  gitleaksFromSource = import ./gitleaks.nix args;
+  trivyFromSource = import ./trivy.nix args;
+  
   common = import ./common.nix { inherit self; };
   postgresql = import ./postgresql.nix {};
-  pythonTools = import ./python-tools.nix {};
+  pythonTools = import ./python-tools.nix {
+  lib = pkgs.lib;
+  python313 = pkgs.python313;
+  callPackage = pkgs.callPackage;
+  # passed explicitly from flake.nix
+  inherit uv2nix pyproject-nix pyproject-build-systems;
+  };
 
   appConfig = pkgs.runCommand "devguard-app-config" { } ''
     install -D -m 0644 ${
@@ -37,6 +51,12 @@
     };
   };
 
+  # /tmp with sticky bit — avoids enableFakechroot (needs proot, Linux-only)
+  scannerTmpDir = pkgs.runCommand "scanner-tmp-dir" { } ''
+    mkdir -p $out/tmp
+    chmod 1777 $out/tmp
+  '';
+
   devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
     name = "devguard-scanner";
     tag = common.version;
@@ -48,14 +68,8 @@
       pythonTools.venv
       craneFromSource
       gitleaksFromSource
+      scannerTmpDir
     ];
-
-    fakeRootCommands = ''
-      mkdir -p tmp
-      chmod 1777 tmp
-    '';
-
-    enableFakechroot = true;
 
     config = {
       Cmd = [ "/bin/devguard-scanner" ];

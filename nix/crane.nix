@@ -30,12 +30,7 @@ buildGoModule rec {
 
   nativeBuildInputs = [ installShellFiles ];
 
-  postInstall = ''
-    installShellCompletion --cmd crane \
-      --bash <($out/bin/crane completion bash) \
-      --fish <($out/bin/crane completion fish) \
-      --zsh  <($out/bin/crane completion zsh)
-  '';
+  postInstall = "";
 
   doCheck = false;
 

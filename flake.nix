@@ -28,50 +28,55 @@
         hostPkgs = nixpkgs.legacyPackages.${system};
         sbomnixPkgs = sbomnix.packages.${system};
 
-        targetPkgsAmd64 = nixpkgs.legacyPackages.${system}.pkgsCross.gnu64;
-        targetPkgsArm64 = nixpkgs.legacyPackages.${system}.pkgsCross.aarch64-multiplatform;
+        targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux;
+        targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux;
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; inherit self; };
-        ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self; };
-        ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self; };
-
-        # Host packages — used for the dev shell and SBOM scripts that run
-        # directly on the developer's machine.
-        # Third-party tools built from source — used in the scanner OCI image.
-        #
-        # Single Python env containing semgrep + checkov.
-        # semgrep-core is the pre-built OCaml binary distributed via nixpkgs;
-        # the Python CLI and checkov are compiled from source.
-        pythonTools = import ./nix/python-tools.nix {
-          inherit uv2nix pyproject-nix pyproject-build-systems;
-        };
+        ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
+        ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
 
         amd64Dependencies = [
           ociImagesAmd64.craneFromSource
           ociImagesAmd64.gitleaksFromSource
           ociImagesAmd64.trivyFromSource
         ];
+
         arm64Dependencies = [
           ociImagesArm64.craneFromSource
           ociImagesArm64.gitleaksFromSource
           ociImagesArm64.trivyFromSource
         ];
-    
 
-      in {
-        packages = {
-          # those are binaries compiled for the host platform
+        commonBuildOutputs = {
           devguardScanner = binaries.devguardScanner;
           devguard = binaries.devguard;
           devguardCLI = binaries.devguardCLI;
+        };
 
-          devguard-0-amd64 = ociImagesAmd64.devguardOCI;
-          devguard-scanner-0-amd64 = ociImagesAmd64.devguardScannerOCI;
+        arm64Packages = {
           devguard-0-arm64 = ociImagesArm64.devguardOCI;
           devguard-scanner-0-arm64 = ociImagesArm64.devguardScannerOCI;
-          postgresql-0-amd64 = ociImagesAmd64.postgresqlOCI;
           postgresql-0-arm64 = ociImagesArm64.postgresqlOCI;
-        };
+          deps = hostPkgs.symlinkJoin {
+            name = "devguard-deps-arm64";
+            paths = arm64Dependencies ++ [ ociImagesArm64.pythonTools.venv ];
+          };
+        } // commonBuildOutputs;
+
+        amd64Packages =  {
+          # those are binaries compiled for the host platform         
+          devguard-0-amd64 = ociImagesAmd64.devguardOCI;
+          devguard-scanner-0-amd64 = ociImagesAmd64.devguardScannerOCI;
+          postgresql-0-amd64 = ociImagesAmd64.postgresqlOCI;
+
+          deps = hostPkgs.symlinkJoin {
+            name = "devguard-deps-amd64";
+            paths = amd64Dependencies ++ [ ociImagesAmd64.pythonTools.venv ];
+          };
+        } // commonBuildOutputs;
+
+      in {
+        packages = if system == "aarch64-linux" then arm64Packages else if system == "x86_64-linux" then amd64Packages else if system == "aarch64-darwin" then arm64Packages else if system == "x86_64-darwin" then amd64Packages else commonBuildOutputs;
 
         devShells.default =
           hostPkgs.mkShell { buildInputs = [ hostPkgs.go hostPkgs.gotools hostPkgs.gopls binaries.devguardScanner binaries.devguardCli ]; };
