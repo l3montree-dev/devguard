@@ -42,6 +42,7 @@ tests:
   devguard_asset_name: "$DEVGUARD_ASSET_NAME"
   devguard_api_url: "$DEVGUARD_API_URL"
   devguard_web_ui: "$DEVGUARD_WEB_UI"
+  devguard_token: "$DEVGUARD_TOKEN"
   nix_cache_substituter: https://nix.garage.l3montree.cloud
   nix_cache_public_key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
   nix_cache_s3_bucket: nix
