@@ -13,7 +13,12 @@
   trivyFromSource = import ./trivy.nix args;
   
   common = import ./common.nix { inherit self; };
-  postgresql = import ./postgresql.nix {};
+  postgresql = import ./postgresql.nix {
+    postgresql_16 = pkgs.postgresql_16;
+    fetchurl = pkgs.fetchurl;
+    stdenv = pkgs.stdenv;
+    runCommand = pkgs.runCommand;
+  };
   pythonTools = import ./python-tools.nix {
   lib = pkgs.lib;
   python313 = pkgs.python313;

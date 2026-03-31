@@ -19,6 +19,6 @@
   };
 
   config = runCommand "postgresql-config" {} ''
-    install -D -m 0644 ${./nix/postgresql.conf} $out/etc/postgresql/postgresql.conf
+    install -D -m 0644 ${./postgresql.conf} $out/etc/postgresql/postgresql.conf
   '';
 }
