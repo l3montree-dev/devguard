@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Drop updated_at column to save space since vuln_events are immutable
 ALTER TABLE public.vuln_events DROP COLUMN IF EXISTS updated_at;
 
@@ -15,16 +17,35 @@ UPDATE public.vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUI
 UPDATE public.vuln_events SET license_risk_id     = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'licenseRisk';
 UPDATE public.vuln_events SET first_party_vuln_id = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'firstPartyVuln';
 
--- add constraint to check that each vuln event has exactly one vuln_id as parent
+-- add constraint to check that each vuln event has exactly one vuln_id as parent but don't validate yet
 
 ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
   (dependency_vuln_id  IS NOT NULL)::int +
   (license_risk_id     IS NOT NULL)::int +
   (first_party_vuln_id IS NOT NULL)::int = 1
-);
+) NOT VALID;
 
--- lastly drop the old column
-
+-- lastly drop the old columns
 ALTER TABLE public.vuln_events
   DROP COLUMN vuln_id,
   DROP COLUMN vuln_type;
+
+COMMIT;
+
+-- validates existing rows with a weaker lock
+ALTER TABLE public.vuln_events VALIDATE CONSTRAINT one_vuln_parent;
+
+-- then build the indexes concurrently
+DROP INDEX CONCURRENTLY IF EXISTS vuln_events_new_vuln_id_idx;
+
+CREATE INDEX CONCURRENTLY idx_vuln_events_dependency_vuln_id
+  ON vuln_events USING btree (dependency_vuln_id)
+  WHERE dependency_vuln_id IS NOT NULL;
+
+CREATE INDEX CONCURRENTLY idx_vuln_events_first_party_vuln_id
+  ON vuln_events USING btree (first_party_vuln_id)
+  WHERE first_party_vuln_id IS NOT NULL;
+
+CREATE INDEX CONCURRENTLY idx_vuln_events_license_risk_id
+  ON vuln_events USING btree (license_risk_id)
+  WHERE license_risk_id IS NOT NULL;
