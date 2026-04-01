@@ -239,12 +239,24 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				loc := result.Locations[0]
 				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
-				snippetContent := dtos.SnippetContent{
-					StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
-					EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
-					StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
-					EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
-					Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
+				var snippetContent dtos.SnippetContent
+
+				if loc.PhysicalLocation.Region == nil {
+					snippetContent = dtos.SnippetContent{
+						StartLine:   0,
+						EndLine:     0,
+						StartColumn: 0,
+						EndColumn:   0,
+						Snippet:     "",
+					}
+				} else {
+					snippetContent = dtos.SnippetContent{
+						StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
+						EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
+						StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
+						EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
+						Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
+					}
 				}
 
 				hash = firstPartyVulnerability.CalculateHash()
