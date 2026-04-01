@@ -61,11 +61,11 @@
           devguard-scanner-debug-arm64 = ociImagesArm64.devguardScannerOCI { debug = true; };
           postgresql-debug-arm64 = ociImagesArm64.postgresqlOCI { debug = true; };
 
-          deps = hostPkgs.symlinkJoin {
+          deps-arm64 = hostPkgs.symlinkJoin {
             name = "devguard-deps-arm64";
             paths = arm64Dependencies ++ [ ociImagesArm64.pythonTools.venv ];
           };
-        } // commonBuildOutputs;
+        };
 
         amd64Packages =  {
           # those are binaries compiled for the host platform         
@@ -77,14 +77,14 @@
           postgresql-debug-amd64 = ociImagesAmd64.postgresqlOCI { debug = true; };
 
 
-          deps = hostPkgs.symlinkJoin {
+          deps-amd64 = hostPkgs.symlinkJoin {
             name = "devguard-deps-amd64";
             paths = amd64Dependencies ++ [ ociImagesAmd64.pythonTools.venv ];
           };
-        } // commonBuildOutputs;
+        };
 
       in {
-        packages = if system == "aarch64-linux" then arm64Packages else if system == "x86_64-linux" then amd64Packages else if system == "aarch64-darwin" then arm64Packages else if system == "x86_64-darwin" then amd64Packages else commonBuildOutputs;
+        packages = arm64Packages // amd64Packages // commonBuildOutputs;
 
         devShells.default =
           hostPkgs.mkShell { buildInputs = [ hostPkgs.go hostPkgs.gotools hostPkgs.gopls ]; };
