@@ -16,6 +16,7 @@
         "montree",
         "nolint",
         "packageurl",
+        "Pkgs",
         "pypi",
         "sarif",
         "Vulns"

@@ -1392,12 +1392,20 @@ func (g *SBOMGraph) reachableNodes() map[string]bool {
 // removeSubtree removes all nodes and edges in the subtree rooted at the given node.
 // The node itself is kept but its children are removed.
 func (g *SBOMGraph) removeSubtree(rootID string) {
-	// Find all nodes in the subtree (but not the root itself)
+	// Determine which nodes are reachable WITHOUT going through rootID's outgoing
+	// edges.  Any node still reachable by another path (e.g. shared by a second
+	// artifact's InfoSource) must not be deleted.
+	savedEdges := g.edges[rootID]
+	g.edges[rootID] = make(map[string]struct{})
+	reachableElsewhere := g.reachableNodes()
+	g.edges[rootID] = savedEdges
+
+	// Collect nodes that are only reachable through rootID and therefore safe to remove.
 	nodesToRemove := make(map[string]bool)
 	var visit func(id string)
 	visit = func(id string) {
 		for childID := range g.edges[id] {
-			if !nodesToRemove[childID] {
+			if !nodesToRemove[childID] && !reachableElsewhere[childID] {
 				nodesToRemove[childID] = true
 				visit(childID)
 			}
