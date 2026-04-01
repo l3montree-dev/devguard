@@ -54,7 +54,9 @@ NIX_CACHE_SECRET_KEY ?= /etc/nix/cache-priv-key.pem
 nix-cache-push::
 	@echo "Building dependency bundles..."
 	nix build --no-link .#deps
+	nix build --no-link .#packages.x86_64-linux.deps
 	@echo "Pushing closures to S3 cache..."
 	nix copy \
 		$$(nix path-info -r .#deps) \
+		$$(nix path-info -r .#packages.x86_64-linux.deps) \
 		--to 's3://$(NIX_CACHE_BUCKET)?endpoint=$(NIX_CACHE_ENDPOINT)&region=$(NIX_CACHE_REGION)&scheme=https&profile=garage&secret-key=$(NIX_CACHE_SECRET_KEY)'

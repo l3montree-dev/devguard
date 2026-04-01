@@ -85,7 +85,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	} else {
 		workDir = utils.GetDirFromPath(pathOrImage)
 	}
-	sbomFile := filepath.Join(workDir, filename)
+	sbomFile := filepath.Join(os.TempDir(), filename)
 
 	var trivyCmd *exec.Cmd
 

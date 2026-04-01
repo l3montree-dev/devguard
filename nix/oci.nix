@@ -77,7 +77,7 @@
     config = {
       Cmd = [ "/bin/devguard-scanner" ];
       User = "53111:53111";
-      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" ];
+      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" "TRIVY_CACHE_DIR=/tmp/.cache/trivy" "SEMGREP_CACHE_DIR=/tmp/.cache/semgrep" ];
     };
   };
 
