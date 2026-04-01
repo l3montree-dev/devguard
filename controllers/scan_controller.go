@@ -17,9 +17,9 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -405,27 +405,15 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 
 	var sarifScan sarif.SarifSchema210Json
 
+	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
+
+	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
 	defer ctx.Request().Body.Close()
 
 	if err := ctx.Bind(&sarifScan); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
-	}
-
-	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
-	data, err := json.Marshal(&sarifScan)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	if int64(len(data)) > maxSize {
-		err = fmt.Errorf("SARIF size %d bytes exceeds limit of %d bytes", len(data), maxSize)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return echo.NewHTTPError(400, "Malformed SARIF").WithInternal(err)
 	}
 
 	org := shared.GetOrg(ctx)

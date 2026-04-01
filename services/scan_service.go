@@ -250,12 +250,17 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 						Snippet:     "",
 					}
 				} else {
+					var checkedSnippet = ""
+					if loc.PhysicalLocation.Region.Snippet != nil {
+						checkedSnippet = utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, "")
+					}
+
 					snippetContent = dtos.SnippetContent{
 						StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
 						EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
 						StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
 						EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
-						Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
+						Snippet:     checkedSnippet,
 					}
 				}
 
