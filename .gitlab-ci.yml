@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: AGPL-3.0
+# GitLab CI for the devguard repository (mirrored from GitHub).
+
+stages:
+  - .pre
+  - build
+  - test
+  - oci-image
+  - attestation
+
+variables:
+  DEVGUARD_ASSET_NAME: "l3montree-cybersecurity/projects/devguard/assets/devguard"
+  DEVGUARD_API_URL: "https://api.main.devguard.org"
+  DEVGUARD_WEB_UI: "https://main.devguard.org"
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+
+lint:
+  stage: test
+  image: golang:1.25
+  before_script:
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh
+  script:
+    - golangci-lint run --timeout=30m
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+tests:
+  stage: test
+  image: golang:1.25
+  script:
+    - go test $(go list ./... | grep -v "/mocks") -coverprofile=coverage.out
+    - go tool cover -func=coverage.out
+  artifacts:
+    name: code-coverage
+    paths:
+      - coverage.out
+    expire_in: 1 week
+
+
+.common: &common
+  devguard_asset_name: "$DEVGUARD_ASSET_NAME"
+  devguard_api_url: "$DEVGUARD_API_URL"
+  devguard_web_ui: "$DEVGUARD_WEB_UI"
+  devguard_token: "$DEVGUARD_TOKEN"
+  nix_cache_substituter: https://nix.garage.l3montree.cloud
+  nix_cache_public_key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+  nix_cache_s3_bucket: nix
+  nix_cache_region: garage
+  version: nix
+
+
+include:
+# ── api-pipeline ──────────────────────────────────────────────────────────────
+  - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/build-nix-multiarch.yml
+    inputs:
+      <<: *common
+      nix_target_amd64: "devguard-0-amd64"
+      nix_target_arm64: "devguard-0-arm64"
+      arm64_runner_tag: "arm"
+
+# ── scanner-pipeline ──────────────────────────────────────────────────────────
+  - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/build-nix-multiarch.yml
+    inputs:
+      <<: *common
+      image_suffix: "scanner"
+      nix_target_amd64: "devguard-scanner-0-amd64"
+      nix_target_arm64: "devguard-scanner-0-arm64"
+      arm64_runner_tag: "arm"
+      job_suffix: ":scanner"
+      version: nix
+
+  # ── postgresql-pipeline ──────────────────────────────────────────────────────────
+  - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/build-nix-multiarch.yml
+    inputs:
+      <<: *common
+      image_suffix: "postgresql"
+      nix_target_amd64: "postgresql-0-amd64"
+      nix_target_arm64: "postgresql-0-arm64"
+      arm64_runner_tag: "arm"
+      job_suffix: ":postgresql"
+      version: nix

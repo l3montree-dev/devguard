@@ -52,13 +52,11 @@ jobs:
         path: coverage.out
 
 
-  devguard:
-    uses: l3montree-dev/devguard-action/.github/workflows/full.yml@main
+  code-scanning:
+    uses: l3montree-dev/devguard-action/.github/workflows/code-scanning.yml@nix
     permissions:
-      contents: write
-      actions: read
+      contents: read
       security-events: write
-      packages: write
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -67,91 +65,52 @@ jobs:
       web-ui: https://main.devguard.org
       continue-on-open-code-risk: true
     secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}       
-      build-args: "--context=. --dockerfile=Dockerfile --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME --build-arg GITHUB_SHA=$GITHUB_SHA"       
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
 
-  build-scanner-image:
-    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
+  api-pipeline:
+    uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
       packages: write
-    with:
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      image-suffix: "scanner"
-    secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
-      build-args: "--context=. --dockerfile=Dockerfile.scanner --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME --build-arg GITHUB_SHA=$GITHUB_SHA"
-
-
-  # Image scanning job to detect vulnerabilities in the built Docker image
-  scanner-container-scanning:
-    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
-    permissions:
-      contents: read
       security-events: write
-    needs: 
-    - build-scanner-image
     with:
+      nix-target-amd64: devguard-0-amd64
+      nix-target-arm64: devguard-0-arm64
+      image-name: ghcr.io/${{ github.repository }}
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
-      image-suffix: "scanner"
-    secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
-      
-  deploy-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
-    permissions:
-      contents: read
-      packages: write
-    with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      image-suffix: "scanner"
-    secrets:
-      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
-  
-  sign-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
-    permissions:
-      contents: read
-      packages: write
-    with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
-      image-suffix: "scanner"
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
-  attest-scanner:
-    needs:
-    - build-scanner-image
-    - scanner-container-scanning
-    - tests
-    uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
+  scanner-pipeline:
+    needs: [tests]
+    uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
       packages: write
+      security-events: write
     with:
+      nix-target-amd64: devguard-scanner-0-amd64
+      nix-target-arm64: devguard-scanner-0-arm64
+      image-name: ghcr.io/${{ github.repository }}/scanner
+      artifact-name-suffix: scanner
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
-      image-suffix: "scanner"
+      web-ui: https://main.devguard.org
+      fail-on-cvss: high
+      fail-on-risk: high
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
