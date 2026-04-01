@@ -4,7 +4,6 @@
 
 
 -- dependency vulns
-BEGIN;
 
 -- add new uuid column
 
@@ -53,12 +52,8 @@ ALTER TABLE public.dependency_vulns RENAME COLUMN new_id TO id;
 ALTER TABLE public.artifact_dependency_vulns RENAME COLUMN new_dependency_vuln_id TO dependency_vuln_id;
 
 
-COMMIT;
-
 
 -- first party vulns
-
-BEGIN;
 
 -- add new uuid column
 
@@ -86,13 +81,8 @@ ALTER TABLE public.first_party_vulnerabilities ADD PRIMARY KEY (new_id);
 ALTER TABLE public.first_party_vulnerabilities RENAME COLUMN new_id TO id;
 
 
-COMMIT;
-
-
 -- license risks
 
-
-BEGIN;
 
 -- add new uuid column
 
@@ -141,21 +131,18 @@ ALTER TABLE public.license_risks RENAME COLUMN new_id TO id;
 ALTER TABLE public.artifact_license_risks RENAME COLUMN new_license_risk_id TO license_risk_id;
 
 
-COMMIT;
-
-
 -- Create indexes at the end
-DROP INDEX CONCURRENTLY IF EXISTS idx_artifact_dependency_vulns_dependency_vuln_id;
-CREATE INDEX CONCURRENTLY idx_artifact_dependency_vulns_dependency_vuln_id ON public.artifact_dependency_vulns USING btree (dependency_vuln_id);
+DROP INDEX IF EXISTS public.idx_artifact_dependency_vulns_dependency_vuln_id;
+CREATE INDEX idx_artifact_dependency_vulns_dependency_vuln_id ON public.artifact_dependency_vulns USING btree (dependency_vuln_id);
 
-DROP INDEX CONCURRENTLY IF EXISTS idx_dependency_vulns_cve_id;
-CREATE INDEX CONCURRENTLY idx_dependency_vulns_cve_id ON public.dependency_vulns USING btree (cve_id);
+DROP INDEX IF EXISTS public.idx_dependency_vulns_cve_id;
+CREATE INDEX idx_dependency_vulns_cve_id ON public.dependency_vulns USING btree (cve_id);
 
-DROP INDEX CONCURRENTLY IF EXISTS idx_dependency_vulns_component_purl;
-CREATE INDEX CONCURRENTLY idx_dependency_vulns_component_purl ON public.dependency_vulns USING btree (component_purl);
+DROP INDEX IF EXISTS public.idx_dependency_vulns_component_purl;
+CREATE INDEX idx_dependency_vulns_component_purl ON public.dependency_vulns USING btree (component_purl);
 
-DROP INDEX CONCURRENTLY IF EXISTS idx_artifact_license_risks_license_risk_id;
-CREATE INDEX CONCURRENTLY idx_artifact_license_risks_license_risk_id ON public.artifact_license_risks USING btree (license_risk_id);
+DROP INDEX IF EXISTS public.idx_artifact_license_risks_license_risk_id;
+CREATE INDEX idx_artifact_license_risks_license_risk_id ON public.artifact_license_risks USING btree (license_risk_id);
 
-DROP INDEX CONCURRENTLY IF EXISTS idx_license_risks_component_purl;
-CREATE INDEX CONCURRENTLY idx_license_risks_component_purl ON public.license_risks USING btree (component_purl);
+DROP INDEX IF EXISTS public.idx_license_risks_component_purl;
+CREATE INDEX idx_license_risks_component_purl ON public.license_risks USING btree (component_purl);
