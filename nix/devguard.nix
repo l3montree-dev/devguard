@@ -17,7 +17,6 @@
     fileset = lib.fileset.unions [
       ../go.mod
       ../go.sum
-      ../vendor
       (lib.fileset.fileFilter (f: f.hasExt "go") ../.)
       # go:embed assets
       ../database/migrations
