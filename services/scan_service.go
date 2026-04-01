@@ -497,13 +497,12 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// Filter out fixed vulnerabilities from the comparison.
-	// The state machine prevents detected events from reopening fixed/accepted/falsePositive vulns.
-	var filterFixed = func(dv models.DependencyVuln) bool {
+	// Keep all fixed vulns in existingDependencyVulns so that when a component reappears,
+	// the vuln lands in Unchanged rather than NewlyDiscovered. This lets us fire an
+	// explicit reopened event instead of silently resetting state via a detected event.
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dv models.DependencyVuln) bool {
 		return dv.State != dtos.VulnStateFixed
-	}
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, filterFixed)
-	existingDependencyVulns = utils.Filter(existingDependencyVulns, filterFixed)
+	})
 
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
@@ -513,7 +512,10 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 		return !slices.Contains(unfixablePurls, dv.ComponentPurl)
 	}
 
-	fixedVulns := utils.Filter(diff.FixedEverywhere, filterPredicate)
+	// Only generate fix events for vulns that are not already fixed, to avoid duplicate events.
+	fixedVulns := utils.Filter(diff.FixedEverywhere, func(dv models.DependencyVuln) bool {
+		return filterPredicate(dv) && dv.State != dtos.VulnStateFixed
+	})
 	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
 
 	// newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(diff.NewlyDiscovered, existingVulnsOnOtherBranch)
@@ -547,13 +549,23 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
+	// Vulns that were fixed and now the component reappeared: fire an explicit reopened event
+	// instead of silently resetting state via the detected path on a fresh struct.
+	vulnsToReopen := utils.Filter(diff.Unchanged, func(dv models.DependencyVuln) bool {
+		return dv.State == dtos.VulnStateFixed
+	})
+	if err := s.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, vulnsToReopen); err != nil {
+		slog.Error("error when trying to reopen previously fixed vulnerability")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
 	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, tx, assetVersion.Name, assetVersion.AssetID, &artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
+	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
 func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
