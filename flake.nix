@@ -31,7 +31,7 @@
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux;
         targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux;
         # this is only done to satisfy the expected structure in the container hardening work
-        binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; inherit self; };
+        binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; lib = hostPkgs.lib; inherit self; };
         ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
         ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
 
@@ -54,9 +54,13 @@
         };
 
         arm64Packages = {
-          devguard-0-arm64 = ociImagesArm64.devguardOCI;
-          devguard-scanner-0-arm64 = ociImagesArm64.devguardScannerOCI;
-          postgresql-0-arm64 = ociImagesArm64.postgresqlOCI;
+          devguard-arm64 = ociImagesArm64.devguardOCI { debug = false; };
+          devguard-scanner-arm64 = ociImagesArm64.devguardScannerOCI { debug = false; };
+          postgresql-arm64 = ociImagesArm64.postgresqlOCI { debug = false; };
+          devguard-debug-arm64 = ociImagesArm64.devguardOCI { debug = true; };
+          devguard-scanner-debug-arm64 = ociImagesArm64.devguardScannerOCI { debug = true; };
+          postgresql-debug-arm64 = ociImagesArm64.postgresqlOCI { debug = true; };
+
           deps = hostPkgs.symlinkJoin {
             name = "devguard-deps-arm64";
             paths = arm64Dependencies ++ [ ociImagesArm64.pythonTools.venv ];
@@ -65,9 +69,13 @@
 
         amd64Packages =  {
           # those are binaries compiled for the host platform         
-          devguard-0-amd64 = ociImagesAmd64.devguardOCI;
-          devguard-scanner-0-amd64 = ociImagesAmd64.devguardScannerOCI;
-          postgresql-0-amd64 = ociImagesAmd64.postgresqlOCI;
+          devguard-amd64 = ociImagesAmd64.devguardOCI { debug = false; };
+          devguard-scanner-amd64 = ociImagesAmd64.devguardScannerOCI { debug = false; };
+          postgresql-amd64 = ociImagesAmd64.postgresqlOCI { debug = false; };
+          devguard-debug-amd64 = ociImagesAmd64.devguardOCI { debug = true; };
+          devguard-scanner-debug-amd64 = ociImagesAmd64.devguardScannerOCI { debug = true; };
+          postgresql-debug-amd64 = ociImagesAmd64.postgresqlOCI { debug = true; };
+
 
           deps = hostPkgs.symlinkJoin {
             name = "devguard-deps-amd64";
@@ -79,6 +87,6 @@
         packages = if system == "aarch64-linux" then arm64Packages else if system == "x86_64-linux" then amd64Packages else if system == "aarch64-darwin" then arm64Packages else if system == "x86_64-darwin" then amd64Packages else commonBuildOutputs;
 
         devShells.default =
-          hostPkgs.mkShell { buildInputs = [ hostPkgs.go hostPkgs.gotools hostPkgs.gopls binaries.devguardScanner binaries.devguardCli ]; };
+          hostPkgs.mkShell { buildInputs = [ hostPkgs.go hostPkgs.gotools hostPkgs.gopls ]; };
       });
 }

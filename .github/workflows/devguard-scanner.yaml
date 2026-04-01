@@ -75,8 +75,8 @@ jobs:
       packages: write
       security-events: write
     with:
-      nix-target-amd64: devguard-0-amd64
-      nix-target-arm64: devguard-0-arm64
+      nix-target-amd64: devguard-amd64
+      nix-target-arm64: devguard-arm64
       image-name: ghcr.io/${{ github.repository }}
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -98,8 +98,8 @@ jobs:
       packages: write
       security-events: write
     with:
-      nix-target-amd64: devguard-scanner-0-amd64
-      nix-target-arm64: devguard-scanner-0-arm64
+      nix-target-amd64: devguard-scanner-amd64
+      nix-target-arm64: devguard-scanner-arm64
       image-name: ghcr.io/${{ github.repository }}/scanner
       artifact-name-suffix: scanner
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard

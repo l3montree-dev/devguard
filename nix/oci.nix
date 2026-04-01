@@ -1,5 +1,5 @@
 { pkgs, self, pyproject-nix, uv2nix, pyproject-build-systems }: rec {
-  devguardBinaries = import ./devguard.nix { inherit self; buildGoModule = pkgs.buildGoModule; };
+  devguardBinaries = import ./devguard.nix { inherit self; buildGoModule = pkgs.buildGoModule; lib = pkgs.lib; };
 
   args = { 
     lib = pkgs.lib; 
@@ -37,7 +37,7 @@
     install -D -m 0644 ${../cosign.pub}             $out/app/cosign.pub
   '';
 
-  devguardOCI = pkgs.dockerTools.buildLayeredImage {
+  devguardOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
     name = "devguard";
     tag = common.version;
 
@@ -46,7 +46,7 @@
       devguardBinaries.devguard
       devguardBinaries.devguardCLI
       appConfig
-    ];
+    ] ++ (if debug then [ pkgs.busybox ] else []);
 
     config = {
       Cmd = [ "/bin/devguard" ];
@@ -56,25 +56,23 @@
     };
   };
 
-  # /tmp with sticky bit — avoids enableFakechroot (needs proot, Linux-only)
-  scannerTmpDir = pkgs.runCommand "scanner-tmp-dir" { } ''
-    mkdir -p $out/tmp
-    chmod 1777 $out/tmp
-  '';
-
-  devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
+  devguardScannerOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
     name = "devguard-scanner";
     tag = common.version;
-
-    contents = [
+    contents =  [
       pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
       devguardBinaries.devguardScanner
       trivyFromSource
       pythonTools.venv
       craneFromSource
       gitleaksFromSource
-      scannerTmpDir
-    ];
+    ] ++ (if debug then [ pkgs.busybox ] else []);
+
+    fakeRootCommands = ''
+      mkdir -p /tmp
+      chmod 1777 /tmp
+    '';
+    enableFakechroot = true;
 
     config = {
       Cmd = [ "/bin/devguard-scanner" ];
@@ -83,7 +81,7 @@
     };
   };
 
-  postgresqlOCI = pkgs.dockerTools.buildLayeredImage {
+  postgresqlOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
     name = "devguard-postgresql";
     tag = "16";
 
@@ -95,7 +93,7 @@
       postgresql.config
       pkgs.bash
       pkgs.coreutils
-    ];
+    ] ++ (if debug then [ pkgs.busybox ] else []);
 
     # Create the postgres user (uid/gid 999, matching the official image),
     # the data directory, and the unix socket directory.

@@ -50,8 +50,8 @@ include:
   - remote: https://gitlab.com/l3montree/devguard/-/raw/nix/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
-      nix_target_amd64: "devguard-0-amd64"
-      nix_target_arm64: "devguard-0-arm64"
+      nix_target_amd64: "devguard-amd64"
+      nix_target_arm64: "devguard-arm64"
       arm64_runner_tag: "arm"
 
 # ── scanner-pipeline ──────────────────────────────────────────────────────────
@@ -59,8 +59,8 @@ include:
     inputs:
       <<: *common
       image_suffix: "scanner"
-      nix_target_amd64: "devguard-scanner-0-amd64"
-      nix_target_arm64: "devguard-scanner-0-arm64"
+      nix_target_amd64: "devguard-scanner-amd64"
+      nix_target_arm64: "devguard-scanner-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":scanner"
       version: nix
@@ -70,8 +70,8 @@ include:
     inputs:
       <<: *common
       image_suffix: "postgresql"
-      nix_target_amd64: "postgresql-0-amd64"
-      nix_target_arm64: "postgresql-0-arm64"
+      nix_target_amd64: "postgresql-amd64"
+      nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
       version: nix
