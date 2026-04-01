@@ -75,6 +75,7 @@ jobs:
       packages: write
       security-events: write
     with:
+      scanner-image: ghcr.io/l3montree-dev/devguard/scanner:main
       nix-target-amd64: devguard-amd64
       nix-target-arm64: devguard-arm64
       image-name: ghcr.io/${{ github.repository }}
@@ -98,6 +99,7 @@ jobs:
       packages: write
       security-events: write
     with:
+      scanner-image: ghcr.io/l3montree-dev/devguard/scanner:main
       nix-target-amd64: devguard-scanner-amd64
       nix-target-arm64: devguard-scanner-arm64
       image-name: ghcr.io/${{ github.repository }}/scanner
