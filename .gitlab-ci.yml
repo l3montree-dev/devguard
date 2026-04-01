@@ -8,11 +8,6 @@ stages:
   - oci-image
   - attestation
 
-variables:
-  DEVGUARD_ASSET_NAME: "l3montree-cybersecurity/projects/devguard/assets/devguard"
-  DEVGUARD_API_URL: "https://api.main.devguard.org"
-  DEVGUARD_WEB_UI: "https://main.devguard.org"
-
 # ── Lint ──────────────────────────────────────────────────────────────────────
 
 lint:
