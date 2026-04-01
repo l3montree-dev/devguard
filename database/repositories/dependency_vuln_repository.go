@@ -550,7 +550,7 @@ func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPac
 		WithContext(ctx).
 		Table("dependency_vulns").
 		Where("direct_dependency_fixed_version IS NOT NULL AND direct_dependency_fixed_version != ''").
-		Where("EXISTS (SELECT 1 FROM jsonb_array_elements(vulnerability_path) AS purl WHERE purl::text LIKE '%/' || ? || '@%')", packageName, packageName).
+		Where("EXISTS (SELECT 1 FROM jsonb_array_elements(vulnerability_path) AS purl WHERE purl::text LIKE '%/' || ? || '@%')", packageName).
 		Select("direct_dependency_fixed_version").
 		Order("last_detected DESC").
 		Limit(1).

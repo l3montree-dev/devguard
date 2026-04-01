@@ -509,7 +509,7 @@ func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) e
 		return echo.NewHTTPError(400, "missing packageValue or currentValue")
 	}
 
-	recommendedVersion, err := controller.dependencyVulnService.GetDirectDependencyFixedVersionByPackageName(ctx.Request().Context(), packageName)
+	recommendedVersion, err := controller.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx.Request().Context(), nil, packageName)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get recommendation").WithInternal(err)
 	}
@@ -529,6 +529,7 @@ func extractVersionFromPURL(input string) string {
 
 	parsed, err := packageurl.FromString(input)
 	if err != nil {
+		slog.Error("could not parse purl", "error", err)
 		return input
 	}
 
