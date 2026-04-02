@@ -133,7 +133,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} dtos.AssetVersionModel
+// @Success 200 {array} []dtos.AssetVersionModel
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs [get]
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
