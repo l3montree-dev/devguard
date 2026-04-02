@@ -3,8 +3,8 @@
 
 stages:
   - .pre
-  - build
   - test
+  - build
   - oci-image
   - attestation
 

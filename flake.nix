@@ -55,10 +55,9 @@
 
         arm64Packages = {
           devguard-arm64 = ociImagesArm64.devguardOCI { debug = false; };
-          devguard-scanner-arm64 = ociImagesArm64.devguardScannerOCI { debug = false; };
+          devguard-scanner-arm64 = ociImagesArm64.devguardScannerOCI;
           postgresql-arm64 = ociImagesArm64.postgresqlOCI { debug = false; };
           devguard-debug-arm64 = ociImagesArm64.devguardOCI { debug = true; };
-          devguard-scanner-debug-arm64 = ociImagesArm64.devguardScannerOCI { debug = true; };
           postgresql-debug-arm64 = ociImagesArm64.postgresqlOCI { debug = true; };
 
           deps-arm64 = hostPkgs.symlinkJoin {
@@ -70,10 +69,9 @@
         amd64Packages =  {
           # those are binaries compiled for the host platform         
           devguard-amd64 = ociImagesAmd64.devguardOCI { debug = false; };
-          devguard-scanner-amd64 = ociImagesAmd64.devguardScannerOCI { debug = false; };
+          devguard-scanner-amd64 = ociImagesAmd64.devguardScannerOCI;
           postgresql-amd64 = ociImagesAmd64.postgresqlOCI { debug = false; };
           devguard-debug-amd64 = ociImagesAmd64.devguardOCI { debug = true; };
-          devguard-scanner-debug-amd64 = ociImagesAmd64.devguardScannerOCI { debug = true; };
           postgresql-debug-amd64 = ociImagesAmd64.postgresqlOCI { debug = true; };
 
 

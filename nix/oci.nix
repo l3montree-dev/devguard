@@ -34,7 +34,7 @@
     install -D -m 0644 ${
       ../intoto-public-key.pem
     }  $out/app/intoto-public-key.pem
-    install -D -m 0644 ${../cosign.pub}             $out/app/cosign.pub
+    install -D -m 0644 ${../cosign.pub} $out/app/cosign.pub
   '';
 
   devguardOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
@@ -56,7 +56,7 @@
     };
   };
 
-  devguardScannerOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
+  devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
     name = "devguard-scanner";
     tag = common.version;
     contents =  [
@@ -66,7 +66,8 @@
       pythonTools.venv
       craneFromSource
       gitleaksFromSource
-    ] ++ (if debug then [ pkgs.busybox ] else []);
+      pkgs.busybox
+    ];
 
     fakeRootCommands = ''
       mkdir -p /tmp
@@ -77,7 +78,7 @@
     config = {
       Cmd = [ "/bin/devguard-scanner" ];
       User = "53111:53111";
-      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" "TRIVY_CACHE_DIR=/tmp/.cache/trivy" "SEMGREP_CACHE_DIR=/tmp/.cache/semgrep" ];
+      Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" "EIO_BACKEND=posix" "HOME=/tmp" "TRIVY_CACHE_DIR=/tmp/.cache/trivy" "SEMGREP_CACHE_DIR=/tmp/.cache/semgrep" "DOCKER_CONFIG=/tmp/.docker" ];
     };
   };
 
