@@ -53,7 +53,9 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context
 	} else {
 		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
+		}).
+			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
+			Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	}
 	if err != nil {
