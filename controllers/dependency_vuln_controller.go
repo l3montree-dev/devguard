@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -518,19 +517,17 @@ func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) e
 	}
 
 	version := extractVersionFromPURL(*recommendedVersion)
+	if version == "" {
+		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
+	}
 
 	return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: version})
 }
 
 func extractVersionFromPURL(input string) string {
-	if !strings.HasPrefix(input, "pkg:") {
-		return input
-	}
-
 	parsed, err := packageurl.FromString(input)
 	if err != nil {
-		slog.Error("could not parse purl", "error", err)
-		return input
+		return ""
 	}
 
 	return parsed.Version

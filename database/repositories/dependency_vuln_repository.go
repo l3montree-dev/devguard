@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -544,7 +545,7 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 }
 
 func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx *gorm.DB, packageName string) (*string, error) {
-	var directDependencyFixedVersion *string
+	var directDependencyFixedVersion sql.NullString
 
 	err := repository.GetDB(ctx, tx).
 		WithContext(ctx).
@@ -559,6 +560,10 @@ func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPac
 	if err != nil {
 		return nil, err
 	}
+	if !directDependencyFixedVersion.Valid || directDependencyFixedVersion.String == "" {
+		return nil, nil
+	}
 
-	return directDependencyFixedVersion, nil
+	version := directDependencyFixedVersion.String
+	return &version, nil
 }
