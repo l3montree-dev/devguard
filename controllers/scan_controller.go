@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -404,6 +405,9 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 
 	var sarifScan sarif.SarifSchema210Json
 
+	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
+
+	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
 	defer ctx.Request().Body.Close()
 
 	if err := ctx.Bind(&sarifScan); err != nil {
