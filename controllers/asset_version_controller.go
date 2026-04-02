@@ -67,7 +67,7 @@ func NewAssetVersionController(
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [get]
 func (a *AssetVersionController) Read(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	return ctx.JSON(200, assetVersion)
+	return ctx.JSON(200, transformer.AssetVersionModelToDTO(assetVersion))
 }
 
 // @Summary Create asset version
@@ -103,7 +103,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
-	return ctx.JSON(201, assetVersion)
+	return ctx.JSON(201, transformer.AssetVersionModelToDTO(assetVersion))
 }
 
 // @Summary Delete asset version
@@ -142,7 +142,11 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 	if err != nil {
 		return err
 	}
-	return ctx.JSON(200, assetVersions)
+	var formattedAssetVersions []dtos.AssetVersionDTO
+	for _, assetVersion := range assetVersions {
+		formattedAssetVersions = append(formattedAssetVersions, transformer.AssetVersionModelToDTO(assetVersion))
+	}
+	return ctx.JSON(200, formattedAssetVersions)
 }
 
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
