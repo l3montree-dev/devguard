@@ -47,12 +47,6 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 		slog.Error("could not mark flag as required", "err", err)
 		return
 	}
-
-	err = cmd.MarkFlagRequired("architecture")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		return
-	}
 }
 
 // WarnIfUnauthenticated prints a warning to stderr when no token and no assetName are
