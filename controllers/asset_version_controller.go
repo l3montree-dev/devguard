@@ -142,10 +142,7 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 	if err != nil {
 		return err
 	}
-	var formattedAssetVersions []dtos.AssetVersionDTO
-	for _, assetVersion := range assetVersions {
-		formattedAssetVersions = append(formattedAssetVersions, transformer.AssetVersionModelToDTO(assetVersion))
-	}
+	formattedAssetVersions := utils.Map(assetVersions, transformer.AssetVersionModelToDTO)
 	return ctx.JSON(200, formattedAssetVersions)
 }
 
