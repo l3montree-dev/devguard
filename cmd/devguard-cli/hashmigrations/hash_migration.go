@@ -356,7 +356,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 		// Step 1: Delete ALL dependency vuln related data (we're recreating everything)
 		slog.Info("Deleting all dependency vuln events...")
-		if err := tx.Exec("DELETE FROM vuln_events WHERE vuln_type = 'dependencyVuln'").Error; err != nil {
+		if err := tx.Exec("DELETE FROM vuln_events WHERE dependency_vuln_id IS NOT NULL").Error; err != nil {
 			slog.Error("failed to delete all dependency vuln events", "err", err)
 			return err
 		}
@@ -604,7 +604,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 
 		// Delete all old dependency vuln related data
 		slog.Info("Deleting all dependency vuln events...")
-		if err := tx.Exec("DELETE FROM vuln_events WHERE vuln_type = 'dependencyVuln'").Error; err != nil {
+		if err := tx.Exec("DELETE FROM vuln_events WHERE dependency_vuln_id IS NOT NULL").Error; err != nil {
 			return fmt.Errorf("failed to delete dependency vuln events: %w", err)
 		}
 		slog.Info("Deleting all artifact_dependency_vulns...")
