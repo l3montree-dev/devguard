@@ -105,6 +105,25 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
 }
 
+func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln) error {
+	if len(dependencyVulns) == 0 {
+		return nil
+	}
+
+	events := make([]models.VulnEvent, len(dependencyVulns))
+	for i := range dependencyVulns {
+		ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, "", false)
+		statemachine.Apply(&dependencyVulns[i], ev)
+		events[i] = ev
+	}
+
+	err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, dependencyVulns)
+	if err != nil {
+		return err
+	}
+	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
+}
+
 func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil

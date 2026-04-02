@@ -368,6 +368,7 @@ type ArtifactService interface {
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
+	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDetectedDependencyVulns(ctx context.Context, tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error

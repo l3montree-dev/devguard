@@ -45,3 +45,18 @@ cli-docs::
 	@echo "Generating CLI documentation..."
 	@go run cmd/doc-gen/main.go
 	@echo "CLI documentation generated in docs/scanner/"
+
+NIX_CACHE_BUCKET     ?= nix.garage.l3montree.cloud
+NIX_CACHE_ENDPOINT   ?= s3.garage.l3montree.cloud
+NIX_CACHE_REGION     ?= garage
+NIX_CACHE_SECRET_KEY ?= /etc/nix/cache-priv-key.pem
+
+nix-cache-push::
+	@echo "Building dependency bundles..."
+	nix build --no-link .#deps-arm64
+	nix build --no-link .#deps-amd64
+	@echo "Pushing closures to S3 cache..."
+	nix copy \
+		$$(nix path-info -r .#deps-amd64) \
+		$$(nix path-info -r .#deps-arm64) \
+		--to 's3://$(NIX_CACHE_BUCKET)?endpoint=$(NIX_CACHE_ENDPOINT)&region=$(NIX_CACHE_REGION)&scheme=https&profile=garage&secret-key=$(NIX_CACHE_SECRET_KEY)'
