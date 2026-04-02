@@ -100,6 +100,7 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
 		integrations.Module,
 		vulndb.Module,
 		daemons.Module,
+		fixedversion.Module,
 		fx.Populate(&daemonRunner, &dependencyVulnRepository, &dependencyVulnService, &assetRepository, &assetVersionRepository),
 	)
 

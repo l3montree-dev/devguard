@@ -73,7 +73,9 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Cont
 		       arh.sum_closed_risk, arh.avg_closed_risk, arh.max_closed_risk, arh.min_closed_risk,
 		       arh.open_dependency_vulns, arh.fixed_dependency_vulns,
 		       arh.low, arh.medium, arh.high, arh.critical,
+		       arh.fixable_low, arh.fixable_medium, arh.fixable_high, arh.fixable_critical,
 			   arh.cve_purl_low, arh.cve_purl_medium, arh.cve_purl_high, arh.cve_purl_critical,
+			   arh.cve_purl_fixable_low, arh.cve_purl_fixable_medium, arh.cve_purl_fixable_high, arh.cve_purl_fixable_critical,
 		       arh.low_cvss, arh.medium_cvss, arh.high_cvss, arh.critical_cvss,
 			   arh.cve_purl_low_cvss, arh.cve_purl_medium_cvss, arh.cve_purl_high_cvss, arh.cve_purl_critical_cvss
 		FROM artifact_risk_history arh
@@ -98,8 +100,10 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(ctx context.Context
 	SELECT
 		day,
 		SUM(low) low, SUM(medium) medium, SUM(high) high, SUM(critical) critical,
+		SUM(fixable_low) fixable_low, SUM(fixable_medium) fixable_medium, SUM(fixable_high) fixable_high, SUM(fixable_critical) fixable_critical,
 		SUM(low_cvss) low_cvss, SUM(medium_cvss) medium_cvss, SUM(high_cvss) high_cvss, SUM(critical_cvss) critical_cvss,
 		SUM(cve_purl_low) cve_purl_low, SUM(cve_purl_medium) cve_purl_medium, SUM(cve_purl_high) cve_purl_high, SUM(cve_purl_critical) cve_purl_critical,
+		SUM(cve_purl_fixable_low) cve_purl_fixable_low, SUM(cve_purl_fixable_medium) cve_purl_fixable_medium, SUM(cve_purl_fixable_high) cve_purl_fixable_high, SUM(cve_purl_fixable_critical) cve_purl_fixable_critical,
 		SUM(cve_purl_low_cvss) cve_purl_low_cvss, SUM(cve_purl_medium_cvss) cve_purl_medium_cvss, SUM(cve_purl_high_cvss) cve_purl_high_cvss, SUM(cve_purl_critical_cvss) cve_purl_critical_cvss
 	FROM
 		artifact_risk_history a
