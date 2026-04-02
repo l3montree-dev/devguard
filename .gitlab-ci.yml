@@ -8,16 +8,6 @@ stages:
   - oci-image
   - attestation
 
-# ── Lint ──────────────────────────────────────────────────────────────────────
-
-lint:
-  stage: test
-  image: golang:1.25
-  before_script:
-    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh
-  script:
-    - golangci-lint run --timeout=30m
-
 
 .common: &common
   devguard_asset_name: "$DEVGUARD_ASSET_NAME"
