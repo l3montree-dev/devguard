@@ -259,10 +259,10 @@ func (c *casbinRBAC) RevokeRoleInProject(ctx context.Context, user string, role 
 	return err
 }
 
-func (c *casbinRBAC) RevokeRoleInAsset(ctx context.Context, user string, role shared.Role, project string) error {
+func (c *casbinRBAC) RevokeRoleInAsset(ctx context.Context, user string, role shared.Role, asset string) error {
 	concurrencyMutex.Lock()
 	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+project+"|role::"+string(role), "domain::"+c.domain)
+	_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
