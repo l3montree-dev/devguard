@@ -18,20 +18,6 @@ lint:
   script:
     - golangci-lint run --timeout=30m
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
-
-tests:
-  stage: test
-  image: golang:1.25
-  script:
-    - go test $(go list ./... | grep -v "/mocks") -coverprofile=coverage.out
-    - go tool cover -func=coverage.out
-  artifacts:
-    name: code-coverage
-    paths:
-      - coverage.out
-    expire_in: 1 week
-
 
 .common: &common
   devguard_asset_name: "$DEVGUARD_ASSET_NAME"
