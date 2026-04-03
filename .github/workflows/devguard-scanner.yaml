@@ -77,6 +77,7 @@ jobs:
     with:
       nix-target-amd64: devguard-amd64
       nix-target-arm64: devguard-arm64
+      nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -100,6 +101,7 @@ jobs:
     with:
       nix-target-amd64: devguard-scanner-amd64
       nix-target-arm64: devguard-scanner-arm64
+      nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/scanner
       artifact-name-suffix: scanner
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -123,6 +125,7 @@ jobs:
     with:
       nix-target-amd64: postgresql-amd64
       nix-target-arm64: postgresql-arm64
+      nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/postgresql
       artifact-name-suffix: postgresql
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
