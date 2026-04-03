@@ -66,6 +66,8 @@
       pythonTools.venv
       craneFromSource
       gitleaksFromSource
+      pkgs.jq
+      pkgs.gettext
       pkgs.busybox
     ];
 
