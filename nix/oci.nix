@@ -75,7 +75,7 @@
       mkdir -p /tmp
       chmod 1777 /tmp
       # Normalize transient Nix state dirs for reproducible image layers.
-      rm -rf nix/var || true
+      rmdir nix/var/nix/builds nix/var/nix nix/var 2>/dev/null || true
     '';
     enableFakechroot = true;
 
@@ -110,7 +110,7 @@
       mkdir -p var/lib/postgresql/data
       mkdir -p var/run/postgresql
       chown -R 999:999 var/lib/postgresql var/run/postgresql
-      rm -rf nix/var || true
+      rmdir nix/var/nix/builds nix/var/nix nix/var 2>/dev/null || true
     '';
     enableFakechroot = true;
 
