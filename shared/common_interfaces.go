@@ -233,6 +233,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsForTagsAndDefaultBranchInAsset(ctx context.Context, tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
+	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -368,15 +369,16 @@ type ArtifactService interface {
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
-	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDetectedDependencyVulns(ctx context.Context, tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
+	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
+	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error)
 }
 
 type AssetVersionService interface {

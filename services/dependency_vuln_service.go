@@ -452,3 +452,7 @@ func (s *DependencyVulnService) GetAllUniqueCVEsForAsset(ctx context.Context, as
 	}
 	return allVulns, nil
 }
+
+func (s *DependencyVulnService) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error) {
+	return s.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx, nil, packageName)
+}

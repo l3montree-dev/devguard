@@ -542,3 +542,23 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 
 	return result, nil
 }
+
+func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx *gorm.DB, packageName string) (*string, error) {
+	var directDependencyFixedVersion *string
+
+	err := repository.GetDB(ctx, tx).
+		WithContext(ctx).
+		Table("dependency_vulns").
+		Where("direct_dependency_fixed_version IS NOT NULL AND direct_dependency_fixed_version != ''").
+		Where("EXISTS (SELECT 1 FROM jsonb_array_elements(vulnerability_path) AS purl WHERE purl::text LIKE '%/' || ? || '@%')", packageName).
+		Select("direct_dependency_fixed_version").
+		Order("last_detected DESC").
+		Limit(1).
+		Scan(&directDependencyFixedVersion).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return directDependencyFixedVersion, nil
+}
