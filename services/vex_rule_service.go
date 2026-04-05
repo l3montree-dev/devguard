@@ -94,7 +94,7 @@ func (s *VEXRuleService) FindByAssetVersionAndCVE(ctx context.Context, tx shared
 	return s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, cveID)
 }
 
-func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error) {
+func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error) {
 	// Fetch the vulnerability to get its CVEID and path
 	vuln, err := s.dependencyVulnRepository.Read(ctx, tx, vulnID)
 	if err != nil {
@@ -209,8 +209,8 @@ func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx sh
 	}
 
 	// Collect all vulns to update (deduplicated by ID)
-	vulnMap := make(map[string]models.DependencyVuln)
-	eventsByVuln := make(map[string][]models.VulnEvent)
+	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
+	eventsByVuln := make(map[uuid.UUID][]models.VulnEvent)
 
 	for ruleID, matchingVulns := range vulnsByRule {
 		rule := ruleMap[ruleID]
@@ -646,8 +646,8 @@ func extractCVE(s string) string {
 	return s
 }
 
-func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) map[string][]models.VEXRule {
-	result := make(map[string][]models.VEXRule)
+func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) map[uuid.UUID][]models.VEXRule {
+	result := make(map[uuid.UUID][]models.VEXRule)
 	// Filter by each rule's cve and path pattern - only match ENABLED rules
 	// group by vuln ID
 	m := make(map[string][]models.DependencyVuln)

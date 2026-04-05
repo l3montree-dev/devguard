@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
@@ -47,14 +48,14 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
-		mockRepository.On("ReadAssetEventsByVulnID", mock.Anything, mock.Anything, "vulnID", dtos.VulnTypeDependencyVuln).Return(nil, assert.AnError)
+		mockRepository.On("ReadAssetEventsByVulnID", mock.Anything, mock.Anything, uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"), dtos.VulnTypeDependencyVuln).Return(nil, assert.AnError)
 		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnID=vulnID", nil)
+		req := httptest.NewRequest(http.MethodGet, "/vuln-events?dependencyVulnID=ffffffff-ffff-ffff-ffff-ffffffffffff", nil)
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 		ctx.SetParamNames("dependencyVulnID")
-		ctx.SetParamValues("vulnID")
+		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 		// Execution
 		err := NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)

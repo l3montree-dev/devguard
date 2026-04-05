@@ -110,7 +110,7 @@ func TestCreateVulnEventFromVEXRule(t *testing.T) {
 	assetID := uuid.New()
 	testVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			ID:               "test-vuln-id",
+			ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			AssetID:          assetID,
 			AssetVersionName: "test-version",
 			State:            dtos.VulnStateOpen,
@@ -215,9 +215,7 @@ func TestIsVexEventAlreadyApplied_PointerComparison(t *testing.T) {
 	}
 
 	vuln := models.DependencyVuln{
-		Vulnerability: models.Vulnerability{
-			Events: []models.VulnEvent{existingEvent},
-		},
+		Events: []models.VulnEvent{existingEvent},
 	}
 
 	// This SHOULD return true (same type + same justification string),
@@ -648,7 +646,7 @@ func TestApplyRulesToExistingVulnsOnlyAppliesEnabledRules(t *testing.T) {
 	// Create matching vulnerabilities
 	vulnForEnabledRule := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			ID:               "vuln-1",
+			ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			AssetID:          assetID,
 			AssetVersionName: assetVersionName,
 			State:            dtos.VulnStateOpen,
@@ -660,7 +658,7 @@ func TestApplyRulesToExistingVulnsOnlyAppliesEnabledRules(t *testing.T) {
 
 	vulnForDisabledRule := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			ID:               "vuln-2",
+			ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe"),
 			AssetID:          assetID,
 			AssetVersionName: assetVersionName,
 			State:            dtos.VulnStateOpen,
@@ -730,7 +728,7 @@ func TestEnablingRuleAppliesItToVulns(t *testing.T) {
 	// Create a matching vulnerability
 	matchingVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			ID:               "vuln-1",
+			ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			AssetID:          assetID,
 			AssetVersionName: assetVersionName,
 			State:            dtos.VulnStateOpen,
@@ -926,7 +924,7 @@ func TestMatchVulnsToRules(t *testing.T) {
 	t.Run("matches enabled rules by CVE and path pattern", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability: models.Vulnerability{ID: "vuln-1"},
+				Vulnerability: models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:         "CVE-2024-1234",
 				VulnerabilityPath: []string{
 					"pkg:golang/myapp@v1.0",
@@ -944,13 +942,13 @@ func TestMatchVulnsToRules(t *testing.T) {
 		}
 
 		result := matchVulnsToRules(vulns, rules)
-		assert.Len(t, result["vuln-1"], 1, "should match the enabled rule")
+		assert.Len(t, result[uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")], 1, "should match the enabled rule")
 	})
 
 	t.Run("skips disabled rules", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability: models.Vulnerability{ID: "vuln-1"},
+				Vulnerability: models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:         "CVE-2024-1234",
 				VulnerabilityPath: []string{
 					"pkg:golang/lib@v1.0",
@@ -967,13 +965,13 @@ func TestMatchVulnsToRules(t *testing.T) {
 		}
 
 		result := matchVulnsToRules(vulns, rules)
-		assert.Empty(t, result["vuln-1"], "disabled rule should not match")
+		assert.Empty(t, result[uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")], "disabled rule should not match")
 	})
 
 	t.Run("does not match when CVE differs", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability:     models.Vulnerability{ID: "vuln-1"},
+				Vulnerability:     models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:             "CVE-2024-1234",
 				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
 			},
@@ -988,13 +986,13 @@ func TestMatchVulnsToRules(t *testing.T) {
 		}
 
 		result := matchVulnsToRules(vulns, rules)
-		assert.Empty(t, result["vuln-1"], "should not match when CVE IDs differ")
+		assert.Empty(t, result[uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")], "should not match when CVE IDs differ")
 	})
 
 	t.Run("does not match when path pattern does not match", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability:     models.Vulnerability{ID: "vuln-1"},
+				Vulnerability:     models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:             "CVE-2024-1234",
 				VulnerabilityPath: []string{"pkg:golang/other@v1.0"},
 			},
@@ -1009,13 +1007,13 @@ func TestMatchVulnsToRules(t *testing.T) {
 		}
 
 		result := matchVulnsToRules(vulns, rules)
-		assert.Empty(t, result["vuln-1"], "should not match when path pattern does not match")
+		assert.Empty(t, result[uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")], "should not match when path pattern does not match")
 	})
 
 	t.Run("multiple rules match same vuln", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability:     models.Vulnerability{ID: "vuln-1"},
+				Vulnerability:     models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:             "CVE-2024-1234",
 				VulnerabilityPath: []string{"pkg:golang/app@v1.0", "pkg:golang/lib@v1.0"},
 			},
@@ -1035,7 +1033,7 @@ func TestMatchVulnsToRules(t *testing.T) {
 		}
 
 		result := matchVulnsToRules(vulns, rules)
-		assert.Len(t, result["vuln-1"], 2, "both enabled rules should match the same vuln")
+		assert.Len(t, result[uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")], 2, "both enabled rules should match the same vuln")
 	})
 
 	t.Run("empty vulns returns empty result", func(t *testing.T) {
@@ -1050,7 +1048,7 @@ func TestMatchVulnsToRules(t *testing.T) {
 	t.Run("empty rules returns empty result", func(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
-				Vulnerability:     models.Vulnerability{ID: "vuln-1"},
+				Vulnerability:     models.Vulnerability{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 				CVEID:             "CVE-2024-1234",
 				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
 			},

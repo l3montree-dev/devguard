@@ -118,7 +118,7 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
 }
 
-func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx *gorm.DB, id string) (models.FirstPartyVuln, error) {
+func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.FirstPartyVuln, error) {
 	var t models.FirstPartyVuln
 	err := repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
@@ -166,7 +166,7 @@ func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsBy
 	return repository.GetFirstPartyVulnsPaged(ctx, tx, subQuery1, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetOrgFromVulnID(ctx context.Context, tx *gorm.DB, firstPartyVulnID string) (models.Org, error) {
+func (repository *firstPartyVulnerabilityRepository) GetOrgFromVulnID(ctx context.Context, tx *gorm.DB, firstPartyVulnID uuid.UUID) (models.Org, error) {
 	var org models.Org
 	if err := repository.GetDB(ctx, tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join first_party_vulnerabilities f on a.id = f.asset_id where f.id = ?", firstPartyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err

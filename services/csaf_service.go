@@ -1246,7 +1246,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 		if timeComp != 0 {
 			return timeComp
 		}
-		return strings.Compare(event1.Vuln.ID, event2.Vuln.ID)
+		return strings.Compare(event1.Vuln.ID.String(), event2.Vuln.ID.String())
 	})
 
 	// then we can construct the full revision history

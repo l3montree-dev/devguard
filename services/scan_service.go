@@ -185,7 +185,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 		attribute.String("assetVersion.name", assetVersion.Name),
 	)
 
-	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
+	firstPartyVulnerabilitiesMap := make(map[uuid.UUID]models.FirstPartyVuln)
 
 	ruleMap := make(map[string]sarif.ReportingDescriptor)
 	for _, run := range sarifScan.Runs {
@@ -228,7 +228,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				firstPartyVulnerability.Date = result.PartialFingerprints["date"]
 			}
 
-			var hash string
+			var hash uuid.UUID
 			if result.Fingerprints != nil {
 				if result.Fingerprints["calculatedFingerprint"] != "" {
 					firstPartyVulnerability.Fingerprint = result.Fingerprints["calculatedFingerprint"]
@@ -338,7 +338,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 		return dependencyVuln.State != dtos.VulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
+	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) uuid.UUID {
 		return vuln.CalculateHash()
 	})
 
@@ -443,13 +443,13 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)
 		if len(dependencyVulns) > 10000 {
 			// unique those
-			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
+			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
 				return f.CalculateHash()
 			})
 		}
 	}
 
-	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
+	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
 		return f.CalculateHash()
 	})
 

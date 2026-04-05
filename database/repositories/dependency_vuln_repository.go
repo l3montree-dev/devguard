@@ -236,7 +236,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPage
 	return repository.GetDependencyVulnsPaged(ctx, tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
 }
 
-func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB, id string) (models.DependencyVuln, error) {
+func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.DependencyVuln, error) {
 	var t models.DependencyVuln
 	err := repository.GetDB(ctx, tx).Preload("CVE.Weaknesses").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
@@ -320,7 +320,7 @@ func (repository *dependencyVulnRepository) GetDefaultDependencyVulnsByOrgIDPage
 
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(ctx context.Context, tx *gorm.DB, dependencyVulnID string) (string, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(ctx context.Context, tx *gorm.DB, dependencyVulnID uuid.UUID) (string, error) {
 	var dependencyVulnAssetID string
 	if err := repository.Repository.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vuln_asset_id").Where("id = ?", dependencyVulnID).Row().Scan(&dependencyVulnAssetID); err != nil {
 		return "", err
@@ -328,7 +328,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnAssetIDByDependency
 	return dependencyVulnAssetID, nil
 }
 
-func (repository *dependencyVulnRepository) GetOrgFromVulnID(ctx context.Context, tx *gorm.DB, dependencyVulnID string) (models.Org, error) {
+func (repository *dependencyVulnRepository) GetOrgFromVulnID(ctx context.Context, tx *gorm.DB, dependencyVulnID uuid.UUID) (models.Org, error) {
 	var org models.Org
 	if err := repository.GetDB(ctx, tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join dependency_vulns f on a.id = f.asset_id where f.id = ?", dependencyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err

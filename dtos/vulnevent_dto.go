@@ -48,7 +48,7 @@ const (
 type VulnEventDTO struct {
 	ID       uuid.UUID     `json:"id"`
 	Type     VulnEventType `json:"type"`
-	VulnID   string        `json:"vulnId"`
+	VulnID   uuid.UUID     `json:"vulnId"`
 	VulnType VulnType      `json:"vulnType"`
 	UserID   string        `json:"userId"`
 

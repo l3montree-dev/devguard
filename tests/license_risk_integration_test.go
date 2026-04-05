@@ -92,7 +92,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 
 			// Sanity: ensure vuln events were created
 			var events []models.VulnEvent
-			err = f.DB.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&events).Error
+			err = f.DB.Where("license_risk_id IS NOT NULL").Find(&events).Error
 			assert.NoError(t, err)
 			assert.Equal(t, 1, len(events))
 		})

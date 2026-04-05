@@ -125,18 +125,20 @@ func (_c *Vuln_AssetVersionIndependentHash_Call) RunAndReturn(run func() string)
 }
 
 // CalculateHash provides a mock function for the type Vuln
-func (_mock *Vuln) CalculateHash() string {
+func (_mock *Vuln) CalculateHash() uuid.UUID {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for CalculateHash")
 	}
 
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
+	var r0 uuid.UUID
+	if returnFunc, ok := ret.Get(0).(func() uuid.UUID); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
 	}
 	return r0
 }
@@ -158,12 +160,12 @@ func (_c *Vuln_CalculateHash_Call) Run(run func()) *Vuln_CalculateHash_Call {
 	return _c
 }
 
-func (_c *Vuln_CalculateHash_Call) Return(s string) *Vuln_CalculateHash_Call {
-	_c.Call.Return(s)
+func (_c *Vuln_CalculateHash_Call) Return(uUID uuid.UUID) *Vuln_CalculateHash_Call {
+	_c.Call.Return(uUID)
 	return _c
 }
 
-func (_c *Vuln_CalculateHash_Call) RunAndReturn(run func() string) *Vuln_CalculateHash_Call {
+func (_c *Vuln_CalculateHash_Call) RunAndReturn(run func() uuid.UUID) *Vuln_CalculateHash_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -351,18 +353,20 @@ func (_c *Vuln_GetEvents_Call) RunAndReturn(run func() []models.VulnEvent) *Vuln
 }
 
 // GetID provides a mock function for the type Vuln
-func (_mock *Vuln) GetID() string {
+func (_mock *Vuln) GetID() uuid.UUID {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetID")
 	}
 
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
+	var r0 uuid.UUID
+	if returnFunc, ok := ret.Get(0).(func() uuid.UUID); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
 	}
 	return r0
 }
@@ -384,12 +388,12 @@ func (_c *Vuln_GetID_Call) Run(run func()) *Vuln_GetID_Call {
 	return _c
 }
 
-func (_c *Vuln_GetID_Call) Return(s string) *Vuln_GetID_Call {
-	_c.Call.Return(s)
+func (_c *Vuln_GetID_Call) Return(uUID uuid.UUID) *Vuln_GetID_Call {
+	_c.Call.Return(uUID)
 	return _c
 }
 
-func (_c *Vuln_GetID_Call) RunAndReturn(run func() string) *Vuln_GetID_Call {
+func (_c *Vuln_GetID_Call) RunAndReturn(run func() uuid.UUID) *Vuln_GetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -24,6 +24,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"go.opentelemetry.io/otel/trace"
@@ -115,35 +116,59 @@ func GetAuthAdminClient(ctx Context) AdminClient {
 	return ctx.Get("authAdminClient").(AdminClient)
 }
 
-func GetVulnID(ctx Context) (string, dtos.VulnType, error) {
+func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 	dependencyVulnID := ctx.Param("dependencyVulnID")
 	if dependencyVulnID != "" {
-		return dependencyVulnID, dtos.VulnTypeDependencyVuln, nil
+		id, err := uuid.Parse(dependencyVulnID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid dependency vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeDependencyVuln, nil
 	}
 	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
 	if ok && dependencyVulnIDFromGet != "" {
-		return dependencyVulnIDFromGet, dtos.VulnTypeDependencyVuln, nil
+		id, err := uuid.Parse(dependencyVulnIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid dependency vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeDependencyVuln, nil
 	}
 
 	firstPartyVulnID := ctx.Param("firstPartyVulnID")
 	if firstPartyVulnID != "" {
-		return firstPartyVulnID, dtos.VulnTypeFirstPartyVuln, nil
+		id, err := uuid.Parse(firstPartyVulnID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid first party vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
 	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
 	if ok && firstPartyVulnIDFromGet != "" {
-		return firstPartyVulnIDFromGet, dtos.VulnTypeFirstPartyVuln, nil
+		id, err := uuid.Parse(firstPartyVulnIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid first party vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
 
 	licenseRiskID := ctx.Param("licenseRiskID")
 	if licenseRiskID != "" {
-		return licenseRiskID, dtos.VulnTypeLicenseRisk, nil
+		id, err := uuid.Parse(licenseRiskID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid license risk id: %w", err)
+		}
+		return id, dtos.VulnTypeLicenseRisk, nil
 	}
 	licenseRiskIDFromGet, ok := ctx.Get("licenseRiskID").(string)
 	if ok && licenseRiskIDFromGet != "" {
-		return licenseRiskIDFromGet, dtos.VulnTypeLicenseRisk, nil
+		id, err := uuid.Parse(licenseRiskIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid license risk id: %w", err)
+		}
+		return id, dtos.VulnTypeLicenseRisk, nil
 	}
 
-	return "", "", fmt.Errorf("could not get vuln id")
+	return uuid.Nil, "", fmt.Errorf("could not get vuln id")
 }
 
 func SetRBAC(ctx Context, rbac AccessControl) {

@@ -14,14 +14,14 @@ import (
 )
 
 type LicenseRiskRepository struct {
-	utils.Repository[string, models.LicenseRisk, *gorm.DB]
+	utils.Repository[uuid.UUID, models.LicenseRisk, *gorm.DB]
 	db *gorm.DB
 }
 
 func NewLicenseRiskRepository(db *gorm.DB) *LicenseRiskRepository {
 	return &LicenseRiskRepository{
 		db:         db,
-		Repository: newGormRepository[string, models.LicenseRisk](db),
+		Repository: newGormRepository[uuid.UUID, models.LicenseRisk](db),
 	}
 }
 
@@ -149,7 +149,7 @@ func (repository *LicenseRiskRepository) applyAndSave(ctx context.Context, tx *g
 	return *ev, nil
 }
 
-func (repository *LicenseRiskRepository) Read(ctx context.Context, tx *gorm.DB, vulnID string) (models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) Read(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
 	err := repository.GetDB(ctx, tx).Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/utils"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -322,7 +323,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 
 	return []dtos.DependencyVulnDTO{
 		{
-			ID: "dep-vuln-001",
+			ID: uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abc"),
 			//	ScannerIDs:            "trivy",
 			AssetVersionName:      "v1.2.3",
 			AssetID:               "asset-12345",
@@ -347,7 +348,7 @@ func createSampleFirstPartyVulns() []dtos.FirstPartyVulnDTO {
 
 	return []dtos.FirstPartyVulnDTO{
 		{
-			ID:               "fpv-001",
+			ID:               uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abd"),
 			ScannerIDs:       "semgrep",
 			Message:          &message,
 			AssetVersionName: "v1.2.3",

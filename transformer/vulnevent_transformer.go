@@ -26,8 +26,8 @@ func ConvertVulnEventsToDtos(event []models.VulnEventDetail) []dtos.VulnEventDTO
 		result = append(result, dtos.VulnEventDTO{
 			ID:                       e.ID,
 			Type:                     e.Type,
-			VulnID:                   e.VulnID,
-			VulnType:                 e.VulnType,
+			VulnID:                   e.GetVulnID(),
+			VulnType:                 e.GetVulnType(),
 			UserID:                   e.UserID,
 			Justification:            e.Justification,
 			MechanicalJustification:  e.MechanicalJustification,
@@ -47,8 +47,8 @@ func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
 	return dtos.VulnEventDTO{
 		ID:                      event.ID,
 		Type:                    event.Type,
-		VulnID:                  event.VulnID,
-		VulnType:                event.VulnType,
+		VulnID:                  event.GetVulnID(),
+		VulnType:                event.GetVulnType(),
 		UserID:                  event.UserID,
 		Justification:           event.Justification,
 		MechanicalJustification: event.MechanicalJustification,
