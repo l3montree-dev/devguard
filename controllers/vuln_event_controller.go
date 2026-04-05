@@ -55,7 +55,7 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 	return ctx.JSON(200, events.Map(func(ved models.VulnEventDetail) any {
-		return transformer.ConvertVulnEventToDto(ved.VulnEvent)
+		return transformer.ConvertVulnEventDetailToDto(ved)
 	}))
 }
 
