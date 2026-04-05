@@ -38,6 +38,11 @@ type Distribution struct {
 	Medium   int `json:"medium"`
 	Critical int `json:"critical"`
 
+	FixableLow      int `json:"fixableLow"`
+	FixableMedium   int `json:"fixableMedium"`
+	FixableHigh     int `json:"fixableHigh"`
+	FixableCritical int `json:"fixableCritical"`
+
 	LowCVSS      int `json:"lowCvss"`
 	MediumCVSS   int `json:"mediumCvss"`
 	HighCVSS     int `json:"highCvss"`
@@ -52,6 +57,11 @@ type Distribution struct {
 	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
 	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
 	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
+
+	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
+	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
+	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
+	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
 }
 
 type History struct {

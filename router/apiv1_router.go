@@ -45,6 +45,7 @@ func NewAPIV1Router(srv api.Server,
 	intotoController *controllers.InToToController,
 	csafController *controllers.CSAFController,
 	scanController *controllers.ScanController,
+	dependencyVulnController *controllers.DependencyVulnController,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
 	assetRepository shared.AssetRepository,
@@ -199,6 +200,7 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
+	apiV1Router.GET("/renovate/recommendation/", dependencyVulnController.GetRecommendation)
 
 	// csaf routes
 	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)

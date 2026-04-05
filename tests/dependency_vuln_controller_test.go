@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -17,11 +18,119 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.uber.org/fx"
 )
+
+func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
+	buildController := func(t *testing.T, depVulnRepo *mocks.DependencyVulnRepository) *controllers.DependencyVulnController {
+		return controllers.NewDependencyVulnController(
+			depVulnRepo,
+			mocks.NewDependencyVulnService(t),
+			mocks.NewProjectService(t),
+			mocks.NewStatisticsService(t),
+			mocks.NewVulnEventRepository(t),
+			nil,
+		)
+	}
+
+	t.Run("uses packageName/packageValue and returns extracted version", func(t *testing.T) {
+		depVulnRepo := mocks.NewDependencyVulnRepository(t)
+		controller := buildController(t, depVulnRepo)
+
+		recommendedPurl := "pkg:npm/lodash@4.17.21"
+		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "lodash").Return(&recommendedPurl, nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=lodash&packageValue=^4.0.0", nil)
+		rec := httptest.NewRecorder()
+		ctx := NewContext(req, rec)
+
+		err := controller.GetRecommendation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response dtos.Recommendation
+		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "4.17.21", response.RecommendedVersion)
+		depVulnRepo.AssertExpectations(t)
+	})
+
+	t.Run("uses depName/currentValue aliases and returns empty recommendation for non-PURL value", func(t *testing.T) {
+		depVulnRepo := mocks.NewDependencyVulnRepository(t)
+		controller := buildController(t, depVulnRepo)
+
+		recommendedVersion := "2.3.4"
+		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "leftpad").Return(&recommendedVersion, nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?depName=leftpad&currentValue=2.0.0", nil)
+		rec := httptest.NewRecorder()
+		ctx := NewContext(req, rec)
+
+		err := controller.GetRecommendation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response map[string]string
+		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "", response["recommendedVersion"])
+		depVulnRepo.AssertExpectations(t)
+	})
+
+	t.Run("returns empty recommendation when repository returns nil", func(t *testing.T) {
+		depVulnRepo := mocks.NewDependencyVulnRepository(t)
+		controller := buildController(t, depVulnRepo)
+
+		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "chalk").Return((*string)(nil), nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=chalk&packageValue=5.0.0", nil)
+		rec := httptest.NewRecorder()
+		ctx := NewContext(req, rec)
+
+		err := controller.GetRecommendation(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response dtos.Recommendation
+		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "", response.RecommendedVersion)
+		depVulnRepo.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when package name params are missing", func(t *testing.T) {
+		depVulnRepo := mocks.NewDependencyVulnRepository(t)
+		controller := buildController(t, depVulnRepo)
+
+		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageValue=1.2.3", nil)
+		rec := httptest.NewRecorder()
+		ctx := NewContext(req, rec)
+
+		err := controller.GetRecommendation(ctx)
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, http.StatusBadRequest, httpErr.Code)
+		assert.Equal(t, "missing packageName or depName", httpErr.Message)
+		depVulnRepo.AssertNotCalled(t, "GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("returns bad request when current version params are missing", func(t *testing.T) {
+		depVulnRepo := mocks.NewDependencyVulnRepository(t)
+		controller := buildController(t, depVulnRepo)
+
+		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=react", nil)
+		rec := httptest.NewRecorder()
+		ctx := NewContext(req, rec)
+
+		err := controller.GetRecommendation(ctx)
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, http.StatusBadRequest, httpErr.Code)
+		assert.Equal(t, "missing packageValue or currentValue", httpErr.Message)
+		depVulnRepo.AssertNotCalled(t, "GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
 
 func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")

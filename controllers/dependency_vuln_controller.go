@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type dependencyVulnsByPackage struct {
@@ -488,4 +489,46 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	}
 
 	return ctx.JSON(200, updatedVulns)
+}
+
+func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) error {
+	packageName := ctx.QueryParam("packageName")
+	if packageName == "" {
+		packageName = ctx.QueryParam("depName")
+	}
+	if packageName == "" {
+		return echo.NewHTTPError(400, "missing packageName or depName")
+	}
+
+	currentValue := ctx.QueryParam("packageValue")
+	if currentValue == "" {
+		currentValue = ctx.QueryParam("currentValue")
+	}
+	if currentValue == "" {
+		return echo.NewHTTPError(400, "missing packageValue or currentValue")
+	}
+
+	recommendedVersion, err := controller.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx.Request().Context(), nil, packageName)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get recommendation").WithInternal(err)
+	}
+	if recommendedVersion == nil || *recommendedVersion == "" {
+		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
+	}
+
+	version := extractVersionFromPURL(*recommendedVersion)
+	if version == "" {
+		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
+	}
+
+	return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: version})
+}
+
+func extractVersionFromPURL(input string) string {
+	parsed, err := packageurl.FromString(input)
+	if err != nil {
+		return ""
+	}
+
+	return parsed.Version
 }
