@@ -20,25 +20,29 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ConvertVulnEventsToDtos(event []models.VulnEventDetail) []dtos.VulnEventDTO {
-	var result []dtos.VulnEventDTO
-	for _, e := range event {
-		result = append(result, dtos.VulnEventDTO{
-			ID:                       e.ID,
-			Type:                     e.Type,
-			VulnID:                   e.VulnID,
-			VulnType:                 e.VulnType,
-			UserID:                   e.UserID,
-			Justification:            e.Justification,
-			MechanicalJustification:  e.MechanicalJustification,
-			ArbitraryJSONData:        e.GetArbitraryJSONData(),
-			CreatedAt:                e.CreatedAt,
-			OriginalAssetVersionName: e.OriginalAssetVersionName,
+func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
+	return dtos.VulnEventDTO{
+		ID:                       e.ID,
+		Type:                     e.Type,
+		VulnID:                   e.VulnID,
+		VulnType:                 e.VulnType,
+		UserID:                   e.UserID,
+		Justification:            e.Justification,
+		MechanicalJustification:  e.MechanicalJustification,
+		ArbitraryJSONData:        e.GetArbitraryJSONData(),
+		CreatedAt:                e.CreatedAt,
+		OriginalAssetVersionName: e.OriginalAssetVersionName,
+		VulnerabilityName:        e.CVEID,
+		PackageName:              e.ComponentPurl,
+		URI:                      e.URI,
+		CreatedByVexRule:         e.CreatedByVexRule,
+	}
+}
 
-			PackageName:      e.ComponentPurl,
-			URI:              e.URI,
-			CreatedByVexRule: e.CreatedByVexRule,
-		})
+func ConvertVulnEventsToDtos(events []models.VulnEventDetail) []dtos.VulnEventDTO {
+	var result []dtos.VulnEventDTO
+	for _, e := range events {
+		result = append(result, ConvertVulnEventDetailToDto(e))
 	}
 	return result
 }
