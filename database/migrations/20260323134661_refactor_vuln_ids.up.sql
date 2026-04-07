@@ -131,18 +131,71 @@ ALTER TABLE public.license_risks RENAME COLUMN new_id TO id;
 ALTER TABLE public.artifact_license_risks RENAME COLUMN new_license_risk_id TO license_risk_id;
 
 
--- Create indexes at the end
+-- In the second step we adjust the vuln_event table 
+
+-- Drop updated_at column to save space since vuln_events are immutable
+ALTER TABLE public.vuln_events DROP COLUMN IF EXISTS updated_at;
+
+-- Now we want to migrate the existing single vuln_id column to 3 columns referencing the respective vuln id column
+
+-- first create the new rows referencing the id columns
+ALTER TABLE public.vuln_events
+  ADD COLUMN dependency_vuln_id   UUID REFERENCES public.dependency_vulns(id)        ON DELETE CASCADE,
+  ADD COLUMN license_risk_id      UUID REFERENCES public.license_risks(id)           ON DELETE CASCADE,
+  ADD COLUMN first_party_vuln_id  UUID REFERENCES public.first_party_vulnerabilities(id) ON DELETE CASCADE;
+
+-- then transform and copy the old values into the new columns
+
+UPDATE public.vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'dependencyVuln';
+UPDATE public.vuln_events SET license_risk_id     = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'licenseRisk';
+UPDATE public.vuln_events SET first_party_vuln_id = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'firstPartyVuln';
+
+-- add constraint to check that each vuln event has exactly one vuln_id as parent but don't validate yet
+
+ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
+  (dependency_vuln_id  IS NOT NULL)::int +
+  (license_risk_id     IS NOT NULL)::int +
+  (first_party_vuln_id IS NOT NULL)::int = 1
+);
+
+-- lastly drop the old columns
+ALTER TABLE public.vuln_events
+  DROP COLUMN vuln_id,
+  DROP COLUMN vuln_type;
+
+
+-- Refactor the indexes at the end
+
+-- First drop all obsolete/outdated ones
+
+DROP INDEX IF EXISTS vuln_events_new_vuln_id_idx; --old vuln_events vuln id idx
+
+DROP INDEX IF EXISTS vuln_events_new_type_vuln_id_vuln_type_justification_id_idx; -- 3 obsolete indexes 
+DROP INDEX IF EXISTS idx_first_party_vulnerabilities_deleted_at; 
+DROP INDEX IF EXISTS idx_license_risks_deleted_at;
+
+DROP INDEX idx_artifact_dependency_vulns_dependency_vuln_id; -- covered by primary key index
+DROP INDEX idx_artifact_license_risks_artifact; -- covered by primary key index
+
+-- then create the new vuln event indexes
+
+CREATE INDEX idx_vuln_events_dependency_vuln_id
+  ON public.vuln_events USING hash (dependency_vuln_id)
+  WHERE dependency_vuln_id IS NOT NULL;
+
+CREATE INDEX idx_vuln_events_first_party_vuln_id
+  ON public.vuln_events USING hash (first_party_vuln_id)
+  WHERE first_party_vuln_id IS NOT NULL;
+
+CREATE INDEX idx_vuln_events_license_risk_id
+  ON public.vuln_events USING hash (license_risk_id)
+  WHERE license_risk_id IS NOT NULL;
+
+
+-- then create indexes for the vuln pivot tables
+
 DROP INDEX IF EXISTS public.idx_artifact_dependency_vulns_dependency_vuln_id;
-CREATE INDEX idx_artifact_dependency_vulns_dependency_vuln_id ON public.artifact_dependency_vulns USING btree (dependency_vuln_id);
-
-DROP INDEX IF EXISTS public.idx_dependency_vulns_cve_id;
-CREATE INDEX idx_dependency_vulns_cve_id ON public.dependency_vulns USING btree (cve_id);
-
-DROP INDEX IF EXISTS public.idx_dependency_vulns_component_purl;
-CREATE INDEX idx_dependency_vulns_component_purl ON public.dependency_vulns USING btree (component_purl);
+CREATE INDEX idx_artifact_dependency_vulns_dependency_vuln_id ON public.artifact_dependency_vulns USING hash (dependency_vuln_id);
 
 DROP INDEX IF EXISTS public.idx_artifact_license_risks_license_risk_id;
-CREATE INDEX idx_artifact_license_risks_license_risk_id ON public.artifact_license_risks USING btree (license_risk_id);
-
-DROP INDEX IF EXISTS public.idx_license_risks_component_purl;
-CREATE INDEX idx_license_risks_component_purl ON public.license_risks USING btree (component_purl);
+CREATE INDEX idx_artifact_license_risks_license_risk_id ON public.artifact_license_risks USING hash (license_risk_id);
