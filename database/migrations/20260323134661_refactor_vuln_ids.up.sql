@@ -174,8 +174,9 @@ DROP INDEX IF EXISTS vuln_events_new_type_vuln_id_vuln_type_justification_id_idx
 DROP INDEX IF EXISTS idx_first_party_vulnerabilities_deleted_at; 
 DROP INDEX IF EXISTS idx_license_risks_deleted_at;
 
-DROP INDEX idx_artifact_dependency_vulns_dependency_vuln_id; -- covered by primary key index
-DROP INDEX idx_artifact_license_risks_artifact; -- covered by primary key index
+DROP INDEX IF EXISTS idx_artifact_dependency_vulns_artifact; -- covered by primary key index
+DROP INDEX IF EXISTS idx_artifact_license_risks_artifact; -- covered by primary key index
+
 
 -- then create the new vuln event indexes
 
