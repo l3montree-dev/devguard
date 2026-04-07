@@ -66,12 +66,16 @@
       pythonTools.venv
       craneFromSource
       gitleaksFromSource
+      pkgs.jq
+      pkgs.gettext
       pkgs.busybox
     ];
 
     fakeRootCommands = ''
       mkdir -p /tmp
       chmod 1777 /tmp
+      # Ensure this path exists in all CI environments for stable layer output.
+      mkdir -p nix/var/nix/builds
     '';
     enableFakechroot = true;
 
@@ -106,6 +110,8 @@
       mkdir -p var/lib/postgresql/data
       mkdir -p var/run/postgresql
       chown -R 999:999 var/lib/postgresql var/run/postgresql
+      # Ensure this path exists in all CI environments for stable layer output.
+      mkdir -p nix/var/nix/builds
     '';
     enableFakechroot = true;
 
