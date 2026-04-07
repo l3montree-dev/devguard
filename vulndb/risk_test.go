@@ -20,6 +20,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -454,7 +455,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVSSBEMessage:          "- Exploiting this vulnerability significantly impacts availability.",
 			ComponentDepthMessage:  "The vulnerability is in a direct dependency of your project.",
 			CVSSMessage:            "- The vulnerability can be exploited over the network without needing physical access.",
-			DependencyVulnID:       "test-vuln-id",
+			DependencyVulnID:       uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			Risk:                   7.5,
 			Depth:                  1,
 			EPSS:                   0.35,
@@ -507,7 +508,7 @@ func TestExplanationMarkdown(t *testing.T) {
 		assert.Contains(t, result, "| CVSS-B | `7.5` | - The vulnerability can be exploited over the network without needing physical access. |")
 
 		// Test DevGuard link
-		assert.Contains(t, result, "More details can be found in [DevGuard](https://devguard.example.com/my-org/projects/my-project/assets/my-asset/refs/v1-0-0/dependency-risks/test-vuln-id)")
+		assert.Contains(t, result, "More details can be found in [DevGuard](https://devguard.example.com/my-org/projects/my-project/assets/my-asset/refs/v1-0-0/dependency-risks/ffffffff-ffff-ffff-ffff-ffffffffffff)")
 
 		// Test closing details tag
 		assert.Contains(t, result, "</details>")

@@ -169,11 +169,11 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 			},
 			{
 				CVEID:             cveID,
@@ -186,11 +186,11 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 			},
 		}
 
@@ -245,28 +245,22 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateAccepted,
-					Events: []models.VulnEvent{
-						{
-							Type:          dtos.EventTypeDetected,
-							Justification: utils.Ptr("Initial detection event without justification"),
-							Model: models.Model{
-								CreatedAt: time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
-							},
-						},
-						{
-							Type:          dtos.EventTypeAccepted,
-							Justification: &justification,
-							Model: models.Model{
-								CreatedAt: time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC),
-							},
-						},
-						{
-							Type:          dtos.EventTypeComment,
-							Justification: utils.Ptr("This is a comment and should be ignored"),
-							Model: models.Model{
-								CreatedAt: time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),
-							},
-						},
+				},
+				Events: []models.VulnEvent{
+					{
+						Type:          dtos.EventTypeDetected,
+						Justification: utils.Ptr("Initial detection event without justification"),
+						CreatedAt:     time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+					},
+					{
+						Type:          dtos.EventTypeAccepted,
+						Justification: &justification,
+						CreatedAt:     time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC),
+					},
+					{
+						Type:          dtos.EventTypeComment,
+						Justification: utils.Ptr("This is a comment and should be ignored"),
+						CreatedAt:     time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),
 					},
 				},
 			},
@@ -313,11 +307,11 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 			},
 			{
 				CVEID:             cveID,
@@ -330,12 +324,12 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateAccepted,
-					Events: []models.VulnEvent{{
-						Type:          dtos.EventTypeAccepted,
-						Justification: utils.Ptr("Risk accepted"),
-						Model:         models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:          dtos.EventTypeAccepted,
+					Justification: utils.Ptr("Risk accepted"),
+					CreatedAt:     time.Now(),
+				}},
 			},
 		}
 
@@ -385,12 +379,12 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFalsePositive,
-					Events: []models.VulnEvent{{
-						Type:          dtos.EventTypeFalsePositive,
-						Justification: utils.Ptr("Not affected in this context"),
-						Model:         models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:          dtos.EventTypeFalsePositive,
+					Justification: utils.Ptr("Not affected in this context"),
+					CreatedAt:     time.Now(),
+				}},
 			},
 			{
 				CVEID:             cveID,
@@ -403,11 +397,11 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 			},
 		}
 
@@ -456,12 +450,12 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFalsePositive,
-					Events: []models.VulnEvent{{
-						Type:          dtos.EventTypeFalsePositive,
-						Justification: utils.Ptr("Not affected via path 1"),
-						Model:         models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:          dtos.EventTypeFalsePositive,
+					Justification: utils.Ptr("Not affected via path 1"),
+					CreatedAt:     time.Now(),
+				}},
 			},
 			{
 				CVEID:             cveID,
@@ -474,12 +468,12 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFalsePositive,
-					Events: []models.VulnEvent{{
-						Type:          dtos.EventTypeFalsePositive,
-						Justification: utils.Ptr("Not affected via path 2"),
-						Model:         models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:          dtos.EventTypeFalsePositive,
+					Justification: utils.Ptr("Not affected via path 2"),
+					CreatedAt:     time.Now(),
+				}},
 			},
 		}
 
@@ -512,7 +506,7 @@ func TestBuildVeX(t *testing.T) {
 		}
 
 		cveID := "CVE-2024-PATH"
-		vulnID := "vuln-path-1"
+		vulnID := uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		componentPurl := "pkg:golang/vulnerable-lib@v1.0"
 		pathPattern := dtos.PathPattern{"pkg:golang/myapp@v1.0", dtos.PathPatternWildcard, componentPurl}
 
@@ -531,11 +525,11 @@ func TestBuildVeX(t *testing.T) {
 				Vulnerability: models.Vulnerability{
 					ID:    vulnID,
 					State: dtos.VulnStateFalsePositive,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:golang/myapp@v1.0", "pkg:golang/mid@v1.0", componentPurl},
@@ -585,13 +579,13 @@ func TestBuildVeX(t *testing.T) {
 		dependencyVulns := []models.DependencyVuln{
 			{
 				Vulnerability: models.Vulnerability{
-					ID:    "vuln-no-match",
+					ID:    uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{{
-						Type:  dtos.EventTypeDetected,
-						Model: models.Model{CreatedAt: time.Now()},
-					}},
 				},
+				Events: []models.VulnEvent{{
+					Type:      dtos.EventTypeDetected,
+					CreatedAt: time.Now(),
+				}},
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},

@@ -626,24 +626,25 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 		asset := shared.GetAsset(event.Ctx)
 		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
 
-		vulnType := ev.VulnType
+		vulnType := ev.GetVulnType()
+		vulnID := ev.GetVulnID()
 
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := githubIntegration.dependencyVulnRepository.Read(ctx, nil, ev.VulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := githubIntegration.firstPartyVulnRepository.Read(ctx, nil, ev.VulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			v, err := githubIntegration.licenseRiskRepository.Read(ctx, nil, ev.VulnID)
+			v, err := githubIntegration.licenseRiskRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}

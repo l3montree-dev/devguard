@@ -139,7 +139,7 @@ func RenderMarkdownForLicenseRisk(licenseRisk models.LicenseRisk, baseURL, orgSl
 	return str.String()
 }
 
-func CreateNewVulnEventBasedOnComment(vulnID string, vulnType dtos.VulnType, userID, comment string, artifactName string) models.VulnEvent {
+func CreateNewVulnEventBasedOnComment(vulnID uuid.UUID, vulnType dtos.VulnType, userID, comment string, artifactName string) models.VulnEvent {
 
 	event, mechanicalJustification, justification := commentTrimmedPrefix(vulnType, comment)
 

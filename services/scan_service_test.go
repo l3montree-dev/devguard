@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -161,7 +162,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		// the ID should be set to the fingerprint when it exists
 		expectedVuln := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				ID: "test-fingerprint", // this should match the fingerprint
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"), // this should match the fingerprint
 			},
 			Fingerprint: "test-fingerprint",
 		}
@@ -190,7 +191,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			"userID")
 		assert.NoError(t, err)
 		assert.Len(t, r, 1)
-		assert.Equal(t, "test-fingerprint", r[0].ID)
+		assert.Equal(t, "ffffffff-ffff-ffff-ffff-ffffffffffff", r[0].ID.String())
 	})
 
 }

@@ -132,7 +132,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 			return dtos.VulnEventDTO{
 				ID:                       ev.ID,
 				Type:                     ev.Type,
-				VulnID:                   ev.VulnID,
+				VulnID:                   ev.GetVulnID(),
 				UserID:                   ev.UserID,
 				Justification:            ev.Justification,
 				MechanicalJustification:  ev.MechanicalJustification,

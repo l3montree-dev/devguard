@@ -56,7 +56,7 @@ func (r *artifactRepository) DeleteArtifact(ctx context.Context, tx *gorm.DB, as
 	return r.GetDB(ctx, tx).Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID).Delete(&models.Artifact{}).Error
 }
 
-func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID string) ([]models.Artifact, error) {
+func (r *artifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 	err := r.Repository.GetDB(ctx, tx).Raw(`SELECT a.* FROM artifact_dependency_vulns adv 
 		LEFT JOIN artifacts a ON adv.artifact_artifact_name = a.artifact_name 

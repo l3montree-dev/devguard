@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -221,7 +222,7 @@ type Explanation struct {
 	CVSSBEMessage         string
 	ComponentDepthMessage string
 	CVSSMessage           string
-	DependencyVulnID      string
+	DependencyVulnID      uuid.UUID
 	Risk                  float64
 
 	Depth int

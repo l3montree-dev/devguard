@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -48,7 +49,7 @@ type DependencyVulnStatus struct {
 }
 
 type BatchDependencyVulnStatus struct {
-	VulnIDs                 []string                         `json:"vulnIds"`
+	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
@@ -305,7 +306,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	project := shared.GetProject(ctx)
 
 	type vulnReq struct {
-		VulnID string            `json:"vulnId"`
+		VulnID uuid.UUID         `json:"vulnId"`
 		Event  dtos.VulnEventDTO `json:"event"`
 	}
 
