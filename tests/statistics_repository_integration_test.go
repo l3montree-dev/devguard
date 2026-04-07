@@ -23,6 +23,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,28 +67,24 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 	// Average = 3600s (not 7200s which would indicate measuring from T1 again)
 	t1 := time.Now().Add(-4 * time.Hour)
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: t1},
-		Type:     dtos.EventTypeDetected,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        t1,
+		Type:             dtos.EventTypeDetected,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: t1.Add(time.Hour)},
-		Type:     dtos.EventTypeFixed,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        t1.Add(time.Hour),
+		Type:             dtos.EventTypeFixed,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: t1.Add(3 * time.Hour)},
-		Type:     dtos.EventTypeReopened,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        t1.Add(3 * time.Hour),
+		Type:             dtos.EventTypeReopened,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: t1.Add(4 * time.Hour)},
-		Type:     dtos.EventTypeFixed,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        t1.Add(4 * time.Hour),
+		Type:             dtos.EventTypeFixed,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 
 	artifactName := "reopen-artifact"
@@ -165,16 +162,14 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 	fixedAt := detectedAt.Add(time.Hour)
 
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: detectedAt},
-		Type:     dtos.EventTypeDetected,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        detectedAt,
+		Type:             dtos.EventTypeDetected,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 	require.NoError(t, db.Create(&models.VulnEvent{
-		Model:    models.Model{CreatedAt: fixedAt},
-		Type:     dtos.EventTypeFixed,
-		VulnID:   vulnID,
-		VulnType: dtos.VulnTypeDependencyVuln,
+		CreatedAt:        fixedAt,
+		Type:             dtos.EventTypeFixed,
+		DependencyVulnID: utils.Ptr(vulnID),
 	}).Error)
 
 	// Create an artifact so the release item satisfies the chk_one_not_null constraint

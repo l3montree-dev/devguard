@@ -17,6 +17,8 @@ package commands
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -58,8 +60,23 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	}
 	defer os.RemoveAll(path.Dir(keyPath))
 
-	// check if the file does exist
 	predicate := args[0]
+
+	// if predicate is "-", read from stdin into a temp file
+	if predicate == "-" {
+		tmp, err := os.CreateTemp("", "devguard-predicate-*.json")
+		if err != nil {
+			return fmt.Errorf("failed to create temp file for stdin: %w", err)
+		}
+		defer os.Remove(tmp.Name())
+		if _, err := io.Copy(tmp, os.Stdin); err != nil {
+			tmp.Close()
+			return fmt.Errorf("failed to read predicate from stdin: %w", err)
+		}
+		tmp.Close()
+		predicate = tmp.Name()
+	}
+
 	if _, err := os.Stat(predicate); os.IsNotExist(err) {
 		slog.Error("file does not exist", "file", predicate)
 		return err
@@ -94,8 +111,9 @@ func NewAttestCommand() *cobra.Command {
 		Long: `Create and upload an attestation for an OCI image or a local predicate file.
 
 The first argument is a path to a local predicate JSON file that will be used as
-the attestation payload. Optionally provide a container image reference as the
-second argument to attach the attestation to that image.
+the attestation payload. Pass "-" to read the predicate from stdin. Optionally
+provide a container image reference as the second argument to attach the
+attestation to that image.
 
 This command validates the predicate file exists, signs the upload using the
 configured token, and sends it to the DevGuard backend. The HTTP header
@@ -105,6 +123,9 @@ X-Predicate-Type is populated from the --predicateType flag (required).`,
 
   # Attest with SLSA provenance
   devguard-scanner attest provenance.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
+
+  # Pipe curl output directly into attest (no shell needed)
+  devguard-scanner curl https://api.example.com/sbom.json --token=... | devguard-scanner attest - ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom
 
   # Upload attestation without attaching to an image
   devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1`,

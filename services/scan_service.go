@@ -185,7 +185,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 		attribute.String("assetVersion.name", assetVersion.Name),
 	)
 
-	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
+	firstPartyVulnerabilitiesMap := make(map[uuid.UUID]models.FirstPartyVuln)
 
 	ruleMap := make(map[string]sarif.ReportingDescriptor)
 	for _, run := range sarifScan.Runs {
@@ -228,7 +228,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				firstPartyVulnerability.Date = result.PartialFingerprints["date"]
 			}
 
-			var hash string
+			var hash uuid.UUID
 			if result.Fingerprints != nil {
 				if result.Fingerprints["calculatedFingerprint"] != "" {
 					firstPartyVulnerability.Fingerprint = result.Fingerprints["calculatedFingerprint"]
@@ -239,12 +239,29 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				loc := result.Locations[0]
 				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
-				snippetContent := dtos.SnippetContent{
-					StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
-					EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
-					StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
-					EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
-					Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
+				var snippetContent dtos.SnippetContent
+
+				if loc.PhysicalLocation.Region == nil {
+					snippetContent = dtos.SnippetContent{
+						StartLine:   0,
+						EndLine:     0,
+						StartColumn: 0,
+						EndColumn:   0,
+						Snippet:     "",
+					}
+				} else {
+					var checkedSnippet = ""
+					if loc.PhysicalLocation.Region.Snippet != nil {
+						checkedSnippet = utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, "")
+					}
+
+					snippetContent = dtos.SnippetContent{
+						StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
+						EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
+						StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
+						EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
+						Snippet:     checkedSnippet,
+					}
 				}
 
 				hash = firstPartyVulnerability.CalculateHash()
@@ -321,7 +338,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 		return dependencyVuln.State != dtos.VulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
+	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) uuid.UUID {
 		return vuln.CalculateHash()
 	})
 
@@ -426,13 +443,13 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)
 		if len(dependencyVulns) > 10000 {
 			// unique those
-			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
+			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
 				return f.CalculateHash()
 			})
 		}
 	}
 
-	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) string {
+	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
 		return f.CalculateHash()
 	})
 

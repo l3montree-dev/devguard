@@ -1,4 +1,4 @@
-{ buildGoModule, self }: rec {
+{ buildGoModule, lib, self }: rec {
   common = import ./common.nix { inherit self; };
   ldflags = [
     "-s"
@@ -9,9 +9,28 @@
     "-X github.com/l3montree-dev/devguard/config.BuildDate=${common.buildDate}"
   ];
 
+  # Only include files that affect the Go build output — Go sources, modules,
+  # vendored deps, and directories used by //go:embed directives.
+  # Excludes nix/, flake.nix, docs, etc. so those changes don't bust the cache.
+  src = lib.fileset.toSource {
+    root = ../.;
+    fileset = lib.fileset.unions [
+      ../go.mod
+      ../go.sum
+      (lib.fileset.fileFilter (f: f.hasExt "go") ../.)
+      # go:embed assets
+      ../database/migrations
+      ../licenses
+      ../compliance/attestation-compliance-policies
+      ../normalize/package_mappings.json
+      ../integrations/commonint/templates
+      ../controllers/report-templates
+    ];
+  };
+
   # Shared build arguments for all three binaries.
   commonArgs = {
-    src = ../.;
+    inherit src;
     vendorHash = "sha256-gTD/NuT2bL6z5o+aG0PAE5BNxsoKfcW27Yio8pwLBhc=";
     inherit ldflags;
     buildFlags =

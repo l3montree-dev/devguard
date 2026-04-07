@@ -604,7 +604,7 @@ func (_c *ArtifactRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context
 }
 
 // GetAllArtifactAffectedByDependencyVuln provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx shared.DB, vulnID string) ([]models.Artifact, error) {
+func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx shared.DB, vulnID uuid.UUID) ([]models.Artifact, error) {
 	ret := _mock.Called(ctx, tx, vulnID)
 
 	if len(ret) == 0 {
@@ -613,17 +613,17 @@ func (_mock *ArtifactRepository) GetAllArtifactAffectedByDependencyVuln(ctx cont
 
 	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.Artifact, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Artifact, error)); ok {
 		return returnFunc(ctx, tx, vulnID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.Artifact); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Artifact); ok {
 		r0 = returnFunc(ctx, tx, vulnID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, vulnID)
 	} else {
 		r1 = ret.Error(1)
@@ -639,12 +639,12 @@ type ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call struct {
 // GetAllArtifactAffectedByDependencyVuln is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - vulnID string
+//   - vulnID uuid.UUID
 func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(ctx interface{}, tx interface{}, vulnID interface{}) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
 	return &ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call{Call: _e.mock.On("GetAllArtifactAffectedByDependencyVuln", ctx, tx, vulnID)}
 }
 
-func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID string)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -654,9 +654,9 @@ func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Run(ru
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -672,7 +672,7 @@ func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) Return
 	return _c
 }
 
-func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID string) ([]models.Artifact, error)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID) ([]models.Artifact, error)) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }

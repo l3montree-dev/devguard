@@ -635,7 +635,7 @@ func TestRenderMarkdown(t *testing.T) {
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
 			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
-				ID: "test-vuln-id",
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
 			URI: "the/uri/of/the/vuln",
 		}
@@ -656,7 +656,7 @@ func TestRenderMarkdown(t *testing.T) {
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
 			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
-				ID: "test-vuln-id"},
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 			URI: "the/uri/of/the/vuln",
 		}
 

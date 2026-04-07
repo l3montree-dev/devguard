@@ -144,7 +144,7 @@ type ArtifactRepository interface {
 	GetByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	DeleteArtifact(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, artifactName string) error
-	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID string) ([]models.Artifact, error)
+	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID uuid.UUID) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 	CleanupOrphanedRecords(ctx context.Context) error
 }
@@ -210,7 +210,7 @@ type ComponentRepository interface {
 }
 
 type DependencyVulnRepository interface {
-	utils.Repository[string, models.DependencyVuln, DB]
+	utils.Repository[uuid.UUID, models.DependencyVuln, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -237,7 +237,7 @@ type DependencyVulnRepository interface {
 }
 
 type FirstPartyVulnRepository interface {
-	utils.Repository[string, models.FirstPartyVuln, DB]
+	utils.Repository[uuid.UUID, models.FirstPartyVuln, DB]
 	GetDefaultFirstPartyVulnsByProjectIDPaged(ctx context.Context, tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
 	GetDefaultFirstPartyVulnsByOrgIDPaged(ctx context.Context, tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
@@ -250,7 +250,7 @@ type FirstPartyVulnRepository interface {
 }
 
 type LicenseRiskRepository interface {
-	utils.Repository[string, models.LicenseRisk, DB]
+	utils.Repository[uuid.UUID, models.LicenseRisk, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.LicenseRisk, error)
 	GetAllLicenseRisksForAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.LicenseRisk], error)
 	GetAllLicenseRisksForAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)
@@ -369,15 +369,16 @@ type ArtifactService interface {
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
-	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDetectedDependencyVulns(ctx context.Context, tx DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
+	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
+	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error)
 }
 
 type AssetVersionService interface {
@@ -451,17 +452,17 @@ type VEXRuleService interface {
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
-	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID string) ([]models.VEXRule, error)
+	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
 }
 
 type VulnEventRepository interface {
 	SaveBatch(ctx context.Context, tx DB, events []models.VulnEvent) error
 	SaveBatchBestEffort(ctx context.Context, tx DB, events []models.VulnEvent) error
 	Save(ctx context.Context, tx DB, event *models.VulnEvent) error
-	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID string, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
+	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID uuid.UUID, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
-	GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx DB, vulnIDs []string) ([]models.VulnEvent, error)
-	GetLastEventBeforeTimestamp(ctx context.Context, tx DB, vulnID string, time time.Time) (models.VulnEvent, error)
+	GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
+	GetLastEventBeforeTimestamp(ctx context.Context, tx DB, vulnID uuid.UUID, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(ctx context.Context, tx DB, eventID string) error
 	HasAccessToEvent(ctx context.Context, tx DB, assetID uuid.UUID, eventID string) (bool, error)
 }
@@ -607,7 +608,7 @@ type CVERelationshipRepository interface {
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(ctx context.Context, tx DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error
 	UpdateLicenseRiskState(ctx context.Context, tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
-	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID, finalLicense, justification, userID string) error
+	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
 type VulnDBImportService interface {

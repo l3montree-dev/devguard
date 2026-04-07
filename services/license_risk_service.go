@@ -102,13 +102,13 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 		}
 	}
 	//filter out duplicates in foundLicenseRisks
-	foundLicenseRisks = utils.UniqBy(foundLicenseRisks, func(risk models.LicenseRisk) string {
+	foundLicenseRisks = utils.UniqBy(foundLicenseRisks, func(risk models.LicenseRisk) uuid.UUID {
 		return risk.CalculateHash()
 	})
 
 	// determine which existing risks were not observed this run -> these are fixed
 	// build comparison between existing risks (all in assetVersion) and newly detected ones
-	comparison := utils.CompareSlices(foundLicenseRisks, existingLicenseRisks, func(risk models.LicenseRisk) string {
+	comparison := utils.CompareSlices(foundLicenseRisks, existingLicenseRisks, func(risk models.LicenseRisk) uuid.UUID {
 		return risk.CalculateHash()
 	})
 
@@ -274,7 +274,7 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(ct
 		// copy all events for this license risk
 		if len(alreadyExistingEvents[i]) != 0 {
 			events[i] = utils.Map(alreadyExistingEvents[i], func(el models.VulnEvent) models.VulnEvent {
-				el.VulnID = licenseRisk.CalculateHash()
+				el.LicenseRiskID = utils.Ptr(licenseRisk.CalculateHash())
 				el.ID = uuid.Nil
 				return el
 			})
@@ -409,7 +409,7 @@ func (s *LicenseRiskService) updateLicenseRiskState(ctx context.Context, tx shar
 	return ev, err
 }
 
-func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *gorm.DB, vulnID, finalLicense, justification, userID string) error {
+func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID, finalLicense, justification, userID string) error {
 	licenseRisk, err := s.licenseRiskRepository.Read(ctx, tx, vulnID)
 	if err != nil {
 		return err

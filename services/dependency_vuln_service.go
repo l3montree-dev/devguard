@@ -58,7 +58,7 @@ func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error
 		ArtifactName        string
 		ArtifactVersionName string
 		ArtifactAssetID     uuid.UUID
-		DependencyVulnID    string
+		DependencyVulnID    uuid.UUID
 	}
 
 	rows := make([]row, 0, len(vulns))
@@ -361,7 +361,7 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	}
 
 	// Check for duplicate vulnerability IDs in the list
-	seen := make(map[string]int)
+	seen := make(map[uuid.UUID]int)
 	for _, vuln := range vulnList {
 		seen[vuln.ID]++
 	}
@@ -376,7 +376,7 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 
 func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
 	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
-	vulnMap := make(map[string]models.DependencyVuln)
+	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
 	for _, vuln := range vulnList {
 		if _, exists := vulnMap[vuln.ID]; !exists {
 			vulnMap[vuln.ID] = vuln
@@ -451,4 +451,8 @@ func (s *DependencyVulnService) GetAllUniqueCVEsForAsset(ctx context.Context, as
 		allVulns = append(allVulns, vuln)
 	}
 	return allVulns, nil
+}
+
+func (s *DependencyVulnService) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error) {
+	return s.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx, nil, packageName)
 }

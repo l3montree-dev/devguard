@@ -18,6 +18,7 @@ package dtos
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
@@ -85,7 +86,7 @@ type ExploitDTO struct {
 }
 
 type DependencyVulnDTO struct {
-	ID                           string        `json:"id"`
+	ID                           uuid.UUID     `json:"id"`
 	Message                      *string       `json:"message"`
 	AssetVersionName             string        `json:"assetVersionId"`
 	AssetID                      string        `json:"assetId"`

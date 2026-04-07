@@ -108,7 +108,7 @@ WITH events AS (
 		LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
 		LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns
-	JOIN vuln_events fe ON dependency_vulns.id = fe.vuln_id
+	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
 	WHERE fe.type IN ?
 	AND dependency_vulns.asset_version_name = ?
@@ -137,10 +137,10 @@ WITH events AS (
 		LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
 		LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns
-	JOIN vuln_events fe ON dependency_vulns.id = fe.vuln_id
+	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
 	JOIN (
-		SELECT DISTINCT dependency_vuln_id
+		SELECT DISTINCT artifact_dependency_vulns.dependency_vuln_id
 		FROM artifact_dependency_vulns
 		WHERE artifact_artifact_name = ?
 	) AS adv ON dependency_vulns.id = adv.dependency_vuln_id
@@ -182,7 +182,7 @@ events AS (
 		LAG(fe.type)       OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_type,
 		LAG(fe.created_at) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns dv
-	JOIN vuln_events fe ON dv.id = fe.vuln_id
+	JOIN vuln_events fe ON dv.id = fe.dependency_vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
 	LEFT JOIN cves c ON dv.cve_id = c.cve
 	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type IN ?
@@ -423,7 +423,7 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Cont
 		LEFT JOIN (
 		SELECT date_trunc('week', a.created_at) AS week, a.type, COUNT(*)
 		FROM vuln_events a
-		LEFT JOIN dependency_vulns b ON a.vuln_id = b.id
+		LEFT JOIN dependency_vulns b ON a.dependency_vuln_id = b.id
 		LEFT JOIN assets c ON b.asset_id = c.id
 		LEFT JOIN projects d ON c.project_id = d.id
 		WHERE d.organization_id = ?
@@ -581,7 +581,7 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
     FROM
         dependency_vulns
     JOIN
-        vuln_events fe ON dependency_vulns.id = fe.vuln_id
+        vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
     LEFT JOIN
         cves c ON dependency_vulns.cve_id = c.cve
     LEFT JOIN
@@ -639,7 +639,7 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 	FROM 
 		vuln_events a
 	LEFT JOIN 
-		dependency_vulns b ON a.vuln_id = b.id
+		dependency_vulns b ON a.dependency_vuln_id = b.id
 	LEFT JOIN 
 		assets ON b.asset_id = assets.id
 	LEFT JOIN 

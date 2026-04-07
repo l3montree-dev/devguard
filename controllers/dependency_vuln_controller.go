@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -49,7 +50,7 @@ type DependencyVulnStatus struct {
 }
 
 type BatchDependencyVulnStatus struct {
-	VulnIDs                 []string                         `json:"vulnIds"`
+	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
@@ -306,7 +307,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	project := shared.GetProject(ctx)
 
 	type vulnReq struct {
-		VulnID string            `json:"vulnId"`
+		VulnID uuid.UUID         `json:"vulnId"`
 		Event  dtos.VulnEventDTO `json:"event"`
 	}
 
@@ -516,19 +517,20 @@ func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) e
 		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
 	}
 
-	version := extractVersionFromPURL(*recommendedVersion)
-	if version == "" {
-		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
+	version, err := extractVersionFromPURL(*recommendedVersion)
+	if err != nil {
+		slog.Error("could not extract version from purl", "err", err, "recommendedVersion", *recommendedVersion)
+		return echo.NewHTTPError(500, "could not get recommendation").WithInternal(err)
 	}
 
 	return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: version})
 }
 
-func extractVersionFromPURL(input string) string {
+func extractVersionFromPURL(input string) (string, error) {
 	parsed, err := packageurl.FromString(input)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	return parsed.Version
+	return parsed.Version, nil
 }

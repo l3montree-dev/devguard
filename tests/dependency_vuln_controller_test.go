@@ -233,7 +233,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			shared.SetOrg(ctx, org)
 			shared.SetAssetVersion(ctx, assetVersion)
 			ctx.SetParamNames("dependencyVulnID")
-			ctx.SetParamValues(depVuln.ID)
+			ctx.SetParamValues(depVuln.ID.String())
 			rbac := mocks.NewAccessControl(t)
 			rbac.On("GetAllMembersOfOrganization").Return(nil, nil)
 			shared.SetRBAC(ctx, rbac)

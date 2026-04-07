@@ -1,0 +1,20 @@
+Command to automatically create migration files
+
+The base command is:
+
+    go tool migrate
+
+For our use case we almost always want to use the following command structure to automatically create a *_up.sql and *_down.sql file, with the current unix timestamp.
+
+Format: 
+
+    go tool migrate create -ext sql -dir ./database/migrations  [migration_name]
+
+Example:
+
+    go tool migrate create -ext sql -dir ./database/migrations  test_migration
+
+
+Once created we almost always only want to use the *_up.sql file to make our changes to the database.
+
+Also note that you specifically have to use "public." in front of every table to correctly address it. 

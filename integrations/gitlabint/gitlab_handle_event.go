@@ -86,24 +86,25 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any) error {
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event
 
-		vulnType := ev.VulnType
+		vulnType := ev.GetVulnType()
+		vulnID := ev.GetVulnID()
 
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(ctx, nil, ev.VulnID)
+			v, err := g.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(ctx, nil, ev.VulnID)
+			v, err := g.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeLicenseRisk:
-			licenseRisk, err := g.licenseRiskRepository.Read(ctx, nil, ev.VulnID)
+			licenseRisk, err := g.licenseRiskRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}

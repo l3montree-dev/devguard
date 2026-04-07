@@ -224,6 +224,74 @@ func (_c *DependencyVulnService_GetAllUniqueCVEsForAsset_Call) RunAndReturn(run 
 	return _c
 }
 
+// GetDirectDependencyFixedVersionByPackageName provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error) {
+	ret := _mock.Called(ctx, packageName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDirectDependencyFixedVersionByPackageName")
+	}
+
+	var r0 *string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*string, error)); ok {
+		return returnFunc(ctx, packageName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *string); ok {
+		r0 = returnFunc(ctx, packageName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, packageName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDirectDependencyFixedVersionByPackageName'
+type DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call struct {
+	*mock.Call
+}
+
+// GetDirectDependencyFixedVersionByPackageName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - packageName string
+func (_e *DependencyVulnService_Expecter) GetDirectDependencyFixedVersionByPackageName(ctx interface{}, packageName interface{}) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
+	return &DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call{Call: _e.mock.On("GetDirectDependencyFixedVersionByPackageName", ctx, packageName)}
+}
+
+func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) Run(run func(ctx context.Context, packageName string)) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) Return(s *string, err error) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) RunAndReturn(run func(ctx context.Context, packageName string) (*string, error)) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, userID, dependencyVulns, justification, asset)
