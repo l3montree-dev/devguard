@@ -264,7 +264,7 @@ DELETE FROM vuln_events ve WHERE ve.first_party_vuln_id IS NOT NULL AND NOT EXIS
 	SELECT first_party_vulnerabilities.id FROM first_party_vulnerabilities WHERE first_party_vulnerabilities.id = ve.first_party_vuln_id
 );
 
-DELETE FROM vuln_events ve WHERE ve.license_risk_id = 'licenseRisk' AND NOT EXISTS(
-	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.license_risk_id 
+DELETE FROM vuln_events ve WHERE ve.license_risk_id IS NOT NULL AND NOT EXISTS(
+	SELECT license_risks.id FROM license_risks WHERE license_risks.id = ve.license_risk_id
 );
 `
