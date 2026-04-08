@@ -45,7 +45,6 @@ func ApplyOrgPatchRequestToModel(p dtos.OrgPatchRequest, org *models.Org) bool {
 	if p.Name != nil {
 		updated = true
 		org.Name = *p.Name
-		org.Slug = slug.Make(*p.Name)
 	}
 
 	if p.ContactPhoneNumber != nil {

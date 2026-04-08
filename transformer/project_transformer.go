@@ -42,7 +42,6 @@ func ApplyProjectPatchRequestToModel(projectPatch dtos.ProjectPatchRequest, proj
 	updated := false
 	if projectPatch.Name != nil {
 		project.Name = *projectPatch.Name
-		project.Slug = slug.Make(*projectPatch.Name)
 		updated = true
 	}
 	if projectPatch.Description != nil {
