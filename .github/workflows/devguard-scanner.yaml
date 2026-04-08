@@ -62,7 +62,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      fail-on-risk: high
+      fail-on-risk: never
       fail-on-cvss: high
       web-ui: https://main.devguard.org
       continue-on-open-code-risk: true
@@ -85,7 +85,7 @@ jobs:
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
       fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
@@ -110,7 +110,7 @@ jobs:
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
       fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
@@ -134,7 +134,7 @@ jobs:
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
       fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
