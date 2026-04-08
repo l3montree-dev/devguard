@@ -224,74 +224,6 @@ func (_c *DependencyVulnService_GetAllUniqueCVEsForAsset_Call) RunAndReturn(run 
 	return _c
 }
 
-// GetDirectDependencyFixedVersionByPackageName provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error) {
-	ret := _mock.Called(ctx, packageName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDirectDependencyFixedVersionByPackageName")
-	}
-
-	var r0 *string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*string, error)); ok {
-		return returnFunc(ctx, packageName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *string); ok {
-		r0 = returnFunc(ctx, packageName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*string)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, packageName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDirectDependencyFixedVersionByPackageName'
-type DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call struct {
-	*mock.Call
-}
-
-// GetDirectDependencyFixedVersionByPackageName is a helper method to define mock.On call
-//   - ctx context.Context
-//   - packageName string
-func (_e *DependencyVulnService_Expecter) GetDirectDependencyFixedVersionByPackageName(ctx interface{}, packageName interface{}) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
-	return &DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call{Call: _e.mock.On("GetDirectDependencyFixedVersionByPackageName", ctx, packageName)}
-}
-
-func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) Run(run func(ctx context.Context, packageName string)) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) Return(s *string, err error) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
-	_c.Call.Return(s, err)
-	return _c
-}
-
-func (_c *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call) RunAndReturn(run func(ctx context.Context, packageName string) (*string, error)) *DependencyVulnService_GetDirectDependencyFixedVersionByPackageName_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, userID, dependencyVulns, justification, asset)
@@ -917,6 +849,75 @@ func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Return(err error)
 }
 
 func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserFixedDependencyVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UserReopenedToOpen provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln) error {
+	ret := _mock.Called(ctx, tx, userID, dependencyVulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UserReopenedToOpen")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []models.DependencyVuln) error); ok {
+		r0 = returnFunc(ctx, tx, userID, dependencyVulns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnService_UserReopenedToOpen_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserReopenedToOpen'
+type DependencyVulnService_UserReopenedToOpen_Call struct {
+	*mock.Call
+}
+
+// UserReopenedToOpen is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - userID string
+//   - dependencyVulns []models.DependencyVuln
+func (_e *DependencyVulnService_Expecter) UserReopenedToOpen(ctx interface{}, tx interface{}, userID interface{}, dependencyVulns interface{}) *DependencyVulnService_UserReopenedToOpen_Call {
+	return &DependencyVulnService_UserReopenedToOpen_Call{Call: _e.mock.On("UserReopenedToOpen", ctx, tx, userID, dependencyVulns)}
+}
+
+func (_c *DependencyVulnService_UserReopenedToOpen_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln)) *DependencyVulnService_UserReopenedToOpen_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []models.DependencyVuln
+		if args[3] != nil {
+			arg3 = args[3].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_UserReopenedToOpen_Call) Return(err error) *DependencyVulnService_UserReopenedToOpen_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnService_UserReopenedToOpen_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln) error) *DependencyVulnService_UserReopenedToOpen_Call {
 	_c.Call.Return(run)
 	return _c
 }

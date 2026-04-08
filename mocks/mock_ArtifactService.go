@@ -109,6 +109,80 @@ func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// GatherVexInformationIncludingResolvedMarking provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, assetVersion, artifactName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GatherVexInformationIncludingResolvedMarking")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, assetVersion, artifactName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *string) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, assetVersion, artifactName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.AssetVersion, *string) error); ok {
+		r1 = returnFunc(ctx, assetVersion, artifactName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_GatherVexInformationIncludingResolvedMarking_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatherVexInformationIncludingResolvedMarking'
+type ArtifactService_GatherVexInformationIncludingResolvedMarking_Call struct {
+	*mock.Call
+}
+
+// GatherVexInformationIncludingResolvedMarking is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetVersion models.AssetVersion
+//   - artifactName *string
+func (_e *ArtifactService_Expecter) GatherVexInformationIncludingResolvedMarking(ctx interface{}, assetVersion interface{}, artifactName interface{}) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+	return &ArtifactService_GatherVexInformationIncludingResolvedMarking_Call{Call: _e.mock.On("GatherVexInformationIncludingResolvedMarking", ctx, assetVersion, artifactName)}
+}
+
+func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string)) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.AssetVersion
+		if args[1] != nil {
+			arg1 = args[1].(models.AssetVersion)
+		}
+		var arg2 *string
+		if args[2] != nil {
+			arg2 = args[2].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetArtifactsByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
 func (_mock *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(ctx, tx, assetID, assetVersionName)

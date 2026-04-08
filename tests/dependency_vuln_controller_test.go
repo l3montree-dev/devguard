@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -129,6 +130,44 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 		assert.Equal(t, "missing packageValue or currentValue", httpErr.Message)
 		depVulnRepo.AssertNotCalled(t, "GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestDependencyVulnRecommendationRoute(t *testing.T) {
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+	}, func(f *TestFixture) {
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		cve := models.CVE{CVE: "CVE-2024-99999"}
+		assert.NoError(t, f.DB.Create(&cve).Error)
+
+		recommendedVersion := "pkg:npm/lodash@4.17.21"
+		depVuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State:            dtos.VulnStateOpen,
+				AssetVersionName: assetVersion.Name,
+				AssetID:          asset.ID,
+			},
+			CVEID:                        cve.CVE,
+			ComponentPurl:                "pkg:npm/left-pad@1.0.0",
+			DirectDependencyFixedVersion: &recommendedVersion,
+			VulnerabilityPath:            []string{"pkg:npm/lodash@4.0.0", "pkg:npm/left-pad@1.0.0"},
+		}
+		assert.NoError(t, f.DB.Create(&depVuln).Error)
+		assert.Equal(t, org.ID, project.OrganizationID)
+
+		server := api.NewServer()
+		server.Echo.GET("/api/v1/renovate/recommendation/", f.App.DependencyVulnController.GetRecommendation)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/renovate/recommendation/?packageName=lodash&packageValue=^4.0.0", nil)
+		rec := httptest.NewRecorder()
+		server.Echo.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var response dtos.Recommendation
+		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		assert.Equal(t, "4.17.21", response.RecommendedVersion)
 	})
 }
 
