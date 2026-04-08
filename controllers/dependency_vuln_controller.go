@@ -494,17 +494,13 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 
 func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) error {
 	packageName := ctx.QueryParam("packageName")
-	if packageName == "" {
-		packageName = ctx.QueryParam("depName")
-	}
+
 	if packageName == "" {
 		return echo.NewHTTPError(400, "missing packageName or depName")
 	}
 
-	currentValue := ctx.QueryParam("packageValue")
-	if currentValue == "" {
-		currentValue = ctx.QueryParam("currentValue")
-	}
+	currentValue := ctx.QueryParam("currentValue")
+
 	if currentValue == "" {
 		return echo.NewHTTPError(400, "missing packageValue or currentValue")
 	}
