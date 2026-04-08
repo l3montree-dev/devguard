@@ -269,7 +269,7 @@ func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVul
 			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
 			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
 			text.FgRed.Sprint(v.State),
-			text.FgRed.Sprint(vulnPath),
+			vulnPath,
 		}
 	}
 
