@@ -378,7 +378,6 @@ type DependencyVulnService interface {
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
-	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, packageName string) (*string, error)
 }
 
 type AssetVersionService interface {

@@ -37,23 +37,32 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context
 	dependencyVulns := []models.DependencyVuln{}
 	var err error
 	if artifactName == nil && assetVersionName == nil {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
 			Where("dependency_vulns.asset_id = ?", assetID).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
-	} else if artifactName != nil {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+	} else if artifactName != nil && assetVersionName == nil {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+			return db.Where("created_at <= ?", time).Order("created_at ASC")
+		}).
+			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", *artifactName).Where("created_at <= ?", time).
+			Find(&dependencyVulns).Error
+	} else if artifactName == nil && assetVersionName != nil {
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+			return db.Where("created_at <= ?", time).Order("created_at ASC")
+		}).
+			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").Where("adv.artifact_asset_id = ?", assetID).Where("adv.asset_version_name = ?", *assetVersionName).Where("created_at <= ?", time).
+			Find(&dependencyVulns).Error
+	} else {
+		// both defined
+		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Where("created_at <= ?", time).Order("created_at ASC")
 		}).
 			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-			Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
-			Find(&dependencyVulns).Error
-	} else {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", artifactName).Where("created_at <= ?", time).
+			Where("adv.artifact_asset_id = ?", assetID).
+			Where("adv.asset_version_name = ?", *assetVersionName).Where("adv.artifact_artifact_name = ?", *artifactName).Where("created_at <= ?", time).
 			Find(&dependencyVulns).Error
 	}
 	if err != nil {
