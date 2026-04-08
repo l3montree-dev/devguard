@@ -91,6 +91,6 @@
       in {
         packages = { default = commonBuildOutputs.devguard; } // arm64Packages // amd64Packages // commonBuildOutputs;
         devShells.default =
-          hostPkgs.mkShell { buildInputs = [ nixpkgs-unstable.go nixpkgs-unstable.gotools nixpkgs-unstable.gopls ]; };
+          hostPkgs.mkShell { buildInputs = [ nixpkgs-unstable.go nixpkgs-unstable.gotools nixpkgs-unstable.gopls nixpkgs-unstable.golangci-lint ]; };
       });
 }
