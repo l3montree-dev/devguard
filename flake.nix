@@ -26,8 +26,9 @@
   outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, sbomnix, uv2nix, pyproject-nix, pyproject-build-systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGoModule;
+          buildGoModule = unstablePkgs.buildGoModule;
         };
         sbomnixPkgs = sbomnix.packages.${system};
 
@@ -91,6 +92,6 @@
       in {
         packages = { default = commonBuildOutputs.devguard; } // arm64Packages // amd64Packages // commonBuildOutputs;
         devShells.default =
-          hostPkgs.mkShell { buildInputs = [ nixpkgs-unstable.go nixpkgs-unstable.gotools nixpkgs-unstable.gopls nixpkgs-unstable.golangci-lint ]; };
+          hostPkgs.mkShell { buildInputs = [ unstablePkgs.go unstablePkgs.gotools unstablePkgs.gopls unstablePkgs.golangci-lint ]; };
       });
 }
