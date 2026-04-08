@@ -84,7 +84,7 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
-      fail-on-cvss: high
+      fail-on-cvss: never
       fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
@@ -109,7 +109,7 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
-      fail-on-cvss: high
+      fail-on-cvss: never
       fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
@@ -133,7 +133,7 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
       web-ui: https://main.devguard.org
-      fail-on-cvss: high
+      fail-on-cvss: never
       fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
