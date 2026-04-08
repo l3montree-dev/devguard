@@ -11,4 +11,6 @@ dependencies = [
 # Pin transitive deps to versions that fix known CVEs.
 # These constraints are enforced during `uv lock` and captured in uv.lock —
 # no manual Nix overrides needed.
-constraint-dependencies = []
+constraint-dependencies = [
+    "aiohttp==3.13.4",
+]

@@ -231,7 +231,19 @@ func PrintScaResults(scanResponse compat.ScanResponse, failOnRisk, failOnCVSS, a
 }
 
 func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
-	cvss := v.CVE.CVSS
+	var cvss string
+	if v.CVE.CVSS == -1 {
+		cvss = "N/A"
+	} else {
+		cvss = fmt.Sprintf("%.1f", v.CVE.CVSS)
+	}
+
+	var risk string
+	if v.RawRiskAssessment == nil {
+		risk = "N/A"
+	} else {
+		risk = fmt.Sprintf("%.1f", *v.RawRiskAssessment)
+	}
 
 	// Keep vulnPath plain so AutoMerge can collapse identical paths across rows in the same group.
 	vulnPath := strings.Join(v.VulnerabilityPath, "\n v \n")
@@ -252,14 +264,14 @@ func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVul
 		return table.Row{
 			libraryName,
 			text.FgRed.Sprint(v.CVEID),
-			text.FgRed.Sprintf("%.2f", utils.OrDefault(v.RawRiskAssessment, 0)),
-			text.FgRed.Sprintf("%.1f", cvss),
+			text.FgRed.Sprint(risk),
+			text.FgRed.Sprint(cvss),
 			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
 			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
 			text.FgRed.Sprint(v.State),
-			vulnPath,
+			text.FgRed.Sprint(vulnPath),
 		}
 	}
 
-	return table.Row{libraryName, v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, vulnPath}
+	return table.Row{libraryName, v.CVEID, risk, cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, vulnPath}
 }
