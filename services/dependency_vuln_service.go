@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -375,6 +376,10 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 }
 
 func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+	if os.Getenv("DISABLE_TICKET_SYNC") == "true" {
+		slog.Info("ticket sync is disabled via DISABLE_TICKET_SYNC environment variable")
+		return nil
+	}
 	// Deduplicate vulnerabilities by ID to prevent creating multiple tickets
 	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
 	for _, vuln := range vulnList {
