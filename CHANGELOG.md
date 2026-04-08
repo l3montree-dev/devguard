@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.1] - 2026-04-08
+
+### Fixed
+
+- Renaming an asset, project, or organization no longer overwrites its slug — slugs are now immutable after creation, preventing broken URLs and references when a resource is renamed
+
 ## [v1.2.0] - 2026-03-30
 
 ### Added
