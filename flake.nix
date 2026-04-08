@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     # sbomnix walks the full Nix derivation graph (build + runtime closure)
     # and emits CycloneDX / SPDX SBOMs — including the Go compiler, stdlib,
@@ -22,14 +23,20 @@
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, sbomnix, uv2nix, pyproject-nix, pyproject-build-systems }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, sbomnix, uv2nix, pyproject-nix, pyproject-build-systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        hostPkgs = nixpkgs.legacyPackages.${system};
+        hostPkgs = nixpkgs.legacyPackages.${system} // {
+          buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGoModule;
+        };
         sbomnixPkgs = sbomnix.packages.${system};
 
-        targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux;
-        targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux;
+        targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
+          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGoModule;
+        };
+        targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux // {
+          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGoModule;
+        };
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; lib = hostPkgs.lib; inherit self; };
         ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
@@ -82,9 +89,8 @@
         };
 
       in {
-        packages = arm64Packages // amd64Packages // commonBuildOutputs;
-
+        packages = { default = commonBuildOutputs.devguard; } // arm64Packages // amd64Packages // commonBuildOutputs;
         devShells.default =
-          hostPkgs.mkShell { buildInputs = [ hostPkgs.go hostPkgs.gotools hostPkgs.gopls ]; };
+          hostPkgs.mkShell { buildInputs = [ nixpkgs-unstable.go nixpkgs-unstable.gotools nixpkgs-unstable.gopls ]; };
       });
 }
