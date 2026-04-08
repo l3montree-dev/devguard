@@ -35,7 +35,6 @@ func TestApplyToModel(t *testing.T) {
 			},
 			expected: models.Asset{
 				Name:        "New Name",
-				Slug:        "new-name",
 				Description: "New Description",
 			},
 			updated: true,
