@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -37,7 +38,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dtos.DependencyVulnDTO{}
+		v := compat.DependencyVulnDTO{}
 		v.CVEID = cveid
 		v.CVE = transformer.CVEToDTO(models.CVE{
 			CVSS: 7.0,
@@ -63,7 +64,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dtos.DependencyVulnDTO{}
+		v := compat.DependencyVulnDTO{}
 		v.CVEID = cveid
 		v.CVE = transformer.CVEToDTO(models.CVE{
 			CVSS: 7.0,
@@ -86,7 +87,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		pURL.Namespace = "example"
 		pURL.Name = "lib"
 
-		v := dtos.DependencyVulnDTO{}
+		v := compat.DependencyVulnDTO{}
 		v.CVEID = "CVE-2023-12345"
 		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 5.0})
 		v.State = dtos.VulnState("open")
@@ -102,7 +103,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		pURL.Name = "lib"
 
 		risk := 9.0
-		v := dtos.DependencyVulnDTO{}
+		v := compat.DependencyVulnDTO{}
 		v.CVEID = "CVE-2023-12345"
 		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 9.0})
 		v.RawRiskAssessment = &risk
@@ -120,8 +121,8 @@ func TestPrintScaResults(t *testing.T) {
 	webUI := "https://app.devguard.org"
 
 	t.Run("should return nil when no vulnerabilities found", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{},
+		scanResponse := compat.ScanResponse{
+			DependencyVulns: []compat.DependencyVulnDTO{},
 			AmountOpened:    0,
 			AmountClosed:    0,
 		}
@@ -131,8 +132,8 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should not fail when all vulnerabilities are closed/accepted - even with high risk/CVSS", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{
+		scanResponse := compat.ScanResponse{
+			DependencyVulns: []compat.DependencyVulnDTO{
 				{
 					CVEID:             "CVE-2023-12345",
 					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
@@ -185,8 +186,8 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := dtos.ScanResponse{
-					DependencyVulns: []dtos.DependencyVulnDTO{
+				scanResponse := compat.ScanResponse{
+					DependencyVulns: []compat.DependencyVulnDTO{
 						{
 							CVEID:             "CVE-2023-12345",
 							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
@@ -234,8 +235,8 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := dtos.ScanResponse{
-					DependencyVulns: []dtos.DependencyVulnDTO{
+				scanResponse := compat.ScanResponse{
+					DependencyVulns: []compat.DependencyVulnDTO{
 						{
 							CVEID:             "CVE-2023-12345",
 							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
@@ -264,8 +265,8 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should only consider OPEN vulnerabilities - mixed states scenario", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{
+		scanResponse := compat.ScanResponse{
+			DependencyVulns: []compat.DependencyVulnDTO{
 				{
 					CVEID:             "CVE-2023-12345",
 					ComponentPurl:     "pkg:golang/github.com/example/lib1@v1.0.0",
@@ -327,8 +328,8 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should handle nil RawRiskAssessment gracefully", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{
+		scanResponse := compat.ScanResponse{
+			DependencyVulns: []compat.DependencyVulnDTO{
 				{
 					CVEID:             "CVE-2023-12345",
 					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
@@ -351,8 +352,8 @@ func TestPrintScaResults(t *testing.T) {
 	})
 
 	t.Run("should handle unknown failOn values gracefully", func(t *testing.T) {
-		scanResponse := dtos.ScanResponse{
-			DependencyVulns: []dtos.DependencyVulnDTO{
+		scanResponse := compat.ScanResponse{
+			DependencyVulns: []compat.DependencyVulnDTO{
 				{
 					CVEID:             "CVE-2023-12345",
 					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",

@@ -24,6 +24,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
@@ -32,14 +33,14 @@ import (
 // Set to gitlab output size limit
 var rowLengthLimit = 80
 
-func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
+func PrintFirstPartyScanResults(scanResponse compat.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
 	}
 
 	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) bool {
+	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v compat.FirstPartyVulnDTO) bool {
 		return v.State == dtos.VulnStateOpen
 	})
 
@@ -66,7 +67,7 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 	return nil
 }
 
-func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
+func PrintSecretScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
 	for _, vuln := range firstPartyVulns {
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
@@ -88,7 +89,7 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 	}
 }
 
-func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
+func PrintSastScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
 
 	for _, vuln := range firstPartyVulns {
 		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
@@ -106,14 +107,14 @@ func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, asset
 }
 
 // can be reused for container scanning as well.
-func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
+func PrintScaResults(scanResponse compat.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
 		return nil
 	}
 	// group the dependencyVulns by their purl
-	dependencyVulnsByPurl := map[string][]dtos.DependencyVulnDTO{}
+	dependencyVulnsByPurl := map[string][]compat.DependencyVulnDTO{}
 	for _, v := range scanResponse.DependencyVulns {
 		purlKey := strings.TrimSpace(v.ComponentPurl)
 		if purlKey == "" {
@@ -121,14 +122,14 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 		}
 		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
-			dependencyVulnsByPurl[purlKey] = []dtos.DependencyVulnDTO{}
+			dependencyVulnsByPurl[purlKey] = []compat.DependencyVulnDTO{}
 		}
 		dependencyVulnsByPurl[purlKey] = append(dependencyVulnsByPurl[purlKey], v)
 	}
 
 	// delete the duplicates in each group
 	for purl, vulns := range dependencyVulnsByPurl {
-		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
+		uniqueVulns := map[string]compat.DependencyVulnDTO{}
 		for _, v := range vulns {
 			uniqueVulns[fmt.Sprintf("%s:%.2f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
 		}
@@ -146,7 +147,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	})
 	for _, v := range dependencyVulnsByPurl {
 		//order the vulnerabilities in each group by their risk
-		slices.SortFunc(v, func(a, b dtos.DependencyVulnDTO) int {
+		slices.SortFunc(v, func(a, b compat.DependencyVulnDTO) int {
 			return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 		})
 
@@ -229,7 +230,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	return nil
 }
 
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
 	cvss := v.CVE.CVSS
 
 	// Keep vulnPath plain so AutoMerge can collapse identical paths across rows in the same group.

@@ -31,9 +31,9 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -278,7 +278,7 @@ func scanExternalImage(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse dtos.ScanResponse
+	var scanResponse compat.ScanResponse
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
 		return errors.Wrap(err, "could not parse response")
@@ -328,7 +328,7 @@ func scanLocalFilePath(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse dtos.ScanResponse
+	var scanResponse compat.ScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
