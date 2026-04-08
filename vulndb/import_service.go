@@ -250,22 +250,13 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 		return err
 	}
 
-	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
+	// filter and sort files beforehand since we need a consistent and sound order of execution
 	sort.Slice(files, func(i, j int) bool {
-		if strings.HasPrefix(files[i].Name(), "cve_affected_component") {
-			return false
+		pi, pj := getExecutionPriority(files[i].Name()), getExecutionPriority(files[j].Name())
+		if pi != pj {
+			return pi < pj
 		}
-		if strings.HasPrefix(files[j].Name(), "cve_affected_component") {
-			return true
-		}
-		// Move exploits to the end
-		if strings.HasPrefix(files[i].Name(), "exploits") {
-			return false
-		}
-		if strings.HasPrefix(files[j].Name(), "exploits") {
-			return true
-		}
-		return strings.Compare(files[i].Name(), files[j].Name()) < 0
+		return files[i].Name() < files[j].Name()
 	})
 
 	for _, file := range files {
@@ -928,7 +919,8 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKeyColumnName, "'"+primaryKeyValue+"'")
 			_, err := tx.Exec(ctx, sql)
 			if err != nil {
-				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue)
+				tx.Rollback(ctx)
+				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue, "err", err)
 				continue
 			}
 		}
@@ -1115,4 +1107,35 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 		return nil, fmt.Errorf("slice not sorted")
 	}
 	return allTags, nil
+}
+
+// assigns a priority to each table and mode combination
+func getExecutionPriority(name string) int {
+	order := 1 // we need to reverse the order for the delete statements
+	if strings.HasSuffix(strings.TrimSuffix(name, ".cvs"), "_delete") {
+		order = -1
+	}
+	switch {
+	// first handle the base tables
+	case strings.HasPrefix(name, "cves_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "affected_components_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "cwes_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "malicious_packages_diff"):
+		return 1 * order
+
+	// tables which are dependant on the base tables values (e.g. foreign key constraint)
+	case strings.HasPrefix(name, "exploits_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "cve_relationships_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "cve_affected_component_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "malicious_affected_components_diff"):
+		return 2 * order
+	default:
+		return 3 * order
+	}
 }
