@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
@@ -38,14 +39,20 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 		)
 	}
 
-	t.Run("uses packageName/packageValue and returns extracted version", func(t *testing.T) {
+	t.Run("uses packageName/currentValue and returns extracted version", func(t *testing.T) {
 		depVulnRepo := mocks.NewDependencyVulnRepository(t)
 		controller := buildController(t, depVulnRepo)
 
 		recommendedPurl := "pkg:npm/lodash@4.17.21"
 		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "lodash").Return(&recommendedPurl, nil).Once()
 
-		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=lodash&packageValue=^4.0.0", nil)
+		requestURL := "/dependency_vuln/recommendation"
+		query := url.Values{}
+		query.Set("packageName", "lodash")
+		query.Set("currentValue", "4.0.0")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
@@ -59,24 +66,28 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 		depVulnRepo.AssertExpectations(t)
 	})
 
-	t.Run("uses depName/currentValue aliases and returns empty recommendation for non-PURL value", func(t *testing.T) {
+	t.Run("returns internal error for non-PURL fixed version", func(t *testing.T) {
 		depVulnRepo := mocks.NewDependencyVulnRepository(t)
 		controller := buildController(t, depVulnRepo)
 
 		recommendedVersion := "2.3.4"
 		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "leftpad").Return(&recommendedVersion, nil).Once()
 
-		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?depName=leftpad&currentValue=2.0.0", nil)
+		requestURL := "/dependency_vuln/recommendation"
+		query := url.Values{}
+		query.Set("packageName", "leftpad")
+		query.Set("currentValue", "2.0.0")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
 		err := controller.GetRecommendation(ctx)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var response map[string]string
-		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
-		assert.Equal(t, "", response["recommendedVersion"])
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
+		assert.Equal(t, "could not get recommendation", httpErr.Message)
 		depVulnRepo.AssertExpectations(t)
 	})
 
@@ -86,7 +97,13 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 
 		depVulnRepo.On("GetDirectDependencyFixedVersionByPackageName", mock.Anything, mock.Anything, "chalk").Return((*string)(nil), nil).Once()
 
-		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=chalk&packageValue=5.0.0", nil)
+		requestURL := "/dependency_vuln/recommendation"
+		query := url.Values{}
+		query.Set("packageName", "chalk")
+		query.Set("currentValue", "5.0.0")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
@@ -104,7 +121,12 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 		depVulnRepo := mocks.NewDependencyVulnRepository(t)
 		controller := buildController(t, depVulnRepo)
 
-		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageValue=1.2.3", nil)
+		requestURL := "/dependency_vuln/recommendation"
+		query := url.Values{}
+		query.Set("currentValue", "1.2.3")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
@@ -120,7 +142,12 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 		depVulnRepo := mocks.NewDependencyVulnRepository(t)
 		controller := buildController(t, depVulnRepo)
 
-		req := httptest.NewRequest(http.MethodGet, "/dependency_vuln/recommendation?packageName=react", nil)
+		requestURL := "/dependency_vuln/recommendation"
+		query := url.Values{}
+		query.Set("packageName", "react")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
@@ -160,7 +187,13 @@ func TestDependencyVulnRecommendationRoute(t *testing.T) {
 		server := api.NewServer()
 		server.Echo.GET("/api/v1/renovate/recommendation/", f.App.DependencyVulnController.GetRecommendation)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/renovate/recommendation/?packageName=lodash&packageValue=^4.0.0", nil)
+		requestURL := "/api/v1/renovate/recommendation/"
+		query := url.Values{}
+		query.Set("packageName", "lodash")
+		query.Set("currentValue", "4.0.0")
+
+		req := httptest.NewRequest(http.MethodGet, requestURL, nil)
+		req.URL.RawQuery = query.Encode()
 		rec := httptest.NewRecorder()
 		server.Echo.ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
