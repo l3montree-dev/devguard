@@ -31,7 +31,7 @@
   # Shared build arguments for all three binaries.
   commonArgs = {
     inherit src;
-    vendorHash = "sha256-gTD/NuT2bL6z5o+aG0PAE5BNxsoKfcW27Yio8pwLBhc=";
+    vendorHash = "sha256-vRd0SFu7i6NQOQCqLZDXaMxnMgq1TYjkD/fZsF3Q9NQ=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
