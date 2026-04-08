@@ -69,6 +69,7 @@
       pkgs.jq
       pkgs.gettext
       pkgs.busybox
+      pkgs.git
     ];
 
     fakeRootCommands = ''
