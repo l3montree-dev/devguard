@@ -82,7 +82,7 @@ func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 			return p.GetID().String()
 		}),
 		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
+		strings.TrimSpace(ctx.QueryParam("search")),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
@@ -103,7 +103,7 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 		project.ID,
 
 		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
+		strings.TrimSpace(ctx.QueryParam("search")),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
