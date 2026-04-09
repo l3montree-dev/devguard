@@ -134,7 +134,7 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), strings.Trim(ctx.QueryParam("search"), " "), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
+		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), strings.TrimSpace(ctx.QueryParam("search")), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
@@ -149,7 +149,7 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 		assetVersion.Name,
 		assetVersion.AssetID,
 		shared.GetPageInfo(ctx),
-		strings.Trim(ctx.QueryParam("search"), " "),
+		strings.TrimSpace(ctx.QueryParam("search")),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
