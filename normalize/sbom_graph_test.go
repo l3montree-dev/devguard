@@ -292,11 +292,11 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 		// With keepOriginalSbomRootComponent=false, component-a should be a child of the info source, not the root
 		// Verify the graph structure
-		edges := result.Edges()
+		edges := result.EdgesIter()
 		foundEdge := false
 		for parentID, childID := range edges {
 			// The info source should have component-a as a child
-			parentNode := result.nodes[parentID]
+			parentNode := result.Nodes[parentID]
 			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == "pkg:npm/component-a@1.0.0" {
 				foundEdge = true
 				break
@@ -335,12 +335,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		// With keepOriginalSbomRootComponent=true, we should have:
 		// 1. An edge from info source to the original root ref
 		// 2. An edge from root ref to component-a (not redirected to info source)
-		edges := result.Edges()
+		edges := result.EdgesIter()
 		foundRootEdge := false
 		foundComponentEdge := false
 
 		for parentID, childID := range edges {
-			parentNode := result.nodes[parentID]
+			parentNode := result.Nodes[parentID]
 			// Check for info source -> root edge
 			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == GraphRootNodeID {
 				foundRootEdge = true
@@ -392,7 +392,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Both components should be children of root, not info source
-		edges := result.Edges()
+		edges := result.EdgesIter()
 		componentAChildren := 0
 		componentBChildren := 0
 
@@ -439,11 +439,11 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Even with keepOriginalSbomRootComponent=true, orphan components should still be connected to info source
-		edges := result.Edges()
+		edges := result.EdgesIter()
 		foundInfoSourceEdge := false
 
 		for parentID, childID := range edges {
-			parentNode := result.nodes[parentID]
+			parentNode := result.Nodes[parentID]
 			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource && childID == "pkg:npm/orphan-component@1.0.0" {
 				foundInfoSourceEdge = true
 				break
@@ -511,12 +511,12 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify the root node exists in the graph
-		rootNode := result.nodes[rootRef]
+		rootNode := result.Nodes[rootRef]
 		assert.NotNil(t, rootNode, "root component node should exist in the graph")
 		assert.Equal(t, GraphNodeTypeComponent, rootNode.Type, "root node should be a component type")
 
 		// Collect all edges
-		edges := result.Edges()
+		edges := result.EdgesIter()
 		edgeMap := make(map[string][]string)
 		for parentID, childID := range edges {
 			edgeMap[parentID] = append(edgeMap[parentID], childID)
@@ -524,7 +524,7 @@ func TestSBOMGraphFromCycloneDX(t *testing.T) {
 
 		// Verify: info source -> root (keepOriginalSbomRootComponent adds this)
 		var infoSourceID string
-		for nodeID, node := range result.nodes {
+		for nodeID, node := range result.Nodes {
 			if node.Type == GraphNodeTypeInfoSource {
 				infoSourceID = nodeID
 				break
@@ -808,7 +808,7 @@ func TestMergeCdxBomsSimple(t *testing.T) {
 	result.MergeGraph(graph2)
 	result.ToCycloneDX(BOMMetadata{})
 
-	assert.Len(t, slices.Collect(result.Vulnerabilities()), 1)
+	assert.Len(t, slices.Collect(result.VulnerabilitiesIter()), 1)
 }
 
 func TestMergeComplex(t *testing.T) {
@@ -1339,7 +1339,7 @@ func TestVulnerabilities(t *testing.T) {
 	t.Run("empty graph returns no vulnerabilities", func(t *testing.T) {
 		g := NewSBOMGraph()
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Empty(t, vulns)
 	})
 
@@ -1350,7 +1350,7 @@ func TestVulnerabilities(t *testing.T) {
 			Description: "Test vulnerability",
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 	})
@@ -1364,7 +1364,7 @@ func TestVulnerabilities(t *testing.T) {
 			},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 		assert.Equal(t, cdx.IASExploitable, vulns[0].Analysis.State)
@@ -1376,7 +1376,7 @@ func TestVulnerabilities(t *testing.T) {
 		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-2222"})
 		g.AddVulnerability(cdx.Vulnerability{ID: "CVE-2021-3333"})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 3)
 
 		ids := make(map[string]bool)
@@ -1400,7 +1400,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.21"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		// Both kept because they have different affects
 		assert.Len(t, vulns, 2)
 	})
@@ -1424,7 +1424,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 		assert.NotNil(t, vulns[0].Analysis)
@@ -1450,7 +1450,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 		assert.NotNil(t, vulns[0].Analysis)
@@ -1474,7 +1474,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-1234", vulns[0].ID)
 	})
@@ -1495,7 +1495,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 1)
 	})
 
@@ -1517,7 +1517,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, cdx.IASInTriage, vulns[0].Analysis.State)
@@ -1535,7 +1535,7 @@ func TestVulnerabilities(t *testing.T) {
 			Affects: &[]cdx.Affects{{Ref: "pkg:npm/package-b@2.0.0"}},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		// Both are kept because they have different affects
 		assert.Len(t, vulns, 2)
 	})
@@ -1567,7 +1567,7 @@ func TestVulnerabilities(t *testing.T) {
 			},
 		})
 
-		vulns := slices.Collect(g.Vulnerabilities())
+		vulns := slices.Collect(g.VulnerabilitiesIter())
 		assert.Len(t, vulns, 3)
 
 		vulnMap := make(map[string]*cdx.Vulnerability)
@@ -1742,7 +1742,7 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 		g.AddComponent(comp)
 
 		// Verify the component was added with unescaped PURL
-		node := g.nodes[encodedPurl]
+		node := g.Nodes[encodedPurl]
 		assert.NotNil(t, node)
 		assert.Equal(t, expectedPurl, node.Component.PackageURL)
 	})
@@ -1764,7 +1764,7 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 		g.AddComponent(comp)
 
 		// Verify the component was added with the same PURL (no change)
-		node := g.nodes[purl]
+		node := g.Nodes[purl]
 		assert.NotNil(t, node)
 		assert.Equal(t, purl, node.Component.PackageURL)
 	})
@@ -1786,7 +1786,7 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 
 		g.AddComponent(comp)
 
-		node := g.nodes[encodedPurl]
+		node := g.Nodes[encodedPurl]
 		assert.NotNil(t, node)
 		assert.Equal(t, expectedPurl, node.Component.PackageURL)
 	})
@@ -1804,7 +1804,7 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 
 		g.AddComponent(comp)
 
-		node := g.nodes["some-ref"]
+		node := g.Nodes["some-ref"]
 		assert.NotNil(t, node)
 		assert.Equal(t, "", node.Component.PackageURL)
 	})
@@ -1851,7 +1851,7 @@ func TestAddComponent_URLUnescaping(t *testing.T) {
 
 		// Verify vulnerability is stored and component PURL matches what would be used for dependency vuln
 		var foundVuln *cdx.Vulnerability
-		for v := range g.Vulnerabilities() {
+		for v := range g.VulnerabilitiesIter() {
 			if v.ID == "CVE-2024-1234" {
 				foundVuln = v
 				break
@@ -2162,7 +2162,7 @@ func TestScoping(t *testing.T) {
 	t.Run("Edges respects scope", func(t *testing.T) {
 		g := buildGraph()
 		_ = g.ScopeToArtifact("app2")
-		for _, child := range g.Edges() {
+		for _, child := range g.EdgesIter() {
 			assert.NotEqual(t, "pkg:npm/only1@1.0.0", child)
 			assert.NotEqual(t, "pkg:npm/shared@1.0.0", child)
 		}
@@ -2294,7 +2294,7 @@ func TestTrivyDebianSBOMNoForeignKeyViolation(t *testing.T) {
 		// Collect the PackageURLs already in the DB (simulates the components
 		// that exist from the first scan — keyed by decoded PURL).
 		existingComponents := make(map[string]struct{})
-		for id, node := range existingGraph.nodes {
+		for id, node := range existingGraph.Nodes {
 			if node != nil && node.Component != nil {
 				existingComponents[id] = struct{}{}
 				existingComponents[node.Component.PackageURL] = struct{}{}
@@ -2404,7 +2404,7 @@ func TestMergeGraphRemovals(t *testing.T) {
 
 		// The edge must still exist in the merged graph.
 		otherEdgeExists := false
-		for parent, child := range base.Edges() {
+		for parent, child := range base.EdgesIter() {
 			if parent == srcIDOther && child == "pkg:npm/other@1.0.0" {
 				otherEdgeExists = true
 				break
@@ -2469,6 +2469,52 @@ func TestMergeGraphRemovals(t *testing.T) {
 		assert.Nil(t, base.Node("pkg:npm/old@1.0.0"),
 			"old component should no longer be reachable after subtree replacement")
 	})
+
+	t.Run("merging removes outdated transitive dep when info source is replaced", func(t *testing.T) {
+		// before: source artifact with sbom:DEFAULT@source -> devguard-scanner-tools -> checkov@3.2.513 -> aiohttp@3.13.3
+		before := NewSBOMGraph()
+		before.Nodes = map[string]*GraphNode{
+			"ROOT":                                  {BOMRef: "ROOT", Type: GraphNodeTypeRoot},
+			"artifact:source":                       {BOMRef: "artifact:source", Type: GraphNodeTypeArtifact},
+			"sbom:DEFAULT@source":                   {BOMRef: "sbom:DEFAULT@source", Type: GraphNodeTypeInfoSource},
+			"pkg:pypi/devguard-scanner-tools@0.1.0": {BOMRef: "pkg:pypi/devguard-scanner-tools@0.1.0", Type: GraphNodeTypeComponent},
+			"pkg:pypi/checkov@3.2.513":              {BOMRef: "pkg:pypi/checkov@3.2.513", Type: GraphNodeTypeComponent},
+			"pkg:pypi/aiohttp@3.13.3":               {BOMRef: "pkg:pypi/aiohttp@3.13.3", Type: GraphNodeTypeComponent},
+		}
+		before.Edges = map[string]map[string]struct{}{
+			"ROOT":                                  {"artifact:source": {}},
+			"artifact:source":                       {"sbom:DEFAULT@source": {}},
+			"sbom:DEFAULT@source":                   {"pkg:pypi/devguard-scanner-tools@0.1.0": {}},
+			"pkg:pypi/devguard-scanner-tools@0.1.0": {"pkg:pypi/checkov@3.2.513": {}},
+			"pkg:pypi/checkov@3.2.513":              {"pkg:pypi/aiohttp@3.13.3": {}},
+		}
+
+		// other: same info source, checkov updated to 3.2.517 pulling aiohttp@3.13.4
+		other := NewSBOMGraph()
+		other.Nodes = map[string]*GraphNode{
+			"ROOT":                                  {BOMRef: "ROOT", Type: GraphNodeTypeRoot},
+			"artifact:source":                       {BOMRef: "artifact:source", Type: GraphNodeTypeArtifact},
+			"sbom:DEFAULT@source":                   {BOMRef: "sbom:DEFAULT@source", Type: GraphNodeTypeInfoSource},
+			"pkg:pypi/devguard-scanner-tools@0.1.0": {BOMRef: "pkg:pypi/devguard-scanner-tools@0.1.0", Type: GraphNodeTypeComponent},
+			"pkg:pypi/checkov@3.2.517":              {BOMRef: "pkg:pypi/checkov@3.2.517", Type: GraphNodeTypeComponent},
+			"pkg:pypi/aiohttp@3.13.4":               {BOMRef: "pkg:pypi/aiohttp@3.13.4", Type: GraphNodeTypeComponent},
+		}
+		other.Edges = map[string]map[string]struct{}{
+			"ROOT":                                  {"artifact:source": {}},
+			"artifact:source":                       {"sbom:DEFAULT@source": {}},
+			"sbom:DEFAULT@source":                   {"pkg:pypi/devguard-scanner-tools@0.1.0": {}},
+			"pkg:pypi/devguard-scanner-tools@0.1.0": {"pkg:pypi/checkov@3.2.517": {}},
+			"pkg:pypi/checkov@3.2.517":              {"pkg:pypi/aiohttp@3.13.4": {}},
+		}
+
+		before.MergeGraph(other)
+
+		assert.Nil(t, before.ScopeToArtifact("source"))
+		assert.Nil(t, before.Node("pkg:pypi/aiohttp@3.13.3"),
+			"after merging, aiohttp 3.13.3 should no longer be reachable from source artifact")
+		assert.NotNil(t, before.Node("pkg:pypi/aiohttp@3.13.4"),
+			"aiohttp 3.13.4 should be reachable after merge")
+	})
 }
 
 func TestDependencyGraph(t *testing.T) {
@@ -2484,7 +2530,7 @@ func TestDependencyGraph(t *testing.T) {
 
 		old := NewSBOMGraph()
 
-		directDeps := g.edges["sbom:infosource@artifact"]
+		directDeps := g.Edges["sbom:infosource@artifact"]
 		assert.Len(t, directDeps, 2)
 		assert.Contains(t, directDeps, "pkg:npm/%40l3montree/service-app@1.0.0")
 		assert.Contains(t, directDeps, "pkg:npm/express@4.22.1")

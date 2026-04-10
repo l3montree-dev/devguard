@@ -605,7 +605,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				m[dv.CVEID] = dv
 			}
 
-			for v := range vex.Vulnerabilities() {
+			for v := range vex.VulnerabilitiesIter() {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue
