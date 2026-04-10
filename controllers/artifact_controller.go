@@ -438,7 +438,8 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/json
+// @Success 200 {string} string "CycloneDX BOM in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/ [get]
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -470,7 +471,8 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/xml
+// @Success 200 {string} string "CycloneDX BOM in XML format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.xml/ [get]
 func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -483,6 +485,7 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
 		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
+	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
@@ -496,7 +499,8 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/xml
+// @Success 200 {string} string "CycloneDX VEX in XML format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.xml/ [get]
 func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
@@ -504,6 +508,7 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 		return err
 	}
 
+	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
@@ -518,7 +523,8 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/json
+// @Success 200 {string} string "CycloneDX VEX in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/ [get]
 func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
@@ -541,7 +547,8 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/json
+// @Success 200 {string} string "OpenVEX document in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/ [get]
 func (c *ArtifactController) OpenVEXJSON(ctx shared.Context) error {
 	vex, err := c.buildOpenVeX(ctx)
@@ -595,7 +602,8 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/pdf
+// @Success 200 {string} string "Vulnerability report as PDF"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vulnerability-report.pdf/ [get]
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -816,7 +824,8 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
+// @Produce application/pdf
+// @Success 200 {string} string "SBOM as PDF"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.pdf/ [get]
 func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)

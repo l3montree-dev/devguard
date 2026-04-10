@@ -372,8 +372,9 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 // @Security PATAuth
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
-// @Success 200 {string} string
-// @Router /organizations/{organization}/config-files/{config-file} [get]
+// @Produce text/plain
+// @Success 200 {string} string "Config file content"
+// @Router /organizations/{organization}/config-files/{config-file}/ [get]
 func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
@@ -392,8 +393,9 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
 // @Param body body string true "Config file content"
-// @Success 200 {string} string
-// @Router /organizations/{organization}/config-files/{config-file} [put]
+// @Produce text/plain
+// @Success 200 {string} string "Updated config file content"
+// @Router /organizations/{organization}/config-files/{config-file}/ [put]
 func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")

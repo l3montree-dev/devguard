@@ -2981,7 +2981,7 @@ paths:
       summary: Update organization
       tags:
       - Organizations
-  /organizations/{organization}/config-files/{config-file}:
+  /organizations/{organization}/config-files/{config-file}/:
     get:
       parameters:
       - description: Organization slug
@@ -2999,10 +2999,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
-          description: OK
+          description: Config file content
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -3034,10 +3034,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
-          description: OK
+          description: Updated config file content
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -3535,6 +3535,93 @@ paths:
       summary: Update asset
       tags:
       - Assets
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get asset config file
+      tags:
+      - Assets
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: string
+        description: Config file content
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Updated config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Update asset config file
+      tags:
+      - Assets
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version}:
     get:
       parameters:
@@ -3681,7 +3768,7 @@ paths:
       summary: Get CVEs with known exploits for an asset
       tags:
       - Statistics
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/:
     get:
       parameters:
       - description: Organization slug
@@ -3708,9 +3795,7 @@ paths:
             application/json:
               schema:
                 items:
-                  items:
-                    $ref: '#/components/schemas/dtos.AssetVersionDTO'
-                  type: array
+                  $ref: '#/components/schemas/dtos.AssetVersionDTO'
                 type: array
           description: OK
       security:
@@ -3803,6 +3888,7 @@ paths:
       summary: Delete asset version
       tags:
       - Asset Versions
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/:
     get:
       parameters:
       - description: Organization slug
@@ -4023,8 +4109,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: OpenVEX document in JSON format
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4069,8 +4155,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: CycloneDX BOM in JSON format
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4113,10 +4199,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            application/pdf:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: SBOM as PDF
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4159,10 +4245,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            application/xml:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: CycloneDX BOM in XML format
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4207,8 +4293,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: CycloneDX VEX in JSON format
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4251,10 +4337,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            application/xml:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: CycloneDX VEX in XML format
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -4297,10 +4383,10 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            application/pdf:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: Vulnerability report as PDF
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -5265,6 +5351,81 @@ paths:
       summary: Scan SBOM file
       tags:
       - Scanning
+  /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get project config file
+      tags:
+      - Projects
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: string
+        description: Config file content
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Updated config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Update project config file
+      tags:
+      - Projects
   /organizations/{organization}/projects/{projectSlug}/members:
     get:
       parameters:

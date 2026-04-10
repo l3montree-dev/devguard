@@ -64,7 +64,7 @@ func NewAssetVersionController(
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {object} dtos.AssetVersionDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/ [get]
 func (a *AssetVersionController) Read(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	return ctx.JSON(200, transformer.AssetVersionModelToDTO(assetVersion))
@@ -79,7 +79,7 @@ func (a *AssetVersionController) Read(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param body body object{name=string,tag=bool,defaultBranch=bool} true "Request body"
 // @Success 201 {object} dtos.AssetVersionDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/ [post]
 func (a *AssetVersionController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -133,8 +133,8 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} []dtos.AssetVersionDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs [get]
+// @Success 200 {array} dtos.AssetVersionDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/ [get]
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
