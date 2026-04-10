@@ -5882,7 +5882,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/": {
             "delete": {
                 "parameters": [
                     {
@@ -5939,9 +5939,7 @@
                 "tags": [
                     "Asset Versions"
                 ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/": {
+            },
             "get": {
                 "parameters": [
                     {
@@ -6292,7 +6290,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object"
                                 }
                             }
                         },
@@ -6367,7 +6365,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object"
                                 }
                             }
                         },
@@ -6592,7 +6590,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object"
                                 }
                             }
                         },

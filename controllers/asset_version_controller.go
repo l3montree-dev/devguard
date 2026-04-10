@@ -115,7 +115,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/ [delete]
 func (a *AssetVersionController) Delete(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)                                         //Get the asset provided in the context / URL
 	err := a.assetVersionRepository.Delete(ctx.Request().Context(), nil, &assetVersion) //Call delete on the returned assetVersion

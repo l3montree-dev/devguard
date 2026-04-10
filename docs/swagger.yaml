@@ -3852,7 +3852,7 @@ paths:
       summary: Create asset version
       tags:
       - Asset Versions
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/:
     delete:
       parameters:
       - description: Organization slug
@@ -3888,7 +3888,6 @@ paths:
       summary: Delete asset version
       tags:
       - Asset Versions
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/:
     get:
       parameters:
       - description: Organization slug
@@ -4109,7 +4108,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                type: object
           description: OpenVEX document in JSON format
       security:
       - CookieAuth: []
@@ -4155,7 +4154,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                type: object
           description: CycloneDX BOM in JSON format
       security:
       - CookieAuth: []
@@ -4293,7 +4292,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                type: object
           description: CycloneDX VEX in JSON format
       security:
       - CookieAuth: []

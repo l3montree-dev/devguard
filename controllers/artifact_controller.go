@@ -439,7 +439,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Produce application/json
-// @Success 200 {string} string "CycloneDX BOM in JSON format"
+// @Success 200 {object} object "CycloneDX BOM in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/ [get]
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -524,7 +524,7 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Produce application/json
-// @Success 200 {string} string "CycloneDX VEX in JSON format"
+// @Success 200 {object} object "CycloneDX VEX in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/ [get]
 func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
@@ -548,7 +548,7 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Produce application/json
-// @Success 200 {string} string "OpenVEX document in JSON format"
+// @Success 200 {object} object "OpenVEX document in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/ [get]
 func (c *ArtifactController) OpenVEXJSON(ctx shared.Context) error {
 	vex, err := c.buildOpenVeX(ctx)
