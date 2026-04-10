@@ -378,6 +378,17 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDetailsWithSecretsDTO(asset, members))
 }
 
+// @Summary Get asset config file
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param config-file path string true "Config file ID"
+// @Produce text/plain
+// @Success 200 {string} string "Config file content"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/ [get]
 func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
@@ -399,6 +410,18 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 	return ctx.String(200, configContent.(string))
 }
 
+// @Summary Update asset config file
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param config-file path string true "Config file ID"
+// @Param body body string true "Config file content"
+// @Produce text/plain
+// @Success 200 {string} string "Updated config file content"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/ [put]
 func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	configID := ctx.Param("config-file")
