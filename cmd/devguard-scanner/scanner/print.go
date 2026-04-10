@@ -254,15 +254,10 @@ func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVul
 	} else {
 		libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
 	}
-	// Color the library name red only when this specific vuln triggered the threshold,
-	// so AutoMerge can still collapse the identical plain-string across non-failed rows.
-	if failed {
-		libraryName = text.FgRed.Sprint(libraryName)
-	}
 
 	if failed {
 		return table.Row{
-			libraryName,
+			text.FgRed.Sprint(libraryName),
 			text.FgRed.Sprint(v.CVEID),
 			text.FgRed.Sprint(risk),
 			text.FgRed.Sprint(cvss),
