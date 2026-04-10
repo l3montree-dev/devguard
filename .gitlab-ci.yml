@@ -39,7 +39,6 @@ include:
       nix_target_arm64: "devguard-scanner-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":scanner"
-      version: nix
 
   # ── postgresql-pipeline ──────────────────────────────────────────────────────────
   - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/build-nix-multiarch.yml
@@ -50,4 +49,3 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
-      version: nix
