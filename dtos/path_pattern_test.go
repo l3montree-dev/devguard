@@ -100,6 +100,9 @@ func TestRootPathPattern(t *testing.T) {
 		{"ROOT matches any path with ROOT at end", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", normalize.GraphRootNodeID}, true},
 		{"ROOT DOES match path without ROOT", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", "C"}, true},
 		{"ROOT does not lead to all paths matching", PathPattern{normalize.GraphRootNodeID, "X"}, []string{"A", "B", "C"}, false},
+		// Direct dependency: pattern created from the graph includes ROOT but VulnerabilityPath does not.
+		// ["*", "ROOT", "pkg:..."] must match ["pkg:..."] because ROOT is a wildcard that matches zero elements.
+		{"wildcard ROOT pkg matches direct dependency path", PathPattern{"*", normalize.GraphRootNodeID, "pkg:golang/go-jose@v4"}, []string{"pkg:golang/go-jose@v4"}, true},
 	}
 
 	for _, tt := range tests {
