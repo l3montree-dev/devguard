@@ -98,6 +98,17 @@ func matchPatternExact(pattern, path []string) bool {
 				return true
 			}
 
+			// If the next pattern element is also a wildcard (e.g. ROOT), try
+			// matching it at the current path position (zero-element match for
+			// this wildcard). This handles patterns like ["*", "ROOT", "pkg:..."]
+			// against paths like ["pkg:..."] where ROOT never appears in
+			// component-only vulnerability paths.
+			if IsWildcard(pattern[pIdx+1]) {
+				if matchPatternExact(pattern[pIdx+1:], path[pathIdx:]) {
+					return true
+				}
+			}
+
 			// Try to find the next pattern element in the path
 			nextPattern := pattern[pIdx+1]
 
