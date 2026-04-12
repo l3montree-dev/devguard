@@ -33,7 +33,7 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -50,7 +50,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -67,7 +67,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -96,7 +96,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
@@ -166,7 +166,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -217,7 +217,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
@@ -236,7 +236,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}
@@ -270,7 +270,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -287,7 +287,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 		for _, ac := range affectedComponents {
 			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
 			assert.Equal(t, ac.Type, "github.com")
@@ -297,6 +297,33 @@ func TestFromOSV(t *testing.T) {
 			assert.Nil(t, ac.SemverFixed)
 			assert.Nil(t, ac.VersionIntroduced)
 			assert.Nil(t, ac.VersionFixed)
+		}
+	})
+	t.Run(" calling the function 2 times, with and without supplying the relationships beforehand should give the same results", func(t *testing.T) {
+		// read the file
+		f, _ := os.Open("testdata/CVE-2024-52523.json")
+		defer f.Close()
+		bytes, _ := io.ReadAll(f)
+		osv := dtos.OSV{}
+		err := json.Unmarshal(bytes, &osv)
+		if err != nil {
+			t.Errorf("Could not unmarshal osv, got %s", err)
+		}
+
+		relations := transformer.OSVToCVERelationships(&osv)
+		affectedComponentsWithRelations := transformer.AffectedComponentsFromOSV(&osv, relations)
+		affectedComponentsWithoutRelations := transformer.AffectedComponentsFromOSV(&osv, nil)
+
+		assert.True(t, len(affectedComponentsWithRelations) == len(affectedComponentsWithoutRelations))
+
+		withRelationsMap := make(map[string]struct{}, len(affectedComponentsWithRelations))
+		for _, ac := range affectedComponentsWithRelations {
+			withRelationsMap[ac.CalculateHash()] = struct{}{}
+		}
+
+		for _, ac := range affectedComponentsWithoutRelations {
+			_, ok := withRelationsMap[ac.CalculateHash()]
+			assert.True(t, ok)
 		}
 	})
 }
@@ -342,7 +369,7 @@ func TestAlpineCVE2021_3711(t *testing.T) {
 		return
 	}
 
-	affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
+	affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
 
 	// for simplicity just do assertions on the ecosystem Alpine:v3.11
 	ac := utils.Filter(affectedComponents, func(el models.AffectedComponent) bool {

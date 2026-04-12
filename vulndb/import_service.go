@@ -67,37 +67,6 @@ var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}, "cve_relationships": {}}
 
-func (service importService) Import(ctx context.Context, tag string) error {
-	begin := time.Now()
-
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
-	// Connect to a remote repository
-	repo, err := remote.NewRepository(reg)
-	if err != nil {
-		return fmt.Errorf("could not connect to remote repository: %w", err)
-	}
-	outpath, err := os.MkdirTemp("", "vulndb")
-	if err != nil {
-		return fmt.Errorf("could not create temp directory: %w", err)
-	}
-
-	_, err = downloadAndSaveZipToTemp(ctx, repo, tag, outpath)
-	if err != nil {
-		return err
-	}
-
-	//copy csv files to database
-	err = service.copyCSVToDB(ctx, outpath, nil)
-	if err != nil {
-		return fmt.Errorf("could not copy csv to db: %w", err)
-	}
-
-	slog.Info("importing vulndb completed", "duration", time.Since(begin))
-
-	os.RemoveAll(outpath) //nolint
-	return nil
-}
-
 func (service importService) CreateTablesWithSuffix(ctx context.Context, suffix string) error {
 	// create the tables with the suffix
 	return createTablesWithSuffix(ctx, service.pool, suffix)
@@ -1054,7 +1023,7 @@ func (service importService) GetAllIncrementalTagsSinceSnapshot(ctx context.Cont
 		slices.Reverse(tags)
 
 		for i := range tags {
-			if strings.Contains(tags[i], ".sig") {
+			if strings.HasSuffix(tags[i], ".sig") {
 				continue
 			}
 			allTags = append(allTags, tags[i])
@@ -1086,7 +1055,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
 		slices.Reverse(tags)
 		for i := range tags {
-			if strings.Contains(tags[i], ".sig") {
+			if strings.HasSuffix(tags[i], ".sig") {
 				continue
 			}
 			allTags = append(allTags, tags[i])
@@ -1102,9 +1071,8 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	}
 	slices.Reverse(allTags)
 
-	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
-		slog.Error("slice not sorted")
-		return nil, fmt.Errorf("slice not sorted")
+	if !slices.IsSorted(allTags) {
+		slices.Sort(allTags)
 	}
 	return allTags, nil
 }
@@ -1112,7 +1080,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 // assigns a priority to each table and mode combination
 func getExecutionPriority(name string) int {
 	order := 1 // we need to reverse the order for the delete statements
-	if strings.HasSuffix(strings.TrimSuffix(name, ".cvs"), "_delete") {
+	if strings.HasSuffix(strings.TrimSuffix(name, ".csv"), "_delete") {
 		order = -1
 	}
 	switch {
@@ -1136,6 +1104,6 @@ func getExecutionPriority(name string) int {
 	case strings.HasPrefix(name, "malicious_affected_components_diff"):
 		return 2 * order
 	default:
-		return 3 * order
+		return 3
 	}
 }

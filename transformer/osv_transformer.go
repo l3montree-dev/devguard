@@ -104,13 +104,16 @@ func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 	return 0, "", false
 }
 
-func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
+func AffectedComponentsFromOSV(osv *dtos.OSV, cveRelations []models.CVERelationship) []models.AffectedComponent {
 	if osv == nil {
 		return []models.AffectedComponent{}
 	}
 	affectedComponents := make([]models.AffectedComponent, 0, len(osv.Affected))
 
-	cveRelations := OSVToCVERelationships(osv)
+	if cveRelations == nil {
+		cveRelations = OSVToCVERelationships(osv)
+	}
+
 	cves := make([]models.CVE, len(cveRelations))
 	for i, relation := range cveRelations {
 		cves[i] = models.CVE{CVE: relation.TargetCVE}
@@ -307,7 +310,7 @@ func createBase(ecosystem string, purl packageurl.PackageURL, semverIntroduced, 
 		Type:               purl.Type,
 		Name:               purl.Name,
 		Namespace:          &purl.Namespace,
-		Qualifiers:         databasetypes.MustJSONBFromStruct(purl.Qualifiers.Map()),
+		Qualifiers:         databasetypes.JSONBFromStringMap(purl.Qualifiers.Map()),
 		Subpath:            &purl.Subpath,
 		SemverIntroduced:   semverIntroduced,
 		SemverFixed:        semverFixed,

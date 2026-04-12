@@ -24,6 +24,7 @@ import (
 	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -190,6 +191,8 @@ type AffectedComponentRepository interface {
 	GetAllAffectedComponentsID(ctx context.Context, tx DB) ([]string, error)
 	DeleteAll(ctx context.Context, tx DB, ecosystem string) error
 	CreateAffectedComponentsUsingUnnest(ctx context.Context, tx DB, components []models.AffectedComponent) error
+	InsertAffectedComponentsUsingCOPY(ctx context.Context, tx pgx.Tx, affectedComponents []models.AffectedComponent) error
+	InsertCVEAffectedComponentsUsingCOPY(ctx context.Context, tx pgx.Tx, cveIDs []string, affectedComponentIDs []string) error
 }
 
 type MaliciousPackageChecker interface {

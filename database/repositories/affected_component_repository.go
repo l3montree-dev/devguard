@@ -17,8 +17,10 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 
@@ -175,4 +177,132 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(ctx context.
 			ON CONFLICT (id) DO NOTHING`
 
 	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
+}
+
+// InsertAffectedComponentsUsingCOPY bulk-inserts affected components via PostgreSQL COPY on the
+// caller-provided pgx transaction. Assumes the slice is already deduplicated by id, so no
+// ON CONFLICT handling is needed. The caller owns the tx lifecycle (begin/commit/rollback).
+func (g *affectedCmpRepository) InsertAffectedComponentsUsingCOPY(ctx context.Context, tx pgx.Tx, affectedComponents []models.AffectedComponent) error {
+	if len(affectedComponents) == 0 {
+		return nil
+	}
+
+	// Staging table with plain text columns. pgx has no built-in codec for the custom
+	// semver type, so we stage as text and cast during the INSERT ... SELECT.
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE affected_components_stage (
+			id                 text,
+			source             text,
+			purl               text,
+			ecosystem          text,
+			scheme             text,
+			type               text,
+			name               text,
+			namespace          text,
+			qualifiers         jsonb,
+			subpath            text,
+			version            text,
+			semver_introduced  text,
+			semver_fixed       text,
+			version_introduced text,
+			version_fixed      text
+		) ON COMMIT DROP
+	`); err != nil {
+		return fmt.Errorf("create staging table: %w", err)
+	}
+
+	copied, err := tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"affected_components_stage"},
+		[]string{
+			"id", "source", "purl", "ecosystem", "scheme", "type", "name",
+			"namespace", "qualifiers", "subpath", "version",
+			"semver_introduced", "semver_fixed",
+			"version_introduced", "version_fixed",
+		},
+		pgx.CopyFromSlice(len(affectedComponents), func(i int) ([]any, error) {
+			c := &affectedComponents[i]
+
+			qualifiers := "{}"
+			if c.Qualifiers != nil {
+				b, err := json.Marshal(c.Qualifiers)
+				if err != nil {
+					return nil, fmt.Errorf("marshal qualifiers: %w", err)
+				}
+				qualifiers = string(b)
+			}
+
+			return []any{
+				c.CalculateHash(),
+				c.Source,
+				c.PurlWithoutVersion,
+				c.Ecosystem,
+				c.Scheme,
+				c.Type,
+				c.Name,
+				c.Namespace,
+				qualifiers,
+				c.Subpath,
+				c.Version,
+				c.SemverIntroduced,
+				c.SemverFixed,
+				c.VersionIntroduced,
+				c.VersionFixed,
+			}, nil
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("copy into staging: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO affected_components (
+			id, source, purl, ecosystem, scheme, type, name,
+			namespace, qualifiers, subpath, version,
+			semver_introduced, semver_fixed,
+			version_introduced, version_fixed
+		)
+		SELECT
+			id, source, purl, ecosystem, scheme, type, name,
+			namespace, qualifiers, subpath, version,
+			semver_introduced::semver, semver_fixed::semver,
+			version_introduced, version_fixed
+		FROM affected_components_stage
+	`); err != nil {
+		return fmt.Errorf("insert from staging: %w", err)
+	}
+
+	slog.Info("copied affected_components", "rows", copied)
+	return nil
+}
+
+// InsertCVEAffectedComponentsUsingCOPY bulk-inserts pivot rows linking cves <-> affected_components via COPY
+// on the caller-provided pgx transaction. Takes two parallel slices to stay schema-agnostic. Assumes the
+// caller has already deduplicated the rows. The caller owns the tx lifecycle.
+//
+// The referenced cves must be visible (committed or in the same tx) when this runs, otherwise the FK
+// check against cve_affected_component.cvecve will fail.
+func (g *affectedCmpRepository) InsertCVEAffectedComponentsUsingCOPY(ctx context.Context, tx pgx.Tx, cveIDs []string, affectedComponentIDs []string) error {
+	if len(cveIDs) == 0 {
+		return nil
+	}
+	if len(cveIDs) != len(affectedComponentIDs) {
+		return fmt.Errorf("cveIDs and affectedComponentIDs must be the same length (%d vs %d)", len(cveIDs), len(affectedComponentIDs))
+	}
+
+	// Pivot is text-only and caller guarantees dedup, so COPY straight into the target table.
+	copied, err := tx.CopyFrom(
+		ctx,
+		pgx.Identifier{"cve_affected_component"},
+		[]string{"cvecve", "affected_component_id"},
+		pgx.CopyFromSlice(len(cveIDs), func(i int) ([]any, error) {
+			return []any{cveIDs[i], affectedComponentIDs[i]}, nil
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("copy into cve_affected_component: %w", err)
+	}
+
+	slog.Info("copied cve_affected_component", "rows", copied)
+	return nil
 }
