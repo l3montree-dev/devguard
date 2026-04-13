@@ -19,6 +19,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"sort"
+	"sync"
 
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -85,4 +87,93 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 		affectedComponent.ID = affectedComponent.CalculateHash()
 	}
 	return nil
+}
+
+var hashBufferPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, 0, 512)
+		return &b
+	},
+}
+
+// CalculateHashFast produces the same hash as CalculateHash but avoids
+// fmt.Sprintf and the intermediate convertToStringMap allocation.
+func (affectedComponent AffectedComponent) CalculateHashFast() string {
+	bufPtr := hashBufferPool.Get().(*[]byte)
+	buf := (*bufPtr)[:0]
+
+	buf = append(buf, affectedComponent.PurlWithoutVersion...)
+	buf = append(buf, '/')
+	buf = append(buf, affectedComponent.Ecosystem...)
+	buf = append(buf, '/')
+	buf = append(buf, affectedComponent.Name...)
+	buf = append(buf, '/')
+	if affectedComponent.Namespace != nil {
+		buf = append(buf, *affectedComponent.Namespace...)
+	}
+	buf = append(buf, '/')
+	buf = appendQualifiers(buf, affectedComponent.Qualifiers)
+	buf = append(buf, '/')
+	if affectedComponent.Subpath != nil {
+		buf = append(buf, *affectedComponent.Subpath...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.Version != nil {
+		buf = append(buf, *affectedComponent.Version...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.SemverIntroduced != nil {
+		buf = append(buf, *affectedComponent.SemverIntroduced...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.SemverFixed != nil {
+		buf = append(buf, *affectedComponent.SemverFixed...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.VersionIntroduced != nil {
+		buf = append(buf, *affectedComponent.VersionIntroduced...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.VersionFixed != nil {
+		buf = append(buf, *affectedComponent.VersionFixed...)
+	}
+
+	sum := sha256.Sum256(buf)
+	out := hex.EncodeToString(sum[:8])
+
+	*bufPtr = buf[:0]
+	hashBufferPool.Put(bufPtr)
+
+	return out
+}
+
+// appendQualifiers mirrors normalize.QualifiersMapToString(convertToStringMap(q))
+// but writes directly into buf. Keys are unique in a map, so sorting by key
+// yields the same order as sorting "key=value" strings.
+func appendQualifiers(buf []byte, q databasetypes.JSONB) []byte {
+	if len(q) == 0 {
+		return buf
+	}
+	keys := make([]string, 0, len(q))
+	for k := range q {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for i, k := range keys {
+		if i > 0 {
+			buf = append(buf, '&')
+		}
+		buf = append(buf, k...)
+		buf = append(buf, '=')
+		switch v := q[k].(type) {
+		case string:
+			buf = append(buf, v...)
+		case nil:
+			buf = append(buf, "<nil>"...)
+		default:
+			buf = append(buf, fmt.Sprintf("%v", v)...)
+		}
+	}
+	return buf
 }
