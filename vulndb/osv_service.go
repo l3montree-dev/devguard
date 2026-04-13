@@ -422,13 +422,10 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	go s.fetchingController(waitGroup, jobs, idsPerEcosystem, vulnData)
 
 	go func() {
-		slog.Info("start waiting for go routines to finish")
 		waitGroup.Wait()
-		slog.Info("fetching routines done, closing results")
 		close(vulnData)
 	}()
 
-	slog.Info("start collecting results")
 	// collect all OSV objects first
 	allOSVVulns := make([]dtos.OSV, 0, totalCount)
 	cveIDs := make([]string, 0, totalCount)
@@ -471,6 +468,7 @@ func (s osvService) fetchingController(waitGroup *sync.WaitGroup, jobs chan fetc
 		ids := idsPerEcosystem[ecosystem]
 		// when fetching too many entries in an ecosystem, switch to downloading the full zip and filtering instead
 		if len(ids) >= 5000 {
+			slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
 			waitGroup.Add(1)
 			go s.fetchEcosystemEntriesViaZip(waitGroup, ecosystem, ids, output)
 		} else {
@@ -488,7 +486,6 @@ func (s osvService) fetchingController(waitGroup *sync.WaitGroup, jobs chan fetc
 }
 
 func (s osvService) fetchEcosystemEntriesViaZip(waitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, output chan dtos.OSV) {
-	slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(idsToFetch))
 	start := time.Now()
 
 	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
@@ -503,12 +500,6 @@ func (s osvService) fetchEcosystemEntriesViaZip(waitGroup *sync.WaitGroup, ecosy
 	shouldProcessID := make(map[string]struct{}, len(idsToFetch))
 	for i := range idsToFetch {
 		shouldProcessID[idsToFetch[i]] = struct{}{}
-	}
-
-	if len(shouldProcessID) == len(idsToFetch) {
-		slog.Info("no duplicates all fine")
-	} else {
-		slog.Warn("NO DUPLICATES SHOULD BE FOUND")
 	}
 
 	foundIDs := make(map[string]struct{}, len(idsToFetch))
@@ -758,7 +749,7 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 		return fmt.Errorf("could not get current state of affected components: %w", err)
 	}
 
-	// build a map of the current state for fast lookups
+	// build a map of the current state for Bulk lookups
 	isAffectedComponentPresent := make(map[string]struct{}, len(currentCVEAffectedComponents))
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
 		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
@@ -824,40 +815,68 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 	}
 	defer tx.Rollback(ctx)
 
-	startInsertCVEs := time.Now()
-	err = s.InsertCVEsNormal(ctx, tx, cves)
-	if err != nil {
-		return fmt.Errorf("could not insert cves: %w", err)
-	}
-	slog.Info("finished inserting cves", "time", time.Since(startInsertCVEs))
+	const bulkThreshold = 50_000
 
-	startInsertCVERelationships := time.Now()
-	err = s.InsertCVERelationshipsNormal(ctx, tx, cveRelationships)
-	if err != nil {
-		return fmt.Errorf("could not insert cve relationships: %w", err)
-	}
-	slog.Info("finished inserting cve relationships", "time", time.Since(startInsertCVERelationships))
+	// full bulk insert over this threshold
+	if len(cves) > bulkThreshold {
+		err = prepareBulkInsert(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("could not prepare transaction: %w", err)
+		}
 
-	startInsertAffectedComponents := time.Now()
-	err = s.InsertAffectedComponentsFAST(ctx, tx, affectedComponents)
-	if err != nil {
-		return fmt.Errorf("could not insert affected_components: %w", err)
-	}
-	slog.Info("finished inserting affected components", "time", time.Since(startInsertAffectedComponents))
+		err = insertCVEsBulk(ctx, tx, cves)
+		if err != nil {
+			return fmt.Errorf("could not insert cves: %w", err)
+		}
 
-	startCVEAffectedComponents := time.Now()
-	if err := s.InsertCVEAffectedComponentsFAST(ctx, tx, cveAffectedComponents); err != nil {
-		return fmt.Errorf("could not insert cve_affected_component: %w", err)
-	}
-	slog.Info("finished inserting cve affected components", "time", time.Since(startCVEAffectedComponents))
+		err = insertCVERelationshipsBulk(ctx, tx, cveRelationships)
+		if err != nil {
+			return fmt.Errorf("could not insert cve relationships: %w", err)
+		}
 
-	// now we finished inserting all data and need to reassign the constraints on the tables and rebuild the indexes
-	startConstraintsAndIndexes := time.Now()
-	err = addIndexesAndConstraints(ctx, tx)
-	if err != nil {
-		return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
+		err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
+		if err != nil {
+			return fmt.Errorf("could not insert affected_components: %w", err)
+		}
+		if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
+			return fmt.Errorf("could not insert cve_affected_component: %w", err)
+		}
+
+		// now we finished inserting all data and need to reassign the constraints on the tables and rebuild the indexes
+		err = addIndexesAndConstraints(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
+		}
+	} else {
+		// below the threshold normal imports is faster
+		slog.Info("below threshold will try diff update")
+		startInsertCVEs := time.Now()
+		err = insertCVEsNormal(ctx, tx, cves)
+		if err != nil {
+			return fmt.Errorf("could not insert cves: %w", err)
+		}
+		slog.Info("finished inserting cves", "time", time.Since(startInsertCVEs))
+
+		startInsertCVERelationships := time.Now()
+		err = insertCVERelationshipsNormal(ctx, tx, cveRelationships)
+		if err != nil {
+			return fmt.Errorf("could not insert cve relationships: %w", err)
+		}
+		slog.Info("finished inserting cve relationships", "time", time.Since(startInsertCVERelationships))
+
+		startInsertAffectedComponents := time.Now()
+		err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
+		if err != nil {
+			return fmt.Errorf("could not insert affected_components: %w", err)
+		}
+		slog.Info("finished inserting affected components", "time", time.Since(startInsertAffectedComponents))
+
+		startCVEAffectedComponents := time.Now()
+		if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
+			return fmt.Errorf("could not insert cve_affected_component: %w", err)
+		}
+		slog.Info("finished inserting cve affected components", "time", time.Since(startCVEAffectedComponents))
 	}
-	slog.Info("finished adding constraints and building indexes", "time", time.Since(startConstraintsAndIndexes))
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit transaction: %w", err)
@@ -874,26 +893,39 @@ type cveAffectedComponentRow struct {
 	AffectedComponentID string `gorm:"column:affected_component_id"`
 }
 
-func (s osvService) InsertAffectedComponentsFAST(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
-	// first drop the index to avoid adjusting those on each insert
-	_, err := tx.Exec(ctx, `
-	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
-	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
-	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
-	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
-    ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
-    
-	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
-    DROP INDEX IF EXISTS idx_affected_components_semver_introduced;
-    DROP INDEX IF EXISTS idx_affected_components_version_fixed;
-    DROP INDEX IF EXISTS idx_affected_components_version_introduced;
-    DROP INDEX IF EXISTS idx_affected_components_p_url;
-    DROP INDEX IF EXISTS idx_affected_components_purl_without_version;
-    DROP INDEX IF EXISTS idx_affected_components_version;`)
+func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
+	slog.Info("inserting into cves using bulk insert", "amount", len(cves))
+	start := time.Now()
+	columnNames := []string{"cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
+		row := cves[i]
+		return []interface{}{row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+	}))
 	if err != nil {
-		return fmt.Errorf("could not drop indexes on table affected_components: %w", err)
+		return fmt.Errorf("could not copy cve rows into table: %w", err)
 	}
+	slog.Info("finished inserting into cves", "time", time.Since(start))
+	return nil
+}
 
+func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
+	slog.Info("inserting into cve_relationships using bulk insert", "amount", len(cveRelationships))
+	start := time.Now()
+	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
+		row := cveRelationships[i]
+		return []interface{}{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
+	}))
+	if err != nil {
+		return fmt.Errorf("could not copy cve relationship rows into table: %w", err)
+	}
+	slog.Info("finished inserting into cve_relationships", "time", time.Since(start))
+	return nil
+}
+
+func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
+	slog.Info("inserting into affected_components using bulk insert", "amount", len(components))
+	start := time.Now()
 	// pgx has no built-in codec for the custom semver type, so stage as text
 	// and cast during the INSERT ... SELECT.
 	if _, err := tx.Exec(ctx, `
@@ -918,7 +950,7 @@ func (s osvService) InsertAffectedComponentsFAST(ctx context.Context, tx pgx.Tx,
 	}
 
 	columnNames := []string{"id", "source", "purl", "ecosystem", "scheme", "type", "name", "namespace", "qualifiers", "subpath", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	_, err = tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
 		c := components[i]
 		qualifiers := "{}"
 		if c.Qualifiers != nil {
@@ -949,10 +981,13 @@ func (s osvService) InsertAffectedComponentsFAST(ctx context.Context, tx pgx.Tx,
 		FROM affected_components_stage`); err != nil {
 		return fmt.Errorf("could not insert from staging into affected_components: %w", err)
 	}
+	slog.Info("finished inserting into affected_components", "time", time.Since(start))
 	return nil
 }
 
-func (s osvService) InsertCVEAffectedComponentsFAST(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
+func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
+	slog.Info("inserting into cve_affected_component using bulk insert", "amount", len(pivotRows))
+	start := time.Now()
 	columnNames := []string{"affected_component_id", "cvecve"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
 		row := pivotRows[i]
@@ -961,10 +996,11 @@ func (s osvService) InsertCVEAffectedComponentsFAST(ctx context.Context, tx pgx.
 	if err != nil {
 		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
 	}
+	slog.Info("finished inserting into cve_affected_component", "time", time.Since(start))
 	return nil
 }
 
-func (s osvService) InsertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
+func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if len(cves) == 0 {
 		return nil
 	}
@@ -1062,7 +1098,7 @@ func (s osvService) InsertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []mode
 	return nil
 }
 
-func (s osvService) InsertCVERelationshipsNormal(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
+func insertCVERelationshipsNormal(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
 	if len(relationships) == 0 {
 		return nil
 	}
@@ -1091,26 +1127,91 @@ func (s osvService) InsertCVERelationshipsNormal(ctx context.Context, tx pgx.Tx,
 	return nil
 }
 
+func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `
+	SET LOCAL synchronous_commit = OFF; -- this makes postgresql return as soon as the WAL has been written to and we do not need to wait until the contents have been written to the disk
+
+	-- first drop all foreign key constraints between the tables since they depend on the primary keys
+	ALTER TABLE public.cve_relationships DROP CONSTRAINT IF EXISTS fk_cve_relationships_source;
+
+	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
+	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
+	
+	-- need to be dropped before dropping cves_pkey
+	ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve; 
+	ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
+	ALTER TABLE public.weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
+	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
+
+	-- then drop all primary key constraints
+	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_pkey;
+	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
+	ALTER TABLE public.cve_relationships DROP CONSTRAINT IF EXISTS cve_relationships_pkey;
+	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
+	
+	-- lastly drop all indexes 
+	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
+    DROP INDEX IF EXISTS idx_affected_components_semver_introduced;
+    DROP INDEX IF EXISTS idx_affected_components_version_fixed;
+    DROP INDEX IF EXISTS idx_affected_components_version_introduced;
+    DROP INDEX IF EXISTS idx_affected_components_p_url;
+    DROP INDEX IF EXISTS idx_affected_components_purl_without_version;
+    DROP INDEX IF EXISTS idx_affected_components_version;
+
+	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
+
+	DROP INDEX IF EXISTS idx_cve_relationships_target_cve;`)
+	if err != nil {
+		return fmt.Errorf("could not drop indexes and constraints on tables: %w", err)
+	}
+	return nil
+}
+
 func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
+	slog.Info("start building indexes and re-adding constraints")
+	totalStart := time.Now()
 	_, err := tx.Exec(ctx, `
 	-- Session tuning: all SET LOCAL — scoped to this transaction, preserves ACID.
 	-- maintenance_work_mem dominates index-build time; raising it avoids on-disk sorts.
 	-- max_parallel_maintenance_workers enables intra-index parallelism for btree builds.
-	SET LOCAL maintenance_work_mem = '2GB';
-	SET LOCAL max_parallel_maintenance_workers = 4;
-	SET LOCAL synchronous_commit = OFF;
 
+	SET LOCAL maintenance_work_mem = '4GB';
+	SET LOCAL max_parallel_maintenance_workers = 8;
+	SET LOCAL max_parallel_workers = 16;
+	SET LOCAL max_parallel_workers_per_gather = 8;
+         
 	-- First add the primary key constraints
+	ALTER TABLE public.cves ADD CONSTRAINT cves_pkey PRIMARY KEY (cve);
 	ALTER TABLE affected_components ADD CONSTRAINT affected_components_pkey PRIMARY KEY (id);
+	ALTER TABLE public.cve_relationships ADD CONSTRAINT cve_relationships_pkey PRIMARY KEY (target_cve, source_cve, relationship_type);
 	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id,cvecve);
+	`)
+	if err != nil {
+		return fmt.Errorf("could not apply primary key constraints: %w", err)
+	}
+	slog.Info("finished adding primary key constraints", "time", time.Since(totalStart))
 
+	start := time.Now()
+	_, err = tx.Exec(ctx, `
 	-- Then add the foreign key constraints
-	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id);
-	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cvecve) REFERENCES public.cves (cve);
+	ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE NOT VALID;
 
-	-- Lastly rebuild the indexes. Using btree throughout so every build benefits from
-	-- parallel maintenance workers (hash index builds are single-threaded in Postgres).
-    CREATE INDEX IF NOT EXISTS cve_affected_component_affected_component_id ON public.cve_affected_component USING btree (cvecve);
+	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE NOT VALID;
+
+	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cvecve) REFERENCES public.cves (cve) ON DELETE CASCADE NOT VALID;
+	ALTER TABLE public.dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE; 
+	ALTER TABLE public.exploits ADD CONSTRAINT fk_cves_exploits FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;
+	ALTER TABLE ONLY public.weaknesses ADD CONSTRAINT fk_cves_weaknesses FOREIGN KEY (cve_id) REFERENCES public.cves(cve) ON DELETE CASCADE;
+	ALTER TABLE public.vex_rules ADD CONSTRAINT fk_vex_rules_cve FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;`)
+	if err != nil {
+		return fmt.Errorf("could not apply foreign key constraints: %w", err)
+	}
+	slog.Info("finsihed applying all foreign key constraints", "time", time.Since(start))
+
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+	-- Lastly rebuild the indexes
+    CREATE INDEX IF NOT EXISTS cve_affected_component_affected_component_id ON public.cve_affected_component USING hash (cvecve);
 
     CREATE INDEX IF NOT EXISTS idx_affected_components_semver_fixed ON public.affected_components USING btree (semver_fixed);
     CREATE INDEX IF NOT EXISTS idx_affected_components_semver_introduced ON public.affected_components USING btree (semver_introduced);
@@ -1119,7 +1220,9 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
     CREATE INDEX IF NOT EXISTS idx_affected_components_purl_without_version ON public.affected_components USING btree (purl);
 	CREATE INDEX IF NOT EXISTS idx_affected_components_version ON public.affected_components USING btree (version);`)
 	if err != nil {
-		return fmt.Errorf("could not re-add constraints and indexes: %w", err)
+		return fmt.Errorf("could not build indexes: %w", err)
 	}
+	slog.Info("finsihed building all indexes", "time", time.Since(start))
+	slog.Info("finished adding constraints and building indexes", "time", time.Since(totalStart))
 	return nil
 }
