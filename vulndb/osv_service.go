@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -38,7 +40,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type osvService struct {
@@ -51,8 +53,25 @@ type osvService struct {
 }
 
 func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, configService shared.ConfigService, pool *pgxpool.Pool) osvService {
+	// use custom transport to adjust the workload to the number of go routines
+	base := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   45 * time.Second,
+			KeepAlive: 45 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          numberOfFetcherRoutines * 2,
+		MaxIdleConnsPerHost:   numberOfFetcherRoutines,
+		MaxConnsPerHost:       numberOfFetcherRoutines,
+		IdleConnTimeout:       45 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	transport := otelhttp.NewTransport(utils.EgressRoundTripper{R: base})
+
 	return osvService{
-		httpClient:                &http.Client{Transport: utils.EgressTransport},
+		httpClient:                &http.Client{Transport: transport, Timeout: 30 * time.Second},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
@@ -372,16 +391,21 @@ func (s osvService) MirrorNoConcurrency() error {
 	return nil
 }
 
-const numberOfFetcherRoutines = 120
+const numberOfFetcherRoutines = 100
+const zipThreshold = 4000
+
+type zipJob struct {
+	File      *zip.File
+	Ecosystem string
+}
 
 func (s osvService) ImportRC(ctx context.Context) error {
 	slog.Info("start RC import")
-	// if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", "2026-04-01T17:00:14.778929Z"); err != nil {
-	// 	return fmt.Errorf("could not update last import time: %w", err)
-	// }
 	var lastUpdate string
 	var idsPerEcosystem map[string][]string
 	err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
+
+	start := time.Now()
 	if err != nil {
 		slog.Warn("could not get last RC import timestamp, assuming no import took place yet", "err", err)
 		idsPerEcosystem, err = s.getRecentlyChangedIDsPerEcosystem(nil)
@@ -398,7 +422,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	// track the time right before fetching the data
 	importStart := time.Now()
 
-	slog.Info("calculated recently changed ids", "amount of ecosystem", len(idsPerEcosystem))
+	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
 
 	// calculate the work load
 	totalCount := 0
@@ -406,23 +430,58 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		totalCount += len(ids)
 	}
 
-	waitGroup := &sync.WaitGroup{}
-	jobs := make(chan fetchingJob, 5000)
-	vulnData := make(chan dtos.OSV, 500)
+	httpWaitGroup := &sync.WaitGroup{}
+	zipPushWaitGroup := &sync.WaitGroup{}
+	zipWorkWaitGroup := &sync.WaitGroup{}
+
+	fetchingJobs := make(chan fetchingJob, 10_000)
+	zipJobs := make(chan zipJob, 10_000)
+	vulnData := make(chan dtos.OSV, 1000)
 
 	fetchingStart := time.Now()
 
-	// fetch the data for each id
-	for range numberOfFetcherRoutines {
-		waitGroup.Add(1)
-		go fetchOSVDataWorker(waitGroup, s.httpClient, jobs, vulnData)
+	anyZip := false
+	for _, ids := range idsPerEcosystem {
+		if len(ids) >= zipThreshold {
+			anyZip = true
+			break
+		}
 	}
 
-	// build the jobs for the fetching workers
-	go s.fetchingController(waitGroup, jobs, idsPerEcosystem, vulnData)
+	for range numberOfFetcherRoutines {
+		httpWaitGroup.Add(1)
+		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData)
+	}
+
+	if anyZip {
+		shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, totalCount)
+		for ecosystem, ids := range idsPerEcosystem {
+			if len(ids) >= zipThreshold {
+				if shouldProcessIDInEcosystem[ecosystem] == nil {
+					shouldProcessIDInEcosystem[ecosystem] = make(map[string]struct{}, len(ids))
+				}
+				for _, id := range ids {
+					shouldProcessIDInEcosystem[ecosystem][id] = struct{}{}
+				}
+			}
+		}
+		for range runtime.NumCPU() {
+			zipWorkWaitGroup.Add(1)
+			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData)
+		}
+	}
+
+	zipPushWaitGroup.Add(1)
+	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, vulnData)
 
 	go func() {
-		waitGroup.Wait()
+		zipPushWaitGroup.Wait()
+		close(zipJobs)
+	}()
+
+	go func() {
+		httpWaitGroup.Wait()
+		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
 
@@ -452,14 +511,16 @@ func (s osvService) ImportRC(ctx context.Context) error {
 }
 
 // controls in what order and what method to use for each ecosystem
-func (s osvService) fetchingController(waitGroup *sync.WaitGroup, jobs chan fetchingJob, idsPerEcosystem map[string][]string, output chan dtos.OSV) {
+func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob, output chan dtos.OSV) {
 	defer close(jobs)
+	defer zipPushWaitGroup.Done()
 
 	// sort the ecosystems by the amount of changes for better concurrency performance (heavy zip downloads get called first)
 	ecosystems := make([]string, 0, len(idsPerEcosystem))
 	for ecosystem := range idsPerEcosystem {
 		ecosystems = append(ecosystems, ecosystem)
 	}
+
 	slices.SortFunc(ecosystems, func(a, b string) int {
 		return len(idsPerEcosystem[b]) - len(idsPerEcosystem[a])
 	})
@@ -467,10 +528,10 @@ func (s osvService) fetchingController(waitGroup *sync.WaitGroup, jobs chan fetc
 	for _, ecosystem := range ecosystems {
 		ids := idsPerEcosystem[ecosystem]
 		// when fetching too many entries in an ecosystem, switch to downloading the full zip and filtering instead
-		if len(ids) >= 5000 {
+		if len(ids) >= zipThreshold {
 			slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
-			waitGroup.Add(1)
-			go s.fetchEcosystemEntriesViaZip(waitGroup, ecosystem, ids, output)
+			zipPushWaitGroup.Add(1)
+			go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs)
 		} else {
 			// otherwise stick to getting each vuln separately
 			slog.Info("start creating jobs for ecosystem", "ecosystem", ecosystem, "amount", len(ids))
@@ -485,7 +546,8 @@ func (s osvService) fetchingController(waitGroup *sync.WaitGroup, jobs chan fetc
 	slog.Info("finished pushing all jobs")
 }
 
-func (s osvService) fetchEcosystemEntriesViaZip(waitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, output chan dtos.OSV) {
+func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, zipJobs chan zipJob) {
+	defer zipPushWaitGroup.Done()
 	start := time.Now()
 
 	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
@@ -495,64 +557,37 @@ func (s osvService) fetchEcosystemEntriesViaZip(waitGroup *sync.WaitGroup, ecosy
 	}
 	if len(zipReader.File) == 0 {
 		slog.Error("no files found in zip", "ecosystem", ecosystem)
+		return
 	}
 
-	shouldProcessID := make(map[string]struct{}, len(idsToFetch))
-	for i := range idsToFetch {
-		shouldProcessID[idsToFetch[i]] = struct{}{}
-	}
-
-	foundIDs := make(map[string]struct{}, len(idsToFetch))
 	for i := range zipReader.File {
-		readCloser, err := zipReader.File[i].Open()
+		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem}
+	}
+	slog.Info("finished pushing zip files", "ecosystem", ecosystem, "time elapsed", time.Since(start))
+}
+
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan dtos.OSV) {
+	defer zipWorkWaitGroup.Done()
+	for zipJob := range zipJobs {
+		readCloser, err := zipJob.File.Open()
 		if err != nil {
-			slog.Error("could not open osv file", "file", zipReader.File[i].Name, "err", err)
+			slog.Error("could not open osv file", "file", zipJob.File.Name, "err", err)
 			continue
 		}
 
-		// only read the id and then decide if we need to further process it
-		var partial struct {
-			ID string `json:"id"`
-		}
-
-		// read until we find the id
-		if err = json.NewDecoder(readCloser).Decode(&partial); err != nil {
+		osvEntry := dtos.OSV{}
+		if err = json.NewDecoder(readCloser).Decode(&osvEntry); err != nil {
 			readCloser.Close()
-			slog.Error("could not parse osv id", "file", zipReader.File[i].Name, "err", err)
+			slog.Error("could not parse osv file to OSV dto", "file", zipJob.File.Name, "err", err)
 			continue
 		}
 		readCloser.Close()
 
-		// check if we need to process this file and if we need to continue
-		if _, ok := shouldProcessID[partial.ID]; !ok {
-			// not relevant -> skip entry
+		if _, ok := shouldProcessID[zipJob.Ecosystem][osvEntry.ID]; !ok {
 			continue
 		}
-
-		// we want to process the file so we need to fully read it now
-		osvEntry := dtos.OSV{}
-		readCloserFull, err := zipReader.File[i].Open()
-		if err != nil {
-			slog.Error("could not open osv file", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-
-		if err = json.NewDecoder(readCloserFull).Decode(&osvEntry); err != nil {
-			readCloserFull.Close()
-			slog.Error("could not parse osv file to OSV dto", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-		readCloserFull.Close()
 		output <- osvEntry
-
-		// sanity check with a deduplicated set of ids
-		foundIDs[osvEntry.ID] = struct{}{}
-		if len(foundIDs) == len(idsToFetch) {
-			break
-		}
 	}
-	waitGroup.Done()
-	slog.Info("finished processing zip", "ecosystem", ecosystem, "time elapsed", time.Since(start))
 }
 
 type fetchingJob struct {
@@ -575,6 +610,11 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 			continue
 		}
 
+		if resp.StatusCode != http.StatusOK {
+			slog.Error("fetching vuln data was unsuccessful", "url", url)
+			continue
+		}
+
 		osvVuln := dtos.OSV{}
 		if err = json.NewDecoder(resp.Body).Decode(&osvVuln); err != nil {
 			resp.Body.Close()
@@ -585,25 +625,6 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 		output <- osvVuln
 	}
 	waitGroup.Done()
-}
-
-func deleteEntries(tx *gorm.DB, cveIDs []string) error {
-	// first delete all entries related to the updated entries
-	err := tx.Exec(`DELETE FROM cve_affected_component WHERE cvecve = ANY($1::text[]);`, pq.Array(cveIDs)).Error
-	if err != nil {
-		return fmt.Errorf("could not delete cve_affected_component, aborting transaction: %w", err)
-	}
-
-	err = tx.Exec(`DELETE FROM cve_relationships WHERE source_cve = ANY($1::text[]);`, pq.Array(cveIDs)).Error
-	if err != nil {
-		return fmt.Errorf("could not delete cve_relationships, aborting transaction: %w", err)
-	}
-
-	err = tx.Exec(`DELETE FROM cves WHERE cve = ANY($1::text[]);`, pq.Array(cveIDs)).Error
-	if err != nil {
-		return fmt.Errorf("could not delete cves entries aborting transaction: %w", err)
-	}
-	return nil
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
@@ -642,7 +663,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 	idsPerEcosystem := make(map[string][]string, len(importEcosystems))
 
 	// use a map to process each vuln only once
-	alreadyProcessed := make(map[string]struct{}, 1<<14)
+	alreadyProcessed := make(map[string]struct{}, 1<<18)
 	for _, record := range records {
 		if len(record) != 2 {
 			slog.Warn("invalid cvs row format skipping entry")
@@ -845,10 +866,11 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 		// now we finished inserting all data and need to reassign the constraints on the tables and rebuild the indexes
 		err = addIndexesAndConstraints(ctx, tx)
 		if err != nil {
-			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
+			slog.Error(fmt.Sprintf("could not re-add constraints and indexes on table: %w", err))
+			// return fmt.Errorf("could not re-add constraints and indexes on table: %w", err) omit for debug purposes
 		}
 	} else {
-		// below the threshold normal imports is faster
+		// below the threshold use "normal" import for better performance on small changes
 		slog.Info("below threshold will try diff update")
 		startInsertCVEs := time.Now()
 		err = insertCVEsNormal(ctx, tx, cves)
