@@ -618,7 +618,7 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 		osvVuln := dtos.OSV{}
 		if err = json.NewDecoder(resp.Body).Decode(&osvVuln); err != nil {
 			resp.Body.Close()
-			slog.Error("could not parse osv file to OSV dto", "file", "OSV ID", job.ID, "err", err, "url", url)
+			slog.Error("could not parse osv file to OSV dto", "OSV ID", job.ID, "url", url)
 			continue
 		}
 		resp.Body.Close()
@@ -638,16 +638,18 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 	}
 
 	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
+	}
+
 	defer func() {
 		if !closed {
 			resp.Body.Close()
 		}
 	}()
-	if err != nil {
-		return nil, fmt.Errorf("csv fetch http request ran into errors: error=%w ecosystem=%s", err)
-	}
+
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("csv fetch was unsuccessful: status=%d ecosystem=%s", resp.StatusCode)
+		return nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
 	}
 
 	records, err := csv.NewReader(resp.Body).ReadAll()
@@ -681,7 +683,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 
 		ecosystem, id, found := strings.Cut(record[1], "/")
 		if !found {
-			return nil, fmt.Errorf("invalid format for vuln id", "id column", record[1])
+			return nil, fmt.Errorf("invalid format for vuln id: %s", record[1])
 		}
 
 		if !slices.Contains(importEcosystems, ecosystem) || shouldIgnoreVulnerabilityID(id) {
@@ -866,7 +868,7 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 		// now we finished inserting all data and need to reassign the constraints on the tables and rebuild the indexes
 		err = addIndexesAndConstraints(ctx, tx)
 		if err != nil {
-			slog.Error(fmt.Sprintf("could not re-add constraints and indexes on table: %w", err))
+			slog.Error(fmt.Errorf("could not re-add constraints and indexes on table: %w", err).Error())
 			// return fmt.Errorf("could not re-add constraints and indexes on table: %w", err) omit for debug purposes
 		}
 	} else {
