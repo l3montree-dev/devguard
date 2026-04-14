@@ -104,20 +104,12 @@ func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 	return 0, "", false
 }
 
-func AffectedComponentsFromOSV(osv *dtos.OSV, cveRelations []models.CVERelationship) []models.AffectedComponent {
+func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 	if osv == nil {
 		return []models.AffectedComponent{}
 	}
-	affectedComponents := make([]models.AffectedComponent, 0, len(osv.Affected))
 
-	if cveRelations == nil {
-		cveRelations = OSVToCVERelationships(osv)
-	}
-
-	cves := make([]models.CVE, len(cveRelations))
-	for i, relation := range cveRelations {
-		cves[i] = models.CVE{CVE: relation.TargetCVE}
-	}
+	affectedComponents := make([]models.AffectedComponent, 0, len(osv.Affected)*3)
 
 	for _, affected := range osv.Affected {
 		// check if the affected package has a purl
@@ -149,7 +141,6 @@ func AffectedComponentsFromOSV(osv *dtos.OSV, cveRelations []models.CVERelations
 					SemverFixed:        base.SemverFixed,
 					VersionIntroduced:  base.VersionIntroduced,
 					VersionFixed:       base.VersionFixed,
-					CVE:                cves,
 				}
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
@@ -171,7 +162,6 @@ func AffectedComponentsFromOSV(osv *dtos.OSV, cveRelations []models.CVERelations
 					SemverFixed:        base.SemverFixed,
 					VersionIntroduced:  base.VersionIntroduced,
 					VersionFixed:       base.VersionFixed,
-					CVE:                cves,
 				}
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
@@ -235,7 +225,13 @@ func affectedComponentBaseFromAffected(affected dtos.Affected) []models.Affected
 }
 
 func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
-	bases := make([]models.AffectedComponentBase, 0)
+	upper := 0
+	for _, r := range ranges {
+		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
+			upper += len(r.Events)/2 + 1
+		}
+	}
+	bases := make([]models.AffectedComponentBase, 0, upper)
 
 	for _, r := range ranges {
 		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
@@ -248,7 +244,7 @@ func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.Packag
 }
 
 func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
-	bases := make([]models.AffectedComponentBase, 0)
+	bases := make([]models.AffectedComponentBase, 0, len(r.Events)/2+1)
 
 	for i := 0; i < len(r.Events); i += 2 {
 		introduced := r.Events[i].Introduced
@@ -294,9 +290,8 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 func processVersions(versions []string, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
 	bases := make([]models.AffectedComponentBase, 0, len(versions))
 
-	for _, v := range versions {
-		version := v
-		bases = append(bases, createBase(ecosystem, purl, nil, nil, &version, nil, nil))
+	for i := range versions {
+		bases = append(bases, createBase(ecosystem, purl, nil, nil, &versions[i], nil, nil))
 	}
 
 	return bases
@@ -322,7 +317,13 @@ func createBase(ecosystem string, purl packageurl.PackageURL, semverIntroduced, 
 
 // affectedComponentBaseFromGitRange extracts base component data from GIT ranges (used for CVEs)
 func affectedComponentBaseFromGitRange(affected dtos.Affected) []models.AffectedComponentBase {
-	bases := make([]models.AffectedComponentBase, 0)
+	upper := 0
+	for _, r := range affected.Ranges {
+		if r.Type == "GIT" {
+			upper += len(affected.Versions)
+		}
+	}
+	bases := make([]models.AffectedComponentBase, 0, upper)
 
 	for _, r := range affected.Ranges {
 		if r.Type != "GIT" {
@@ -351,18 +352,18 @@ func affectedComponentBaseFromGitRange(affected dtos.Affected) []models.Affected
 			continue
 		}
 
-		for _, v := range affected.Versions {
-			tmpV := v
-			base := models.AffectedComponentBase{
+		namespacePtr := &purlParsed.Namespace
+
+		for i := range affected.Versions {
+			bases = append(bases, models.AffectedComponentBase{
 				PurlWithoutVersion: purl,
 				Ecosystem:          "GIT",
 				Scheme:             "pkg",
 				Type:               purlParsed.Type,
 				Name:               purlParsed.Name,
-				Version:            &tmpV,
-				Namespace:          &purlParsed.Namespace,
-			}
-			bases = append(bases, base)
+				Version:            &affected.Versions[i],
+				Namespace:          namespacePtr,
+			})
 		}
 	}
 

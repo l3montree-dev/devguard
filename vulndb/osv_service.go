@@ -260,7 +260,7 @@ func (s osvService) workerFileFunction(ctx context.Context, waitGroup *sync.Wait
 			continue
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, relations)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 		// then create the affected components
 		err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(ctx, tx, affectedComponents)
@@ -368,7 +368,7 @@ func (s osvService) MirrorNoConcurrency() error {
 				continue
 			}
 
-			affectedComponents := transformer.AffectedComponentsFromOSV(&osv, relations)
+			affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 			// then create the affected components
 			err = s.affectedCmpRepository.CreateAffectedComponentsUsingUnnest(ctx, tx, affectedComponents)
@@ -436,7 +436,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
-	vulnData := make(chan dtos.OSV, 1000)
+	vulnData := make(chan *dtos.OSV, 5000)
 
 	fetchingStart := time.Now()
 
@@ -472,7 +472,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 
 	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, vulnData)
+	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs)
 
 	go func() {
 		zipPushWaitGroup.Wait()
@@ -490,7 +490,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	cveIDs := make([]string, 0, totalCount)
 	for osvObject := range vulnData {
 		cveIDs = append(cveIDs, osvObject.ID)
-		allOSVVulns = append(allOSVVulns, osvObject)
+		allOSVVulns = append(allOSVVulns, *osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
@@ -511,7 +511,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 }
 
 // controls in what order and what method to use for each ecosystem
-func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob, output chan dtos.OSV) {
+func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob) {
 	defer close(jobs)
 	defer zipPushWaitGroup.Done()
 
@@ -566,7 +566,7 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 	slog.Info("finished pushing zip files", "ecosystem", ecosystem, "time elapsed", time.Since(start))
 }
 
-func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan dtos.OSV) {
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
 		readCloser, err := zipJob.File.Open()
@@ -586,7 +586,7 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldPr
 		if _, ok := shouldProcessID[zipJob.Ecosystem][osvEntry.ID]; !ok {
 			continue
 		}
-		output <- osvEntry
+		output <- &osvEntry
 	}
 }
 
@@ -595,7 +595,7 @@ type fetchingJob struct {
 	ID        string
 }
 
-func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan dtos.OSV) {
+func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan *dtos.OSV) {
 	for job := range jobs {
 		url := fmt.Sprintf("https://storage.googleapis.com/osv-vulnerabilities/%s/%s.json", job.Ecosystem, job.ID)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -622,7 +622,7 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 			continue
 		}
 		resp.Body.Close()
-		output <- osvVuln
+		output <- &osvVuln
 	}
 	waitGroup.Done()
 }
@@ -785,6 +785,10 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 	cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*55) // key -> key
 	slog.Info("start building rows", "amount", len(allEntries))
 	buildingTime := time.Now()
+	// Hoisted out of the per-entry loop and cleared in place — avoids ~len(allEntries)
+	// map allocations. Deduplication semantics are unchanged: row keys include
+	// CveCVE, which is constant within a single entry's affectedComponentsForCVE.
+	isCVEAffectedComponentAlreadyPresent := make(map[cveAffectedComponentRow]struct{}, 512)
 	// built all the objects first
 	for i := range allEntries {
 		cve := transformer.OSVToCVE(&allEntries[i])
@@ -794,12 +798,12 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 		relationships := transformer.OSVToCVERelationships(&allEntries[i])
 		cveRelationships = append(cveRelationships, relationships...)
 
-		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(&allEntries[i], relationships)
+		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(&allEntries[i])
 		if len(affectedComponentsForCVE) == 0 {
 			continue // 20k + empty CVEs -> ignore them completely?
 		}
 
-		isCVEAffectedComponentAlreadyPresent := make(map[cveAffectedComponentRow]struct{}, 512)
+		clear(isCVEAffectedComponentAlreadyPresent)
 		for _, affectedComponent := range affectedComponentsForCVE {
 			hash := affectedComponent.CalculateHashFast()
 			affectedComponent.ID = hash // assign hash for later use
