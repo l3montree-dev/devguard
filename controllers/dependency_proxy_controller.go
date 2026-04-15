@@ -456,6 +456,12 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 
 	slog.Info("Proxy request", "proxy", "pypi", "method", c.Request().Method, "path", requestPath)
 
+	//check config for not allowed patterns before doing anything else to fail fast and avoid unnecessary processing
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, PyPIProxy, requestPath, configs)
+	if notAllowed {
+		return d.blockNotAllowedPackage(c, PyPIProxy, requestPath, notAllowedReason)
+	}
+
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
 		if blocked, reason := d.checkMaliciousPackage(c.Request().Context(), PyPIProxy, requestPath); blocked {
@@ -810,7 +816,7 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies := map[string]string{}
 	proxies["npm"] = registryURL + "/" + secret.String() + "/npm/"
 	proxies["go"] = registryURL + "/" + secret.String() + "/go/"
-	proxies["pypi"] = registryURL + "/" + secret.String() + "/pypi/"
+	proxies["pypi"] = registryURL + "/" + secret.String() + "/pypi/simple/"
 
 	return ctx.JSON(http.StatusOK, proxies)
 }
@@ -1020,7 +1026,7 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 		return pkgName, ""
 
 	case GoProxy:
-		re := regexp.MustCompile(`^/([^@]+)(?:@v/([^/]+))?`)
+		re := regexp.MustCompile(`^([^@]+)(?:@v/([^/]+))?`)
 		matches := re.FindStringSubmatch(path)
 		if len(matches) > 1 {
 			moduleName := matches[1]
@@ -1038,7 +1044,7 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 	case PyPIProxy:
 		// PyPI simple API: /simple/<package-name>/ or /packages/<filename>
 		// Extract package name from path like /simple/django/ or /packages/django-3.2.0-py3-none-any.whl
-		if after, ok := strings.CutPrefix(path, "/simple/"); ok {
+		if after, ok := strings.CutPrefix(path, "simple/"); ok {
 			pkgName := after
 			pkgName = strings.TrimSuffix(pkgName, "/")
 			return pkgName, ""
