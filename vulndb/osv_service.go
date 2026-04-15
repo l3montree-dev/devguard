@@ -958,16 +958,11 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 	// and cast during the INSERT ... SELECT.
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE affected_components_stage (
-			id                 text,
-			source             text,
+			id                 bigint,
+			
 			purl               text,
 			ecosystem          text,
-			scheme             text,
-			type               text,
-			name               text,
-			namespace          text,
-			qualifiers         jsonb,
-			subpath            text,
+			
 			version            text,
 			semver_introduced  text,
 			semver_fixed       text,
