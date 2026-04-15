@@ -829,7 +829,7 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 		return configs, fmt.Errorf("failed to get dependency proxy model by secret: %w", err)
 	}
 
-	var configFilesJson any
+	var configFilesJSON any
 
 	switch scope {
 	case "asset":
@@ -838,28 +838,28 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
 
-		configFilesJson = asset.ConfigFiles["dependency-proxy-configs"]
+		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
 
 	case "project":
 		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid)
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
-		configFilesJson = project.ConfigFiles["dependency-proxy-configs"]
+		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
 	case "organization":
 		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid)
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}
-		configFilesJson = org.ConfigFiles["dependency-proxy-configs"]
+		configFilesJSON = org.ConfigFiles["dependency-proxy-configs"]
 	default:
 		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
 	}
 
-	if configFilesJson != nil {
-		s, ok := configFilesJson.(string)
+	if configFilesJSON != nil {
+		s, ok := configFilesJSON.(string)
 		if !ok {
-			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJson)
+			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
 		var raw struct {
 			Rules          string `json:"rules"`
