@@ -13,12 +13,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -44,23 +47,45 @@ const (
 	PyPIProxy ProxyType = "pypi"
 )
 
-type DependencyProxyConfig struct {
+type DependencyProxyCache struct {
 	CacheDir string
+}
+type DependencyProxyConfigs struct {
+	Rules          []string `json:"rules"`
+	MinReleaseTime int      `json:"minReleaseTime"` // in hours
 }
 
 type DependencyProxyController struct {
-	maliciousChecker shared.MaliciousPackageChecker
-	cacheDir         string
-	client           *http.Client
+	assetRepository        shared.AssetRepository
+	projectRepository      shared.ProjectRepository
+	orgRepository          shared.OrganizationRepository
+	dependencyProxyService shared.DependencyProxySecretService
+	maliciousChecker       shared.MaliciousPackageChecker
+	cacheDir               string
+	client                 *http.Client
+}
+
+// trimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem>/ prefix from the path.
+// The secret segment is optional to support routes with and without a secret.
+func TrimProxyPrefix(path string, ecosystem ProxyType) string {
+	return regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?`+regexp.QuoteMeta(string(ecosystem))+`/`).ReplaceAllString(path, "")
 }
 
 func NewDependencyProxyController(
-	config DependencyProxyConfig,
+	dependencyProxyService shared.DependencyProxySecretService,
+	config DependencyProxyCache,
 	maliciousChecker shared.MaliciousPackageChecker,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	orgRepository shared.OrganizationRepository,
 ) *DependencyProxyController {
 	return &DependencyProxyController{
-		maliciousChecker: maliciousChecker,
-		cacheDir:         config.CacheDir,
+		dependencyProxyService: dependencyProxyService,
+		maliciousChecker:       maliciousChecker,
+		cacheDir:               config.CacheDir,
+		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
+		orgRepository:          orgRepository,
 		client: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: utils.EgressTransport,
@@ -69,8 +94,16 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
+
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+	}
+
+	path := c.Request().URL.Path
+
 	// Get the full path after the prefix
-	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/npm")
+	requestPath := TrimProxyPrefix(path, NPMProxy)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm",
 		trace.WithAttributes(
@@ -96,7 +129,15 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	packageName, version := d.ParsePackageFromPath(NPMProxy, requestPath)
 	hasExplicitVersion := version != "" || strings.HasSuffix(requestPath, ".tgz")
 
-	if blocked, reason := d.checkMaliciousPackage(ctx, NPMProxy, requestPath); blocked {
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, NPMProxy, requestPath, configs)
+
+	if notAllowed {
+		return d.blockNotAllowedPackage(c, NPMProxy, requestPath, notAllowedReason)
+	}
+
+	hasMalicious, reason := d.checkMaliciousPackage(ctx, NPMProxy, requestPath)
+
+	if hasMalicious {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
 		// Also remove from cache if it exists to prevent serving cached malicious content
 		cachePath := d.getCachePath(NPMProxy, requestPath)
@@ -115,15 +156,29 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
-				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-				return d.writeNPMResponse(c, data, requestPath, true)
+				if configs.MinReleaseTime > 0 && !hasExplicitVersion && packageName != "" {
+					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
+						if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+							return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseTime)
+						}
+						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+						return d.writeNPMResponse(c, data, requestPath, true)
+					}
+					// No cached release time - fall through to upstream to retrieve it
+					slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "npm", "path", requestPath)
+				} else {
+					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+					return d.writeNPMResponse(c, data, requestPath, true)
+				}
+			} else {
+				slog.Warn("Cache integrity verification failed, refetching", "proxy", "npm", "path", requestPath)
+				// Remove corrupted cache
+				os.Remove(cachePath)
+				os.Remove(cachePath + ".sha256")
 			}
-			slog.Warn("Cache integrity verification failed, refetching", "proxy", "npm", "path", requestPath)
-			// Remove corrupted cache
-			os.Remove(cachePath)
-			os.Remove(cachePath + ".sha256")
+		} else {
+			slog.Warn("Cache read error", "proxy", "npm", "error", err)
 		}
-		slog.Warn("Cache read error", "proxy", "npm", "error", err)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -148,10 +203,12 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		return c.Blob(statusCode, headers.Get("Content-Type"), data)
 	}
 
+	resolvedVersion, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
+
 	// For metadata requests without explicit version, check the resolved version against malicious database
 	if d.maliciousChecker != nil && !hasExplicitVersion && packageName != "" {
 		// Parse the JSON response to extract the version that would be installed
-		if resolvedVersion := d.ExtractNPMVersionFromMetadata(data); resolvedVersion != "" {
+		if resolvedVersion != "" {
 			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
 			isMalicious, entry := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
 			if isMalicious {
@@ -165,9 +222,25 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		}
 	}
 
+	// Check MinReleaseTime for metadata responses (non-tgz)
+	if configs.MinReleaseTime > 0 && !hasExplicitVersion && packageName != "" {
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+			return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseTime)
+		}
+
+	}
+
 	// Cache successful responses with integrity verification
 	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
+	}
+
+	// Store release time so MinReleaseTime can be enforced on future cache hits
+	if !hasExplicitVersion && packageName != "" {
+		if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
+			slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
+		}
+
 	}
 
 	// Copy important headers from upstream
@@ -241,7 +314,18 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
 	}
 
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+	}
+
 	slog.Info("Proxy request", "proxy", "go", "method", c.Request().Method, "path", requestPath)
+
+	//check config for not allowed patterns before doing anything else to fail fast and avoid unnecessary processing
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, GoProxy, requestPath, configs)
+	if notAllowed {
+		return d.blockNotAllowedPackage(c, GoProxy, requestPath, notAllowedReason)
+	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
 	if d.maliciousChecker != nil {
@@ -265,15 +349,29 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
-				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-				return d.writeGoResponse(c, data, requestPath, true)
+				if configs.MinReleaseTime > 0 && strings.HasSuffix(requestPath, ".info") {
+					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
+						if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+							return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
+						}
+						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+						return d.writeGoResponse(c, data, requestPath, true)
+					}
+					// No cached release time - fall through to upstream to retrieve it
+					slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "go", "path", requestPath)
+				} else {
+					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+					return d.writeGoResponse(c, data, requestPath, true)
+				}
+			} else {
+				slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
+				// Remove corrupted cache
+				os.Remove(cachePath)
+				os.Remove(cachePath + ".sha256")
 			}
-			slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
-			// Remove corrupted cache
-			os.Remove(cachePath)
-			os.Remove(cachePath + ".sha256")
+		} else {
+			slog.Warn("Cache read error", "proxy", "go", "error", err)
 		}
-		slog.Warn("Cache read error", "proxy", "go", "error", err)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -298,9 +396,27 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		return c.Blob(statusCode, headers.Get("Content-Type"), data)
 	}
 
+	// Check MinReleaseTime for .info responses (version metadata)
+	if configs.MinReleaseTime > 0 && strings.HasSuffix(requestPath, ".info") {
+		if releaseTime, ok := d.ExtractGoReleaseTime(data); ok {
+			if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+				return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
+			}
+		}
+	}
+
 	// Cache successful responses with integrity verification
 	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
+	}
+
+	// Store release time so MinReleaseTime can be enforced on future cache hits
+	if strings.HasSuffix(requestPath, ".info") {
+		if releaseTime, ok := d.ExtractGoReleaseTime(data); ok {
+			if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
+				slog.Warn("Failed to cache release time", "proxy", "go", "error", err)
+			}
+		}
 	}
 
 	// Copy important headers from upstream
@@ -333,6 +449,11 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
 	}
 
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+	}
+
 	slog.Info("Proxy request", "proxy", "pypi", "method", c.Request().Method, "path", requestPath)
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning
@@ -357,15 +478,29 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		if err == nil {
 			// Verify cache integrity
 			if d.VerifyCacheIntegrity(cachePath, data) {
-				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-				return d.writePyPIResponse(c, data, requestPath, true)
+				if configs.MinReleaseTime > 0 && strings.Contains(requestPath, "/simple/") {
+					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
+						if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+							return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseTime)
+						}
+						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+						return d.writePyPIResponse(c, data, requestPath, true)
+					}
+					// No cached release time - fall through to upstream to retrieve it
+					slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "pypi", "path", requestPath)
+				} else {
+					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+					return d.writePyPIResponse(c, data, requestPath, true)
+				}
+			} else {
+				slog.Warn("Cache integrity verification failed, refetching", "proxy", "pypi", "path", requestPath)
+				// Remove corrupted cache
+				os.Remove(cachePath)
+				os.Remove(cachePath + ".sha256")
 			}
-			slog.Warn("Cache integrity verification failed, refetching", "proxy", "pypi", "path", requestPath)
-			// Remove corrupted cache
-			os.Remove(cachePath)
-			os.Remove(cachePath + ".sha256")
+		} else {
+			slog.Warn("Cache read error", "proxy", "pypi", "error", err)
 		}
-		slog.Warn("Cache read error", "proxy", "pypi", "error", err)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -390,9 +525,30 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		return c.Blob(statusCode, headers.Get("Content-Type"), data)
 	}
 
+	// Check MinReleaseTime for simple/ requests by fetching the PyPI JSON API
+	var pypiReleaseTime time.Time
+	if configs.MinReleaseTime > 0 && strings.Contains(requestPath, "/simple/") {
+		pkgName, _ := d.ParsePackageFromPath(PyPIProxy, requestPath)
+		if pkgName != "" {
+			if releaseTime, ok := d.fetchPyPILatestReleaseTime(ctx, pkgName); ok {
+				pypiReleaseTime = releaseTime
+				if time.Since(releaseTime) < time.Duration(configs.MinReleaseTime)*time.Hour {
+					return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseTime)
+				}
+			}
+		}
+	}
+
 	// Cache successful responses with integrity verification
 	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
+	}
+
+	// Store release time so MinReleaseTime can be enforced on future cache hits
+	if !pypiReleaseTime.IsZero() {
+		if err := d.CacheReleaseTime(cachePath, pypiReleaseTime); err != nil {
+			slog.Warn("Failed to cache release time", "proxy", "pypi", "error", err)
+		}
 	}
 
 	// Copy important headers from upstream
@@ -460,8 +616,11 @@ func (d *DependencyProxyController) isPyPICached(cachePath string) bool {
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, proxyType ProxyType, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
-	url := upstreamURL + requestPath
-	slog.Debug("Fetching from upstream", "proxy", proxyType, "url", url)
+	url, err := url.JoinPath(upstreamURL, requestPath)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
+	}
+	slog.Debug("Fetching from upstream", "proxy", proxyType, "url", url, "bodyPresent", body != nil)
 
 	// Determine HTTP method based on body presence
 	method := "GET"
@@ -614,6 +773,125 @@ func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, dat
 	return nil
 }
 
+func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
+	//get registry url from env
+	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
+	if registryURL == "" {
+		registryURL = "https://api.main.devguard.org/dependency-proxy"
+	}
+
+	var secret uuid.UUID
+
+	reqCtx := ctx.Request().Context()
+	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByAssetID(reqCtx, asset.GetID())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for asset: %v", err))
+		}
+		secret = proxy.Secret
+	} else if project, err := shared.MaybeGetProject(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByProjectID(reqCtx, project.GetID())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for project: %v", err))
+		}
+		secret = proxy.Secret
+	} else if org, err := shared.MaybeGetOrganization(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByOrgID(reqCtx, org.GetID())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for organization: %v", err))
+		}
+		secret = proxy.Secret
+	}
+
+	proxies := map[string]string{}
+	proxies["npm"] = registryURL + "/" + secret.String() + "/npm/"
+	proxies["go"] = registryURL + "/" + secret.String() + "/go/"
+	proxies["pypi"] = registryURL + "/" + secret.String() + "/pypi/"
+
+	return ctx.JSON(http.StatusOK, proxies)
+}
+
+func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
+	var configs DependencyProxyConfigs
+
+	secret := c.Param("secret")
+	uuidSecret, err := uuid.Parse(secret)
+	if err != nil {
+		return configs, fmt.Errorf("invalid secret format: %w", err)
+	}
+
+	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
+	if err != nil {
+		return configs, fmt.Errorf("failed to get dependency proxy model by secret: %w", err)
+	}
+
+	var configFilesJson any
+
+	switch scope {
+	case "asset":
+		asset, err := d.assetRepository.Read(c.Request().Context(), nil, uuid)
+		if err != nil {
+			return configs, fmt.Errorf("failed to read asset: %w", err)
+		}
+
+		configFilesJson = asset.ConfigFiles["dependency-proxy-configs"]
+
+	case "project":
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid)
+		if err != nil {
+			return configs, fmt.Errorf("failed to read project: %w", err)
+		}
+		configFilesJson = project.ConfigFiles["dependency-proxy-configs"]
+	case "organization":
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid)
+		if err != nil {
+			return configs, fmt.Errorf("failed to read organization: %w", err)
+		}
+		configFilesJson = org.ConfigFiles["dependency-proxy-configs"]
+	default:
+		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
+	}
+
+	if configFilesJson != nil {
+		s, ok := configFilesJson.(string)
+		if !ok {
+			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJson)
+		}
+		var raw struct {
+			Rules          string `json:"rules"`
+			MinReleaseTime int    `json:"minReleaseTime"`
+		}
+		if err := json.Unmarshal([]byte(s), &raw); err != nil {
+			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
+		}
+		configs.MinReleaseTime = raw.MinReleaseTime
+		configs.Rules = strings.Split(raw.Rules, "\n")
+	}
+
+	return configs, nil
+}
+
+// CacheReleaseTime stores the release time for a cached entry to enable MinReleaseTime checks on cache hits.
+func (d *DependencyProxyController) CacheReleaseTime(cachePath string, releaseTime time.Time) error {
+	if releaseTime.IsZero() {
+		return nil
+	}
+	return os.WriteFile(cachePath+".releasetime", []byte(releaseTime.UTC().Format(time.RFC3339)), 0644)
+}
+
+// ReadCachedReleaseTime reads the stored release time for a cached entry.
+func (d *DependencyProxyController) ReadCachedReleaseTime(cachePath string) (time.Time, bool) {
+	data, err := os.ReadFile(cachePath + ".releasetime")
+	if err != nil {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(data)))
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
 // VerifyCacheIntegrity checks if the cached data matches its stored hash
 func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data []byte) bool {
 	hashPath := cachePath + ".sha256"
@@ -745,7 +1023,7 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 			version := ""
 			if len(matches) > 2 && matches[2] != "" {
 				if matches[2] == "list" {
-					return moduleName, ""
+					return strings.TrimRight(moduleName, "/"), ""
 				}
 				version = strings.TrimSuffix(strings.TrimSuffix(matches[2], ".info"), ".mod")
 				version = strings.TrimSuffix(version, ".zip")
@@ -772,6 +1050,122 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 	}
 
 	return "", ""
+}
+
+func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, proxyType ProxyType, path string, configs DependencyProxyConfigs) (bool, string) {
+	var packageName, version, packagePurl string
+	if strings.HasPrefix(path, "pkg:") {
+		// Path is already a PURL — use it directly.
+		packagePurl = path
+	} else {
+		packageName, version = d.ParsePackageFromPath(proxyType, path)
+		if packageName == "" {
+			return false, ""
+		}
+		packagePurl = fmt.Sprintf("pkg:%s/%s", proxyType, packageName)
+		if version != "" {
+			packagePurl += "@" + version
+		}
+	}
+
+	// Rules are applied in order like gitignore: last matching rule wins.
+	// A rule prefixed with "!" negates the match (allowlist).
+	blocked := false
+	matchedRule := ""
+	for _, rule := range configs.Rules {
+		negate := strings.HasPrefix(rule, "!")
+		pattern := strings.TrimPrefix(rule, "!")
+
+		// A bare "*" should match any package (across all path segments).
+		// doublestar "*" does not cross path separators, so we use "**" instead.
+		if pattern == "*" {
+			pattern = "**"
+		}
+		matched, err := doublestar.Match(pattern, packagePurl)
+		if err != nil {
+			slog.Warn("Invalid rule pattern", "rule", rule, "err", err)
+			continue
+		}
+		// When no version was extracted from the path, also try matching against
+		// the pattern with its version suffix stripped (e.g. "pkg:npm/lodash@*" → "pkg:npm/lodash").
+		if !matched {
+			patternWithoutVersion := pattern
+			patternVersion := ""
+			lastSlashIdx := strings.LastIndex(pattern, "/")
+			patternAfterLastSlash := pattern
+			if lastSlashIdx != -1 {
+				patternAfterLastSlash = pattern[lastSlashIdx+1:]
+			}
+			if atIdx := strings.LastIndex(patternAfterLastSlash, "@"); atIdx != -1 {
+				patternWithoutVersion = pattern[:lastSlashIdx+1+atIdx]
+				patternVersion = pattern[lastSlashIdx+1+atIdx+1:]
+				if patternVersion == "*" {
+					patternVersion = "**"
+				}
+			}
+
+			packagePurlWithoutVersion := packagePurl
+			packagePurlVersion := ""
+			// Only look for the version-separator "@" in the part after the last "/",
+			// so that scoped NPM package names like "pkg:npm/@babel/core" are not
+			// incorrectly split on the "@" that is part of the scope.
+			lastSlashIdx = strings.LastIndex(packagePurl, "/")
+			purlAfterLastSlash := packagePurl[lastSlashIdx+1:]
+			if atIdx := strings.Index(purlAfterLastSlash, "@"); atIdx != -1 {
+				actualIdx := lastSlashIdx + 1 + atIdx
+				packagePurlWithoutVersion = packagePurl[:actualIdx]
+				packagePurlVersion = packagePurl[actualIdx+1:]
+			}
+
+			matched, err = doublestar.Match(patternWithoutVersion, packagePurlWithoutVersion)
+			if err != nil {
+				slog.Warn("Invalid rule pattern", "rule", rule, "err", err)
+				continue
+			}
+			if matched && patternVersion != "" {
+				// If the pattern includes a version requirement, check if the package version satisfies it.
+				matched, err = doublestar.Match(patternVersion, packagePurlVersion)
+				if err != nil {
+					slog.Warn("Invalid version requirement in rule", "rule", rule, "err", err)
+					continue
+				}
+			} else if matched && patternVersion == "" {
+				// If the pattern does not include a version requirement, it should match any version of the package.
+				matched = true
+			} else if matched && patternVersion != "" && packagePurlVersion == "" {
+				// If the pattern includes a version requirement but the package does not have a version, it should not match.
+				matched = false
+			}
+
+			// For non-PURL patterns (e.g. bare names like "react"), also try
+			// matching against just the package name without the "pkg:type/" prefix.
+			if !matched && !strings.HasPrefix(pattern, "pkg:") {
+				purlPrefix := fmt.Sprintf("pkg:%s/", proxyType)
+				pkgNameOnly := strings.TrimPrefix(packagePurlWithoutVersion, purlPrefix)
+				matched, err = doublestar.Match(patternWithoutVersion, pkgNameOnly)
+				if err != nil {
+					slog.Warn("Invalid rule pattern (name match)", "rule", rule, "err", err)
+					continue
+				}
+				if matched && patternVersion != "" {
+					matched, err = doublestar.Match(patternVersion, packagePurlVersion)
+					if err != nil {
+						slog.Warn("Invalid version requirement in rule", "rule", rule, "err", err)
+						continue
+					}
+				}
+			}
+		}
+		if matched {
+			blocked = !negate
+			matchedRule = rule
+		}
+	}
+
+	if blocked {
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+	}
+	return false, ""
 }
 
 func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, proxyType ProxyType, path string) (bool, string) {
@@ -806,19 +1200,49 @@ func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, p
 
 // ExtractNPMVersionFromMetadata parses NPM package metadata JSON and extracts the "latest" version
 // This is used when npx or npm install is called without a specific version
-func (d *DependencyProxyController) ExtractNPMVersionFromMetadata(data []byte) string {
+func (d *DependencyProxyController) ExtractNPMVersionAndReleaseTimeFromMetadata(data []byte) (string, time.Time) {
 	var metadata struct {
 		DistTags struct {
 			Latest string `json:"latest"`
 		} `json:"dist-tags"`
+		Time map[string]time.Time `json:"time"`
 	}
 
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		slog.Debug("Failed to parse NPM metadata", "error", err)
-		return ""
+		return "", time.Time{}
 	}
 
-	return metadata.DistTags.Latest
+	return metadata.DistTags.Latest, metadata.Time[metadata.DistTags.Latest]
+}
+
+func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
+	span := trace.SpanFromContext(c.Request().Context())
+	span.SetAttributes(
+		attribute.Bool("proxy.not_allowed_blocked", true),
+		attribute.String("proxy.block_reason", reason),
+	)
+	span.SetStatus(codes.Error, "package blocked by rule")
+
+	c.Response().Header().Set("X-Not-Allowed-Package", "blocked")
+
+	slog.Warn("BLOCKED NOT ALLOWED PACKAGE", "path", path, "reason", reason)
+
+	packageName, _ := d.ParsePackageFromPath(proxyType, path)
+	if packageName == "" {
+		packageName = "unknown"
+	}
+	span.SetAttributes(attribute.String("proxy.package", packageName))
+
+	response := map[string]any{
+		"error":   "Forbidden",
+		"message": "This package has been blocked by the dependency proxy rules",
+		"reason":  reason,
+		"path":    path,
+		"blocked": true,
+	}
+
+	return c.JSON(http.StatusForbidden, response)
 }
 
 func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
@@ -843,6 +1267,87 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, prox
 	response := map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
+		"reason":  reason,
+		"path":    path,
+		"blocked": true,
+	}
+
+	return c.JSON(http.StatusForbidden, response)
+}
+
+// ExtractGoReleaseTime parses a Go proxy .info response and returns the version time.
+func (d *DependencyProxyController) ExtractGoReleaseTime(data []byte) (time.Time, bool) {
+	var info struct {
+		Time time.Time `json:"Time"`
+	}
+	if err := json.Unmarshal(data, &info); err != nil || info.Time.IsZero() {
+		return time.Time{}, false
+	}
+	return info.Time, true
+}
+
+// ExtractPyPIReleaseTime parses a PyPI JSON API response and returns the upload time for a version.
+// If version is empty, it uses info.version (the current release).
+func (d *DependencyProxyController) ExtractPyPIReleaseTime(data []byte, version string) (time.Time, bool) {
+	var metadata struct {
+		Info struct {
+			Version string `json:"version"`
+		} `json:"info"`
+		Releases map[string][]struct {
+			UploadTime string `json:"upload_time_iso_8601"`
+		} `json:"releases"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return time.Time{}, false
+	}
+	if version == "" {
+		version = metadata.Info.Version
+	}
+	files, ok := metadata.Releases[version]
+	if !ok || len(files) == 0 {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, files[0].UploadTime)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// fetchPyPILatestReleaseTime fetches the PyPI JSON API and returns the release time of the current version.
+func (d *DependencyProxyController) fetchPyPILatestReleaseTime(ctx context.Context, pkgName string) (time.Time, bool) {
+	data, _, statusCode, err := d.fetchPyPIFromUpstream(ctx, "/pypi/"+pkgName+"/json", http.Header{})
+	if err != nil || statusCode != http.StatusOK {
+		return time.Time{}, false
+	}
+	return d.ExtractPyPIReleaseTime(data, "")
+}
+
+func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyType ProxyType, path string, releaseTime time.Time, minReleaseTime int) error {
+	span := trace.SpanFromContext(c.Request().Context())
+	span.SetAttributes(
+		attribute.Bool("proxy.too_new_blocked", true),
+	)
+	span.SetStatus(codes.Error, "package too new")
+
+	c.Response().Header().Set("X-Too-New-Package", "blocked")
+
+	packageName, _ := d.ParsePackageFromPath(proxyType, path)
+	if packageName == "" {
+		packageName = "unknown"
+	}
+	span.SetAttributes(attribute.String("proxy.package", packageName))
+
+	reason := fmt.Sprintf("Package %s was released %s ago, which is less than the required minimum of %d hours",
+		packageName,
+		time.Since(releaseTime).Round(time.Minute),
+		minReleaseTime,
+	)
+	slog.Warn("BLOCKED TOO NEW PACKAGE", "path", path, "reason", reason)
+
+	response := map[string]any{
+		"error":   "Forbidden",
+		"message": "This package has been blocked because it was released too recently",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,

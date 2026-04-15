@@ -34,7 +34,7 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Create controller
-	config := controllers.DependencyProxyConfig{
+	config := controllers.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
@@ -42,7 +42,7 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Cache with integrity verification", func(t *testing.T) {
 		testData := []byte("test package content")
@@ -132,14 +132,14 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 func TestDependencyProxyController_MaliciousPackageRemoval(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := controllers.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Malicious package removed from cache", func(t *testing.T) {
 		// Cache a "malicious" package
@@ -158,14 +158,14 @@ func TestDependencyProxyController_MaliciousPackageRemoval(t *testing.T) {
 func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := controllers.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Extract version from npm package metadata", func(t *testing.T) {
 		// Create sample NPM package metadata JSON
@@ -188,13 +188,13 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 
 		// Test extractNPMVersionFromMetadata (we need to make this public for testing)
 		// For now, we'll test the full flow
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
+		version, _ := controller.ExtractNPMVersionAndReleaseTimeFromMetadata(jsonData)
 		assert.Equal(t, "1.2.3", version)
 	})
 
 	t.Run("Extract version from malformed metadata", func(t *testing.T) {
 		invalidJSON := []byte(`{"name": "test", "dist-tags": "invalid"}`)
-		version := controller.ExtractNPMVersionFromMetadata(invalidJSON)
+		version, _ := controller.ExtractNPMVersionAndReleaseTimeFromMetadata(invalidJSON)
 		assert.Equal(t, "", version)
 	})
 
@@ -205,7 +205,7 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 		jsonData, err := json.Marshal(metadata)
 		require.NoError(t, err)
 
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
+		version, _ := controller.ExtractNPMVersionAndReleaseTimeFromMetadata(jsonData)
 		assert.Equal(t, "", version)
 	})
 }
@@ -213,14 +213,14 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := controllers.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Verify extractNPMVersionFromMetadata extracts correct version", func(t *testing.T) {
 		// Test that when metadata is fetched for a package without a version,
@@ -235,7 +235,7 @@ func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
 		jsonData, err := json.Marshal(metadata)
 		require.NoError(t, err)
 
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
+		version, _ := controller.ExtractNPMVersionAndReleaseTimeFromMetadata(jsonData)
 		assert.Equal(t, "3.1.4", version, "Should extract the latest version from dist-tags")
 	})
 
@@ -256,17 +256,294 @@ func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
 	})
 }
 
+func TestDependencyProxyController_CheckNotAllowedPackage(t *testing.T) {
+	tempDir := t.TempDir()
+	config := controllers.DependencyProxyCache{CacheDir: tempDir}
+	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	require.NoError(t, err)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
+	ctx := t.Context()
+
+	testCases := []struct {
+		name            string
+		proxyType       controllers.ProxyType
+		path            string
+		rules           []string
+		expectedBlocked bool
+	}{
+
+		{
+			name:            "negation rule with minor wildcard unblocks matching version",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react@17*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "negation rule for different major version does not unblock",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react@18.*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "negation rule with patch wildcard unblocks matching version",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react@17.0.*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "negation rule with patch wildcard does not unblock non-matching minor version",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.1.0",
+			rules:           []string{"*", "!react@17.0.*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "negation rule with exact different version does not unblock",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react@18.0.0"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "negation rule with exact matching version unblocks",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react@17.0.0"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "negation rule with package name without version unblocks",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"*", "!react"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "package name rule without version blocks matching package",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"react"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "package name rule without version blocks package with version suffix",
+			proxyType:       controllers.NPMProxy,
+			path:            "react@17.0.0",
+			rules:           []string{"react"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "package name rule matches purl-format path",
+			proxyType:       controllers.NPMProxy,
+			path:            "pkg:npm/react@17.0.0",
+			rules:           []string{"react"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "double-star negation unblocks deeply nested path",
+			proxyType:       controllers.NPMProxy,
+			path:            "bla/blo/foo/ddo/react",
+			rules:           []string{"*", "!**/react"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "double-star negation unblocks single-level nested path",
+			proxyType:       controllers.NPMProxy,
+			path:            "bla/react",
+			rules:           []string{"*", "!**/react"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "single-star negation unblocks top-level package",
+			proxyType:       controllers.NPMProxy,
+			path:            "react",
+			rules:           []string{"*", "!*/react"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "no rules — package allowed",
+			proxyType:       controllers.NPMProxy,
+			path:            "/lodash",
+			rules:           []string{},
+			expectedBlocked: false,
+		},
+		{
+			name:            "exact match blocks package",
+			proxyType:       controllers.NPMProxy,
+			path:            "/lodash",
+			rules:           []string{"pkg:npm/lodash@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "exact match with version blocks package",
+			proxyType:       controllers.NPMProxy,
+			path:            "pkg:npm/lodash@1.0.0",
+			rules:           []string{"pkg:npm/lodash@1.0.0"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "wildcard blocks all packages",
+			proxyType:       controllers.NPMProxy,
+			path:            "/express",
+			rules:           []string{"*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "prefix wildcard blocks matching packages",
+			proxyType:       controllers.NPMProxy,
+			path:            "/babel-core",
+			rules:           []string{"pkg:npm/babel-core@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "prefix wildcard does not block non-matching package",
+			proxyType:       controllers.NPMProxy,
+			path:            "/lodash",
+			rules:           []string{"pkg:npm/babel-*@*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "scoped package exact match",
+			proxyType:       controllers.NPMProxy,
+			path:            "/@babel/core",
+			rules:           []string{"pkg:npm/@babel/core@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "scoped package wildcard",
+			proxyType:       controllers.NPMProxy,
+			path:            "/@babel/core",
+			rules:           []string{"pkg:npm/@babel/*@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "scoped wildcard does not block other scope",
+			proxyType:       controllers.NPMProxy,
+			path:            "/@types/node",
+			rules:           []string{"pkg:npm/@babel/*@*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "unresolvable path — not blocked",
+			proxyType:       controllers.NPMProxy,
+			path:            "/",
+			rules:           []string{"*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "PyPI package blocked by rule",
+			proxyType:       controllers.PyPIProxy,
+			path:            "/simple/requests/",
+			rules:           []string{"pkg:pypi/requests@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "Go module blocked by double-star pattern",
+			proxyType:       controllers.GoProxy,
+			path:            "/github.com/some/module/@v/list",
+			rules:           []string{"pkg:go/github.com/some/module@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "multiple rules — all purl rules match, package blocked",
+			proxyType:       controllers.NPMProxy,
+			path:            "/react",
+			rules:           []string{"pkg:npm/*@*", "pkg:npm/react@*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "multiple rules — none match",
+			proxyType:       controllers.NPMProxy,
+			path:            "/vue",
+			rules:           []string{"pkg:npm/react@*", "pkg:npm/express@*"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "multiple rules — negation unblocks even with subsequent non-matching rule",
+			proxyType:       controllers.NPMProxy,
+			path:            "/react",
+			rules:           []string{"*", "!pkg:npm/react@*", "pkg:npm/express@1.0.0"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "block all",
+			proxyType:       controllers.NPMProxy,
+			path:            "/react",
+			rules:           []string{"*"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "single-star path rule blocks single-segment match",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/a/lodash",
+			rules:           []string{"npm/*/lodash"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "single-star path rule does not block direct child (no intermediate segment)",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/lodash",
+			rules:           []string{"npm/*/lodash"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "single-star path rule does not block multi-segment path",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/a/b/lodash",
+			rules:           []string{"npm/*/lodash"},
+			expectedBlocked: false,
+		},
+		{
+			name:            "double-star path rule blocks single-segment match",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/a/lodash",
+			rules:           []string{"npm/**/lodash"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "double-star path rule blocks direct child",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/lodash",
+			rules:           []string{"npm/**/lodash"},
+			expectedBlocked: true,
+		},
+		{
+			name:            "double-star path rule blocks multi-segment path",
+			proxyType:       controllers.NPMProxy,
+			path:            "npm/a/b/lodash",
+			rules:           []string{"npm/**/lodash"},
+			expectedBlocked: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			settings := controllers.DependencyProxyConfigs{Rules: tc.rules}
+			blocked, reason := controller.CheckNotAllowedPackage(ctx, tc.proxyType, tc.path, settings)
+			assert.Equal(t, tc.expectedBlocked, blocked)
+			if tc.expectedBlocked {
+				assert.NotEmpty(t, reason)
+			} else {
+				assert.Empty(t, reason)
+			}
+		})
+	}
+}
+
 func TestDependencyProxyController_ParseNPMPackagePath(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := controllers.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := controllers.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	testCases := []struct {
 		name            string
@@ -305,6 +582,65 @@ func TestDependencyProxyController_ParseNPMPackagePath(t *testing.T) {
 			pkg, version := controller.ParsePackageFromPath(controllers.NPMProxy, tc.path)
 			assert.Equal(t, tc.expectedPackage, pkg)
 			assert.Equal(t, tc.expectedVersion, version)
+		})
+	}
+}
+
+func TestTrimProxyPrefix(t *testing.T) {
+	testCases := []struct {
+		name      string
+		path      string
+		ecosystem controllers.ProxyType
+		expected  string
+	}{
+		{
+			name:      "NPM with secret",
+			path:      "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/npm/lodash",
+			ecosystem: controllers.NPMProxy,
+			expected:  "lodash",
+		},
+		{
+			name:      "NPM without secret",
+			path:      "/api/v1/dependency-proxy/npm/lodash",
+			ecosystem: controllers.NPMProxy,
+			expected:  "lodash",
+		},
+		{
+			name:      "NPM scoped package with secret",
+			path:      "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/npm/@babel/core",
+			ecosystem: controllers.NPMProxy,
+			expected:  "@babel/core",
+		},
+		{
+			name:      "NPM scoped package without secret",
+			path:      "/api/v1/dependency-proxy/npm/@babel/core",
+			ecosystem: controllers.NPMProxy,
+			expected:  "@babel/core",
+		},
+		{
+			name:      "Go with secret",
+			path:      "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/go/github.com/foo/bar",
+			ecosystem: controllers.GoProxy,
+			expected:  "github.com/foo/bar",
+		},
+		{
+			name:      "Go without secret",
+			path:      "/api/v1/dependency-proxy/go/github.com/foo/bar",
+			ecosystem: controllers.GoProxy,
+			expected:  "github.com/foo/bar",
+		},
+		{
+			name:      "no match returns original path",
+			path:      "/something/completely/different",
+			ecosystem: controllers.NPMProxy,
+			expected:  "/something/completely/different",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := controllers.TrimProxyPrefix(tc.path, tc.ecosystem)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
