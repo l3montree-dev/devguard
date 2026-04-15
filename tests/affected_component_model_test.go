@@ -33,7 +33,7 @@ func TestFromOSV(t *testing.T) {
 		osv := dtos.OSV{
 			Affected: []dtos.Affected{},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -50,7 +50,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -67,7 +67,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
@@ -96,7 +96,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
@@ -105,18 +105,6 @@ func TestFromOSV(t *testing.T) {
 		}
 		if affectedComponents[0].Ecosystem != "" {
 			t.Errorf("Expected ecosystem to be ecosystem, got %s", affectedComponents[0].Ecosystem)
-		}
-		if affectedComponents[0].Scheme != "pkg" {
-			t.Errorf("Expected scheme to be pkg, got %s", affectedComponents[0].Scheme)
-		}
-		if affectedComponents[0].Type != "golang" {
-			t.Errorf("Expected type to be golang, got %s", affectedComponents[0].Type)
-		}
-		if affectedComponents[0].Name != "toolchain" {
-			t.Errorf("Expected name to be toolchain, got %s", affectedComponents[0].Name)
-		}
-		if *affectedComponents[0].Namespace != "" {
-			t.Errorf("Expected namespace to be '', got %s", *affectedComponents[0].Namespace)
 		}
 
 		// check the semver range
@@ -131,9 +119,11 @@ func TestFromOSV(t *testing.T) {
 		// check the hash
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
-		if affectedComponents[0].ID != "cd146d09f2bf86c4" { // nolint:all
+		if affectedComponents[0].ID != affectedComponents[0].CalculateHash() { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
+
+		assert.Equal(t, affectedComponents[0].CalculateHash(), affectedComponents[0].CalculateHashFast(), "expect all hashes to be identical")
 	})
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
@@ -166,7 +156,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -217,7 +207,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
@@ -236,7 +226,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}
@@ -270,7 +260,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -287,43 +277,13 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		for _, ac := range affectedComponents {
 			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
-			assert.Equal(t, ac.Type, "github.com")
-			assert.Equal(t, ac.Name, "server")
-			assert.Equal(t, *ac.Namespace, "nextcloud")
 			assert.Nil(t, ac.SemverIntroduced)
 			assert.Nil(t, ac.SemverFixed)
 			assert.Nil(t, ac.VersionIntroduced)
 			assert.Nil(t, ac.VersionFixed)
-		}
-	})
-	t.Run(" calling the function 2 times, with and without supplying the relationships beforehand should give the same results", func(t *testing.T) {
-		// read the file
-		f, _ := os.Open("testdata/CVE-2024-52523.json")
-		defer f.Close()
-		bytes, _ := io.ReadAll(f)
-		osv := dtos.OSV{}
-		err := json.Unmarshal(bytes, &osv)
-		if err != nil {
-			t.Errorf("Could not unmarshal osv, got %s", err)
-		}
-
-		relations := transformer.OSVToCVERelationships(&osv)
-		affectedComponentsWithRelations := transformer.AffectedComponentsFromOSV(&osv, relations)
-		affectedComponentsWithoutRelations := transformer.AffectedComponentsFromOSV(&osv, nil)
-
-		assert.True(t, len(affectedComponentsWithRelations) == len(affectedComponentsWithoutRelations))
-
-		withRelationsMap := make(map[string]struct{}, len(affectedComponentsWithRelations))
-		for _, ac := range affectedComponentsWithRelations {
-			withRelationsMap[ac.CalculateHash()] = struct{}{}
-		}
-
-		for _, ac := range affectedComponentsWithoutRelations {
-			_, ok := withRelationsMap[ac.CalculateHash()]
-			assert.True(t, ok)
 		}
 	})
 }
@@ -336,7 +296,6 @@ func TestSetIdHash(t *testing.T) {
 	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
 		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
-			Namespace:          ptr("golang"),
 			CVE: []models.CVE{
 				{},
 			},
@@ -345,7 +304,6 @@ func TestSetIdHash(t *testing.T) {
 
 		otherAffectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
-			Namespace:          ptr("golang"),
 			CVE:                make([]models.CVE, 0),
 		}
 
@@ -369,7 +327,7 @@ func TestAlpineCVE2021_3711(t *testing.T) {
 		return
 	}
 
-	affectedComponents := transformer.AffectedComponentsFromOSV(&osv, nil)
+	affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 
 	// for simplicity just do assertions on the ecosystem Alpine:v3.11
 	ac := utils.Filter(affectedComponents, func(el models.AffectedComponent) bool {

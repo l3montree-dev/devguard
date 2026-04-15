@@ -196,11 +196,11 @@ func (s osvService) workerZipFunction(ctx context.Context, results chan<- *zip.R
 		slog.Info("importing ecosystem", "ecosystem", ecosystem)
 		start := time.Now()
 		// remove all affected packages for this ecosystem
-		err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
-		if err != nil {
-			slog.Error("could not delete affected packages", "err", err)
-			continue
-		}
+		// err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
+		// if err != nil {
+		// 	slog.Error("could not delete affected packages", "err", err)
+		// 	continue
+		// }
 		slog.Info("deleted all affected packages", "ecosystem", ecosystem, "duration", time.Since(start))
 
 		// download the zip and extract it in memory
@@ -307,11 +307,11 @@ func (s osvService) MirrorNoConcurrency() error {
 		slog.Info("importing ecosystem", "ecosystem", ecosystem)
 		start := time.Now()
 		// remove all affected packages for this ecosystem
-		err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
-		if err != nil {
-			slog.Error("could not delete affected packages", "err", err)
-			continue
-		}
+		// err := s.affectedCmpRepository.DeleteAll(ctx, nil, ecosystem)
+		// if err != nil {
+		// 	slog.Error("could not delete affected packages", "err", err)
+		// 	continue
+		// }
 		slog.Info("deleted all affected packages", "ecosystem", ecosystem, "duration", time.Since(start))
 
 		// download the zip and extract it in memory
@@ -977,18 +977,10 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 		return fmt.Errorf("could not create staging table: %w", err)
 	}
 
-	columnNames := []string{"id", "source", "purl", "ecosystem", "scheme", "type", "name", "namespace", "qualifiers", "subpath", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
+	columnNames := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
 		c := components[i]
-		qualifiers := "{}"
-		if c.Qualifiers != nil {
-			b, err := json.Marshal(c.Qualifiers)
-			if err != nil {
-				return nil, fmt.Errorf("marshal qualifiers: %w", err)
-			}
-			qualifiers = string(b)
-		}
-		return []interface{}{c.ID, c.Source, c.PurlWithoutVersion, c.Ecosystem, c.Scheme, c.Type, c.Name, c.Namespace, qualifiers, c.Subpath, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
+		return []interface{}{c.ID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
@@ -996,14 +988,12 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO affected_components (
-			id, source, purl, ecosystem, scheme, type, name,
-			namespace, qualifiers, subpath, version,
+			id, purl, ecosystem,  version,
 			semver_introduced, semver_fixed,
 			version_introduced, version_fixed
 		)
 		SELECT
-			id, source, purl, ecosystem, scheme, type, name,
-			namespace, qualifiers, subpath, version,
+			id, purl, ecosystem, version,
 			semver_introduced::semver, semver_fixed::semver,
 			version_introduced, version_fixed
 		FROM affected_components_stage`); err != nil {

@@ -363,7 +363,7 @@ func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.Purl
 			acTable.AppendRow(table.Row{
 				i + 1,
 				ac.PurlWithoutVersion,
-				ac.Source,
+				"osv",
 				versionRange,
 				strings.Join(cveIDs, ", "),
 			})

@@ -23,27 +23,20 @@ import (
 	"sync"
 
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"gorm.io/gorm"
 )
 
 type AffectedComponent struct {
-	ID                 string `json:"id" gorm:"primaryKey;"`
-	Source             string
-	PurlWithoutVersion string              `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem          string              `json:"ecosystem" gorm:"type:text;"`
-	Scheme             string              `json:"scheme" gorm:"type:text;"`
-	Type               string              `json:"type" gorm:"type:text;"`
-	Name               string              `json:"name" gorm:"type:text;"`
-	Namespace          *string             `json:"namespace" gorm:"type:text;"`
-	Qualifiers         databasetypes.JSONB `json:"qualifiers" gorm:"type:text;"`
-	Subpath            *string             `json:"subpath" gorm:"type:text;"`
-	Version            *string             `json:"version" gorm:"index"` // either version or semver is defined
-	SemverIntroduced   *string             `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed        *string             `json:"semverEnd" gorm:"type:semver;index"`
+	ID string `json:"id" gorm:"primaryKey;"`
 
+	PurlWithoutVersion string `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string `json:"ecosystem" gorm:"type:text;"`
+
+	Version           *string `json:"version" gorm:"index"` // either version or semver is defined
+	SemverIntroduced  *string `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed       *string `json:"semverEnd" gorm:"type:semver;index"`
 	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 
@@ -64,13 +57,9 @@ func convertToStringMap(jsonb databasetypes.JSONB) map[string]string {
 
 func (affectedComponent AffectedComponent) CalculateHash() string {
 
-	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s",
 		affectedComponent.PurlWithoutVersion,
 		affectedComponent.Ecosystem,
-		affectedComponent.Name,
-		utils.SafeDereference(affectedComponent.Namespace),
-		normalize.QualifiersMapToString(convertToStringMap(affectedComponent.Qualifiers)),
-		utils.SafeDereference(affectedComponent.Subpath),
 		utils.SafeDereference(affectedComponent.Version),
 		utils.SafeDereference(affectedComponent.SemverIntroduced),
 		utils.SafeDereference(affectedComponent.SemverFixed),
@@ -105,18 +94,6 @@ func (affectedComponent AffectedComponent) CalculateHashFast() string {
 	buf = append(buf, affectedComponent.PurlWithoutVersion...)
 	buf = append(buf, '/')
 	buf = append(buf, affectedComponent.Ecosystem...)
-	buf = append(buf, '/')
-	buf = append(buf, affectedComponent.Name...)
-	buf = append(buf, '/')
-	if affectedComponent.Namespace != nil {
-		buf = append(buf, *affectedComponent.Namespace...)
-	}
-	buf = append(buf, '/')
-	buf = appendQualifiers(buf, affectedComponent.Qualifiers)
-	buf = append(buf, '/')
-	if affectedComponent.Subpath != nil {
-		buf = append(buf, *affectedComponent.Subpath...)
-	}
 	buf = append(buf, '/')
 	if affectedComponent.Version != nil {
 		buf = append(buf, *affectedComponent.Version...)

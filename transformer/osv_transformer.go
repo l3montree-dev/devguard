@@ -126,21 +126,16 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 			bases := affectedComponentBaseFromAffected(affected)
 			for _, base := range bases {
 				affectedComponent := models.AffectedComponent{
-					ID:                 "",
-					Source:             "osv",
+					ID: "",
+
 					PurlWithoutVersion: base.PurlWithoutVersion,
 					Ecosystem:          base.Ecosystem,
-					Scheme:             base.Scheme,
-					Type:               base.Type,
-					Name:               base.Name,
-					Namespace:          base.Namespace,
-					Qualifiers:         base.Qualifiers,
-					Subpath:            base.Subpath,
-					Version:            base.Version,
-					SemverIntroduced:   base.SemverIntroduced,
-					SemverFixed:        base.SemverFixed,
-					VersionIntroduced:  base.VersionIntroduced,
-					VersionFixed:       base.VersionFixed,
+
+					Version:           base.Version,
+					SemverIntroduced:  base.SemverIntroduced,
+					SemverFixed:       base.SemverFixed,
+					VersionIntroduced: base.VersionIntroduced,
+					VersionFixed:      base.VersionFixed,
 				}
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
@@ -149,19 +144,16 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 			bases := affectedComponentBaseFromGitRange(affected)
 			for _, base := range bases {
 				affectedComponent := models.AffectedComponent{
-					ID:                 "",
-					Source:             "osv",
+					ID: "",
+
 					PurlWithoutVersion: base.PurlWithoutVersion,
 					Ecosystem:          base.Ecosystem,
-					Scheme:             base.Scheme,
-					Type:               base.Type,
-					Name:               base.Name,
-					Version:            base.Version,
-					Namespace:          base.Namespace,
-					SemverIntroduced:   base.SemverIntroduced,
-					SemverFixed:        base.SemverFixed,
-					VersionIntroduced:  base.VersionIntroduced,
-					VersionFixed:       base.VersionFixed,
+
+					Version:           base.Version,
+					SemverIntroduced:  base.SemverIntroduced,
+					SemverFixed:       base.SemverFixed,
+					VersionIntroduced: base.VersionIntroduced,
+					VersionFixed:      base.VersionFixed,
 				}
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}

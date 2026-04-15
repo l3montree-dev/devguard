@@ -558,7 +558,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			markFP(t, repo, vuln, "art")
 
 			for i := 0; i < 3; i++ {
-				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom)           // gone
+				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom) // gone
 				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 				scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability) // back
 				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
@@ -1852,11 +1852,6 @@ func createCVE2025_46569(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
-		Scheme:             "pkg",
-		Type:               "golang",
-		Name:               "github.com/open-policy-agent/opa",
-		Namespace:          utils.Ptr(""),
-		Qualifiers:         nil,
 		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 
@@ -2112,9 +2107,6 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 			ID:                 "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
 			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
 			Ecosystem:          "golang",
-			Scheme:             "pkg",
-			Type:               "golang",
-			Name:               "github.com/jinzhu/inflection",
 			Version:            utils.Ptr("1.0.0"),
 			CVE:                []models.CVE{newCVE},
 		}

@@ -122,13 +122,8 @@ func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
 func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
 	return dtos.AffectedComponentDTO{
 		ID:                 ac.ID,
-		Source:             ac.Source,
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,
-		Scheme:             ac.Scheme,
-		Type:               ac.Type,
-		Name:               ac.Name,
-		Namespace:          ac.Namespace,
 		Version:            ac.Version,
 		SemverIntroduced:   ac.SemverIntroduced,
 		SemverFixed:        ac.SemverFixed,
