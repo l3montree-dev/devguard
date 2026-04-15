@@ -706,6 +706,9 @@
                     "cveID": {
                         "type": "string"
                     },
+                    "directDependencyFixedVersion": {
+                        "type": "string"
+                    },
                     "effort": {
                         "type": "integer"
                     },
@@ -787,6 +790,9 @@
                         "$ref": "#/components/schemas/dtos.CVEDTO"
                     },
                     "cveID": {
+                        "type": "string"
+                    },
+                    "directDependencyFixedVersion": {
                         "type": "string"
                     },
                     "effort": {
@@ -946,6 +952,18 @@
                     "cvePurlCriticalCvss": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
                     "cvePurlHigh": {
                         "type": "integer"
                     },
@@ -962,6 +980,18 @@
                         "type": "integer"
                     },
                     "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
                         "type": "integer"
                     },
                     "high": {
@@ -1564,31 +1594,79 @@
             },
             "dtos.OrgRiskHistory": {
                 "properties": {
-                    "criticalCVSS": {
+                    "critical": {
                         "type": "integer"
                     },
-                    "criticalRisk": {
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
                         "type": "integer"
                     },
                     "day": {
                         "type": "string"
                     },
-                    "highCVSS": {
+                    "fixableCritical": {
                         "type": "integer"
                     },
-                    "highRisk": {
+                    "fixableHigh": {
                         "type": "integer"
                     },
-                    "lowCVSS": {
+                    "fixableLow": {
                         "type": "integer"
                     },
-                    "lowRisk": {
+                    "fixableMedium": {
                         "type": "integer"
                     },
-                    "mediumCVSS": {
+                    "high": {
                         "type": "integer"
                     },
-                    "mediumRisk": {
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
                         "type": "integer"
                     }
                 },
@@ -2042,6 +2120,18 @@
                     "cvePurlCriticalCvss": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
                     "cvePurlHigh": {
                         "type": "integer"
                     },
@@ -2063,6 +2153,18 @@
                     "day": {
                         "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
                         "type": "string"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
+                        "type": "integer"
                     },
                     "fixedDependencyVulns": {
                         "type": "integer"
@@ -2250,6 +2352,18 @@
                     "cvePurlCriticalCvss": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
                     "cvePurlHigh": {
                         "type": "integer"
                     },
@@ -2266,6 +2380,18 @@
                         "type": "integer"
                     },
                     "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
                         "type": "integer"
                     },
                     "high": {
@@ -2565,6 +2691,18 @@
                     "cvePurlCriticalCvss": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
                     "cvePurlHigh": {
                         "type": "integer"
                     },
@@ -2586,6 +2724,18 @@
                     "day": {
                         "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
                         "type": "string"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
+                        "type": "integer"
                     },
                     "fixedDependencyVulns": {
                         "type": "integer"
@@ -3105,6 +3255,9 @@
                         "$ref": "#/components/schemas/models.CVE"
                     },
                     "cveId": {
+                        "type": "string"
+                    },
+                    "directDependencyFixedVersion": {
                         "type": "string"
                     },
                     "effort": {
@@ -3717,13 +3870,19 @@
                     "createdByVexRule": {
                         "type": "boolean"
                     },
-                    "dtos.VulnType": {
-                        "$ref": "#/components/schemas/dtos.VulnType"
+                    "dependencyVulnId": {
+                        "type": "string"
+                    },
+                    "firstPartyVulnId": {
+                        "type": "string"
                     },
                     "id": {
                         "type": "string"
                     },
                     "justification": {
+                        "type": "string"
+                    },
+                    "licenseRiskId": {
                         "type": "string"
                     },
                     "mechanicalJustification": {
@@ -3735,13 +3894,7 @@
                     "type": {
                         "$ref": "#/components/schemas/dtos.VulnEventType"
                     },
-                    "updatedAt": {
-                        "type": "string"
-                    },
                     "userId": {
-                        "type": "string"
-                    },
-                    "vulnId": {
                         "type": "string"
                     }
                 },
@@ -4273,7 +4426,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/config-files/{config-file}": {
+        "/organizations/{organization}/config-files/{config-file}/": {
             "get": {
                 "parameters": [
                     {
@@ -4298,13 +4451,13 @@
                 "responses": {
                     "200": {
                         "content": {
-                            "application/json": {
+                            "text/plain": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "string"
                                 }
                             }
                         },
-                        "description": "OK"
+                        "description": "Config file content"
                     }
                 },
                 "security": [
@@ -4316,6 +4469,64 @@
                     }
                 ],
                 "summary": "Get organization config file",
+                "tags": [
+                    "Organizations"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Config file ID",
+                        "in": "path",
+                        "name": "config-file",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Config file content",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Updated config file content"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Update organization config file",
                 "tags": [
                     "Organizations"
                 ]
@@ -5149,6 +5360,148 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Config file ID",
+                        "in": "path",
+                        "name": "config-file",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Config file content"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get asset config file",
+                "tags": [
+                    "Assets"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Config file ID",
+                        "in": "path",
+                        "name": "config-file",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Config file content",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Updated config file content"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Update asset config file",
+                "tags": [
+                    "Assets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv": {
             "get": {
                 "parameters": [
@@ -5391,7 +5744,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/": {
             "get": {
                 "parameters": [
                     {
@@ -5428,7 +5781,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/models.AssetVersion"
+                                        "$ref": "#/components/schemas/dtos.AssetVersionDTO"
                                     },
                                     "type": "array"
                                 }
@@ -5508,7 +5861,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/models.AssetVersion"
+                                    "$ref": "#/components/schemas/dtos.AssetVersionDTO"
                                 }
                             }
                         },
@@ -5529,7 +5882,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/": {
             "delete": {
                 "parameters": [
                     {
@@ -5631,7 +5984,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/models.AssetVersion"
+                                    "$ref": "#/components/schemas/dtos.AssetVersionDTO"
                                 }
                             }
                         },
@@ -5652,7 +6005,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/": {
             "post": {
                 "parameters": [
                     {
@@ -5730,7 +6083,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/": {
             "delete": {
                 "parameters": [
                     {
@@ -5883,7 +6236,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/": {
             "get": {
                 "parameters": [
                     {
@@ -5941,7 +6294,82 @@
                                 }
                             }
                         },
-                        "description": "OK"
+                        "description": "OpenVEX document in JSON format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get VEX in OpenVEX JSON format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "CycloneDX BOM in JSON format"
                     }
                 },
                 "security": [
@@ -5958,7 +6386,157 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.pdf/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "SBOM as PDF"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get SBOM as PDF",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.xml/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "CycloneDX BOM in XML format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get SBOM in XML format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/": {
             "get": {
                 "parameters": [
                     {
@@ -6016,7 +6594,7 @@
                                 }
                             }
                         },
-                        "description": "OK"
+                        "description": "CycloneDX VEX in JSON format"
                     }
                 },
                 "security": [
@@ -6028,6 +6606,156 @@
                     }
                 ],
                 "summary": "Get VEX in JSON format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.xml/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "CycloneDX VEX in XML format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get VEX in XML format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vulnerability-report.pdf/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Vulnerability report as PDF"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get vulnerability report as PDF",
                 "tags": [
                     "Artifacts"
                 ]
@@ -7591,6 +8319,130 @@
                 "summary": "Scan SBOM file",
                 "tags": [
                     "Scanning"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Config file ID",
+                        "in": "path",
+                        "name": "config-file",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Config file content"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Get project config file",
+                "tags": [
+                    "Projects"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Config file ID",
+                        "in": "path",
+                        "name": "config-file",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "description": "Config file content",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "Updated config file content"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Update project config file",
+                "tags": [
+                    "Projects"
                 ]
             }
         },

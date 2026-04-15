@@ -105,14 +105,14 @@ type GraphNode struct {
 //
 // All nodes live in the same graph. Scoping is done by traversing from a specific node.
 type SBOMGraph struct {
-	nodes map[string]*GraphNode          // id -> node
-	edges map[string]map[string]struct{} // parent id -> set of child ids
+	Nodes map[string]*GraphNode          // id -> node
+	Edges map[string]map[string]struct{} // parent id -> set of child ids
 
-	vulnerabilities map[string]*cdx.Vulnerability // vuln ID -> vulnerability
+	Vulnerabilities map[string]*cdx.Vulnerability // vuln ID -> vulnerability
 
-	rootID string // ID of the root node (constant: "ROOT")
+	RootID string // ID of the root node (constant: "ROOT")
 
-	scopeID string // The id of the current scope node
+	ScopeID string // The id of the current scope node
 }
 
 type VexReport struct {
@@ -160,17 +160,17 @@ const GraphRootNodeID = "ROOT"
 // NewSBOMGraph creates an empty graph with a root node.
 func NewSBOMGraph() *SBOMGraph {
 	g := &SBOMGraph{
-		nodes:           make(map[string]*GraphNode),
-		edges:           make(map[string]map[string]struct{}),
-		vulnerabilities: make(map[string]*cdx.Vulnerability),
-		rootID:          GraphRootNodeID,
-		scopeID:         GraphRootNodeID,
+		Nodes:           make(map[string]*GraphNode),
+		Edges:           make(map[string]map[string]struct{}),
+		Vulnerabilities: make(map[string]*cdx.Vulnerability),
+		RootID:          GraphRootNodeID,
+		ScopeID:         GraphRootNodeID,
 	}
 	// Always create root node
-	g.nodes[GraphRootNodeID] = &GraphNode{BOMRef: GraphRootNodeID, Type: GraphNodeTypeRoot, Component: &cdx.Component{
+	g.Nodes[GraphRootNodeID] = &GraphNode{BOMRef: GraphRootNodeID, Type: GraphNodeTypeRoot, Component: &cdx.Component{
 		PackageURL: "", // empty string for root on purpose
 	}}
-	g.edges[GraphRootNodeID] = make(map[string]struct{})
+	g.Edges[GraphRootNodeID] = make(map[string]struct{})
 	return g
 }
 
@@ -181,8 +181,8 @@ func NewSBOMGraph() *SBOMGraph {
 // AddArtifact adds an artifact node as a child of root.
 func (g *SBOMGraph) AddArtifact(name string) string {
 	id := "artifact:" + name
-	if g.nodes[id] == nil {
-		g.nodes[id] = &GraphNode{
+	if g.Nodes[id] == nil {
+		g.Nodes[id] = &GraphNode{
 			BOMRef: id,
 			Type:   GraphNodeTypeArtifact,
 			Component: &cdx.Component{
@@ -192,9 +192,9 @@ func (g *SBOMGraph) AddArtifact(name string) string {
 				Type:       cdx.ComponentTypeApplication,
 			},
 		}
-		g.edges[id] = make(map[string]struct{})
+		g.Edges[id] = make(map[string]struct{})
 	}
-	g.edges[GraphRootNodeID][id] = struct{}{}
+	g.Edges[GraphRootNodeID][id] = struct{}{}
 	return id
 }
 
@@ -209,8 +209,8 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 	}
 	// Create a unique ID that includes the artifact name
 	id := fmt.Sprintf("%s:%s@%s", sourceType, sourceID, artifactName)
-	if g.nodes[id] == nil {
-		g.nodes[id] = &GraphNode{
+	if g.Nodes[id] == nil {
+		g.Nodes[id] = &GraphNode{
 			BOMRef:   id,
 			Type:     GraphNodeTypeInfoSource,
 			InfoType: sourceType,
@@ -220,9 +220,9 @@ func (g *SBOMGraph) AddInfoSource(artifactID, sourceID string, sourceType InfoSo
 				PackageURL: id,
 			},
 		}
-		g.edges[id] = make(map[string]struct{})
+		g.Edges[id] = make(map[string]struct{})
 	}
-	g.edges[artifactID][id] = struct{}{}
+	g.Edges[artifactID][id] = struct{}{}
 	return id
 }
 
@@ -268,8 +268,8 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 	// Sanitize component type - fall back to Library if invalid
 	comp.Type = sanitizeComponentType(comp.Type)
 
-	if g.nodes[comp.BOMRef] == nil {
-		g.nodes[comp.BOMRef] = &GraphNode{
+	if g.Nodes[comp.BOMRef] == nil {
+		g.Nodes[comp.BOMRef] = &GraphNode{
 			BOMRef:    comp.BOMRef,
 			Type:      GraphNodeTypeComponent,
 			Component: &comp,
@@ -280,10 +280,10 @@ func (g *SBOMGraph) AddComponent(comp cdx.Component) string {
 
 // AddEdge adds a directed edge from parent to child.
 func (g *SBOMGraph) AddEdge(parentID, childID string) {
-	if g.edges[parentID] == nil {
-		g.edges[parentID] = make(map[string]struct{})
+	if g.Edges[parentID] == nil {
+		g.Edges[parentID] = make(map[string]struct{})
 	}
-	g.edges[parentID][childID] = struct{}{}
+	g.Edges[parentID][childID] = struct{}{}
 }
 
 // statePriority returns a priority value for vulnerability states.
@@ -314,9 +314,9 @@ func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 
 	key := vuln.ID + "@" + affectsStr
 
-	existing, exists := g.vulnerabilities[key]
+	existing, exists := g.Vulnerabilities[key]
 	if !exists {
-		g.vulnerabilities[key] = &vuln
+		g.Vulnerabilities[key] = &vuln
 		return
 	}
 
@@ -332,12 +332,12 @@ func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
 	}
 
 	if statePriority(newState) > statePriority(existingState) {
-		g.vulnerabilities[key] = &vuln
+		g.Vulnerabilities[key] = &vuln
 	}
 }
 
 func (g *SBOMGraph) ClearScope() {
-	g.scopeID = g.rootID
+	g.ScopeID = g.RootID
 }
 
 var ErrNodeNotReachable = fmt.Errorf("node not reachable from current scope")
@@ -345,14 +345,14 @@ var ErrNodeNotReachable = fmt.Errorf("node not reachable from current scope")
 func (g *SBOMGraph) Scope(id string) error {
 	// check if valid
 	if g.reachableNodes()[id] {
-		g.scopeID = id
+		g.ScopeID = id
 		return nil
 	}
 	return ErrNodeNotReachable
 }
 
 func (g *SBOMGraph) CurrentScopeID() string {
-	return g.scopeID
+	return g.ScopeID
 }
 func (g *SBOMGraph) ScopeToArtifact(artifactName string) error {
 	artifactID := "artifact:" + artifactName
@@ -366,22 +366,22 @@ func (g *SBOMGraph) ScopeToInfoSource(infoSource string, t InfoSourceType) error
 }
 
 func (g *SBOMGraph) IsScoped() bool {
-	return g.scopeID != g.rootID
+	return g.ScopeID != g.RootID
 }
 
 // Clone creates a deep copy of the graph.
 func (g *SBOMGraph) Clone() *SBOMGraph {
 	clone := &SBOMGraph{
-		nodes:           make(map[string]*GraphNode, len(g.nodes)),
-		edges:           make(map[string]map[string]struct{}, len(g.edges)),
-		vulnerabilities: make(map[string]*cdx.Vulnerability, len(g.vulnerabilities)),
-		rootID:          g.rootID,
-		scopeID:         g.scopeID,
+		Nodes:           make(map[string]*GraphNode, len(g.Nodes)),
+		Edges:           make(map[string]map[string]struct{}, len(g.Edges)),
+		Vulnerabilities: make(map[string]*cdx.Vulnerability, len(g.Vulnerabilities)),
+		RootID:          g.RootID,
+		ScopeID:         g.ScopeID,
 	}
 
 	// Deep copy nodes
-	for id, node := range g.nodes {
-		clone.nodes[id] = &GraphNode{
+	for id, node := range g.Nodes {
+		clone.Nodes[id] = &GraphNode{
 			BOMRef:    node.BOMRef,
 			Type:      node.Type,
 			InfoType:  node.InfoType,
@@ -390,16 +390,16 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 	}
 
 	// Deep copy edges
-	for parentID, children := range g.edges {
-		clone.edges[parentID] = make(map[string]struct{}, len(children))
+	for parentID, children := range g.Edges {
+		clone.Edges[parentID] = make(map[string]struct{}, len(children))
 		for childID := range children {
-			clone.edges[parentID][childID] = struct{}{}
+			clone.Edges[parentID][childID] = struct{}{}
 		}
 	}
 
 	// Deep copy vulnerabilities
-	for id, vuln := range g.vulnerabilities {
-		clone.vulnerabilities[id] = vuln // Note: Vuln is shared, make deep copy if needed
+	for id, vuln := range g.Vulnerabilities {
+		clone.Vulnerabilities[id] = vuln // Note: Vuln is shared, make deep copy if needed
 	}
 
 	return clone
@@ -407,7 +407,7 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 
 // GetInfoSourceNode returns the info source node by ID, or nil if not found.
 func (g *SBOMGraph) GetInfoSourceNode(infoSourceID string) *GraphNode {
-	if node := g.nodes[infoSourceID]; node != nil && node.Type == GraphNodeTypeInfoSource {
+	if node := g.Nodes[infoSourceID]; node != nil && node.Type == GraphNodeTypeInfoSource {
 		return node
 	}
 	return nil
@@ -423,62 +423,72 @@ func (g *SBOMGraph) HasInfoSource(infoSourceID string) bool {
 // When an info source with the same ID exists, it replaces the entire subtree.
 func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 	beforeNodes := g.reachableNodes()
+
 	beforeEdges := make(map[[2]string]bool)
-	for parent, child := range g.Edges() {
+	for parent, child := range g.EdgesIter() {
 		beforeEdges[[2]string{parent, child}] = true
 	}
 
-	// Find info sources that need to be replaced (exist in both graphs)
-	infoSourcesToReplace := make(map[string]bool)
-	for id, node := range other.nodes {
-		if node.Type == GraphNodeTypeInfoSource {
-			if existingNode := g.nodes[id]; existingNode != nil && existingNode.Type == GraphNodeTypeInfoSource {
-				infoSourcesToReplace[id] = true
-			}
-		}
-	}
-
-	// Remove old subtrees for info sources that will be replaced
-	for infoSourceID := range infoSourcesToReplace {
-		g.removeSubtree(infoSourceID)
-	}
-
 	// Import all nodes
-	for bomRef, node := range other.nodes {
+	for bomRef, node := range other.Nodes {
 		if bomRef == GraphRootNodeID {
 			continue // Skip root
 		}
 		// Always overwrite if node already exists (for replacement semantics)
-		g.nodes[bomRef] = &GraphNode{
+		g.Nodes[bomRef] = &GraphNode{
 			BOMRef:    node.BOMRef,
 			Type:      node.Type,
 			InfoType:  node.InfoType,
 			Component: node.Component,
 		}
-		if g.edges[bomRef] == nil {
-			g.edges[bomRef] = make(map[string]struct{})
+		if g.Edges[bomRef] == nil {
+			g.Edges[bomRef] = make(map[string]struct{})
 		}
 	}
 
-	// Import all edges
-	for parentID, children := range other.edges {
-		if parentID == GraphRootNodeID {
-			// Connect root children to our root
+	// Import all edges - this is done by overwriting
+	for parentID, children := range other.Edges {
+		// get the parent node to decide what todo with the edges
+		parent := other.Nodes[parentID]
+		switch parent.Type {
+		case GraphNodeTypeRoot:
+			/**
+			Root -> Artifact1
+			Root -> Artifact2
+
+			We want to add new artifacts - or overwrite
+			*/
 			for childID := range children {
-				g.edges[g.rootID][childID] = struct{}{}
+				g.Edges[g.RootID][childID] = struct{}{}
 			}
-		} else {
-			if g.edges[parentID] == nil {
-				g.edges[parentID] = make(map[string]struct{})
-			}
-			// Clear existing edges for replaced info sources
-			if infoSourcesToReplace[parentID] {
-				g.edges[parentID] = make(map[string]struct{})
-			}
+		case GraphNodeTypeArtifact:
+			/**
+			Artifact -> InfoSource1
+			Artifact -> InfoSource2
+			We want to replace the entire subtree under the artifact for any info source that is being replaced, but keep existing edges for info sources that are not being replaced
+			*/
+
 			for childID := range children {
-				g.edges[parentID][childID] = struct{}{}
+				// This info source is being replaced, so we overwrite the edge (which effectively replaces the subtree since we cleared edges above)
+				g.Edges[parentID][childID] = struct{}{}
+			}
+		case GraphNodeTypeComponent, GraphNodeTypeInfoSource:
+			/**
+			InfoSource -> Component1
+			InfoSource -> Component2
+
+			OR
+
+			Component1 -> Component2
+
+			We want to replace all edges for this info source or component. Thus reset the map before
+			*/
+			g.Edges[parentID] = make(map[string]struct{}) // Clear existing edges to remove old subtree
+			for childID := range children {
+				g.Edges[parentID][childID] = struct{}{}
 			}
 		}
+
 	}
 
 	// Calculate diff
@@ -487,13 +497,13 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 
 	for id := range afterNodes {
 		if !beforeNodes[id] {
-			if node := g.nodes[id]; node != nil {
+			if node := g.Nodes[id]; node != nil {
 				diff.AddedNodes = append(diff.AddedNodes, node)
 			}
 		}
 	}
 
-	for parent, child := range g.Edges() {
+	for parent, child := range g.EdgesIter() {
 		edge := [2]string{parent, child}
 		if !beforeEdges[edge] {
 			diff.AddedEdges = append(diff.AddedEdges, edge)
@@ -501,7 +511,7 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 	}
 
 	afterEdges := make(map[[2]string]bool)
-	for parent, child := range g.Edges() {
+	for parent, child := range g.EdgesIter() {
 		afterEdges[[2]string{parent, child}] = true
 	}
 	for edge := range beforeEdges {
@@ -510,8 +520,28 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 		}
 	}
 	// add vulnerabilities
-	maps.Copy(g.vulnerabilities, other.vulnerabilities)
+	maps.Copy(g.Vulnerabilities, other.Vulnerabilities)
+	g.pruneUnreachable()
 	return diff
+}
+
+func (g *SBOMGraph) pruneUnreachable() {
+	reachable := g.reachableNodes()
+	for id := range g.Nodes {
+		if !reachable[id] {
+			delete(g.Nodes, id)
+			delete(g.Edges, id)
+		}
+	}
+
+	// Also delete edges that point to unreachable nodes
+	for parentID, children := range g.Edges {
+		for childID := range children {
+			if !reachable[parentID] || !reachable[childID] {
+				delete(g.Edges[parentID], childID)
+			}
+		}
+	}
 }
 
 // DeleteArtifactFromGraph removes an artifact and all its subtree from the graph.
@@ -524,17 +554,17 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 
 	beforeNodes := g.reachableNodes()
 	beforeEdges := make(map[[2]string]bool)
-	for parent, child := range g.Edges() {
+	for parent, child := range g.EdgesIter() {
 		beforeEdges[[2]string{parent, child}] = true
 	}
 
 	// Check if artifact exists
-	if g.nodes[artifactID] == nil {
+	if g.Nodes[artifactID] == nil {
 		return GraphDiff{} // Nothing to delete
 	}
 
 	// Remove the edge from root to artifact (disconnect it)
-	delete(g.edges[g.rootID], artifactID)
+	delete(g.Edges[g.RootID], artifactID)
 
 	// Now see what's still reachable - anything that became unreachable should be deleted
 	stillReachable := g.reachableNodes()
@@ -542,16 +572,16 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 	// Delete nodes that are no longer reachable
 	for id := range beforeNodes {
 		if !stillReachable[id] {
-			delete(g.nodes, id)
-			delete(g.edges, id)
+			delete(g.Nodes, id)
+			delete(g.Edges, id)
 		}
 	}
 
 	// Delete edges where either endpoint is no longer reachable
-	for parentID, children := range g.edges {
+	for parentID, children := range g.Edges {
 		for childID := range children {
 			if !stillReachable[parentID] || !stillReachable[childID] {
-				delete(g.edges[parentID], childID)
+				delete(g.Edges[parentID], childID)
 			}
 		}
 	}
@@ -563,7 +593,7 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 	// Find removed nodes
 	for id := range beforeNodes {
 		if !afterNodes[id] {
-			if node := g.nodes[id]; node != nil {
+			if node := g.Nodes[id]; node != nil {
 				diff.RemovedNodes = append(diff.RemovedNodes, node)
 			}
 		}
@@ -572,7 +602,7 @@ func (g *SBOMGraph) DeleteArtifactFromGraph(artifactName string) GraphDiff {
 	// Find removed edges
 	for edge := range beforeEdges {
 		found := false
-		for parent, child := range g.Edges() {
+		for parent, child := range g.EdgesIter() {
 			if [2]string{parent, child} == edge {
 				found = true
 				break
@@ -598,8 +628,8 @@ func (g *SBOMGraph) GetArtifactIDs() []string {
 // GetInfoSourceIDs returns all info source IDs for a given artifact.
 func (g *SBOMGraph) GetInfoSourceIDs(artifactID string) []string {
 	var ids []string
-	for childID := range g.edges[artifactID] {
-		if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeInfoSource {
+	for childID := range g.Edges[artifactID] {
+		if node := g.Nodes[childID]; node != nil && node.Type == GraphNodeTypeInfoSource {
 			ids = append(ids, childID)
 		}
 	}
@@ -609,7 +639,7 @@ func (g *SBOMGraph) GetInfoSourceIDs(artifactID string) []string {
 // GetParentIDs returns all parent node IDs for a given node.
 func (g *SBOMGraph) GetParentIDs(nodeID string) []string {
 	var parents []string
-	for parentID, children := range g.edges {
+	for parentID, children := range g.Edges {
 		if _, hasChild := children[nodeID]; hasChild {
 			parents = append(parents, parentID)
 		}
@@ -644,17 +674,17 @@ func (g *SBOMGraph) LicenseDistribution() map[string]int {
 
 // Node returns a node by ID, or nil if not reachable from scope.
 func (g *SBOMGraph) Node(id string) *GraphNode {
-	if !g.isReachable(id) {
+	if !g.IsReachable(id) {
 		return nil
 	}
-	return g.nodes[id]
+	return g.Nodes[id]
 }
 
 // Children returns an iterator over direct children of a node.
 func (g *SBOMGraph) Children(nodeID string) iter.Seq[*GraphNode] {
 	return func(yield func(*GraphNode) bool) {
-		for childID := range g.edges[nodeID] {
-			if node := g.nodes[childID]; node != nil {
+		for childID := range g.Edges[nodeID] {
+			if node := g.Nodes[childID]; node != nil {
 				if !yield(node) {
 					return
 				}
@@ -687,20 +717,20 @@ func (g *SBOMGraph) NodesOfType(nodeType GraphNodeType) iter.Seq[*GraphNode] {
 			}
 			visited[id] = true
 
-			if node := g.nodes[id]; node != nil && node.Type == nodeType {
+			if node := g.Nodes[id]; node != nil && node.Type == nodeType {
 				if !yield(node) {
 					return false
 				}
 			}
 
-			for _, childID := range slices.Sorted(maps.Keys(g.edges[id])) {
+			for _, childID := range slices.Sorted(maps.Keys(g.Edges[id])) {
 				if !visit(childID) {
 					return false
 				}
 			}
 			return true
 		}
-		visit(g.scopeID)
+		visit(g.ScopeID)
 	}
 }
 
@@ -726,11 +756,11 @@ func (g *SBOMGraph) InfoSources() iter.Seq[*GraphNode] {
 	return g.NodesOfType(GraphNodeTypeInfoSource)
 }
 
-// Edges returns all edges where both endpoints are reachable from scope.
-func (g *SBOMGraph) Edges() iter.Seq2[string, string] {
+// EdgesIter returns all edges where both endpoints are reachable from scope.
+func (g *SBOMGraph) EdgesIter() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		reachable := g.reachableNodes()
-		for parent, children := range g.edges {
+		for parent, children := range g.Edges {
 			if !reachable[parent] {
 				continue
 			}
@@ -749,9 +779,9 @@ func (g *SBOMGraph) Edges() iter.Seq2[string, string] {
 // ComponentEdges returns edges between components only.
 func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
-		for parent, child := range g.Edges() {
-			pNode := g.nodes[parent]
-			cNode := g.nodes[child]
+		for parent, child := range g.EdgesIter() {
+			pNode := g.Nodes[parent]
+			cNode := g.Nodes[child]
 			if pNode != nil && cNode != nil && pNode.Type == GraphNodeTypeComponent && cNode.Type == GraphNodeTypeComponent {
 				if !yield(parent, child) {
 					return
@@ -761,11 +791,11 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 	}
 }
 
-// Vulnerabilities returns all vulnerabilities.
+// VulnerabilitiesIter returns all vulnerabilities.
 // Deduplication with state priority is handled in AddVulnerability.
-func (g *SBOMGraph) Vulnerabilities() iter.Seq[*cdx.Vulnerability] {
+func (g *SBOMGraph) VulnerabilitiesIter() iter.Seq[*cdx.Vulnerability] {
 	return func(yield func(*cdx.Vulnerability) bool) {
-		for _, v := range g.vulnerabilities {
+		for _, v := range g.Vulnerabilities {
 			if !yield(v) {
 				return
 			}
@@ -791,7 +821,7 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 			}
 			visited[id] = true
 
-			node := g.nodes[id]
+			node := g.Nodes[id]
 			if node != nil && node.Type == GraphNodeTypeComponent {
 				if result[id] == nil {
 					result[id] = make(map[InfoSourceType]int)
@@ -799,7 +829,7 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 				result[id][infoSource.InfoType]++
 			}
 
-			for childID := range g.edges[id] {
+			for childID := range g.Edges[id] {
 				visit(childID)
 			}
 		}
@@ -849,7 +879,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 	// Build reverse edge map (child -> parents) for backward traversal
 	// Sort parent IDs for deterministic traversal order
 	reverseEdges := make(map[string][]string)
-	for parent, children := range g.edges {
+	for parent, children := range g.Edges {
 		for child := range children {
 			reverseEdges[child] = append(reverseEdges[child], parent)
 		}
@@ -898,7 +928,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			// Check if parent is NOT a component (termination condition)
 			// Use node type from graph instead of ID format, because BOMRef
 			// may not be a PURL even though the component has a valid PackageURL.
-			parentNode := g.nodes[parentID]
+			parentNode := g.Nodes[parentID]
 			if parentNode == nil || parentNode.Type != GraphNodeTypeComponent {
 				foundTermination = true
 				// Build path in correct order (root to target)
@@ -929,7 +959,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				if current.onPath[parentID] {
 					continue
 				}
-				pNode := g.nodes[parentID]
+				pNode := g.Nodes[parentID]
 				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 					continue // Skip non-components for path extension
 				}
@@ -947,7 +977,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 	// translate each path and path entry to the package purl of that component
 	for i, path := range paths {
 		for j, nodeID := range path {
-			node := g.nodes[nodeID]
+			node := g.Nodes[nodeID]
 			if node != nil && node.Component != nil && node.Component.PackageURL != "" {
 				paths[i][j] = node.Component.PackageURL
 			}
@@ -1019,11 +1049,11 @@ func (g *SBOMGraph) ToMinimalTree() minimalTree {
 	reachable := g.reachableNodes()
 	nodes := make([]string, 0, len(reachable))
 	dependencies := make(map[string][]string)
-	depMap := edgesToDepMap(g.edges)
+	depMap := edgesToDepMap(g.Edges)
 
 	// Only add nodes that are reachable in current scope
 	for id := range reachable {
-		node := g.nodes[id]
+		node := g.Nodes[id]
 		if node != nil && node.Component != nil {
 			nodes = append(nodes, node.Component.PackageURL)
 		}
@@ -1032,23 +1062,23 @@ func (g *SBOMGraph) ToMinimalTree() minimalTree {
 	// add the ROOT node PackageURL (which is an empty string to the nodes list to ensure it's included in the minimal tree)
 	nodes = append(nodes, "")
 
-	for parent := range g.edges {
+	for parent := range g.Edges {
 		if !reachable[parent] {
 			continue
 		}
-		parentNode := g.nodes[parent]
+		parentNode := g.Nodes[parent]
 		if parentNode == nil {
 			continue
 		}
 		parentPURL := parentNode.Component.PackageURL
 
-		children := getChildrenOfParent(depMap, g.nodes, parent)
+		children := getChildrenOfParent(depMap, g.Nodes, parent)
 		deps := make([]string, 0, len(children))
 		for _, child := range children {
 			if !reachable[child] {
 				continue
 			}
-			childNode := g.nodes[child]
+			childNode := g.Nodes[child]
 			if childNode == nil {
 				continue
 			}
@@ -1083,7 +1113,7 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 
 	// Build reverse edge map (child -> parents)
 	reverseEdges := make(map[string][]string)
-	for parent, children := range g.edges {
+	for parent, children := range g.Edges {
 		for child := range children {
 			reverseEdges[child] = append(reverseEdges[child], parent)
 		}
@@ -1115,7 +1145,7 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 			// Only follow component edges for the tree structure
 			// Use node type from graph instead of ID format, because BOMRef
 			// may not be a PURL even though the component has a valid PackageURL.
-			pNode := g.nodes[parentID]
+			pNode := g.Nodes[parentID]
 			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
 				continue
 			}
@@ -1242,8 +1272,8 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 	// Root's direct deps are the first-level components (children of info sources)
 	for infoSource := range g.InfoSources() {
-		for childID := range g.edges[infoSource.BOMRef] {
-			if node := g.nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
+		for childID := range g.Edges[infoSource.BOMRef] {
+			if node := g.Nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
 				if slices.Contains(depMap[rootName], childID) {
 					continue
 				}
@@ -1275,7 +1305,7 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	})
 
 	vulns := []cdx.Vulnerability{}
-	for v := range g.Vulnerabilities() {
+	for v := range g.VulnerabilitiesIter() {
 		vulns = append(vulns, *v)
 	}
 
@@ -1381,54 +1411,15 @@ func (g *SBOMGraph) reachableNodes() map[string]bool {
 			return
 		}
 		reachable[id] = true
-		for childID := range g.edges[id] {
+		for childID := range g.Edges[id] {
 			visit(childID)
 		}
 	}
-	visit(g.scopeID)
+	visit(g.ScopeID)
 	return reachable
 }
 
-// removeSubtree removes all nodes and edges in the subtree rooted at the given node.
-// The node itself is kept but its children are removed.
-func (g *SBOMGraph) removeSubtree(rootID string) {
-	// Determine which nodes are reachable WITHOUT going through rootID's outgoing
-	// edges.  Any node still reachable by another path (e.g. shared by a second
-	// artifact's InfoSource) must not be deleted.
-	savedEdges := g.edges[rootID]
-	g.edges[rootID] = make(map[string]struct{})
-	reachableElsewhere := g.reachableNodes()
-	g.edges[rootID] = savedEdges
-
-	// Collect nodes that are only reachable through rootID and therefore safe to remove.
-	nodesToRemove := make(map[string]bool)
-	var visit func(id string)
-	visit = func(id string) {
-		for childID := range g.edges[id] {
-			if !nodesToRemove[childID] && !reachableElsewhere[childID] {
-				nodesToRemove[childID] = true
-				visit(childID)
-			}
-		}
-	}
-	visit(rootID)
-
-	// Remove the nodes and their edges
-	for nodeID := range nodesToRemove {
-		delete(g.nodes, nodeID)
-		delete(g.edges, nodeID)
-
-		// Remove any edges pointing to this node
-		for parentID := range g.edges {
-			delete(g.edges[parentID], nodeID)
-		}
-	}
-
-	// Clear the root node's children edges
-	g.edges[rootID] = make(map[string]struct{})
-}
-
-func (g *SBOMGraph) isReachable(id string) bool {
+func (g *SBOMGraph) IsReachable(id string) bool {
 	return g.reachableNodes()[id]
 }
 
@@ -1587,7 +1578,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	// Build dependency map and eliminate leaf references to undefined components.
 	// Keep undefined refs that are dependency parents themselves because they can
 	// represent synthetic grouping nodes in CycloneDX dependency graphs.
-	depMap := buildFilteredDependencyMap(bom.Dependencies, g.nodes, rootRef)
+	depMap := buildFilteredDependencyMap(bom.Dependencies, g.Nodes, rootRef)
 	if bom.Dependencies != nil {
 		addEdgesFromDependencyMap(g, depMap, rootRef, infoID, keepOriginalSbomRootComponent)
 	}
@@ -1777,7 +1768,7 @@ func buildFilteredDependencyMap(dependencies *[]cdx.Dependency, nodes map[string
 
 func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef, infoID string, keepOriginalSbomRootComponent bool) {
 	for parent := range depMap {
-		parentNode := g.nodes[parent]
+		parentNode := g.Nodes[parent]
 		// Skip if parent is not represented in the graph.
 		if parentNode == nil {
 			continue
@@ -1789,7 +1780,7 @@ func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef
 		}
 
 		// Resolve synthetic intermediary nodes recursively.
-		children := getChildrenOfParent(depMap, g.nodes, parent)
+		children := getChildrenOfParent(depMap, g.Nodes, parent)
 		edgeSource := parent
 		if parent == rootRef && !keepOriginalSbomRootComponent {
 			edgeSource = infoID
@@ -1939,7 +1930,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 		prefix, name := ParseGraphNodeID(id)
 		switch prefix {
 		case "artifact":
-			g.nodes[id] = &GraphNode{
+			g.Nodes[id] = &GraphNode{
 				BOMRef: id,
 				Type:   GraphNodeTypeArtifact,
 				Component: &cdx.Component{
@@ -1948,30 +1939,30 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 					Type:   cdx.ComponentTypeApplication,
 				},
 			}
-			g.edges[id] = make(map[string]struct{})
+			g.Edges[id] = make(map[string]struct{})
 		case string(InfoSourceSBOM):
-			g.nodes[id] = &GraphNode{
+			g.Nodes[id] = &GraphNode{
 				BOMRef:    id,
 				Type:      GraphNodeTypeInfoSource,
 				InfoType:  InfoSourceType(prefix),
 				Component: &cdxComp,
 			}
-			g.edges[id] = make(map[string]struct{})
+			g.Edges[id] = make(map[string]struct{})
 		default:
 			// Regular component
-			g.nodes[id] = &GraphNode{
+			g.Nodes[id] = &GraphNode{
 				BOMRef:    id,
 				Type:      GraphNodeTypeComponent,
 				Component: &cdxComp,
 			}
-			g.edges[id] = make(map[string]struct{})
+			g.Edges[id] = make(map[string]struct{})
 		}
 	}
 
 	// Second pass: create edges
 	for parentID, children := range dependencyMap {
 		for _, childID := range children {
-			if g.nodes[childID] != nil {
+			if g.Nodes[childID] != nil {
 				g.AddEdge(parentID, childID)
 			}
 		}
@@ -1996,7 +1987,7 @@ func (g *SBOMGraph) NodeIDsAndEdges() FlatGraph {
 	}
 
 	var edges [][2]string
-	for parent, children := range g.edges {
+	for parent, children := range g.Edges {
 		if !reachable[parent] {
 			continue
 		}
@@ -2012,8 +2003,8 @@ func (g *SBOMGraph) NodeIDsAndEdges() FlatGraph {
 
 // GetRootID returns the ID of the current scope root.
 func (g *SBOMGraph) GetRootID() string {
-	if g.scopeID != "" {
-		return g.scopeID
+	if g.ScopeID != "" {
+		return g.ScopeID
 	}
-	return g.rootID
+	return g.RootID
 }
