@@ -165,7 +165,7 @@ type CveRepository interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.CVE, error)
 	GetLastModDate(ctx context.Context, tx DB) (time.Time, error)
 	GetAllCVEsID(ctx context.Context, tx DB) ([]string, error)
-	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []int64) error
 	FindCVE(ctx context.Context, tx DB, id string) (models.CVE, error)
 	FindCVEs(ctx context.Context, tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(ctx context.Context, tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)

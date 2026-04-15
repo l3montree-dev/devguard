@@ -6,7 +6,7 @@ type VulnInPackageDTO struct {
 }
 
 type AffectedComponentDTO struct {
-	ID string `json:"id"`
+	ID int64 `json:"id"`
 
 	PurlWithoutVersion string `json:"purl"`
 	Ecosystem          string `json:"ecosystem"`

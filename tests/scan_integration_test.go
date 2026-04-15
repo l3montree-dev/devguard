@@ -2104,7 +2104,6 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		// Create AffectedComponent to link the CVE to the package
 		// This ensures the SBOM scan will find this vulnerability for the package
 		affectedComp := models.AffectedComponent{
-			ID:                 "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
 			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
 			Ecosystem:          "golang",
 			Version:            utils.Ptr("1.0.0"),

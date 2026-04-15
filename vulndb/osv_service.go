@@ -773,7 +773,7 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 	}
 
 	// build a map of the current state for Bulk lookups
-	isAffectedComponentPresent := make(map[string]struct{}, len(currentCVEAffectedComponents))
+	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
 		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
 	}
@@ -918,7 +918,7 @@ func areCVEsIdentical(c1, c2 models.CVE) bool {
 
 type cveAffectedComponentRow struct {
 	CveCVE              string `gorm:"column:cvecve"`
-	AffectedComponentID string `gorm:"column:affected_component_id"`
+	AffectedComponentID int64  `gorm:"column:affected_component_id"`
 }
 
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {

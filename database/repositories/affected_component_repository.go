@@ -93,18 +93,11 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(ctx context.
 	}
 
 	// convert values of entries into arrays of values
-	ids := make([]string, len(components))
-	sources := make([]string, len(components))
+	ids := make([]int64, len(components))
+
 	purls := make([]string, len(components))
 	ecosystems := make([]string, len(components))
-	schemes := make([]string, len(components))
-	types := make([]string, len(components))
-	names := make([]string, len(components))
 
-	// nil-able
-	namespaces := make([]*string, len(components))
-	qualifiers := make([]*string, len(components))
-	subpaths := make([]*string, len(components))
 	versions := make([]*string, len(components))
 	semversIntroduced := make([]*string, len(components))
 	semversFixed := make([]*string, len(components))
@@ -126,24 +119,19 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(ctx context.
 	}
 
 	query := `
-        INSERT INTO affected_components (id,source,purl,ecosystem,scheme,type,name,namespace,qualifiers,subpath,version,semver_introduced,semver_fixed,version_introduced,version_fixed)
+        INSERT INTO affected_components (id,purl,ecosystem,version,semver_introduced,semver_fixed,version_introduced,version_fixed)
         SELECT
             unnest($1::text[]),
+
             unnest($2::text[]),
             unnest($3::text[]),
+
             unnest($4::text[]),
-            unnest($5::text[]),
-            unnest($6::text[]),
+            unnest($5::text[])::semver,
+            unnest($6::text[])::semver,
             unnest($7::text[]),
-            unnest($8::text[]),
-            unnest($9::text[])::jsonb,
-            unnest($10::text[]),
-            unnest($11::text[]),
-            unnest($12::text[])::semver,
-            unnest($13::text[])::semver,
-            unnest($14::text[]),
-			unnest($15::text[])
+			unnest($8::text[])
 			ON CONFLICT (id) DO NOTHING`
 
-	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, sources, purls, ecosystems, schemes, types, names, namespaces, qualifiers, subpaths, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
+	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(query, ids, purls, ecosystems, versions, semversIntroduced, semversFixed, versionsIntroduced, versionsFixed).Error
 }

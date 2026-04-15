@@ -17,9 +17,8 @@ package models
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/binary"
 	"fmt"
-	"sort"
 	"sync"
 
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
@@ -29,7 +28,7 @@ import (
 )
 
 type AffectedComponent struct {
-	ID string `json:"id" gorm:"primaryKey;"`
+	ID int64 `json:"id" gorm:"primaryKey;"`
 
 	PurlWithoutVersion string `json:"purl" gorm:"type:text;column:purl;index"`
 	Ecosystem          string `json:"ecosystem" gorm:"type:text;"`
@@ -55,7 +54,7 @@ func convertToStringMap(jsonb databasetypes.JSONB) map[string]string {
 	return result
 }
 
-func (affectedComponent AffectedComponent) CalculateHash() string {
+func (affectedComponent AffectedComponent) CalculateHash() int64 {
 
 	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s",
 		affectedComponent.PurlWithoutVersion,
@@ -67,12 +66,12 @@ func (affectedComponent AffectedComponent) CalculateHash() string {
 		utils.SafeDereference(affectedComponent.VersionFixed),
 	)
 
-	hash := sha256.Sum256([]byte(toHash))
-	return hex.EncodeToString(hash[:])[:16]
+	sum := sha256.Sum256([]byte(toHash))
+	return int64(binary.BigEndian.Uint64(sum[:8]))
 }
 
 func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
-	if affectedComponent.ID == "" {
+	if affectedComponent.ID == 0 {
 		affectedComponent.ID = affectedComponent.CalculateHash()
 	}
 	return nil
@@ -87,7 +86,7 @@ var hashBufferPool = sync.Pool{
 
 // CalculateHashFast produces the same hash as CalculateHash but avoids
 // fmt.Sprintf and the intermediate convertToStringMap allocation.
-func (affectedComponent AffectedComponent) CalculateHashFast() string {
+func (affectedComponent AffectedComponent) CalculateHashFast() int64 {
 	bufPtr := hashBufferPool.Get().(*[]byte)
 	buf := (*bufPtr)[:0]
 
@@ -116,41 +115,9 @@ func (affectedComponent AffectedComponent) CalculateHashFast() string {
 	}
 
 	sum := sha256.Sum256(buf)
-	out := hex.EncodeToString(sum[:8])
+	out := int64(binary.BigEndian.Uint64(sum[:8]))
 
 	*bufPtr = buf[:0]
 	hashBufferPool.Put(bufPtr)
-
 	return out
-}
-
-// appendQualifiers mirrors normalize.QualifiersMapToString(convertToStringMap(q))
-// but writes directly into buf. Keys are unique in a map, so sorting by key
-// yields the same order as sorting "key=value" strings.
-func appendQualifiers(buf []byte, q databasetypes.JSONB) []byte {
-	if len(q) == 0 {
-		return buf
-	}
-	keys := make([]string, 0, len(q))
-	for k := range q {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for i, k := range keys {
-		if i > 0 {
-			buf = append(buf, '&')
-		}
-		buf = append(buf, k...)
-		buf = append(buf, '=')
-		switch v := q[k].(type) {
-		case string:
-			buf = append(buf, v...)
-		case nil:
-			buf = append(buf, "<nil>"...)
-		default:
-			buf = append(buf, fmt.Sprintf("%v", v)...)
-		}
-	}
-	return buf
 }

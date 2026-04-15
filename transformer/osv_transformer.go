@@ -126,8 +126,6 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 			bases := affectedComponentBaseFromAffected(affected)
 			for _, base := range bases {
 				affectedComponent := models.AffectedComponent{
-					ID: "",
-
 					PurlWithoutVersion: base.PurlWithoutVersion,
 					Ecosystem:          base.Ecosystem,
 
@@ -144,8 +142,6 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 			bases := affectedComponentBaseFromGitRange(affected)
 			for _, base := range bases {
 				affectedComponent := models.AffectedComponent{
-					ID: "",
-
 					PurlWithoutVersion: base.PurlWithoutVersion,
 					Ecosystem:          base.Ecosystem,
 
