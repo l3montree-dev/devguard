@@ -71,7 +71,7 @@ func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cve
 	transport := otelhttp.NewTransport(utils.EgressRoundTripper{R: base})
 
 	return osvService{
-		httpClient:                &http.Client{Transport: transport, Timeout: 30 * time.Second},
+		httpClient:                &http.Client{Transport: transport, Timeout: 60 * time.Second},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
@@ -486,11 +486,11 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}()
 
 	// collect all OSV objects first
-	allOSVVulns := make([]dtos.OSV, 0, totalCount)
+	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	cveIDs := make([]string, 0, totalCount)
 	for osvObject := range vulnData {
 		cveIDs = append(cveIDs, osvObject.ID)
-		allOSVVulns = append(allOSVVulns, *osvObject)
+		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
@@ -764,7 +764,7 @@ func (s osvService) getOSVObjectsFromIDs(ecosystem string, ids map[string]struct
 }
 
 // execute all necessary steps to insert new entries and update the existing ones
-func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntries []dtos.OSV) error {
+func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntries []*dtos.OSV) error {
 	// get the current state of the affected components
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
 	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component WHERE cvecve = ANY($1::text[])`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
@@ -774,8 +774,10 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 
 	// build a map of the current state for Bulk lookups
 	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
+	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{})
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
 		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
+		isCVEAffectedComponentPresent[cveAffectedComponent] = struct{}{}
 	}
 
 	cves := make([]models.CVE, 0, len(allEntries))
@@ -785,25 +787,21 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 	cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*55) // key -> key
 	slog.Info("start building rows", "amount", len(allEntries))
 	buildingTime := time.Now()
-	// Hoisted out of the per-entry loop and cleared in place — avoids ~len(allEntries)
-	// map allocations. Deduplication semantics are unchanged: row keys include
-	// CveCVE, which is constant within a single entry's affectedComponentsForCVE.
-	isCVEAffectedComponentAlreadyPresent := make(map[cveAffectedComponentRow]struct{}, 512)
+
 	// built all the objects first
 	for i := range allEntries {
-		cve := transformer.OSVToCVE(&allEntries[i])
+		cve := transformer.OSVToCVE(allEntries[i])
 
 		cves = append(cves, cve)
 
-		relationships := transformer.OSVToCVERelationships(&allEntries[i])
+		relationships := transformer.OSVToCVERelationships(allEntries[i])
 		cveRelationships = append(cveRelationships, relationships...)
 
-		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(&allEntries[i])
+		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(allEntries[i])
 		if len(affectedComponentsForCVE) == 0 {
 			continue // 20k + empty CVEs -> ignore them completely?
 		}
 
-		clear(isCVEAffectedComponentAlreadyPresent)
 		for _, affectedComponent := range affectedComponentsForCVE {
 			hash := affectedComponent.CalculateHashFast()
 			affectedComponent.ID = hash // assign hash for later use
@@ -813,10 +811,10 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 				// add the new component, so that we do not have duplicates in the new data
 				isAffectedComponentPresent[hash] = struct{}{}
 			}
-			if _, ok := isCVEAffectedComponentAlreadyPresent[row]; !ok {
+			if _, ok := isCVEAffectedComponentPresent[row]; !ok {
 				cveAffectedComponents = append(cveAffectedComponents, row)
 				// add the new component, so that we do not have duplicates in the new data
-				isCVEAffectedComponentAlreadyPresent[row] = struct{}{}
+				isCVEAffectedComponentPresent[row] = struct{}{}
 			}
 		}
 	}
@@ -1231,11 +1229,28 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
     CREATE INDEX IF NOT EXISTS idx_affected_components_version_fixed ON public.affected_components USING btree (version_fixed);
     CREATE INDEX IF NOT EXISTS idx_affected_components_version_introduced ON public.affected_components USING btree (version_introduced);
     CREATE INDEX IF NOT EXISTS idx_affected_components_purl_without_version ON public.affected_components USING btree (purl);
-	CREATE INDEX IF NOT EXISTS idx_affected_components_version ON public.affected_components USING btree (version);`)
+	CREATE INDEX IF NOT EXISTS idx_affected_components_version ON public.affected_components USING btree (version);
+	
+	CREATE INDEX idx_ac_purl_version
+  		ON affected_components (purl, version);
+
+	CREATE INDEX idx_ac_purl_semver_range
+  		ON affected_components (purl, semver_introduced, semver_fixed)
+ 		WHERE semver_introduced IS NOT NULL OR semver_fixed IS NOT NULL;`)
 	if err != nil {
 		return fmt.Errorf("could not build indexes: %w", err)
 	}
 	slog.Info("finsihed building all indexes", "time", time.Since(start))
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+	ANALYZE cves;
+	ANALYZE affected_components;
+	ANALYZE cve_relationships;
+	ANALYZE cve_affected_component;`)
+	if err != nil {
+		return fmt.Errorf("could not analyze tables: %w", err)
+	}
+	slog.Info("finished analyzing all updated tables", "time", time.Since(start))
 	slog.Info("finished adding constraints and building indexes", "time", time.Since(totalStart))
 	return nil
 }
