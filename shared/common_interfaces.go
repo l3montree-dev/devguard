@@ -116,6 +116,23 @@ type PolicyRepository interface {
 	FindCommunityManagedPolicies(ctx context.Context, tx DB) ([]models.Policy, error)
 }
 
+type DependencyProxySecretRepository interface {
+	utils.Repository[uuid.UUID, models.DependencyProxySecret, DB]
+	GetOrCreateByOrgID(ctx context.Context, tx DB, orgID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.DependencyProxySecret, error)
+	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
+	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
+}
+
+type DependencyProxySecretService interface {
+	GetOrCreateByOrgID(ctx context.Context, orgID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByProjectID(ctx context.Context, projectID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByAssetID(ctx context.Context, assetID uuid.UUID) (models.DependencyProxySecret, error)
+	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
+	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
+}
+
 type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
