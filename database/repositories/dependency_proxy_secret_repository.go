@@ -85,18 +85,29 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 }
 
 func (r *dependencyProxySecretRepository) UpdateSecret(ctx context.Context, tx *gorm.DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error) {
-	r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	exec := func(db *gorm.DB) error {
 		newSecret := uuid.New()
-
-		if err := tx.Delete(&models.DependencyProxySecret{}, "secret = ?", proxy.Secret).Error; err != nil {
+		if err := db.Delete(&models.DependencyProxySecret{}, "secret = ?", proxy.Secret).Error; err != nil {
 			return err
 		}
 		proxy.Secret = newSecret
-		if err := tx.Create(proxy).Error; err != nil {
+		if err := db.Create(&proxy).Error; err != nil {
 			return err
 		}
 		return nil
-	})
+	}
+	var err error
+	if tx != nil {
+		err = exec(tx.WithContext(ctx))
+	} else {
+		err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return exec(tx)
+		})
+	}
+	if err != nil {
+		return proxy, err
+	}
+
 	return proxy, nil
 }
 

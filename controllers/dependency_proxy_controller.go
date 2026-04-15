@@ -65,10 +65,10 @@ type DependencyProxyController struct {
 	client                 *http.Client
 }
 
-// trimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem>/ prefix from the path.
+// trimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix from the path.
 // The secret segment is optional to support routes with and without a secret.
 func TrimProxyPrefix(path string, ecosystem ProxyType) string {
-	return regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?`+regexp.QuoteMeta(string(ecosystem))+`/`).ReplaceAllString(path, "")
+	return regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?`+regexp.QuoteMeta(string(ecosystem))+`(?:/|$)`).ReplaceAllString(path, "")
 }
 
 func NewDependencyProxyController(
@@ -297,7 +297,7 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 
 func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	// Get the full path after the prefix
-	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/go")
+	requestPath := TrimProxyPrefix(c.Request().URL.Path, GoProxy)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.go",
 		trace.WithAttributes(
@@ -432,7 +432,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 
 func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 	// Get the full path after the prefix
-	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/api/v1/dependency-proxy/pypi")
+	requestPath := TrimProxyPrefix(c.Request().URL.Path, PyPIProxy)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.pypi",
 		trace.WithAttributes(
@@ -803,6 +803,10 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 		secret = proxy.Secret
 	}
 
+	if secret == uuid.Nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to determine scope for dependency proxy")
+	}
+
 	proxies := map[string]string{}
 	proxies["npm"] = registryURL + "/" + secret.String() + "/npm/"
 	proxies["go"] = registryURL + "/" + secret.String() + "/go/"
@@ -817,7 +821,7 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	secret := c.Param("secret")
 	uuidSecret, err := uuid.Parse(secret)
 	if err != nil {
-		return configs, fmt.Errorf("invalid secret format: %w", err)
+		return configs, nil
 	}
 
 	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
@@ -876,7 +880,7 @@ func (d *DependencyProxyController) CacheReleaseTime(cachePath string, releaseTi
 	if releaseTime.IsZero() {
 		return nil
 	}
-	return os.WriteFile(cachePath+".releasetime", []byte(releaseTime.UTC().Format(time.RFC3339)), 0644)
+	return os.WriteFile(cachePath+".releasetime", []byte(releaseTime.UTC().Format(time.RFC3339Nano)), 0644)
 }
 
 // ReadCachedReleaseTime reads the stored release time for a cached entry.
@@ -885,7 +889,7 @@ func (d *DependencyProxyController) ReadCachedReleaseTime(cachePath string) (tim
 	if err != nil {
 		return time.Time{}, false
 	}
-	t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(data)))
+	t, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(string(data)))
 	if err != nil {
 		return time.Time{}, false
 	}
@@ -1307,7 +1311,7 @@ func (d *DependencyProxyController) ExtractPyPIReleaseTime(data []byte, version 
 	if !ok || len(files) == 0 {
 		return time.Time{}, false
 	}
-	t, err := time.Parse(time.RFC3339, files[0].UploadTime)
+	t, err := time.Parse(time.RFC3339Nano, files[0].UploadTime)
 	if err != nil {
 		return time.Time{}, false
 	}

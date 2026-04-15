@@ -17,6 +17,17 @@ CREATE TABLE IF NOT EXISTS public.dependency_proxy_secrets (
     secret uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     asset_id uuid,
     project_id uuid,
-    org_id uuid
+    org_id uuid,
+    CONSTRAINT dependency_proxy_secrets_exactly_one_scope CHECK (
+        ((asset_id IS NOT NULL)::int + (project_id IS NOT NULL)::int + (org_id IS NOT NULL)::int) = 1
+    )
 );
-
+CREATE UNIQUE INDEX IF NOT EXISTS dependency_proxy_secrets_unique_asset_id
+    ON public.dependency_proxy_secrets (asset_id)
+    WHERE asset_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS dependency_proxy_secrets_unique_project_id
+    ON public.dependency_proxy_secrets (project_id)
+    WHERE project_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS dependency_proxy_secrets_unique_org_id
+    ON public.dependency_proxy_secrets (org_id)
+    WHERE org_id IS NOT NULL;

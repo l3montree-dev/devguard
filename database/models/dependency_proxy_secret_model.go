@@ -20,7 +20,7 @@ import (
 )
 
 type DependencyProxySecret struct {
-	Secret    uuid.UUID  `gorm:"type:text;primaryKey; default:gen_random_uuid()"`
+	Secret    uuid.UUID  `gorm:"type:uuid;primaryKey; default:gen_random_uuid()"`
 	AssetID   *uuid.UUID `gorm:"type:uuid;"`
 	ProjectID *uuid.UUID `gorm:"type:uuid;"`
 	OrgID     *uuid.UUID `gorm:"type:uuid;"`

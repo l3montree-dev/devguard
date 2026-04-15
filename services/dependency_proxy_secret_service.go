@@ -17,6 +17,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -56,19 +57,23 @@ func (s *dependencyProxySecretService) GetModelBySecret(ctx context.Context, sec
 		return "", uuid.Nil, err
 	}
 
-	var uuid uuid.UUID
+	var modelID uuid.UUID
 	var scope string
 	if proxy.AssetID != nil {
 		scope = "asset"
-		uuid = *proxy.AssetID
+		modelID = *proxy.AssetID
 	} else if proxy.ProjectID != nil {
 		scope = "project"
-		uuid = *proxy.ProjectID
+		modelID = *proxy.ProjectID
 
 	} else if proxy.OrgID != nil {
 		scope = "organization"
-		uuid = *proxy.OrgID
+		modelID = *proxy.OrgID
 	}
 
-	return scope, uuid, nil
+	if modelID == uuid.Nil {
+		return "", uuid.Nil, fmt.Errorf("no model found for secret: %s", secret)
+	}
+
+	return scope, modelID, nil
 }
