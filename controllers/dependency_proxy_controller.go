@@ -210,7 +210,12 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		// Parse the JSON response to extract the version that would be installed
 		if resolvedVersion != "" {
 			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
-			isMalicious, entry := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
+			isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
+			if err != nil {
+				slog.Error("Error checking malicious package", "proxy", "npm", "error", err)
+				return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
+			}
+
 			if isMalicious {
 				reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
 				if entry.Summary != "" {
@@ -1196,7 +1201,12 @@ func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, p
 
 	slog.Debug("Checking package against malicious database", "ecosystem", ecosystem, "package", packageName, "version", version)
 
-	isMalicious, entry := d.maliciousChecker.IsMalicious(ctx, ecosystem, packageName, version)
+	isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, ecosystem, packageName, version)
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", proxyType, "error", err)
+		return false, ""
+	}
+
 	if isMalicious {
 		reason := fmt.Sprintf("Package %s is flagged as malicious (ID: %s)", packageName, entry.ID)
 		if entry.Summary != "" {

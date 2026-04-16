@@ -211,7 +211,7 @@ type AffectedComponentRepository interface {
 
 type MaliciousPackageChecker interface {
 	DownloadAndProcessDB(ctx context.Context) error
-	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV)
+	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
 }
 
 type ComponentRepository interface {

@@ -123,7 +123,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isMalicious, entry := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
+			isMalicious, entry, _ := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
 			if isMalicious != tt.expected {
 				t.Errorf("IsMalicious(%s, %s, %s) = %v, want %v",
 					tt.ecosystem, tt.pkgName, tt.version, isMalicious, tt.expected)
