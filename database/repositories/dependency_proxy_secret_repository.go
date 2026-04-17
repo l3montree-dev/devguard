@@ -111,17 +111,6 @@ func (r *dependencyProxySecretRepository) UpdateSecret(ctx context.Context, tx *
 	return proxy, nil
 }
 
-func (r *dependencyProxySecretRepository) GetDependencyProxyConfigBySecret(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (models.DependencyProxySecret, error) {
-
-	var proxy models.DependencyProxySecret
-
-	if err := r.db.WithContext(ctx).Where("secret = ?", secret).First(&proxy).Error; err != nil {
-		return proxy, err
-	}
-
-	return proxy, nil
-}
-
 func (r *dependencyProxySecretRepository) GetBySecret(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (models.DependencyProxySecret, error) {
 
 	var proxy models.DependencyProxySecret

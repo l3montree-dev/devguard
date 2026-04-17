@@ -70,7 +70,7 @@ func TrimProxyPrefix(path string, ecosystem ProxyType) string {
 	encodedPackage := regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?`+regexp.QuoteMeta(string(ecosystem))+`(?:/|$)`).ReplaceAllString(path, "")
 	decodedPackage, err := url.PathUnescape(encodedPackage)
 	if err != nil {
-		return ""
+		return encodedPackage
 	}
 	return decodedPackage
 }
@@ -223,7 +223,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		}
 
 		// Parse the JSON response to extract the version that would be installed
-		if resolvedVersion != "" {
+		if resolvedVersion != "" && d.maliciousChecker != nil {
 			slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
 			isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
 			if err != nil {
@@ -256,11 +256,9 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 	}
 
 	// Store release time so MinReleaseTime can be enforced on future cache hits
-	if hasExplicitVersion && packageName != "" {
-		if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
-			slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
-		}
 
+	if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
+		slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
 	}
 
 	// Copy important headers from upstream
@@ -873,7 +871,7 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	//get registry url from env
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {
-		registryURL = "https://api.main.devguard.org/dependency-proxy"
+		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
 	}
 
 	var secret uuid.UUID
@@ -917,7 +915,7 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	secret := c.Param("secret")
 	uuidSecret, err := uuid.Parse(secret)
 	if err != nil {
-		return configs, nil
+		return configs, fmt.Errorf("invalid dependency proxy secret: %w", err)
 	}
 
 	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
@@ -965,7 +963,12 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
 		}
 		configs.MinReleaseTime = raw.MinReleaseTime
-		configs.Rules = strings.Split(raw.Rules, "\n")
+		for _, line := range strings.Split(raw.Rules, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" && !strings.HasPrefix(line, "#") {
+				configs.Rules = append(configs.Rules, line)
+			}
+		}
 	}
 
 	return configs, nil
@@ -1220,7 +1223,11 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	}
 
 	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+		displayName := packageName
+		if displayName == "" {
+			displayName = packagePurl
+		}
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", displayName, matchedRule)
 	}
 	return false, ""
 }
@@ -1242,7 +1249,10 @@ func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, p
 	}
 
 	slog.Debug("Checking package against malicious database", "ecosystem", ecosystem, "package", packageName, "version", version)
-
+	if d.maliciousChecker == nil {
+		slog.Debug("No malicious checker configured, skipping check")
+		return false, ""
+	}
 	isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, ecosystem, packageName, version)
 	if err != nil {
 		slog.Error("Error checking malicious package", "proxy", proxyType, "error", err)

@@ -151,7 +151,7 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	_, maliciousPackage, err := c.maliciousPackageChecker.IsMalicious(ctx.Request().Context(), purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
 	if err != nil {
-		return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
+		return echo.NewHTTPError(400, "failed to check if package is malicious").WithInternal(err)
 	}
 
 	var componentDTO *dtos.ComponentDTO
