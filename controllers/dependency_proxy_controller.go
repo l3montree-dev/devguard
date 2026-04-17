@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -748,7 +747,10 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, proxy
 func (d *DependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Context, requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
-	url := npmRegistry + requestPath
+	url, err := url.JoinPath(npmRegistry, requestPath)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
+	}
 	slog.Info("Fetching npm audit from upstream", "url", url, "bodySize", len(bodyBytes))
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
@@ -806,7 +808,10 @@ func (d *DependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Contex
 func (d *DependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
 	// remove any trailing slashes from requestPath
 	requestPath = strings.TrimRight(requestPath, "/")
-	url := pypiRegistry + requestPath
+	url, err := url.JoinPath(pypiRegistry, requestPath)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
+	}
 	slog.Debug("Fetching from upstream", "proxy", "pypi", "url", url)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -1148,6 +1153,40 @@ func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, pa
 	return "", ""
 }
 
+// matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
+// - *pattern* → contains
+// - *pattern  → contains (suffix match)
+// - pattern*  → starts with
+// - a*b       → starts with "a" and ends with "b"
+// - pattern   → exact match
+func matchPattern(pattern, packagePurl string) bool {
+	parts := strings.Split(pattern, "*")
+	if len(parts) == 1 {
+		return packagePurl == pattern
+	}
+	// First part must be a prefix (empty if pattern starts with *)
+	if parts[0] != "" && !strings.HasPrefix(packagePurl, parts[0]) {
+		return false
+	}
+	// Last part must be a suffix (empty if pattern ends with *)
+	if parts[len(parts)-1] != "" && !strings.HasSuffix(packagePurl, parts[len(parts)-1]) {
+		return false
+	}
+	// Middle parts must appear in order
+	rest := packagePurl
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		idx := strings.Index(rest, part)
+		if idx == -1 {
+			return false
+		}
+		rest = rest[idx+len(part):]
+	}
+	return true
+}
+
 func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, proxyType ProxyType, path string, configs DependencyProxyConfigs) (bool, string) {
 	var packageName, version, packagePurl string
 	if strings.HasPrefix(path, "pkg:") {
@@ -1172,86 +1211,8 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
-		// A bare "*" should match any package (across all path segments).
-		// doublestar "*" does not cross path separators, so we use "**" instead.
-		if pattern == "*" {
-			pattern = "**"
-		}
-		matched, err := doublestar.Match(pattern, packagePurl)
-		if err != nil {
-			slog.Warn("Invalid rule pattern", "rule", rule, "err", err)
-			continue
-		}
-		// When no version was extracted from the path, also try matching against
-		// the pattern with its version suffix stripped (e.g. "pkg:npm/lodash@*" → "pkg:npm/lodash").
-		if !matched {
-			patternWithoutVersion := pattern
-			patternVersion := ""
-			lastSlashIdx := strings.LastIndex(pattern, "/")
-			patternAfterLastSlash := pattern
-			if lastSlashIdx != -1 {
-				patternAfterLastSlash = pattern[lastSlashIdx+1:]
-			}
-			if atIdx := strings.LastIndex(patternAfterLastSlash, "@"); atIdx != -1 {
-				patternWithoutVersion = pattern[:lastSlashIdx+1+atIdx]
-				patternVersion = pattern[lastSlashIdx+1+atIdx+1:]
-				if patternVersion == "*" {
-					patternVersion = "**"
-				}
-			}
+		matched := matchPattern(pattern, packagePurl)
 
-			packagePurlWithoutVersion := packagePurl
-			packagePurlVersion := ""
-			// Only look for the version-separator "@" in the part after the last "/",
-			// so that scoped NPM package names like "pkg:npm/@babel/core" are not
-			// incorrectly split on the "@" that is part of the scope.
-			lastSlashIdx = strings.LastIndex(packagePurl, "/")
-			purlAfterLastSlash := packagePurl[lastSlashIdx+1:]
-			if atIdx := strings.Index(purlAfterLastSlash, "@"); atIdx != -1 {
-				actualIdx := lastSlashIdx + 1 + atIdx
-				packagePurlWithoutVersion = packagePurl[:actualIdx]
-				packagePurlVersion = packagePurl[actualIdx+1:]
-			}
-
-			matched, err = doublestar.Match(patternWithoutVersion, packagePurlWithoutVersion)
-			if err != nil {
-				slog.Warn("Invalid rule pattern", "rule", rule, "err", err)
-				continue
-			}
-			if matched && patternVersion != "" {
-				// If the pattern includes a version requirement, check if the package version satisfies it.
-				matched, err = doublestar.Match(patternVersion, packagePurlVersion)
-				if err != nil {
-					slog.Warn("Invalid version requirement in rule", "rule", rule, "err", err)
-					continue
-				}
-			} else if matched && patternVersion == "" {
-				// If the pattern does not include a version requirement, it should match any version of the package.
-				matched = true
-			} else if matched && patternVersion != "" && packagePurlVersion == "" {
-				// If the pattern includes a version requirement but the package does not have a version, it should not match.
-				matched = false
-			}
-
-			// For non-PURL patterns (e.g. bare names like "react"), also try
-			// matching against just the package name without the "pkg:type/" prefix.
-			if !matched && !strings.HasPrefix(pattern, "pkg:") {
-				purlPrefix := fmt.Sprintf("pkg:%s/", proxyType)
-				pkgNameOnly := strings.TrimPrefix(packagePurlWithoutVersion, purlPrefix)
-				matched, err = doublestar.Match(patternWithoutVersion, pkgNameOnly)
-				if err != nil {
-					slog.Warn("Invalid rule pattern (name match)", "rule", rule, "err", err)
-					continue
-				}
-				if matched && patternVersion != "" {
-					matched, err = doublestar.Match(patternVersion, packagePurlVersion)
-					if err != nil {
-						slog.Warn("Invalid version requirement in rule", "rule", rule, "err", err)
-						continue
-					}
-				}
-			}
-		}
 		if matched {
 			blocked = !negate
 			matchedRule = rule
