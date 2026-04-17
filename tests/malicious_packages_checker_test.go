@@ -83,6 +83,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		pkgName   string
 		version   string
 		expected  bool
+		error     bool
 	}{
 		{
 			name:      "Malicious package with specific version",
@@ -104,6 +105,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
 			expected:  false,
+			error:     true,
 		},
 		{
 			name:      "Safe package",
@@ -123,7 +125,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isMalicious, entry := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
+			isMalicious, entry, err := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
 			if isMalicious != tt.expected {
 				t.Errorf("IsMalicious(%s, %s, %s) = %v, want %v",
 					tt.ecosystem, tt.pkgName, tt.version, isMalicious, tt.expected)
@@ -133,6 +135,11 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			}
 			if !isMalicious && entry != nil {
 				t.Error("Expected entry to be nil for safe package")
+			}
+			if tt.error {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
 			}
 		})
 	}

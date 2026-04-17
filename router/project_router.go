@@ -30,6 +30,7 @@ func NewProjectRouter(
 	organizationGroup OrgRouter,
 	projectController *controllers.ProjectController,
 	assetController *controllers.AssetController,
+	dependencyProxyController *controllers.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
@@ -52,6 +53,7 @@ func NewProjectRouter(
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
+	projectRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetDependencyProxyURLs)
 	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)

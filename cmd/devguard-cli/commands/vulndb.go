@@ -88,6 +88,7 @@ func migrateDB() {
 			fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 			fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
 			fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
+			fx.Invoke(func(shareDependencyProxyRouter router.ShareDependencyProxyRouter) {}),
 			fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
 				lc.Append(fx.Hook{
 					OnStart: func(ctx context.Context) error {

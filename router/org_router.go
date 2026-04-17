@@ -31,6 +31,7 @@ func NewOrgRouter(
 	sessionGroup SessionRouter,
 	orgController *controllers.OrgController,
 	projectController *controllers.ProjectController,
+	dependencyProxyController *controllers.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	firstPartyVulnController *controllers.FirstPartyVulnController,
 	policyController *controllers.PolicyController,
@@ -63,6 +64,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetDependencyProxyURLs)
 	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)
 	organizationRouter.GET("/", orgController.Read)

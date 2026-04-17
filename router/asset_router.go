@@ -29,6 +29,7 @@ type AssetRouter struct {
 func NewAssetRouter(
 	projectGroup ProjectRouter,
 	assetController *controllers.AssetController,
+	dependencyProxyController *controllers.DependencyProxyController,
 	assetVersionController *controllers.AssetVersionController,
 	complianceController *controllers.ComplianceController,
 	statisticsController *controllers.StatisticsController,
@@ -52,6 +53,7 @@ func NewAssetRouter(
 	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
+	assetRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetDependencyProxyURLs)
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)

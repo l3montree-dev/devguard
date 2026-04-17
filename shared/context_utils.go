@@ -318,6 +318,30 @@ func GetAssetVersion(ctx Context) models.AssetVersion {
 	return ctx.Get("assetVersion").(models.AssetVersion)
 }
 
+func MaybeGetOrganization(ctx Context) (models.Org, error) {
+	org, ok := ctx.Get("organization").(models.Org)
+	if !ok {
+		return models.Org{}, fmt.Errorf("could not get organization")
+	}
+	return org, nil
+}
+
+func MaybeGetProject(ctx Context) (models.Project, error) {
+	project, ok := ctx.Get("project").(models.Project)
+	if !ok {
+		return models.Project{}, fmt.Errorf("could not get project")
+	}
+	return project, nil
+}
+
+func MaybeGetAsset(ctx Context) (models.Asset, error) {
+	asset, ok := ctx.Get("asset").(models.Asset)
+	if !ok {
+		return models.Asset{}, fmt.Errorf("could not get asset")
+	}
+	return asset, nil
+}
+
 func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
 	assetVersion, ok := ctx.Get("assetVersion").(models.AssetVersion)
 	if !ok {

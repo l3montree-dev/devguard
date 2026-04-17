@@ -29,8 +29,8 @@ import (
 
 var controllersTracer = otel.Tracer("devguard/controllers")
 
-// ProvideDependencyProxyConfig creates the configuration for the dependency proxy
-func ProvideDependencyProxyConfig() DependencyProxyConfig {
+// ProvideDependencyProxyCache creates the configuration for the dependency proxy
+func ProvideDependencyProxyCache() DependencyProxyCache {
 	var cacheDir string
 	dependencyProxyCacheDir := os.Getenv("DEPENDENCY_PROXY_CACHE_DIR")
 	if dependencyProxyCacheDir != "" {
@@ -47,7 +47,7 @@ func ProvideDependencyProxyConfig() DependencyProxyConfig {
 		slog.Error("Failed to create cache directory", "error", err)
 	}
 
-	return DependencyProxyConfig{
+	return DependencyProxyCache{
 		CacheDir: cacheDir,
 	}
 }
@@ -108,7 +108,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewScanController),
 
 	// Dependency Proxy
-	fx.Provide(ProvideDependencyProxyConfig),
+	fx.Provide(ProvideDependencyProxyCache),
 	fx.Provide(fx.Annotate(ProvideMaliciousPackageChecker, fx.As(new(shared.MaliciousPackageChecker)))),
 	fx.Provide(NewDependencyProxyController),
 )
