@@ -77,7 +77,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	vulnID := ctx.QueryParam("vulnId")
+	vulnID := ctx.QueryParam("dependencyVulnId")
 	if vulnID != "" {
 		vulnIDParsed, err := uuid.Parse(vulnID)
 		if err != nil {
