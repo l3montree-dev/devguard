@@ -370,38 +370,38 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		}
 
 		// Check cache
-		/*
-			if d.isGoCached(cachePath) {
-				slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
-				data, err := os.ReadFile(cachePath)
-				if err == nil {
-					// Verify cache integrity
-					if d.VerifyCacheIntegrity(cachePath, data) {
-						if configs.MinReleaseTime > 0 {
-							if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-								if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-									return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
-								}
-								span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-								return d.writeGoResponse(c, data, requestPath, true)
+
+		if d.isGoCached(cachePath) {
+			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
+			data, err := os.ReadFile(cachePath)
+			if err == nil {
+				// Verify cache integrity
+				if d.VerifyCacheIntegrity(cachePath, data) {
+					if configs.MinReleaseTime > 0 {
+						if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
+							if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
+								return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
 							}
-							// No cached release time - fall through to upstream to retrieve it
-							slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "go", "path", requestPath)
-						} else {
 							span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 							return d.writeGoResponse(c, data, requestPath, true)
 						}
+						// No cached release time - fall through to upstream to retrieve it
+						slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "go", "path", requestPath)
 					} else {
-						slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
-						// Remove corrupted cache
-						os.Remove(cachePath)
-						os.Remove(cachePath + ".sha256")
+						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+						return d.writeGoResponse(c, data, requestPath, true)
 					}
 				} else {
-					slog.Warn("Cache read error", "proxy", "go", "error", err)
+					slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
+					// Remove corrupted cache
+					os.Remove(cachePath)
+					os.Remove(cachePath + ".sha256")
 				}
+			} else {
+				slog.Warn("Cache read error", "proxy", "go", "error", err)
 			}
-		*/
+		}
+
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
