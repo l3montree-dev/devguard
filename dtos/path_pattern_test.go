@@ -34,7 +34,7 @@ func TestIsWildcard(t *testing.T) {
 		{"literal pkg:npm/foo", "pkg:npm/foo@1.0.0", false},
 		{"empty string", "", false},
 		{"triple star", "***", false},
-		{"ROOT is wildcard", normalize.GraphRootNodeID, true},
+		{"ROOT is not a wildcard", normalize.GraphRootNodeID, false},
 	}
 
 	for _, tt := range tests {
@@ -96,12 +96,14 @@ func TestRootPathPattern(t *testing.T) {
 		path     []string
 		expected bool
 	}{
-		{"ROOT matches ROOT", PathPattern{normalize.GraphRootNodeID}, []string{normalize.GraphRootNodeID}, true},
-		{"ROOT matches any path with ROOT at end", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", normalize.GraphRootNodeID}, true},
-		{"ROOT DOES match path without ROOT", PathPattern{normalize.GraphRootNodeID}, []string{"A", "B", "C"}, true},
-		{"ROOT does not lead to all paths matching", PathPattern{normalize.GraphRootNodeID, "X"}, []string{"A", "B", "C"}, false},
-		// Direct dependency: pattern created from the graph includes ROOT but VulnerabilityPath does not.
-		// ["*", "ROOT", "pkg:..."] must match ["pkg:..."] because ROOT is a wildcard that matches zero elements.
+		// ROOT is a stop marker: [root, pkg:A] matches only direct dependencies.
+		// VulnerabilityPath never contains ROOT, so ROOT in the pattern consumes
+		// zero path elements and anchors the match to position 0 (no suffix scan).
+		{"root pkg:A matches direct dependency", PathPattern{normalize.GraphRootNodeID, "pkg:A"}, []string{"pkg:A"}, true},
+		{"root pkg:A does not match transitive dependency", PathPattern{normalize.GraphRootNodeID, "pkg:A"}, []string{"pkg:B", "pkg:A"}, false},
+		// [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]: ROOT absorbs the wildcard prefix.
+		{"wildcard root pkg:A matches direct dependency", PathPattern{"*", normalize.GraphRootNodeID, "pkg:A"}, []string{"pkg:A"}, true},
+		{"wildcard root pkg:A does not match transitive dependency", PathPattern{"*", normalize.GraphRootNodeID, "pkg:A"}, []string{"pkg:B", "pkg:A"}, false},
 		{"wildcard ROOT pkg matches direct dependency path", PathPattern{"*", normalize.GraphRootNodeID, "pkg:golang/go-jose@v4"}, []string{"pkg:golang/go-jose@v4"}, true},
 	}
 
