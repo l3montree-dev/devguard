@@ -779,7 +779,7 @@ func (s osvService) getOSVObjectsFromIDs(ecosystem string, ids map[string]struct
 func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntries []*dtos.OSV) error {
 	// get the current state of the affected components to avoid creating duplicate entries
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
-	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component WHERE cve_id = ANY($1::bigint[])`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
+	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
 	if err != nil {
 		return fmt.Errorf("could not get current state of affected components: %w", err)
 	}
@@ -861,62 +861,68 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntri
 	const bulkThreshold = 50_000
 	const batchSize = 2000
 
+	reachedBulkThreshold := len(cves) > bulkThreshold
 	// if we reach a certain threshold of data we switch to an optimized bulk insert method:
-	if len(cves) > bulkThreshold {
-		// index updates and constraint checks on each insert slow the process down dramatically
-		// drop all first and later re-apply all
+	if reachedBulkThreshold {
+		// index updates and constraint checks on each insert slow the process down drastically
+		// drop all first and later re-apply all again
+		slog.Info("reached bulk insert threshold; using bulk optimized import strategy")
 		err = prepareBulkInsert(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("could not prepare transaction: %w", err)
 		}
+	}
 
-		// then we can just stream all our data with the COPY clause straight into the tables
-		err = insertCVEsBulk(ctx, tx, cves)
-		if err != nil {
-			return fmt.Errorf("could not insert cves: %w", err)
-		}
+	// then we can just stream all our data with the COPY clause straight into the tables
+	err = insertCVEsBulk(ctx, tx, cves)
+	if err != nil {
+		return fmt.Errorf("could not insert cves: %w", err)
+	}
 
-		err = insertCVERelationshipsBulk(ctx, tx, cveRelationships)
-		if err != nil {
-			return fmt.Errorf("could not insert cve relationships: %w", err)
-		}
+	err = insertCVERelationshipsBulk(ctx, tx, cveRelationships)
+	if err != nil {
+		return fmt.Errorf("could not insert cve relationships: %w", err)
+	}
 
-		err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
-		if err != nil {
-			return fmt.Errorf("could not insert affected_components: %w", err)
-		}
-		if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
-			return fmt.Errorf("could not insert cve_affected_component: %w", err)
-		}
+	err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
+	if err != nil {
+		return fmt.Errorf("could not insert affected_components: %w", err)
+	}
+	if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
+		return fmt.Errorf("could not insert cve_affected_component: %w", err)
+	}
 
+	if reachedBulkThreshold {
 		// after we finish inserting the data we need to re-apply all previously deleted constraints and indexes
 		err = addIndexesAndConstraints(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
 		}
-	} else {
-		// below the threshold use "normal" unnest import in batches for better performance
-		slog.Info("below bulk threshold: insert into tables using batched unnest method")
-
-		err = insertCVEsUsingUnnest(ctx, tx, cves)
-		if err != nil {
-			return fmt.Errorf("could not insert cves: %w", err)
-		}
-
-		err = insertCVERelationshipsNormal(ctx, tx, cveRelationships)
-		if err != nil {
-			return fmt.Errorf("could not insert cve relationships: %w", err)
-		}
-
-		err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
-		if err != nil {
-			return fmt.Errorf("could not insert affected_components: %w", err)
-		}
-
-		if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
-			return fmt.Errorf("could not insert cve_affected_component: %w", err)
-		}
 	}
+
+	// } else {
+	// 	// below the threshold use "normal" unnest import in batches for better performance
+	// 	slog.Info("below bulk threshold: insert into tables using batched unnest method")
+
+	// 	err = insertCVEsUsingUnnest(ctx, tx, cves)
+	// 	if err != nil {
+	// 		return fmt.Errorf("could not insert cves: %w", err)
+	// 	}
+
+	// 	err = insertCVERelationshipsUsingUnnest(ctx, tx, cveRelationships)
+	// 	if err != nil {
+	// 		return fmt.Errorf("could not insert cve relationships: %w", err)
+	// 	}
+
+	// 	err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
+	// 	if err != nil {
+	// 		return fmt.Errorf("could not insert affected_components: %w", err)
+	// 	}
+
+	// 	if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
+	// 		return fmt.Errorf("could not insert cve_affected_component: %w", err)
+	// 	}
+	// }
 
 	// finally commit the whole import transaction
 	if err := tx.Commit(ctx); err != nil {
@@ -936,31 +942,95 @@ type cveAffectedComponentRow struct {
 }
 
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
-	slog.Info("inserting into cves using bulk insert", "amount", len(cves))
+	if len(cves) == 0 {
+		return nil
+	}
+	slog.Info("inserting into cves using staging table", "amount", len(cves))
 	start := time.Now()
+
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE cves_stage (
+			id                      bigint,
+			cve                     text,
+			created_at              timestamptz,
+			updated_at              timestamptz,
+			date_published          timestamptz,
+			date_last_modified      timestamptz,
+			description             text,
+			cvss                    numeric(4,2),
+			"references"            text,
+			cisa_exploit_add        date,
+			cisa_action_due         date,
+			cisa_required_action    text,
+			cisa_vulnerability_name text,
+			epss                    numeric(6,5),
+			percentile              numeric(6,5),
+			vector                  text
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create cves staging table: %w", err)
+	}
+
 	columnNames := []string{"id", "cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
 		row := cves[i]
 		return []interface{}{row.ID, row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
 	}))
 	if err != nil {
-		return fmt.Errorf("could not copy cve rows into table: %w", err)
+		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
 	}
+
+	// only update OSV-sourced fields on conflict
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cves (id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+		SELECT id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		FROM cves_stage
+		ON CONFLICT (id) DO UPDATE SET
+			updated_at         = EXCLUDED.updated_at,
+			date_published     = EXCLUDED.date_published,
+			date_last_modified = EXCLUDED.date_last_modified,
+			description        = EXCLUDED.description,
+			cvss               = EXCLUDED.cvss,
+			vector             = EXCLUDED.vector`); err != nil {
+		return fmt.Errorf("could not upsert from staging into cves: %w", err)
+	}
+
 	slog.Info("finished inserting into cves", "time", time.Since(start))
 	return nil
 }
 
 func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
-	slog.Info("inserting into cve_relationships using bulk insert", "amount", len(cveRelationships))
+	if len(cveRelationships) == 0 {
+		return nil
+	}
+	slog.Info("inserting into cve_relationships using staging table", "amount", len(cveRelationships))
 	start := time.Now()
+
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE cve_relationships_stage (
+			target_cve        text,
+			source_cve        text,
+			relationship_type text
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create cve_relationships staging table: %w", err)
+	}
+
 	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
 		row := cveRelationships[i]
 		return []interface{}{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
 	}))
 	if err != nil {
-		return fmt.Errorf("could not copy cve relationship rows into table: %w", err)
+		return fmt.Errorf("could not copy cve relationship rows into staging table: %w", err)
 	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
+		SELECT target_cve, source_cve, relationship_type
+		FROM cve_relationships_stage
+		ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not insert from staging into cve_relationships: %w", err)
+	}
+
 	slog.Info("finished inserting into cve_relationships", "time", time.Since(start))
 	return nil
 }
@@ -1133,7 +1203,7 @@ func insertCVEsUsingUnnest(ctx context.Context, tx pgx.Tx, cves []models.CVE) er
 	return nil
 }
 
-func insertCVERelationshipsNormal(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
+func insertCVERelationshipsUsingUnnest(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
 	if len(relationships) == 0 {
 		return nil
 	}
@@ -1176,17 +1246,16 @@ func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
 	ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
 	
-	-- need to be dropped before dropping cves_pkey
+	-- need to be dropped before dropping cves_cve_unique constraint
 	ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve; 
 	ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
 	ALTER TABLE public.weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
 	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
 
 	-- then drop all primary key (and unique) constraints
-	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_pkey;
+	-- do not drop cves_pkey since we still need that index to detect and resolve indexes
 	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_cve_unique;
 	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
-	ALTER TABLE public.cve_relationships DROP CONSTRAINT IF EXISTS cve_relationships_pkey;
 	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
 	
 	-- lastly drop all indexes 
@@ -1226,9 +1295,8 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	SET LOCAL max_parallel_workers_per_gather = 8;
          
 	-- First add the primary key constraints
-	ALTER TABLE public.cves ADD CONSTRAINT cves_pkey PRIMARY KEY (id);
+	-- we did not drop the cves_pkey, so we do not need to add that
 	ALTER TABLE affected_components ADD CONSTRAINT affected_components_pkey PRIMARY KEY (id);
-	ALTER TABLE public.cve_relationships ADD CONSTRAINT cve_relationships_pkey PRIMARY KEY (target_cve, source_cve, relationship_type);
 	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id,cve_id);
 	`)
 	if err != nil {
