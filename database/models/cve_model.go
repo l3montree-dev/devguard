@@ -1,11 +1,14 @@
 package models
 
 import (
+	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type Severity string
@@ -24,7 +27,8 @@ type cveReference struct {
 	Tags   []string `json:"tags"`
 }
 type CVE struct {
-	CVE                   string              `json:"cve" gorm:"primaryKey;not null;type:text;"`
+	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
+	CVE                   string              `json:"cve" gorm:"type:text;"`
 	CreatedAt             time.Time           `json:"createdAt" cve:"createdAt"`
 	UpdatedAt             time.Time           `json:"updatedAt" cve:"updatedAt"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
@@ -62,10 +66,28 @@ func (m CVE) TableName() string {
 	return "cves"
 }
 
+// calculate the hash for the cve solely based on the cve-id using md5 for compatibility with the postgresql database
+func (m CVE) CalculateHash() int64 {
+	return CalculateHashForCVE(m.CVE)
+}
+
+func CalculateHashForCVE(cveID string) int64 {
+	sum := md5.Sum([]byte(cveID))
+	u := binary.BigEndian.Uint64(sum[:8])
+	return int64(u & 0x7fffffffffffffff)
+}
+
 func (m CVE) GetReferences() ([]cveReference, error) {
 	var refs []cveReference
 	if err := json.Unmarshal([]byte(m.References), &refs); err != nil {
 		return nil, err
 	}
 	return refs, nil
+}
+
+func (cve *CVE) BeforeSave(tx *gorm.DB) error {
+	if cve.ID == 0 {
+		cve.ID = cve.CalculateHash()
+	}
+	return nil
 }

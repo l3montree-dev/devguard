@@ -487,9 +487,9 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
-	cveIDs := make([]string, 0, totalCount)
+	cveIDs := make([]int64, 0, totalCount)
 	for osvObject := range vulnData {
-		cveIDs = append(cveIDs, osvObject.ID)
+		cveIDs = append(cveIDs, models.CalculateHashForCVE(osvObject.ID))
 		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
@@ -499,7 +499,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	dbStart := time.Now()
 	err = s.processEntries(ctx, cveIDs, allOSVVulns)
 	if err != nil {
-		return fmt.Errorf("could process new OSV data, error: %w", err)
+		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 	slog.Info("successfully processed data to database", "time elapsed", time.Since(dbStart))
 	// lastly update the import to the earliest possible fetch
@@ -764,10 +764,10 @@ func (s osvService) getOSVObjectsFromIDs(ecosystem string, ids map[string]struct
 }
 
 // execute all necessary steps to insert new entries and update the existing ones
-func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntries []*dtos.OSV) error {
+func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntries []*dtos.OSV) error {
 	// get the current state of the affected components
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
-	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component WHERE cvecve = ANY($1::text[])`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
+	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component WHERE cve_id = ANY($1::bigint[])`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
 	if err != nil {
 		return fmt.Errorf("could not get current state of affected components: %w", err)
 	}
@@ -791,7 +791,7 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 	// built all the objects first
 	for i := range allEntries {
 		cve := transformer.OSVToCVE(allEntries[i])
-
+		cve.ID = cve.CalculateHash()
 		cves = append(cves, cve)
 
 		relationships := transformer.OSVToCVERelationships(allEntries[i])
@@ -805,7 +805,7 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []string, allEntr
 		for _, affectedComponent := range affectedComponentsForCVE {
 			hash := affectedComponent.CalculateHashFast()
 			affectedComponent.ID = hash // assign hash for later use
-			row := cveAffectedComponentRow{CveCVE: cve.CVE, AffectedComponentID: hash}
+			row := cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash}
 			if _, ok := isAffectedComponentPresent[hash]; !ok {
 				affectedComponents = append(affectedComponents, affectedComponent)
 				// add the new component, so that we do not have duplicates in the new data
@@ -915,17 +915,17 @@ func areCVEsIdentical(c1, c2 models.CVE) bool {
 }
 
 type cveAffectedComponentRow struct {
-	CveCVE              string `gorm:"column:cvecve"`
-	AffectedComponentID int64  `gorm:"column:affected_component_id"`
+	CveID               int64 `gorm:"column:cve_id"`
+	AffectedComponentID int64 `gorm:"column:affected_component_id"`
 }
 
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	slog.Info("inserting into cves using bulk insert", "amount", len(cves))
 	start := time.Now()
-	columnNames := []string{"cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	columnNames := []string{"id", "cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
 		row := cves[i]
-		return []interface{}{row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+		return []interface{}{row.ID, row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into table: %w", err)
@@ -999,10 +999,10 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
 	slog.Info("inserting into cve_affected_component using bulk insert", "amount", len(pivotRows))
 	start := time.Now()
-	columnNames := []string{"affected_component_id", "cvecve"}
+	columnNames := []string{"affected_component_id", "cve_id"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
 		row := pivotRows[i]
-		return []interface{}{row.AffectedComponentID, row.CveCVE}, nil
+		return []interface{}{row.AffectedComponentID, row.CveID}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
@@ -1015,8 +1015,8 @@ func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if len(cves) == 0 {
 		return nil
 	}
-
-	ids := make([]string, len(cves))
+	ids := make([]int64, len(cves))
+	cveIDs := make([]string, len(cves))
 	createdAts := make([]time.Time, len(cves))
 	updatedAts := make([]time.Time, len(cves))
 	datePublisheds := make([]time.Time, len(cves))
@@ -1034,7 +1034,8 @@ func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 
 	now := time.Now()
 	for i := range cves {
-		ids[i] = cves[i].CVE
+		cveIDs[i] = cves[i].CVE
+		ids[i] = models.CalculateHashForCVE(cves[i].CVE)
 		if cves[i].CreatedAt.IsZero() {
 			createdAts[i] = now
 		} else {
@@ -1067,7 +1068,7 @@ func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		vectors[i] = cves[i].Vector
 	}
 
-	sql := `INSERT INTO cves (cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+	sql := `INSERT INTO cves (cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, id)
 	SELECT
 		unnest($1::text[]),
 		unnest($2::timestamptz[]),
@@ -1083,11 +1084,12 @@ func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		unnest($12::text[]),
 		unnest($13::text[])::numeric(6,5),
 		unnest($14::text[])::numeric(6,5),
-		unnest($15::text[])
+		unnest($15::text[]),
+		unnest($16::bigint[])
 	ON CONFLICT (cve) DO NOTHING`
 
 	_, err := tx.Exec(ctx, sql,
-		ids,
+		cveIDs,
 		createdAts,
 		updatedAts,
 		datePublisheds,
@@ -1102,6 +1104,7 @@ func insertCVEsNormal(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		epsss,
 		percentiles,
 		vectors,
+		ids,
 	)
 	if err != nil {
 		return fmt.Errorf("could not insert cves: %w", err)
@@ -1154,8 +1157,9 @@ func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE public.weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
 	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
 
-	-- then drop all primary key constraints
+	-- then drop all primary key (and unique) constraints
 	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_pkey;
+	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_cve_unique;
 	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
 	ALTER TABLE public.cve_relationships DROP CONSTRAINT IF EXISTS cve_relationships_pkey;
 	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
@@ -1169,7 +1173,12 @@ func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
     DROP INDEX IF EXISTS idx_affected_components_purl_without_version;
     DROP INDEX IF EXISTS idx_affected_components_version;
 
+	DROP INDEX IF EXISTS idx_ac_purl_version;
+
+	DROP INDEX IF EXISTS idx_ac_purl_semver_range;
+
 	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
+	DROP INDEX IF EXISTS cve_affected_component_cve_id;
 
 	DROP INDEX IF EXISTS idx_cve_relationships_target_cve;`)
 	if err != nil {
@@ -1192,10 +1201,10 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	SET LOCAL max_parallel_workers_per_gather = 8;
          
 	-- First add the primary key constraints
-	ALTER TABLE public.cves ADD CONSTRAINT cves_pkey PRIMARY KEY (cve);
+	ALTER TABLE public.cves ADD CONSTRAINT cves_pkey PRIMARY KEY (id);
 	ALTER TABLE affected_components ADD CONSTRAINT affected_components_pkey PRIMARY KEY (id);
 	ALTER TABLE public.cve_relationships ADD CONSTRAINT cve_relationships_pkey PRIMARY KEY (target_cve, source_cve, relationship_type);
-	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id,cvecve);
+	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id,cve_id);
 	`)
 	if err != nil {
 		return fmt.Errorf("could not apply primary key constraints: %w", err)
@@ -1205,14 +1214,16 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 	_, err = tx.Exec(ctx, `
 	-- Then add the foreign key constraints
+	ALTER TABLE public.cves ADD CONSTRAINT cves_cve_unique UNIQUE (cve);
 	ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE NOT VALID;
 
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE NOT VALID;
-
-	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cvecve) REFERENCES public.cves (cve) ON DELETE CASCADE NOT VALID;
+	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cve_id) REFERENCES public.cves (id) ON DELETE CASCADE;
+	
 	ALTER TABLE public.dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE; 
+
 	ALTER TABLE public.exploits ADD CONSTRAINT fk_cves_exploits FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;
-	ALTER TABLE ONLY public.weaknesses ADD CONSTRAINT fk_cves_weaknesses FOREIGN KEY (cve_id) REFERENCES public.cves(cve) ON DELETE CASCADE;
+	ALTER TABLE public.weaknesses ADD CONSTRAINT fk_cves_weaknesses FOREIGN KEY (cve_id) REFERENCES public.cves(cve) ON DELETE CASCADE;
 	ALTER TABLE public.vex_rules ADD CONSTRAINT fk_vex_rules_cve FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;`)
 	if err != nil {
 		return fmt.Errorf("could not apply foreign key constraints: %w", err)
@@ -1222,14 +1233,7 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	-- Lastly rebuild the indexes
-    CREATE INDEX IF NOT EXISTS cve_affected_component_affected_component_id ON public.cve_affected_component USING hash (cvecve);
-
-    CREATE INDEX IF NOT EXISTS idx_affected_components_semver_fixed ON public.affected_components USING btree (semver_fixed);
-    CREATE INDEX IF NOT EXISTS idx_affected_components_semver_introduced ON public.affected_components USING btree (semver_introduced);
-    CREATE INDEX IF NOT EXISTS idx_affected_components_version_fixed ON public.affected_components USING btree (version_fixed);
-    CREATE INDEX IF NOT EXISTS idx_affected_components_version_introduced ON public.affected_components USING btree (version_introduced);
-    CREATE INDEX IF NOT EXISTS idx_affected_components_purl_without_version ON public.affected_components USING btree (purl);
-	CREATE INDEX IF NOT EXISTS idx_affected_components_version ON public.affected_components USING btree (version);
+    CREATE INDEX IF NOT EXISTS cve_affected_component_affected_component_id ON public.cve_affected_component USING hash (cve_id);
 	
 	CREATE INDEX idx_ac_purl_version
   		ON affected_components (purl, version);

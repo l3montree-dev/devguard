@@ -62,7 +62,7 @@ func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.
 }
 
 // maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
-var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}, "cve_relationships": {"target_cve", "source_cve", "relationship_type"}}
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cve_cve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}, "cve_relationships": {"target_cve", "source_cve", "relationship_type"}}
 
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}, "cve_relationships": {}}
@@ -298,12 +298,12 @@ ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_com
 -- Delete orphaned rows where the CVE no longer exists
 DELETE FROM cve_affected_component 
 WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
+    SELECT 1 FROM cves WHERE cves.id = cve_affected_component.cve_cve
 );
 
 -- Recreate the foreign key constraint
 ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
-  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+  FOREIGN KEY (cve_cve) REFERENCES cves(id);
 
 
 ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;

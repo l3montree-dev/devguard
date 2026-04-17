@@ -121,7 +121,7 @@ func (g *affectedCmpRepository) CreateAffectedComponentsUsingUnnest(ctx context.
 	query := `
         INSERT INTO affected_components (id,purl,ecosystem,version,semver_introduced,semver_fixed,version_introduced,version_fixed)
         SELECT
-            unnest($1::text[]),
+            unnest($1::bigint[]),
 
             unnest($2::text[]),
             unnest($3::text[]),

@@ -596,10 +596,7 @@ type ComponentService interface {
 
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
-	GetAllRelationsForCVE(ctx context.Context, tx DB, targetCVEID string) ([]models.CVERelationship, error)
-	GetAllRelationshipsForCVEBatch(ctx context.Context, tx DB, sourceCVEIDs []string) ([]models.CVERelationship, error)
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
-	FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx DB) error
 }
 
 type LicenseRiskService interface {

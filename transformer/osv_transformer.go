@@ -84,21 +84,16 @@ func hasValidCVSSScore(osv *dtos.OSV) (float64, string, bool) {
 			if err == nil {
 				return cvssScore.BaseScore(), cvssScore.Vector(), true
 			}
-			panic(err)
 		} else if strings.HasPrefix(severity.Score, "CVSS:3.0") {
 			cvssScore, err := gocvss30.ParseVector(severity.Score)
 			if err == nil {
 				return cvssScore.BaseScore(), cvssScore.Vector(), true
 			}
-			panic(err)
 		} else if strings.HasPrefix(severity.Score, "CVSS:4.0") {
 			cvssScore, err := gocvss40.ParseVector(severity.Score)
 			if err == nil {
 				return cvssScore.Score(), cvssScore.Vector(), true
 			}
-			panic(err)
-		} else {
-			panic(severity.Score)
 		}
 	}
 	return 0, "", false

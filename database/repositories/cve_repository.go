@@ -207,7 +207,7 @@ func (g *cveRepository) CreateCVEAffectedComponentsEntries(ctx context.Context, 
 		affectedComponents[i] = components[i].CalculateHash()
 	}
 
-	query := `INSERT INTO cve_affected_component (affected_component_id,cvecve) 
+	query := `INSERT INTO cve_affected_component (affected_component_id,cve_id) 
 	SELECT 
 	unnest($1::text[]),
 	unnest($2::text[])
