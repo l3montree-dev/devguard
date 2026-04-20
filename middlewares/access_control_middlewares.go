@@ -204,13 +204,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
 			if org.IsExternalEntity() {
 				// check if there is an admin token defined
-				conf, ok := oauth2Config[*org.ExternalEntityProviderID]
-				if !ok {
-					slog.Error("no oauth2 config found for external entity provider", "provider", *org.ExternalEntityProviderID)
-					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
-				}
-
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
 			}
 
 			// check if the user is allowed to access the organization
