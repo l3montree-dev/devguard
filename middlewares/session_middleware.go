@@ -61,8 +61,6 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 			var scopes string
 			var err error
 
-			adminTokenHeader := ctx.Request().Header.Get("X-Admin-Token")
-
 			if oryKratosSessionCookie != nil {
 				userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String())
 				if err != nil {
@@ -76,10 +74,6 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 				scopes = "scan manage"
 				scopesArray := strings.Fields(scopes)
 				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
-				return next(ctx)
-			} else if adminTokenHeader != "" {
-				slog.Warn("admin token header is set, using it to create session")
-				ctx.Set("session", accesscontrol.NewSession(adminTokenHeader, []string{}))
 				return next(ctx)
 			} else {
 				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request())

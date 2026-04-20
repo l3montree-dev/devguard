@@ -7,19 +7,16 @@ import (
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestIsAllowed(t *testing.T) {
-
 	type testCase struct {
 		name           string
 		userID         string
 		object         shared.Object
 		action         shared.Action
-		adminToken     *string
 		mockResult     bool
 		mockErr        error
 		expectedResult bool
@@ -32,7 +29,6 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "admin-token",
 			object:         shared.ObjectProject,
 			action:         shared.ActionRead,
-			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: true,
 		},
 		{
@@ -40,25 +36,22 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user1",
 			object:         shared.ObjectOrganization,
 			action:         shared.ActionRead,
-			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: true,
 		},
 
 		{
-			name:       "error from rootAccessControl",
-			userID:     "user5",
-			object:     shared.ObjectProject,
-			action:     shared.ActionRead,
-			adminToken: utils.Ptr("admin-token"),
-			mockErr:    errors.New("some error"),
-			expectErr:  true,
+			name:      "error from rootAccessControl",
+			userID:    "user5",
+			object:    shared.ObjectProject,
+			action:    shared.ActionRead,
+			mockErr:   errors.New("some error"),
+			expectErr: true,
 		},
 		{
 			name:           "admin token can not create",
 			userID:         "admin-token",
 			object:         shared.ObjectProject,
 			action:         shared.ActionCreate,
-			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: false,
 		},
 		{
@@ -66,7 +59,6 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "admin-token",
 			object:         shared.ObjectProject,
 			action:         shared.ActionDelete,
-			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: false,
 		},
 	}
@@ -87,7 +79,6 @@ func TestIsAllowed(t *testing.T) {
 				rootAccessControl,
 				thirdpartyIntegrationMock,
 				"external-entity-provider-id",
-				tc.adminToken,
 			)
 
 			result, err := rbac.IsAllowed(context.Background(), tc.userID, tc.object, tc.action)
@@ -112,7 +103,6 @@ func TestHasAccess(t *testing.T) {
 			rootAccessControl,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			utils.Ptr("admin-token"),
 		)
 
 		hasAccess, err := rbac.HasAccess(context.Background(), "admin-token")
@@ -131,30 +121,10 @@ func TestHasAccess(t *testing.T) {
 			rootAccessControl,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			nil,
 		)
 
 		hasAccess, err := rbac.HasAccess(context.Background(), "user1")
 		assert.NoError(t, err)
 		assert.True(t, hasAccess)
-	})
-
-	t.Run("if no admin token is provided, the third party integration should be called (false)", func(t *testing.T) {
-		ctx := mocks.NewContext(t)
-		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
-		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", ctx, "external-entity-provider-id").Return(false, nil)
-
-		rbac := NewExternalEntityProviderRBAC(
-			ctx,
-			rootAccessControl,
-			thirdpartyIntegrationMock,
-			"external-entity-provider-id",
-			nil,
-		)
-
-		hasAccess, err := rbac.HasAccess(context.Background(), "user1")
-		assert.NoError(t, err)
-		assert.False(t, hasAccess)
 	})
 }
