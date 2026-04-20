@@ -219,7 +219,7 @@ jobs:
           echo "Generated checksums for all release artifacts"
 
       - name: Sign release artifacts with devguard-scanner
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main-latest
+        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main
         with:
           entrypoint: /bin/sh
           args: |
