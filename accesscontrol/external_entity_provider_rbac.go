@@ -10,7 +10,6 @@ import (
 type externalEntityProviderRBAC struct {
 	thirdPartyIntegration    shared.IntegrationAggregate
 	externalEntityProviderID string
-	adminToken               *string
 	ctx                      shared.Context
 
 	rootAccessControl shared.AccessControl
@@ -18,11 +17,10 @@ type externalEntityProviderRBAC struct {
 
 var _ shared.AccessControl = (*externalEntityProviderRBAC)(nil)
 
-func NewExternalEntityProviderRBAC(ctx shared.Context, rootAccessControl shared.AccessControl, thirdPartyIntegration shared.IntegrationAggregate, externalEntityProviderID string, adminToken *string) *externalEntityProviderRBAC {
+func NewExternalEntityProviderRBAC(ctx shared.Context, rootAccessControl shared.AccessControl, thirdPartyIntegration shared.IntegrationAggregate, externalEntityProviderID string) *externalEntityProviderRBAC {
 	return &externalEntityProviderRBAC{
 		thirdPartyIntegration:    thirdPartyIntegration,
 		externalEntityProviderID: externalEntityProviderID,
-		adminToken:               adminToken,
 		ctx:                      ctx,
 		rootAccessControl:        rootAccessControl,
 	}
@@ -41,9 +39,6 @@ func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(ctx context.Co
 }
 
 func (e *externalEntityProviderRBAC) HasAccess(ctx context.Context, userID string) (bool, error) {
-	if e.adminToken != nil && userID == *e.adminToken {
-		return true, nil
-	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 
@@ -104,13 +99,6 @@ func (e *externalEntityProviderRBAC) AllowRole(ctx context.Context, role shared.
 }
 
 func (e *externalEntityProviderRBAC) IsAllowed(ctx context.Context, userID string, object shared.Object, action shared.Action) (bool, error) {
-	if e.adminToken != nil && userID == *e.adminToken {
-		if action == shared.ActionRead {
-			return true, nil
-		}
-		return false, nil
-	}
-
 	// ALLOW ORG read access for all users - this is pretty much the same as HasAccess.
 	if object == shared.ObjectOrganization && action == shared.ActionRead {
 		return true, nil
@@ -122,9 +110,6 @@ func (e *externalEntityProviderRBAC) IsAllowed(ctx context.Context, userID strin
 func (e *externalEntityProviderRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
 	if project.ExternalEntityProviderID == nil || project.ExternalEntityID == nil {
 		return false, nil
-	}
-	if e.adminToken != nil && user == *e.adminToken && action == shared.ActionRead {
-		return true, nil
 	}
 	return e.rootAccessControl.IsAllowedInProject(ctx, project, user, object, action)
 }
@@ -172,9 +157,6 @@ func (e *externalEntityProviderRBAC) RevokeRoleInAsset(ctx context.Context, subj
 func (e *externalEntityProviderRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
 	if asset.ExternalEntityProviderID == nil || asset.ExternalEntityID == nil {
 		return false, nil
-	}
-	if e.adminToken != nil && user == *e.adminToken && action == shared.ActionRead {
-		return true, nil
 	}
 	return e.rootAccessControl.IsAllowedInAsset(ctx, asset, user, object, action)
 }
