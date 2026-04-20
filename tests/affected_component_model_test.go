@@ -120,7 +120,7 @@ func TestFromOSV(t *testing.T) {
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
 		if affectedComponents[0].ID != affectedComponents[0].CalculateHash() { // nolint:all
-			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
+			t.Errorf("Expected ID to be set, got %d", affectedComponents[0].ID)
 		}
 
 		assert.Equal(t, affectedComponents[0].CalculateHash(), affectedComponents[0].CalculateHashFast(), "expect all hashes to be identical")
@@ -309,7 +309,7 @@ func TestSetIdHash(t *testing.T) {
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck
 		if affectedComponent.ID != otherAffectedComponent.ID {
-			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
+			t.Errorf("Expected the same hash, got %d and %d", affectedComponent.ID, otherAffectedComponent.ID)
 		}
 	})
 }

@@ -9,9 +9,6 @@ ALTER TABLE public.affected_components DROP COLUMN IF EXISTS name;
 ALTER TABLE public.affected_components DROP COLUMN IF EXISTS namespace;
 ALTER TABLE public.affected_components DROP COLUMN IF EXISTS qualifiers;
 
--- Drop left over index
-DROP INDEX IF EXISTS idx_affected_components_p_url; -- duplicate
-
 -- refactor the affected components id to a bigint to optimize memory and performance in affected_components as well as in cve_affected_component
 
 -- add the new id column as type bigint then copy and transform the existing values to it
@@ -92,5 +89,21 @@ ALTER TABLE public.weaknesses ADD CONSTRAINT fk_cves_weaknesses FOREIGN KEY (cve
 ALTER TABLE public.vex_rules ADD CONSTRAINT fk_vex_rules_cve FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;
 ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE;
 
+-- Drop unnecessary indexes; we add more optimized ones at the end
+DROP INDEX IF EXISTS public.idx_affected_components_semver_fixed;
+DROP INDEX IF EXISTS public.idx_affected_components_semver_introduced;
+DROP INDEX IF EXISTS public.idx_affected_components_version_fixed;
+DROP INDEX IF EXISTS public.idx_affected_components_version_introduced;
+DROP INDEX IF EXISTS public.idx_affected_components_p_url;
+DROP INDEX IF EXISTS public.idx_affected_components_purl_without_version;
+DROP INDEX IF EXISTS public.idx_affected_components_version;
+
 CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
 
+-- re-add optimized indexes for affected_components table
+CREATE INDEX idx_affected_component_purl_version
+  		ON public.affected_components (purl, version);
+
+CREATE INDEX idx_affected_component_purl_semver_range
+  		ON public.affected_components (purl, semver_introduced, semver_fixed)
+ 		WHERE semver_introduced IS NOT NULL OR semver_fixed IS NOT NULL;
