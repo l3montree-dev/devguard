@@ -37,7 +37,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -509,7 +508,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	// then insert all entries to the database
 	slog.Info("start database processing")
 	dbStart := time.Now()
-	err = s.processEntries(ctx, cveIDs, allOSVVulns)
+	err = s.processEntries(ctx, allOSVVulns)
 	if err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
@@ -776,15 +775,16 @@ func (s osvService) getOSVObjectsFromIDs(ecosystem string, ids map[string]struct
 }
 
 // execute all necessary steps to insert new entries and update the existing ones
-func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntries []*dtos.OSV) error {
+func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) error {
 	// get the current state of the affected components to avoid creating duplicate entries
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
-	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`, pq.Array(cveIDs)).Find(&currentCVEAffectedComponents).Error
+	err := s.affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
 	if err != nil {
 		return fmt.Errorf("could not get current state of affected components: %w", err)
 	}
 
 	// build a map of the current state for faster lookups of the existing state
+	// used for deduplicating rows in memory rather than on insert
 	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
 	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{})
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
@@ -839,7 +839,6 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntri
 
 	// free unused slices so that the garbage collector may free the space
 	allEntries = nil
-	cveIDs = nil
 
 	slog.Info("finished building rows", "building time", time.Since(buildingTime))
 
@@ -858,16 +857,15 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntri
 	}
 	defer tx.Rollback(ctx) // if we run into any errors rollback the entire transaction
 
-	const bulkThreshold = 50_000
-	const batchSize = 2000
+	const bulkThreshold = 200_000
 
-	reachedBulkThreshold := len(cves) > bulkThreshold
+	reachedBulkThreshold := len(affectedComponents) > bulkThreshold || len(cveAffectedComponents) > bulkThreshold
 	// if we reach a certain threshold of data we switch to an optimized bulk insert method:
 	if reachedBulkThreshold {
 		// index updates and constraint checks on each insert slow the process down drastically
 		// drop all first and later re-apply all again
 		slog.Info("reached bulk insert threshold; using bulk optimized import strategy")
-		err = prepareBulkInsert(ctx, tx)
+		err = PrepareBulkInsert(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("could not prepare transaction: %w", err)
 		}
@@ -894,35 +892,11 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntri
 
 	if reachedBulkThreshold {
 		// after we finish inserting the data we need to re-apply all previously deleted constraints and indexes
-		err = addIndexesAndConstraints(ctx, tx)
+		err = AddIndexesAndConstraints(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
 		}
 	}
-
-	// } else {
-	// 	// below the threshold use "normal" unnest import in batches for better performance
-	// 	slog.Info("below bulk threshold: insert into tables using batched unnest method")
-
-	// 	err = insertCVEsUsingUnnest(ctx, tx, cves)
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not insert cves: %w", err)
-	// 	}
-
-	// 	err = insertCVERelationshipsUsingUnnest(ctx, tx, cveRelationships)
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not insert cve relationships: %w", err)
-	// 	}
-
-	// 	err = insertAffectedComponentsBulk(ctx, tx, affectedComponents)
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not insert affected_components: %w", err)
-	// 	}
-
-	// 	if err := insertCVEAffectedComponentsBulk(ctx, tx, cveAffectedComponents); err != nil {
-	// 		return fmt.Errorf("could not insert cve_affected_component: %w", err)
-	// 	}
-	// }
 
 	// finally commit the whole import transaction
 	if err := tx.Commit(ctx); err != nil {
@@ -932,15 +906,13 @@ func (s osvService) processEntries(ctx context.Context, cveIDs []int64, allEntri
 	return nil
 }
 
-func areCVEsIdentical(c1, c2 models.CVE) bool {
-	return c1.CVE == c2.CVE && c1.DatePublished == c2.DatePublished && c1.DateLastModified == c2.DateLastModified && c1.Description == c2.Description && c1.CVSS == c2.CVSS && c1.Vector == c2.Vector
-}
-
 type cveAffectedComponentRow struct {
 	CveID               int64 `gorm:"column:cve_id"`
 	AffectedComponentID int64 `gorm:"column:affected_component_id"`
 }
 
+// insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
+// this lets us handle on conflicts and updates gracefully, while still having the speed of copy
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if len(cves) == 0 {
 		return nil
@@ -948,6 +920,7 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	slog.Info("inserting into cves using staging table", "amount", len(cves))
 	start := time.Now()
 
+	// first create the staging table to load the data into
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE cves_stage (
 			id                      bigint,
@@ -970,6 +943,7 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		return fmt.Errorf("could not create cves staging table: %w", err)
 	}
 
+	// copy data straight into the staging table
 	columnNames := []string{"id", "cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
 		row := cves[i]
@@ -979,7 +953,7 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
 	}
 
-	// only update OSV-sourced fields on conflict
+	// then insert from the staging table and update entries on conflicts (newest first)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO cves (id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
 		SELECT id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
@@ -998,6 +972,8 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	return nil
 }
 
+// insert into cve relationships using copy in combination with a staging table
+// the staging table step is used to able to handle on conflict, effectively resulting in the deduplication of rows before applying the primary key
 func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
 	if len(cveRelationships) == 0 {
 		return nil
@@ -1005,6 +981,7 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 	slog.Info("inserting into cve_relationships using staging table", "amount", len(cveRelationships))
 	start := time.Now()
 
+	// first create staging table with no constraints
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE cve_relationships_stage (
 			target_cve        text,
@@ -1014,6 +991,7 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 		return fmt.Errorf("could not create cve_relationships staging table: %w", err)
 	}
 
+	// stream data straight into staging table
 	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
 		row := cveRelationships[i]
@@ -1023,6 +1001,7 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 		return fmt.Errorf("could not copy cve relationship rows into staging table: %w", err)
 	}
 
+	// then merge both tables and ignore duplicate rows
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
 		SELECT target_cve, source_cve, relationship_type
@@ -1035,11 +1014,13 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 	return nil
 }
 
+// inserts into affected components using copy + staging table approach
+// the staging table is needed in this case to be able to transform semver values to the semver datatype since COPY lacks this functionality
 func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
 	slog.Info("inserting into affected_components using bulk insert", "amount", len(components))
 	start := time.Now()
-	// pgx has no built-in codec for the custom semver type, so stage as text
-	// and cast during the INSERT ... SELECT.
+
+	// create staging table with COPY supported data types only (text instead of semver)
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE affected_components_stage (
 			id                 bigint,
@@ -1056,6 +1037,7 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 		return fmt.Errorf("could not create staging table: %w", err)
 	}
 
+	// stream the values into the staging table; all affected components attributes are already default postgresql types
 	columnNames := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
 		c := components[i]
@@ -1065,6 +1047,8 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
 	}
 
+	// finally merge both tables and cast the semver texts from the staging table to the semver datatype in the real table
+	// no ON CONFLICT needed since we deduplicated in memory
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO affected_components (
 			id, purl, ecosystem,  version,
@@ -1082,9 +1066,13 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 	return nil
 }
 
+// insert into the cve affected components pivot table using COPY
 func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
 	slog.Info("inserting into cve_affected_component using bulk insert", "amount", len(pivotRows))
 	start := time.Now()
+
+	// stream data straight into the table using COPY (by pass query executioner)
+	// no ON CONFLICT needed since we deduplicated in memory
 	columnNames := []string{"affected_component_id", "cve_id"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
 		row := pivotRows[i]
@@ -1097,146 +1085,7 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
-func insertCVEsUsingUnnest(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
-	if len(cves) == 0 {
-		return nil
-	}
-
-	slog.Info("inserting into cves using unnest", "amount", len(cves))
-	start := time.Now()
-
-	ids := make([]int64, len(cves))
-	cveIDs := make([]string, len(cves))
-	createdAts := make([]time.Time, len(cves))
-	updatedAts := make([]time.Time, len(cves))
-	datePublisheds := make([]time.Time, len(cves))
-	dateLastModifieds := make([]time.Time, len(cves))
-	descriptions := make([]string, len(cves))
-	cvsss := make([]float32, len(cves))
-	references := make([]string, len(cves))
-	cisaExploitAdds := make([]any, len(cves))
-	cisaActionDues := make([]any, len(cves))
-	cisaRequiredActions := make([]string, len(cves))
-	cisaVulnerabilityNames := make([]string, len(cves))
-	epsss := make([]any, len(cves))
-	percentiles := make([]any, len(cves))
-	vectors := make([]string, len(cves))
-
-	now := time.Now()
-	for i := range cves {
-		cveIDs[i] = cves[i].CVE
-		ids[i] = models.CalculateHashForCVE(cves[i].CVE)
-		if cves[i].CreatedAt.IsZero() {
-			createdAts[i] = now
-		} else {
-			createdAts[i] = cves[i].CreatedAt
-		}
-		if cves[i].UpdatedAt.IsZero() {
-			updatedAts[i] = now
-		} else {
-			updatedAts[i] = cves[i].UpdatedAt
-		}
-		datePublisheds[i] = cves[i].DatePublished
-		dateLastModifieds[i] = cves[i].DateLastModified
-		descriptions[i] = cves[i].Description
-		cvsss[i] = cves[i].CVSS
-		references[i] = cves[i].References
-		if cves[i].CISAExploitAdd != nil {
-			cisaExploitAdds[i] = time.Time(*cves[i].CISAExploitAdd).Format("2006-01-02")
-		}
-		if cves[i].CISAActionDue != nil {
-			cisaActionDues[i] = time.Time(*cves[i].CISAActionDue).Format("2006-01-02")
-		}
-		cisaRequiredActions[i] = cves[i].CISARequiredAction
-		cisaVulnerabilityNames[i] = cves[i].CISAVulnerabilityName
-		if cves[i].EPSS != nil {
-			epsss[i] = *cves[i].EPSS
-		}
-		if cves[i].Percentile != nil {
-			percentiles[i] = *cves[i].Percentile
-		}
-		vectors[i] = cves[i].Vector
-	}
-
-	sql := `INSERT INTO cves (cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, id)
-	SELECT
-		unnest($1::text[]),
-		unnest($2::timestamptz[]),
-		unnest($3::timestamptz[]),
-		unnest($4::timestamptz[]),
-		unnest($5::timestamptz[]),
-		unnest($6::text[]),
-		unnest($7::numeric(4,2)[]),
-		unnest($8::text[]),
-		unnest($9::text[])::date,
-		unnest($10::text[])::date,
-		unnest($11::text[]),
-		unnest($12::text[]),
-		unnest($13::text[])::numeric(6,5),
-		unnest($14::text[])::numeric(6,5),
-		unnest($15::text[]),
-		unnest($16::bigint[])
-	ON CONFLICT (cve) DO NOTHING`
-
-	_, err := tx.Exec(ctx, sql,
-		cveIDs,
-		createdAts,
-		updatedAts,
-		datePublisheds,
-		dateLastModifieds,
-		descriptions,
-		cvsss,
-		references,
-		cisaExploitAdds,
-		cisaActionDues,
-		cisaRequiredActions,
-		cisaVulnerabilityNames,
-		epsss,
-		percentiles,
-		vectors,
-		ids,
-	)
-	if err != nil {
-		return fmt.Errorf("could not insert cves: %w", err)
-	}
-	slog.Info("finished inserting into cves", "time", time.Since(start))
-	return nil
-}
-
-func insertCVERelationshipsUsingUnnest(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
-	if len(relationships) == 0 {
-		return nil
-	}
-
-	slog.Info("inserting into cve_relationships using unnest", "amount", len(relationships))
-	start := time.Now()
-
-	sourceCVEs := make([]string, len(relationships))
-	targetCVEs := make([]string, len(relationships))
-	relationshipTypes := make([]string, len(relationships))
-
-	for i := range relationships {
-		sourceCVEs[i] = relationships[i].SourceCVE
-		targetCVEs[i] = relationships[i].TargetCVE
-		relationshipTypes[i] = string(relationships[i].RelationshipType)
-	}
-
-	sql := `INSERT INTO cve_relationships (source_cve, target_cve, relationship_type)
-	SELECT
-		unnest($1::text[]),
-		unnest($2::text[]),
-		unnest($3::text[])
-	ON CONFLICT (source_cve, target_cve, relationship_type) DO NOTHING`
-
-	_, err := tx.Exec(ctx, sql, sourceCVEs, targetCVEs, relationshipTypes)
-	if err != nil {
-		return fmt.Errorf("could not insert cve_relationships: %w", err)
-	}
-	slog.Info("finished inserting into cve_relationships", "time", time.Since(start))
-	return nil
-}
-
-func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
+func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 	SET LOCAL synchronous_commit = OFF; -- this makes postgresql return as soon as the WAL has been written to and we do not need to wait until the contents have been written to the disk
 
@@ -1267,9 +1116,9 @@ func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
     DROP INDEX IF EXISTS idx_affected_components_purl_without_version;
     DROP INDEX IF EXISTS idx_affected_components_version;
 
-	DROP INDEX IF EXISTS idx_ac_purl_version;
+	DROP INDEX IF EXISTS idx_affected_component_purl_version;
 
-	DROP INDEX IF EXISTS idx_ac_purl_semver_range;
+	DROP INDEX IF EXISTS idx_affected_component_purl_semver_range;
 
 	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
 	DROP INDEX IF EXISTS cve_affected_component_cve_id;
@@ -1281,7 +1130,7 @@ func prepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
+func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	slog.Info("start building indexes and re-adding constraints")
 	totalStart := time.Now()
 	_, err := tx.Exec(ctx, `
@@ -1326,12 +1175,14 @@ func addIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	-- Lastly rebuild the indexes
-    CREATE INDEX IF NOT EXISTS cve_affected_component_affected_component_id ON public.cve_affected_component USING hash (cve_id);
+    CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
+
+	CREATE INDEX idx_cve_relationships_target_cve ON public.cve_relationships USING hash (target_cve);
 	
-	CREATE INDEX idx_ac_purl_version
+	CREATE INDEX idx_affected_component_purl_version
   		ON affected_components (purl, version);
 
-	CREATE INDEX idx_ac_purl_semver_range
+	CREATE INDEX idx_affected_component_purl_semver_range
   		ON affected_components (purl, semver_introduced, semver_fixed)
  		WHERE semver_introduced IS NOT NULL OR semver_fixed IS NOT NULL;`)
 	if err != nil {
