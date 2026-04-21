@@ -49,7 +49,7 @@ func TestIsAllowed(t *testing.T) {
 			thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 
 			// Only mock rootAccessControl if we expect it to be called
-			if tc.userID != "admin-token" && tc.object != shared.ObjectOrganization {
+			if tc.object != shared.ObjectOrganization {
 				rootAccessControl.On("IsAllowed", mock.Anything, tc.userID, tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
 			}
 
