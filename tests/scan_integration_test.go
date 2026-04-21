@@ -1636,12 +1636,6 @@ func TestTicketHandling(t *testing.T) {
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
 
-			cve := models.CVE{
-				CVE:  "CVE-2025-46569",
-				CVSS: 8.0,
-			}
-			err = f.DB.Save(&cve).Error
-			assert.Nil(t, err)
 			// scan the sbom with the vulnerability again
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
@@ -1737,6 +1731,7 @@ func TestTicketHandling(t *testing.T) {
 				CVE:  "CVE-2025-46569",
 				CVSS: 8.0,
 			}
+			cve.ID = cve.CalculateHash()
 			err = f.DB.Save(&cve).Error
 			assert.Nil(t, err)
 			if err := f.DB.Exec("DELETE FROM artifact_dependency_vulns adv USING dependency_vulns dv WHERE adv.dependency_vuln_id = dv.id AND dv.cve_id = ?;", "CVE-2025-46569").Error; err != nil {

@@ -414,15 +414,18 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	if err != nil {
 		slog.Warn("could not get last RC import timestamp, assuming no import took place yet", "err", err)
 		idsPerEcosystem, err = s.getRecentlyChangedIDsPerEcosystem(nil)
+		if err != nil {
+			return err
+		}
 	} else {
 		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
 		if err != nil {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
 		idsPerEcosystem, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	// track the time right before fetching the data
 	importStart := time.Now()
@@ -796,7 +799,13 @@ func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) 
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
-	defer tx.Rollback(ctx) // if we run into any errors rollback the entire transaction
+	defer func() {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			slog.Error("could not roll back transaction successfully, database state is potentially inconsistent!")
+			panic(err)
+		}
+	}() // if we run into any errors rollback the entire transaction
 
 	const bulkThreshold = 200_000
 

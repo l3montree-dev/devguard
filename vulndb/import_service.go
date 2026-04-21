@@ -888,7 +888,7 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKeyColumnName, "'"+primaryKeyValue+"'")
 			_, err := tx.Exec(ctx, sql)
 			if err != nil {
-				tx.Rollback(ctx)
+				tx.Rollback(ctx) // nolint
 				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue, "err", err)
 				continue
 			}
