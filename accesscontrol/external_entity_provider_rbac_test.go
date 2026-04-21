@@ -25,13 +25,6 @@ func TestIsAllowed(t *testing.T) {
 
 	tests := []testCase{
 		{
-			name:           "admin token can read",
-			userID:         "admin-token",
-			object:         shared.ObjectProject,
-			action:         shared.ActionRead,
-			expectedResult: true,
-		},
-		{
 			name:           "all users can read organization",
 			userID:         "user1",
 			object:         shared.ObjectOrganization,
@@ -47,20 +40,6 @@ func TestIsAllowed(t *testing.T) {
 			mockErr:   errors.New("some error"),
 			expectErr: true,
 		},
-		{
-			name:           "admin token can not create",
-			userID:         "admin-token",
-			object:         shared.ObjectProject,
-			action:         shared.ActionCreate,
-			expectedResult: false,
-		},
-		{
-			name:           "admin token cannot delete",
-			userID:         "admin-token",
-			object:         shared.ObjectProject,
-			action:         shared.ActionDelete,
-			expectedResult: false,
-		},
 	}
 
 	for _, tc := range tests {
@@ -70,7 +49,7 @@ func TestIsAllowed(t *testing.T) {
 			thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 
 			// Only mock rootAccessControl if we expect it to be called
-			if tc.userID != "admin-token" && tc.object != shared.ObjectOrganization {
+			if tc.object != shared.ObjectOrganization {
 				rootAccessControl.On("IsAllowed", mock.Anything, tc.userID, tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
 			}
 
@@ -93,23 +72,6 @@ func TestIsAllowed(t *testing.T) {
 }
 
 func TestHasAccess(t *testing.T) {
-	t.Run("admin token should have access", func(t *testing.T) {
-		ctx := mocks.NewContext(t)
-		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
-
-		rbac := NewExternalEntityProviderRBAC(
-			ctx,
-			rootAccessControl,
-			thirdpartyIntegrationMock,
-			"external-entity-provider-id",
-		)
-
-		hasAccess, err := rbac.HasAccess(context.Background(), "admin-token")
-		assert.NoError(t, err)
-		assert.True(t, hasAccess)
-	})
-
 	t.Run("if no admin token is provided, the third party integration should be called", func(t *testing.T) {
 		ctx := mocks.NewContext(t)
 		rootAccessControl := mocks.NewAccessControl(t)
