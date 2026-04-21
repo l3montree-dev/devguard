@@ -288,10 +288,6 @@ func TestFromOSV(t *testing.T) {
 	})
 }
 
-func ptr[T any](t T) *T {
-	return &t
-}
-
 func TestSetIdHash(t *testing.T) {
 	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
 		affectedComponent := models.AffectedComponent{

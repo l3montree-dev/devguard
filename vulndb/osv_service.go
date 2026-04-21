@@ -128,10 +128,10 @@ func (s osvService) getEcosystems() ([]string, error) {
 	}
 
 	res, err := s.httpClient.Do(req)
-	defer res.Body.Close()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download ecosystems")
 	}
+	defer res.Body.Close()
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -346,7 +346,13 @@ func (s osvService) MirrorNoConcurrency() error {
 
 			// first build the CVE based on the OSV and save it to the db
 			tx := s.cveRepository.Begin(ctx)
-			defer tx.Rollback()
+			defer func() {
+				err := tx.Rollback()
+				if err != nil {
+					slog.Error("could not roll back transaction successfully, database state is potentially inconsistent!")
+					panic(err)
+				}
+			}()
 
 			relations := transformer.OSVToCVERelationships(&osv)
 
@@ -493,9 +499,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
-	cveIDs := make([]int64, 0, totalCount)
 	for osvObject := range vulnData {
-		cveIDs = append(cveIDs, models.CalculateHashForCVE(osvObject.ID))
 		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
@@ -711,69 +715,6 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 	return idsPerEcosystem, nil
 }
 
-func (s osvService) getOSVObjectsFromIDs(ecosystem string, ids map[string]struct{}) ([]dtos.OSV, error) {
-	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
-	if err != nil {
-		slog.Error("could not read zip", "err", err)
-		return nil, err
-	}
-	if len(zipReader.File) == 0 {
-		slog.Error("no files found in zip")
-		return nil, fmt.Errorf("no files found in zip")
-	}
-
-	entries := make([]dtos.OSV, 0, len(ids))
-	foundIDs := make(map[string]struct{}, len(ids))
-	for i := range zipReader.File {
-		readCloser, err := zipReader.File[i].Open()
-		if err != nil {
-			slog.Error("could not open osv file", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-
-		// only read the id and then decide if we need to further process it
-		var partial struct {
-			ID string `json:"id"`
-		}
-
-		// read until we find the id
-		if err = json.NewDecoder(readCloser).Decode(&partial); err != nil {
-			readCloser.Close()
-			slog.Error("could not parse osv id", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-		readCloser.Close()
-
-		// check if we need to process this file and if we need to continue
-		if _, ok := ids[partial.ID]; !ok {
-			// not relevant -> skip entry
-			continue
-		}
-
-		// we want to process the file so we need to fully read it now
-		osvEntry := dtos.OSV{}
-		readCloserFull, err := zipReader.File[i].Open()
-		if err != nil {
-			slog.Error("could not open osv file", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-
-		if err = json.NewDecoder(readCloserFull).Decode(&osvEntry); err != nil {
-			readCloserFull.Close()
-			slog.Error("could not parse osv file to OSV dto", "file", zipReader.File[i].Name, "err", err)
-			continue
-		}
-		readCloserFull.Close()
-		entries = append(entries, osvEntry)
-		// sanity check with a deduplicated set of ids
-		foundIDs[osvEntry.ID] = struct{}{}
-		if len(foundIDs) == len(ids) {
-			break
-		}
-	}
-	return entries, nil
-}
-
 // execute all necessary steps to insert new entries and update the existing ones
 func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) error {
 	// get the current state of the affected components to avoid creating duplicate entries
@@ -838,7 +779,7 @@ func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) 
 	}
 
 	// free unused slices so that the garbage collector may free the space
-	allEntries = nil
+	allEntries = nil // nolint
 
 	slog.Info("finished building rows", "building time", time.Since(buildingTime))
 
@@ -1177,7 +1118,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	-- Lastly rebuild the indexes
     CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
 
-	CREATE INDEX idx_cve_relationships_target_cve ON public.cve_relationships USING hash (target_cve);
+	CREATE INDEX idx_cve_relationships_target_cve ON public.cve_relationships USING btree (target_cve);
 	
 	CREATE INDEX idx_affected_component_purl_version
   		ON affected_components (purl, version);
@@ -1202,3 +1143,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	slog.Info("finished adding constraints and building indexes", "time", time.Since(totalStart))
 	return nil
 }
+
+// func validateDatabaseState(ctx context.Context, tx pgx.Tx) error {
+
+// }
