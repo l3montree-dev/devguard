@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.2] - 2026-04-22
+
+### Fixed
+
+- Security vulnerability in middleware implementation (more details will be added later)
+
 ## [v1.2.1] - 2026-04-08
 
 ### Fixed
