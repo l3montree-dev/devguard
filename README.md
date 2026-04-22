@@ -95,7 +95,7 @@ curl -L -o kratos/identity.schema.json https://raw.githubusercontent.com/l3montr
 docker compose -f docker-compose-try-it.yaml up
 ```
 
-The web UI is at <http://localhost:3000>, the API at <http://localhost:8080>. Register, create an organization, and you're in.
+The web UI is at <http://localhost:3000>, the API at <http://localhost:8080>, and Kratos (authorization server) at <http://localhost:4433>. Register, create an organization, and you're in.
 
 ### Run your first scan
 
