@@ -85,7 +85,6 @@ var importEcosystems = []string{
 	"npm",
 	"Alpine",
 	"Bitnami",
-	"Chainguard",
 	"crates.io",
 	"Debian",
 	"GIT",
@@ -410,10 +409,11 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	var idsPerEcosystem map[string][]string
 	err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
 
+	var importTimestamp time.Time
 	start := time.Now()
 	if err != nil {
-		slog.Warn("could not get last RC import timestamp, assuming no import took place yet", "err", err)
-		idsPerEcosystem, err = s.getRecentlyChangedIDsPerEcosystem(nil)
+		slog.Info("could not get last RC import timestamp, assuming no import took place yet")
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(nil)
 		if err != nil {
 			return err
 		}
@@ -422,13 +422,11 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
-		idsPerEcosystem, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp)
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp)
 		if err != nil {
 			return err
 		}
 	}
-	// track the time right before fetching the data
-	importStart := time.Now()
 
 	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
 
@@ -522,7 +520,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	slog.Info("successfully processed data to database", "time elapsed", time.Since(dbStart))
 
 	// lastly update the import timestamp to the earliest possible fetching time
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", importStart.Format(time.RFC3339Nano)); err != nil {
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", importTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
 	return nil
@@ -646,18 +644,19 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (map[string][]string, error) {
+func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (map[string][]string, time.Time, error) {
 	closed := false
+	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
 
 	// first get all the recent changes from the osv API
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/modified_id.csv", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, importStart, errors.Wrap(err, "could not create request")
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
+		return nil, importStart, fmt.Errorf("csv fetch http request ran into error: %w", err)
 	}
 
 	defer func() {
@@ -667,12 +666,12 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 	}()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
+		return nil, importStart, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
 	}
 
 	records, err := csv.NewReader(resp.Body).ReadAll()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read csv")
+		return nil, importStart, errors.Wrap(err, "could not read csv")
 	}
 
 	// we read everything from the body so we can close it and mark it as closed
@@ -689,19 +688,10 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 			slog.Warn("invalid cvs row format skipping entry")
 			continue
 		}
-		// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
-		entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
-		if err != nil {
-			return nil, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
-		}
-		// entries are sorted descending by timestamp; only process changes which happened after our latest update
-		if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
-			break
-		}
 
 		ecosystem, id, found := strings.Cut(record[1], "/")
 		if !found {
-			return nil, fmt.Errorf("invalid format for vuln id: %s", record[1])
+			return nil, importStart, fmt.Errorf("invalid format for vuln id: %s", record[1])
 		}
 
 		if !slices.Contains(importEcosystems, ecosystem) || shouldIgnoreVulnerabilityID(id) {
@@ -709,13 +699,29 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 			continue
 		}
 
-		// lastly check if we have already seen this vuln
-		if _, ok := alreadyProcessed[id]; !ok {
-			idsPerEcosystem[ecosystem] = append(idsPerEcosystem[ecosystem], id)
-			alreadyProcessed[id] = struct{}{}
+		// check if we have already seen this vuln
+		if _, ok := alreadyProcessed[id]; ok {
+			continue
 		}
+
+		// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
+		entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
+		if err != nil {
+			return nil, importStart, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
+		}
+		// entries are sorted descending by timestamp; only process changes which happened after our latest update
+		if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
+			break
+		}
+
+		if entryTimestamp.After(importStart) {
+			continue // skip "newer" vulns than our import start
+		}
+
+		alreadyProcessed[id] = struct{}{}
+		idsPerEcosystem[ecosystem] = append(idsPerEcosystem[ecosystem], id)
 	}
-	return idsPerEcosystem, nil
+	return idsPerEcosystem, importStart, nil
 }
 
 // execute all necessary steps to insert new entries and update the existing ones
@@ -747,19 +753,20 @@ func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) 
 
 	// then build the structs for each OSV object
 	for i := range allEntries {
+		// first calculate the components necessary for the skip condition
+		relationships := transformer.OSVToCVERelationships(allEntries[i])
+		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(allEntries[i])
+		if len(affectedComponentsForCVE) == 0 && len(relationships) == 0 {
+			continue // we do not need to process this entry since it will never be found
+		}
+
+		// only then process the rest
+		cveRelationships = append(cveRelationships, relationships...)
+
 		// create the cve first
 		cve := transformer.OSVToCVE(allEntries[i])
 		cve.ID = cve.CalculateHash()
 		cves = append(cves, cve)
-
-		// then calculate all relationships of that cve
-		relationships := transformer.OSVToCVERelationships(allEntries[i])
-		cveRelationships = append(cveRelationships, relationships...)
-
-		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(allEntries[i])
-		if len(affectedComponentsForCVE) == 0 {
-			continue // we do not need to process this entry further
-		}
 
 		// for each affected component check if its already present and create the respective pivot table entries
 		for _, affectedComponent := range affectedComponentsForCVE {
@@ -801,7 +808,7 @@ func (s osvService) processEntries(ctx context.Context, allEntries []*dtos.OSV) 
 	}
 	defer func() {
 		err := tx.Rollback(ctx)
-		if err != nil {
+		if err != nil && err != pgx.ErrTxClosed { // only log if the error is not from trying to roll back a closed transaction
 			slog.Error("could not roll back transaction successfully, database state is potentially inconsistent!")
 			panic(err)
 		}
@@ -1153,6 +1160,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// func validateDatabaseState(ctx context.Context, tx pgx.Tx) error {
-
-// }
+// after importing check if the database state is consistent
+func validateDatabaseState(ctx context.Context, tx pgx.Tx) error {
+	return nil
+}
