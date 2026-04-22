@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ type AttestationFileLine struct {
 }
 
 func fetchAttestationsForReference(ctx context.Context, ref name.Reference) ([]oci.Signature, error) {
-	desc, err := remote.Get(ref, remote.WithContext(ctx))
+	desc, err := remote.Get(ref, remote.WithContext(ctx), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get remote descriptor")
 	}
