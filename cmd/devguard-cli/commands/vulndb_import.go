@@ -19,8 +19,8 @@ import (
 func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
-		Short: "Import vulnerability database from differential updates",
-		Long:  "Imports the vulnerability database using differential CSV files. This applies incremental updates to the database rather than doing a full rebuild, making it faster for regular updates.",
+		Short: "Import the latest state of the vulnerability database",
+		Long:  "Imports all changes since the last import from the OSV database",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 
@@ -33,9 +33,15 @@ func newImportCommand() *cobra.Command {
 				services.ServiceModule,
 				vulndb.Module,
 				fx.Invoke(func(
-					importService shared.VulnDBImportService,
+					cveRepository shared.CveRepository,
+					cweRepository shared.CweRepository,
+					cveRelationshipRepository shared.CVERelationshipRepository,
+					affectedCmpRepository shared.AffectedComponentRepository,
+					configService shared.ConfigService,
+					pool *pgxpool.Pool,
 				) error {
-					return importService.ImportFromDiff(context.Background(), nil)
+					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, configService, pool)
+					return osvService.ImportRC(context.Background())
 				}),
 			)
 

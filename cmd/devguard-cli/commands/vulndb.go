@@ -31,10 +31,7 @@ func NewVulndbCommand() *cobra.Command {
 
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
-	vulndbCmd.AddCommand(newImportRCCommand())
-	vulndbCmd.AddCommand(newExportIncrementalCommand())
 	vulndbCmd.AddCommand(newAliasMappingCommand())
-	vulndbCmd.AddCommand(newCleanupCommand())
 	return &vulndbCmd
 }
 

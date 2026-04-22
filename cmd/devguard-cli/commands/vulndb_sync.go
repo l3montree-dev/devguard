@@ -72,7 +72,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "osv") {
 						slog.Info("starting osv database sync")
 						now := time.Now()
-						if err := osvService.Mirror(context.Background()); err != nil {
+						if err := osvService.ImportRC(context.Background()); err != nil {
 							slog.Error("could not sync osv database", "err", err)
 						}
 						slog.Info("finished osv database sync", "duration", time.Since(now))
