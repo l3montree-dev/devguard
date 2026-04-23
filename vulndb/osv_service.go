@@ -28,6 +28,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -127,8 +128,10 @@ type zipJob struct {
 	Ecosystem string
 }
 
+// imports the newest vulnerability data from the OSV database (using the recently changed csv) and applies it to our vulndb tables (cves, cve_relationships, affected_components, cve_affected_componentss)
 func (s osvService) ImportRC(ctx context.Context) error {
-	slog.Info("start RC import")
+	slog.Info("start vulndb import")
+
 	var lastUpdate string
 	var idsPerEcosystem map[string][]string
 	err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
@@ -169,6 +172,8 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
+	var fetchFailures atomic.Int64
+
 	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
 	vulnData := make(chan *dtos.OSV, 5000)
@@ -186,11 +191,11 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	for range numberOfSingleFetchers {
 		httpWaitGroup.Add(1)
-		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData)
+		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData, &fetchFailures)
 	}
 
 	if anyZip {
-		shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, totalCount)
+		shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, len(idsPerEcosystem))
 		for ecosystem, ids := range idsPerEcosystem {
 			if len(ids) >= zipThreshold {
 				if shouldProcessIDInEcosystem[ecosystem] == nil {
@@ -203,12 +208,12 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		}
 		for range numberOfZipWorkers {
 			zipWorkWaitGroup.Add(1)
-			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData)
+			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, &fetchFailures)
 		}
 	}
 
 	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs)
+	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, &fetchFailures)
 
 	// handle sync via independent go routines
 	go func() {
@@ -228,6 +233,11 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
+
+	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
+	if n := fetchFailures.Load(); n > 0 {
+		return fmt.Errorf("aborting import: %d ids could not be fetched; watermark not advanced, will retry on next run", n)
+	}
 
 	if len(allOSVVulns) == 0 {
 		slog.Warn("could not fetch any OSV vulns")
@@ -382,7 +392,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time) (ma
 }
 
 // controls in what order and what method to use for each ecosystem
-func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob) {
+func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer close(jobs)
 	defer zipPushWaitGroup.Done()
 
@@ -402,7 +412,7 @@ func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerE
 		if len(ids) >= zipThreshold {
 			slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
 			zipPushWaitGroup.Add(1)
-			go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs)
+			go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs, fetchFailures)
 		} else {
 			// otherwise stick to getting each vuln separately
 			slog.Info("start creating jobs for ecosystem", "ecosystem", ecosystem, "amount", len(ids))
@@ -417,17 +427,20 @@ func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerE
 	slog.Info("finished pushing all jobs")
 }
 
-func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, zipJobs chan zipJob) {
+func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 	start := time.Now()
 
 	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
 	if err != nil {
-		slog.Error("could not read zip", "err", err, "ecosystem", ecosystem)
+		// whole ecosystem worth of ids lost; count each so the abort log reflects the real blast radius
+		fetchFailures.Add(int64(len(idsToFetch)))
+		slog.Error("could not read zip", "err", err, "ecosystem", ecosystem, "lost ids", len(idsToFetch))
 		return
 	}
 	if len(zipReader.File) == 0 {
-		slog.Error("no files found in zip", "ecosystem", ecosystem)
+		fetchFailures.Add(int64(len(idsToFetch)))
+		slog.Error("no files found in zip", "ecosystem", ecosystem, "lost ids", len(idsToFetch))
 		return
 	}
 
@@ -451,11 +464,20 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 	return utils.ZipReaderFromResponse(res)
 }
 
-func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV) {
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
+		id, _, ok := strings.Cut(zipJob.File.Name, ".")
+		if !ok {
+			continue
+		}
+		// first check if we should even process this id, using the filename
+		if _, ok := shouldProcessID[zipJob.Ecosystem][id]; !ok {
+			continue
+		}
 		readCloser, err := zipJob.File.Open()
 		if err != nil {
+			fetchFailures.Add(1)
 			slog.Error("could not open osv file", "file", zipJob.File.Name, "err", err)
 			continue
 		}
@@ -463,34 +485,35 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldPr
 		osvEntry := dtos.OSV{}
 		if err = json.NewDecoder(readCloser).Decode(&osvEntry); err != nil {
 			readCloser.Close()
+			fetchFailures.Add(1)
 			slog.Error("could not parse osv file to OSV dto", "file", zipJob.File.Name, "err", err)
 			continue
 		}
 		readCloser.Close()
-
-		if _, ok := shouldProcessID[zipJob.Ecosystem][osvEntry.ID]; !ok {
-			continue
-		}
 		output <- &osvEntry
 	}
 }
 
-func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan *dtos.OSV) {
+func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
 	for job := range jobs {
-		url := fmt.Sprintf("https://storage.googleapis.com/osv-vulnerabilities/%s/%s.json", job.Ecosystem, job.ID)
+		url := fmt.Sprintf("%s/%s/%s.json", osvBaseURL, job.Ecosystem, job.ID)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
+			fetchFailures.Add(1)
 			slog.Error("could not build http request to fetch osv data", "err", err, "url", url)
 			continue
 		}
 
 		resp, err := client.Do(req)
 		if err != nil {
+			fetchFailures.Add(1)
 			slog.Error("could not fetch osv data via http request", "err", err, "url", url)
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			fetchFailures.Add(1)
 			slog.Error("fetching vuln data was unsuccessful", "url", url)
 			continue
 		}
@@ -498,6 +521,7 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 		osvVuln := dtos.OSV{}
 		if err = json.NewDecoder(resp.Body).Decode(&osvVuln); err != nil {
 			resp.Body.Close()
+			fetchFailures.Add(1)
 			slog.Error("could not parse osv file to OSV dto", "OSV ID", job.ID, "url", url)
 			continue
 		}
@@ -571,7 +595,7 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 		}
 	}
 	slog.Info("finished building rows", "building time", time.Since(buildingTime))
-	return vulndbRows{cves, cveRelationships, affectedComponents, cveAffectedComponents}, nil
+	return vulndbRows{CVEs: cves, CVERelationships: cveRelationships, AffectedComponents: affectedComponents, CVEAffectedComponents: cveAffectedComponents}, nil
 }
 
 // write all rows to the database using the appropriate insert method
@@ -837,7 +861,7 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
 	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
 	
-	-- lastly drop all indexes 
+	-- lastly drop all indexes (might be redundant but safe)
 	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
     DROP INDEX IF EXISTS idx_affected_components_semver_introduced;
     DROP INDEX IF EXISTS idx_affected_components_version_fixed;
@@ -900,7 +924,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return fmt.Errorf("could not apply foreign key constraints: %w", err)
 	}
-	slog.Info("finsihed applying all foreign key constraints", "time", time.Since(start))
+	slog.Info("finished applying all foreign key constraints", "time", time.Since(start))
 
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
