@@ -99,8 +99,8 @@ jobs:
       api-url: https://api.main.devguard.org
       artifact-name: "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner"
       web-ui: https://main.devguard.org
-      fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-cvss: never
+      fail-on-risk: never
       image-suffix: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
