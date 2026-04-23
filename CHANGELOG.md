@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.3] - 2026-04-23
+
+### Fixed
+
+- Remote authentication flow for attestations now works correctly when fetching attestations
+
 ## [v1.2.2] - 2026-04-22
 
 ### Fixed
@@ -186,7 +192,12 @@ This is the first stable release of DevGuard. It marks the transition from the `
 - GitLab ticket links using un-slugified refs
 - Various database constraint and migration errors
 
-[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.1.0...main
+[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.2.3...main
+[v1.2.3]: https://github.com/l3montree-dev/devguard/compare/v1.2.2...v1.2.3
+[v1.2.2]: https://github.com/l3montree-dev/devguard/compare/v1.2.1...v1.2.2
+[v1.2.1]: https://github.com/l3montree-dev/devguard/compare/v1.2.0...v1.2.1
+[v1.2.0]: https://github.com/l3montree-dev/devguard/compare/v1.1.1...v1.2.0
+[v1.1.1]: https://github.com/l3montree-dev/devguard/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/l3montree-dev/devguard/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/l3montree-dev/devguard/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/l3montree-dev/devguard/compare/v0.4.7...v1.0.0
