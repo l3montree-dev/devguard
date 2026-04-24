@@ -134,7 +134,7 @@ func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.O
 		return fmt.Errorf("received nil response when sending SBOM")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to send SBOM, status: %s", resp.Status)
 	}
 
@@ -142,9 +142,7 @@ func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.O
 }
 
 func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
-	return nil
-
-	/*body := WebhookStruct{
+	body := WebhookStruct{
 		Organization: org,
 		Project:      project,
 		Asset:        asset,
@@ -159,16 +157,19 @@ func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln 
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return fmt.Errorf("received nil response when sending first party vulnerabilities")
+	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to send vulnerability, status: %s,", resp.Status)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("failed to send vulnerability, status: %s", resp.Status)
 	}
 
-	return nil*/
+	return nil
 }
 
 func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
@@ -197,7 +198,7 @@ func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln 
 		return fmt.Errorf("received nil response when sending dependency vulnerabilities")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to send vulnerability, status: %s", resp.Status)
 	}
 
