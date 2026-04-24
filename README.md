@@ -79,54 +79,13 @@ DevGuard is for developers, DevOps engineers, and security teams. No specialized
 
 [![Code risk analysis](docs/screenshots/code-risks.png)](docs/screenshots/code-risks.png)
 
-## Quick Start
+## Getting started
 
-### Try DevGuard locally with Docker Compose
+The full documentation lives at **[docs.devguard.org](https://docs.devguard.org)**. It covers installation, quickstart, CI/CD integration, scanner usage, and configuration.
 
-Spin up a full DevGuard stack (API, worker, Kratos, Postgres) on your machine:
+For details on connecting to your CI, setting up the dependency firewall, or self-hosting in production, see the [documentation](https://docs.devguard.org).
 
-```bash
-curl -LO https://raw.githubusercontent.com/l3montree-dev/devguard/main/docker-compose-try-it.yaml
-curl -LO https://raw.githubusercontent.com/l3montree-dev/devguard/main/initdb.sql
-mkdir -p kratos
-curl -L -o kratos/kratos.yml           https://raw.githubusercontent.com/l3montree-dev/devguard/main/.kratos/kratos.example.yml
-curl -L -o kratos/identity.schema.json https://raw.githubusercontent.com/l3montree-dev/devguard/main/.kratos/identity.schema.json
 
-docker compose -f docker-compose-try-it.yaml up
-```
-
-The web UI is at <http://localhost:3000>, the API at <http://localhost:8080>, and Kratos (authorization server) at <http://localhost:4433>. Register, create an organization, and you're in.
-
-### Run your first scan
-
-After creating a repository in the UI, generate a personal access token and run:
-
-```bash
-docker run -v "$PWD:/app" ghcr.io/l3montree-dev/devguard/scanner:main-latest \
-  devguard-scanner sca \
-    --path=/app \
-    --assetName="myorg/projects/myproject/assets/myrepo" \
-    --apiUrl="http://localhost:8080" \
-    --token="<YOUR_TOKEN>" \
-    --webUI="http://localhost:3000"
-```
-
-The full walk-through, including GitHub Actions and GitLab CI recipes, is in the [Quickstart guide](https://docs.devguard.org/getting-started).
-
-### Prefer hosted?
-
-Sign up for the free public instance at <https://app.devguard.org/registration>. Self-hosting for production is covered in the [installation docs](https://docs.devguard.org/getting-started/installation).
-
-## How It Works
-
-DevGuard coordinates four moving parts:
-
-1. **Scanner** — a Go CLI (`devguard-scanner`) that runs in your CI or locally. It wraps Trivy, Semgrep, gitleaks, and others behind one interface, and can forward SBOMs/SARIF from existing tools.
-2. **API** (this repository) — a Go service backed by PostgreSQL. Ingests scan results, runs risk scoring, persists SBOMs and VEX documents, drives compliance workflows, and exposes everything over a REST API.
-3. **Web frontend** — [devguard-web](https://github.com/l3montree-dev/devguard-web), a Next.js app for exploring risks, running triage, and managing policies.
-4. **Dependency Firewall** — an optional registry proxy for npm, Go, and Python that blocks malicious packages at install time.
-
-All communication is through open standards (SBOM, VEX, SARIF, in-toto, SLSA), so any component can be replaced or integrated with existing infrastructure.
 
 ## Documentation
 
