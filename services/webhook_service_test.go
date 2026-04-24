@@ -9,9 +9,17 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func newTestWebhookService(url string) *webhookClient {
+	webhookClient := NewWebhookService(url, nil)
+	webhookClient.retryDelays = []time.Duration{0, 0, 0}
+	return webhookClient
+}
 
 func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 	t.Run("should succeed on first attempt when request is successful", func(t *testing.T) {
@@ -25,7 +33,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookService(server.URL, nil)
+		client := newTestWebhookService(server.URL)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
@@ -46,18 +54,16 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookService(server.URL, nil)
+		client := newTestWebhookService(server.URL)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, resp)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 		assert.Equal(t, 3, attemptCount, "Should make exactly 3 attempts on 5xx")
-		if resp != nil {
-			resp.Body.Close()
-		}
 	})
 
 	t.Run("should not retry on 4xx client errors", func(t *testing.T) {
@@ -69,18 +75,16 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookService(server.URL, nil)
+		client := newTestWebhookService(server.URL)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, resp)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 		assert.Equal(t, 1, attemptCount, "Should not retry on 4xx")
-		if resp != nil {
-			resp.Body.Close()
-		}
 	})
 
 	t.Run("should retry on 429 Too Many Requests", func(t *testing.T) {
@@ -92,17 +96,15 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := NewWebhookService(server.URL, nil)
+		client := newTestWebhookService(server.URL)
 		body := strings.NewReader(`{"test": "data"}`)
 
 		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, resp)
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 		assert.Equal(t, 3, attemptCount, "Should retry on 429")
-		if resp != nil {
-			resp.Body.Close()
-		}
 	})
 }
