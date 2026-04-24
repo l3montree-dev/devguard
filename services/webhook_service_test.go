@@ -37,10 +37,9 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		resp.Body.Close()
 	})
 
-	t.Run("should make exactly 3 attempts when requests fail", func(t *testing.T) {
+	t.Run("should retry 3 times on 5xx and return the last response", func(t *testing.T) {
 		attemptCount := 0
 
-		// Setup test server that always fails
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attemptCount++
 			w.WriteHeader(http.StatusInternalServerError)
@@ -52,9 +51,58 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 
 		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
 
-		assert.Error(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, 3, attemptCount, "Should make exactly 3 attempts")
-		assert.Contains(t, err.Error(), "webhook request failed with no response")
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Equal(t, 3, attemptCount, "Should make exactly 3 attempts on 5xx")
+		if resp != nil {
+			resp.Body.Close()
+		}
+	})
+
+	t.Run("should not retry on 4xx client errors", func(t *testing.T) {
+		attemptCount := 0
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attemptCount++
+			w.WriteHeader(http.StatusBadRequest)
+		}))
+		defer server.Close()
+
+		client := NewWebhookService(server.URL, nil)
+		body := strings.NewReader(`{"test": "data"}`)
+
+		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		assert.Equal(t, 1, attemptCount, "Should not retry on 4xx")
+		if resp != nil {
+			resp.Body.Close()
+		}
+	})
+
+	t.Run("should retry on 429 Too Many Requests", func(t *testing.T) {
+		attemptCount := 0
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attemptCount++
+			w.WriteHeader(http.StatusTooManyRequests)
+		}))
+		defer server.Close()
+
+		client := NewWebhookService(server.URL, nil)
+		body := strings.NewReader(`{"test": "data"}`)
+
+		resp, err := client.CreateRequest(context.Background(), "POST", server.URL, body)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+		assert.Equal(t, 3, attemptCount, "Should retry on 429")
+		if resp != nil {
+			resp.Body.Close()
+		}
 	})
 }

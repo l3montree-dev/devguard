@@ -73,39 +73,55 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
-	// Retry logic with delays: 1s, 5s, 10s
 	retryDelays := []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}
 
-	var resp *http.Response
+	var (
+		resp    *http.Response
+		lastErr error
+	)
 
 	for i, delay := range retryDelays {
+		// Drain and close the previous iteration's body so the connection can be reused.
+		if resp != nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			resp = nil
+		}
+
 		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bodyBytes))
 		if err != nil {
 			return nil, err
 		}
-
 		if c.Secret != nil {
 			req.Header.Set("X-Webhook-Secret", *c.Secret)
 		}
-
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err = c.httpClient.Do(req)
+		resp, lastErr = c.httpClient.Do(req)
 
-		if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// Don't retry on 2xx or permanent 4xx — only 408/429 are retryable in the 4xx range.
+		if lastErr == nil && resp.StatusCode < 500 &&
+			resp.StatusCode != http.StatusRequestTimeout &&
+			resp.StatusCode != http.StatusTooManyRequests {
 			return resp, nil
 		}
 
 		if i == len(retryDelays)-1 {
-			return nil, fmt.Errorf("webhook request failed with no response")
+			break
 		}
 
-		time.Sleep(delay)
+		select {
+		case <-ctx.Done():
+			if resp != nil {
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
 	}
 
-	// This should never be reached due to the break condition above
-	return nil, fmt.Errorf("unexpected end of retry loop")
-
+	return resp, lastErr
 }
 
 func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
