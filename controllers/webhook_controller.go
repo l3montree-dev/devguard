@@ -303,8 +303,9 @@ func (w *WebhookController) HandleEvent(ctx context.Context, event any) error {
 				//send sbom
 				if err := client.SendSBOM(ctx, *event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send SBOM to webhook", "webhookID", webhook.ID, "err", err)
+				} else {
+					slog.Info("webhook sent", "eventType", "sbom", "webhookID", webhook.ID, "org", event.Org.Name)
 				}
-				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
 			}
 		}
 	case shared.FirstPartyVulnsDetectedEvent:
@@ -323,8 +324,9 @@ func (w *WebhookController) HandleEvent(ctx context.Context, event any) error {
 				//send vulnerability
 				if err := client.SendFirstPartyVulnerabilities(ctx, vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
 					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
+				} else {
+					slog.Info("webhook sent", "eventType", "firstPartyVulnerabilities", "webhookID", webhook.ID, "org", event.Org.Name)
 				}
-				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)
 			}
 		}
 
@@ -344,8 +346,9 @@ func (w *WebhookController) HandleEvent(ctx context.Context, event any) error {
 				//send vulnerability
 				if err := client.SendDependencyVulnerabilities(ctx, vulns, event.Org, event.Project, event.Asset, event.AssetVersion, event.Artifact); err != nil {
 					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
+				} else {
+					slog.Info("webhook sent", "eventType", "dependencyVulnerabilities", "webhookID", webhook.ID, "org", event.Org.Name)
 				}
-				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)
 			}
 		}
 	}
