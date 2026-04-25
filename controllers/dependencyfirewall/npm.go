@@ -97,7 +97,7 @@ func (npmEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 
 // ProxyNPMTarball handles explicit-version npm requests (.tgz downloads).
 // Routes: GET /npm/:package/-/* and GET /npm/:scope/:name/-/*
-func (d *DependencyProxyController) ProxyNPMTarball(c shared.Context) error {
+func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -116,8 +116,8 @@ func (d *DependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := ensureReadMethod(c); err != nil {
+		return err
 	}
 
 	slog.Info("Proxy request", "proxy", "npm", "type", "tarball", "method", c.Request().Method, "path", requestPath)
@@ -180,12 +180,7 @@ func (d *DependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "npm", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	_, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
@@ -212,7 +207,7 @@ func (d *DependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 // ProxyNPMMetadata handles metadata / version-resolution npm requests (no explicit version in path).
 // Routes: GET /npm/:package and GET /npm/:scope/:name
-func (d *DependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
+func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -231,8 +226,8 @@ func (d *DependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := ensureReadMethod(c); err != nil {
+		return err
 	}
 
 	slog.Info("Proxy request", "proxy", "npm", "type", "metadata", "method", c.Request().Method, "path", requestPath)
@@ -253,12 +248,7 @@ func (d *DependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "npm", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	resolvedVersion, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
@@ -308,7 +298,7 @@ func (d *DependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
 	return npm.writeResponse(c, data, requestPath, false)
 }
 
-func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
+func (d *NPMDependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 	requestPath := npm.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm-audit",
@@ -338,18 +328,10 @@ func (d *DependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
 
-	for key, values := range headers {
-		for _, value := range values {
-			c.Response().Header().Add(key, value)
-		}
-	}
-
-	fmt.Println(string(data))
-
-	return c.Blob(statusCode, headers.Get("Content-Type"), data)
+	return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 }
 
-func (d *DependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Context, requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
+func (d *NPMDependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Context, requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(npmRegistry, requestPath)
 	if err != nil {
@@ -406,7 +388,7 @@ func (d *DependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Contex
 }
 
 // ExtractNPMVersionAndReleaseTimeFromMetadata parses NPM package metadata JSON and extracts the latest version and its release time.
-func (d *DependencyProxyController) ExtractNPMVersionAndReleaseTimeFromMetadata(data []byte) (string, time.Time) {
+func (d *NPMDependencyProxyController) ExtractNPMVersionAndReleaseTimeFromMetadata(data []byte) (string, time.Time) {
 	var metadata struct {
 		DistTags struct {
 			Latest string `json:"latest"`

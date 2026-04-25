@@ -57,7 +57,7 @@ func (pypiEcosystem) parsePackage(path string) (string, string) {
 	path = strings.TrimPrefix(path, "/")
 	if after, ok := strings.CutPrefix(path, "simple/"); ok {
 		return strings.TrimSuffix(after, "/"), ""
-	} else if strings.HasPrefix(path, "/packages/") {
+	} else if strings.HasPrefix(path, "packages/") {
 		filename := filepath.Base(path)
 		matches := pypiFilenameRe.FindStringSubmatch(filename)
 		if len(matches) > 2 {
@@ -106,9 +106,7 @@ func (pypiEcosystem) writeResponse(c shared.Context, data []byte, path string, c
 
 // ProxyPyPIPackage handles explicit-version PyPI package downloads (from /packages/).
 // Route: GET /pypi/packages/*
-func (d *DependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
-	pypi := pypiEcosystem{}
-
+func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -127,8 +125,8 @@ func (d *DependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := ensureReadMethod(c); err != nil {
+		return err
 	}
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "package", "method", c.Request().Method, "path", requestPath)
@@ -191,12 +189,7 @@ func (d *DependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "pypi", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
@@ -212,9 +205,7 @@ func (d *DependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 
 // ProxyPyPISimple handles PyPI /simple/ metadata requests, resolving the latest version before checking rules.
 // Route: GET /pypi/simple/:package
-func (d *DependencyProxyController) ProxyPyPISimple(c shared.Context) error {
-	pypi := pypiEcosystem{}
-
+func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -234,8 +225,8 @@ func (d *DependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := ensureReadMethod(c); err != nil {
+		return err
 	}
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "simple", "method", c.Request().Method, "path", requestPath)
@@ -254,12 +245,7 @@ func (d *DependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "pypi", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	// Fetch the PyPI JSON API to resolve version and release time before checking rules —
@@ -315,7 +301,7 @@ func (d *DependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 	return pypi.writeResponse(c, data, requestPath, false)
 }
 
-func (d *DependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
+func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(pypiRegistry, requestPath)
 	if err != nil {
@@ -351,7 +337,7 @@ func (d *DependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, r
 
 // ExtractPyPIReleaseTime parses a PyPI JSON API response and returns the resolved version and its upload time.
 // If version is empty, it uses info.version (the current release).
-func (d *DependencyProxyController) ExtractPyPIReleaseTime(data []byte, version string) (string, time.Time, bool) {
+func (d *PythonDependencyProxyController) ExtractPyPIReleaseTime(data []byte, version string) (string, time.Time, bool) {
 	var metadata struct {
 		Info struct {
 			Version string `json:"version"`
@@ -378,7 +364,7 @@ func (d *DependencyProxyController) ExtractPyPIReleaseTime(data []byte, version 
 }
 
 // fetchPyPILatestVersionAndReleaseTime fetches the PyPI JSON API and returns the resolved version and its release time.
-func (d *DependencyProxyController) fetchPyPILatestVersionAndReleaseTime(ctx context.Context, pkgName string) (string, time.Time, bool) {
+func (d *PythonDependencyProxyController) fetchPyPILatestVersionAndReleaseTime(ctx context.Context, pkgName string) (string, time.Time, bool) {
 	data, _, statusCode, err := d.fetchPyPIFromUpstream(ctx, "/pypi/"+pkgName+"/json", http.Header{})
 	if err != nil || statusCode != http.StatusOK {
 		return "", time.Time{}, false

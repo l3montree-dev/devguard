@@ -102,7 +102,7 @@ func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cac
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), data)
 }
 
-func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
+func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 	requestPath := golang.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.go",
@@ -115,8 +115,8 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := ensureReadMethod(c); err != nil {
+		return err
 	}
 
 	configs, err := d.GetDependencyProxyConfigs(c)
@@ -137,7 +137,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 }
 
 // proxyGoExplicitVersion handles Go proxy requests for a specific version (.info, .mod, .zip).
-func (d *DependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string) error {
+func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string) error {
 	cachePath := d.getCachePath(eco, requestPath)
 
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, eco, requestPath, configs)
@@ -196,12 +196,7 @@ func (d *DependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "go", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	_, releaseTime, hasReleaseTime := d.ExtractGoVersionAndReleaseTime(data)
@@ -235,7 +230,7 @@ func (d *DependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx
 }
 
 // proxyGoLatest handles Go proxy requests for @latest and @v/list (version-resolution requests).
-func (d *DependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string) error {
+func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string) error {
 	cachePath := d.getCachePath(eco, requestPath)
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -251,12 +246,7 @@ func (d *DependencyProxyController) proxyGoLatest(c shared.Context, ctx context.
 
 	if statusCode != http.StatusOK {
 		slog.Debug("Upstream returned non-OK status", "proxy", "go", "status", statusCode)
-		for key, values := range headers {
-			for _, value := range values {
-				c.Response().Header().Add(key, value)
-			}
-		}
-		return c.Blob(statusCode, headers.Get("Content-Type"), data)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
 	resolvedVersion, releaseTime, hasReleaseTime := d.ExtractGoVersionAndReleaseTime(data)
@@ -311,7 +301,7 @@ func (d *DependencyProxyController) proxyGoLatest(c shared.Context, ctx context.
 }
 
 // ExtractGoVersionAndReleaseTime parses a Go proxy .info response and returns the resolved version and its release time.
-func (d *DependencyProxyController) ExtractGoVersionAndReleaseTime(data []byte) (string, time.Time, bool) {
+func (d *GoDependencyProxyController) ExtractGoVersionAndReleaseTime(data []byte) (string, time.Time, bool) {
 	var info struct {
 		Version string    `json:"Version"`
 		Time    time.Time `json:"Time"`

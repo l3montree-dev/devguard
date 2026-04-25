@@ -112,4 +112,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(ProvideDependencyProxyCache),
 	fx.Provide(fx.Annotate(ProvideMaliciousPackageChecker, fx.As(new(shared.MaliciousPackageChecker)))),
 	fx.Provide(dependencyfirewall.NewDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewNPMDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewGoDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewPythonDependencyProxyController),
 )

@@ -154,6 +154,23 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	return data, resp.Header, resp.StatusCode, nil
 }
 
+func ensureReadMethod(c shared.Context) error {
+	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
+		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
+	}
+	return nil
+}
+
+func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context, headers http.Header, statusCode int, data []byte) error {
+	for key, values := range headers {
+		for _, value := range values {
+			c.Response().Header().Add(key, value)
+		}
+	}
+
+	return c.Blob(statusCode, headers.Get("Content-Type"), data)
+}
+
 func (d *DependencyProxyController) cacheData(cachePath string, data []byte) error {
 	dir := filepath.Dir(cachePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
