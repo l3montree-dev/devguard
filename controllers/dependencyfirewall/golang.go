@@ -40,6 +40,16 @@ var (
 	goPathRe        = regexp.MustCompile(`^([^@]+)(?:@v/([^/]+))?`)
 )
 
+// GoDependencyProxyController handles Go dependency proxy requests.
+// It embeds DependencyProxyController to reuse shared helpers and state.
+type GoDependencyProxyController struct {
+	*DependencyProxyController
+}
+
+func NewGoDependencyProxyController(controller *DependencyProxyController) *GoDependencyProxyController {
+	return &GoDependencyProxyController{DependencyProxyController: controller}
+}
+
 type goEcosystem struct{}
 
 var golang goEcosystem

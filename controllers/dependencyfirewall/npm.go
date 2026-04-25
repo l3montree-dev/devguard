@@ -25,6 +25,16 @@ const npmRegistry = "https://registry.npmjs.org"
 
 var npmProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?npm(?:/|$)`)
 
+// NPMDependencyProxyController handles npm dependency proxy requests.
+// It embeds DependencyProxyController to reuse shared helpers and state.
+type NPMDependencyProxyController struct {
+	*DependencyProxyController
+}
+
+func NewNPMDependencyProxyController(controller *DependencyProxyController) *NPMDependencyProxyController {
+	return &NPMDependencyProxyController{DependencyProxyController: controller}
+}
+
 type npmEcosystem struct{}
 
 var npm npmEcosystem

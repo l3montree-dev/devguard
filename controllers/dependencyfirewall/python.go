@@ -43,6 +43,16 @@ var (
 	pypiFilenameRe    = regexp.MustCompile(`^([a-zA-Z0-9_-]+)-([0-9\.]+[a-zA-Z0-9\.]*)(?:-|\.).*$`)
 )
 
+// PythonDependencyProxyController handles PyPI dependency proxy requests.
+// It embeds DependencyProxyController to reuse shared helpers and state.
+type PythonDependencyProxyController struct {
+	*DependencyProxyController
+}
+
+func NewPythonDependencyProxyController(controller *DependencyProxyController) *PythonDependencyProxyController {
+	return &PythonDependencyProxyController{DependencyProxyController: controller}
+}
+
 type pypiEcosystem struct{}
 
 var pypi pypiEcosystem
