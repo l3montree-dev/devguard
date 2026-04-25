@@ -37,10 +37,7 @@ type PathPattern []string
 
 // IsWildcard returns true if the element is a wildcard (*).
 func IsWildcard(elem string) bool {
-	// ROOT is a special element in the path
-	// this means, THE CURRENT application does not call the vulnerable code
-	// therefore, we can just replace it with a wildcard for matching purposes
-	return elem == PathPatternWildcard || elem == normalize.GraphRootNodeID
+	return elem == PathPatternWildcard
 }
 
 // MatchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
@@ -55,6 +52,14 @@ func (p PathPattern) MatchesSuffix(path []string) bool {
 
 	if len(p) == 0 {
 		return true
+	}
+
+	// ROOT is a stop marker meaning "direct dependency only". When the pattern
+	// contains ROOT, skip suffix scanning and match the full path from position 0.
+	for _, elem := range p {
+		if elem == normalize.GraphRootNodeID {
+			return matchPatternExact(p, path)
+		}
 	}
 
 	// For suffix matching, we try increasingly longer suffixes
@@ -98,6 +103,15 @@ func matchPatternExact(pattern, path []string) bool {
 				return true
 			}
 
+			// If the next pattern element is ROOT (stop marker), try a zero-length
+			// match for this wildcard. [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]:
+			// ROOT anchors the remainder to the current path position.
+			if pattern[pIdx+1] == normalize.GraphRootNodeID {
+				if matchPatternExact(pattern[pIdx+1:], path[pathIdx:]) {
+					return true
+				}
+			}
+
 			// Try to find the next pattern element in the path
 			nextPattern := pattern[pIdx+1]
 
@@ -123,6 +137,13 @@ func matchPatternExact(pattern, path []string) bool {
 				return true
 			}
 			return pathIdx == len(path)
+		}
+
+		// ROOT is a stop marker — it is never stored in VulnerabilityPath,
+		// so skip it in the pattern without consuming a path element.
+		if pattern[pIdx] == normalize.GraphRootNodeID {
+			pIdx++
+			continue
 		}
 
 		// Literal match
