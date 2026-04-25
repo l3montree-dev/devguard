@@ -51,7 +51,7 @@ type DependencyProxyCache struct {
 }
 type DependencyProxyConfigs struct {
 	Rules          []string `json:"rules"`
-	MinReleaseTime int      `json:"minReleaseTime"` // in hours
+	MinReleaseAge int `json:"minReleaseAge"` // in hours
 }
 
 type DependencyProxyController struct {
@@ -163,16 +163,16 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 			if err == nil {
 				// Verify cache integrity
 				if d.VerifyCacheIntegrity(cachePath, data) {
-					if configs.MinReleaseTime > 0 {
+					if configs.MinReleaseAge > 0 {
 						if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-							if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-								return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseTime)
+							if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+								return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseAge)
 							}
 							span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 							return d.writeNPMResponse(c, data, requestPath, true)
 						}
 						// No cached release time - fall through to upstream to retrieve it
-						slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "npm", "path", requestPath)
+						slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "npm", "path", requestPath)
 					} else {
 						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 						return d.writeNPMResponse(c, data, requestPath, true)
@@ -242,10 +242,10 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		}
 	}
 
-	// Check MinReleaseTime for metadata responses (non-tgz)
-	if configs.MinReleaseTime > 0 && !hasExplicitVersion && packageName != "" {
-		if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-			return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseTime)
+	// Check MinReleaseAge for metadata responses (non-tgz)
+	if configs.MinReleaseAge > 0 && !hasExplicitVersion && packageName != "" {
+		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+			return d.blockTooNewPackage(c, NPMProxy, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 
 	}
@@ -255,7 +255,7 @@ func (d *DependencyProxyController) ProxyNPM(c shared.Context) error {
 		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
 	}
 
-	// Store release time so MinReleaseTime can be enforced on future cache hits
+	// Store release time so MinReleaseAge can be enforced on future cache hits
 
 	if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
 		slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
@@ -374,16 +374,16 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 			if err == nil {
 				// Verify cache integrity
 				if d.VerifyCacheIntegrity(cachePath, data) {
-					if configs.MinReleaseTime > 0 {
+					if configs.MinReleaseAge > 0 {
 						if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-							if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-								return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
+							if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+								return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseAge)
 							}
 							span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 							return d.writeGoResponse(c, data, requestPath, true)
 						}
 						// No cached release time - fall through to upstream to retrieve it
-						slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "go", "path", requestPath)
+						slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "go", "path", requestPath)
 					} else {
 						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 						return d.writeGoResponse(c, data, requestPath, true)
@@ -451,11 +451,11 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		}
 	}
 
-	// Check MinReleaseTime for .info responses or resolved-version responses (e.g. /@latest)
-	if configs.MinReleaseTime > 0 && hasReleaseTime {
+	// Check MinReleaseAge for .info responses or resolved-version responses (e.g. /@latest)
+	if configs.MinReleaseAge > 0 && hasReleaseTime {
 		if strings.HasSuffix(requestPath, ".info") || (!hasExplicitVersion && resolvedVersion != "") {
-			if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-				return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseTime)
+			if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+				return d.blockTooNewPackage(c, GoProxy, requestPath, releaseTime, configs.MinReleaseAge)
 			}
 		}
 	}
@@ -465,7 +465,7 @@ func (d *DependencyProxyController) ProxyGo(c shared.Context) error {
 		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
 	}
 
-	// Store release time so MinReleaseTime can be enforced on future cache hits
+	// Store release time so MinReleaseAge can be enforced on future cache hits
 	if hasReleaseTime && (strings.HasSuffix(requestPath, ".info") || (!hasExplicitVersion && resolvedVersion != "")) {
 		if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
 			slog.Warn("Failed to cache release time", "proxy", "go", "error", err)
@@ -541,16 +541,16 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 			if err == nil {
 				// Verify cache integrity
 				if d.VerifyCacheIntegrity(cachePath, data) {
-					if configs.MinReleaseTime > 0 {
+					if configs.MinReleaseAge > 0 {
 						if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-							if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-								return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseTime)
+							if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+								return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseAge)
 							}
 							span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 							return d.writePyPIResponse(c, data, requestPath, true)
 						}
 						// No cached release time - fall through to upstream to retrieve it
-						slog.Debug("No cached release time for MinReleaseTime check, refetching", "proxy", "pypi", "path", requestPath)
+						slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "pypi", "path", requestPath)
 					} else {
 						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 						return d.writePyPIResponse(c, data, requestPath, true)
@@ -619,9 +619,9 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 				}
 			}
 
-			if configs.MinReleaseTime > 0 {
-				if time.Since(releaseTime) > time.Duration(configs.MinReleaseTime)*time.Hour {
-					return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseTime)
+			if configs.MinReleaseAge > 0 {
+				if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+					return d.blockTooNewPackage(c, PyPIProxy, requestPath, releaseTime, configs.MinReleaseAge)
 				}
 			}
 		}
@@ -632,7 +632,7 @@ func (d *DependencyProxyController) ProxyPyPI(c shared.Context) error {
 		slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
 	}
 
-	// Store release time so MinReleaseTime can be enforced on future cache hits
+	// Store release time so MinReleaseAge can be enforced on future cache hits
 	if !pypiReleaseTime.IsZero() {
 		if err := d.CacheReleaseTime(cachePath, pypiReleaseTime); err != nil {
 			slog.Warn("Failed to cache release time", "proxy", "pypi", "error", err)
@@ -956,13 +956,13 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
 		var raw struct {
-			Rules          string `json:"rules"`
-			MinReleaseTime int    `json:"minReleaseTime"`
+			Rules         string `json:"rules"`
+			MinReleaseAge int    `json:"minReleaseAge"`
 		}
 		if err := json.Unmarshal([]byte(s), &raw); err != nil {
 			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
 		}
-		configs.MinReleaseTime = raw.MinReleaseTime
+		configs.MinReleaseAge = raw.MinReleaseAge
 		for _, line := range strings.Split(raw.Rules, "\n") {
 			line = strings.TrimSpace(line)
 			if line != "" && !strings.HasPrefix(line, "#") {
@@ -974,7 +974,7 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	return configs, nil
 }
 
-// CacheReleaseTime stores the release time for a cached entry to enable MinReleaseTime checks on cache hits.
+// CacheReleaseTime stores the release time for a cached entry to enable MinReleaseAge checks on cache hits.
 func (d *DependencyProxyController) CacheReleaseTime(cachePath string, releaseTime time.Time) error {
 	if releaseTime.IsZero() {
 		return nil
@@ -1396,7 +1396,7 @@ func (d *DependencyProxyController) fetchPyPILatestVersionAndReleaseTime(ctx con
 	return d.ExtractPyPIReleaseTime(data, "")
 }
 
-func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyType ProxyType, path string, releaseTime time.Time, minReleaseTime int) error {
+func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyType ProxyType, path string, releaseTime time.Time, minReleaseAge int) error {
 	span := trace.SpanFromContext(c.Request().Context())
 	span.SetAttributes(
 		attribute.Bool("proxy.too_new_blocked", true),
@@ -1414,7 +1414,7 @@ func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyTy
 	reason := fmt.Sprintf("Package %s was released %s ago, which is less than the required minimum of %d hours",
 		packageName,
 		time.Since(releaseTime).Round(time.Minute),
-		minReleaseTime,
+		minReleaseAge,
 	)
 	slog.Warn("BLOCKED TOO NEW PACKAGE", "path", path, "reason", reason)
 
