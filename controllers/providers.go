@@ -16,10 +16,12 @@
 package controllers
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -30,7 +32,7 @@ import (
 var controllersTracer = otel.Tracer("devguard/controllers")
 
 // ProvideDependencyProxyCache creates the configuration for the dependency proxy
-func ProvideDependencyProxyCache() DependencyProxyCache {
+func ProvideDependencyProxyCache() dependencyfirewall.DependencyProxyCache {
 	var cacheDir string
 	dependencyProxyCacheDir := os.Getenv("DEPENDENCY_PROXY_CACHE_DIR")
 	if dependencyProxyCacheDir != "" {
@@ -47,7 +49,7 @@ func ProvideDependencyProxyCache() DependencyProxyCache {
 		slog.Error("Failed to create cache directory", "error", err)
 	}
 
-	return DependencyProxyCache{
+	return dependencyfirewall.DependencyProxyCache{
 		CacheDir: cacheDir,
 	}
 }
@@ -60,8 +62,7 @@ func ProvideMaliciousPackageChecker(
 	repository := repositories.NewMaliciousPackageRepository(db)
 	checker, err := vulndb.NewMaliciousPackageChecker(repository)
 	if err != nil {
-		slog.Warn("Could not initialize malicious package checker", "error", err)
-		return nil
+		panic(fmt.Sprintf("could not initialize malicious package checker: %v", err))
 	}
 
 	return checker
@@ -110,5 +111,5 @@ var ControllerModule = fx.Options(
 	// Dependency Proxy
 	fx.Provide(ProvideDependencyProxyCache),
 	fx.Provide(fx.Annotate(ProvideMaliciousPackageChecker, fx.As(new(shared.MaliciousPackageChecker)))),
-	fx.Provide(NewDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewDependencyProxyController),
 )

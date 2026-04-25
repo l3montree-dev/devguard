@@ -17,6 +17,7 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
@@ -31,7 +32,7 @@ func NewOrgRouter(
 	sessionGroup SessionRouter,
 	orgController *controllers.OrgController,
 	projectController *controllers.ProjectController,
-	dependencyProxyController *controllers.DependencyProxyController,
+	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	firstPartyVulnController *controllers.FirstPartyVulnController,
 	policyController *controllers.PolicyController,

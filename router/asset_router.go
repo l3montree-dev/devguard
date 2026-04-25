@@ -17,6 +17,7 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -29,7 +30,7 @@ type AssetRouter struct {
 func NewAssetRouter(
 	projectGroup ProjectRouter,
 	assetController *controllers.AssetController,
-	dependencyProxyController *controllers.DependencyProxyController,
+	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	assetVersionController *controllers.AssetVersionController,
 	complianceController *controllers.ComplianceController,
 	statisticsController *controllers.StatisticsController,

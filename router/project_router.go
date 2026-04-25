@@ -17,6 +17,7 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -30,7 +31,7 @@ func NewProjectRouter(
 	organizationGroup OrgRouter,
 	projectController *controllers.ProjectController,
 	assetController *controllers.AssetController,
-	dependencyProxyController *controllers.DependencyProxyController,
+	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
