@@ -32,5 +32,15 @@ func NewDependencyProxyRouter(
 	group.GET("/pypi", controller.ProxyPyPI)
 	group.GET("/pypi/*", controller.ProxyPyPI)
 
+	// Secret-scoped routes (used without DevGuard authentication)
+	secretGroup := group.Group("/:secret")
+	secretGroup.GET("/npm", controller.ProxyNPM)
+	secretGroup.GET("/npm/*", controller.ProxyNPM)
+	secretGroup.POST("/npm/*", controller.ProxyNPMAudit)
+	secretGroup.GET("/go", controller.ProxyGo)
+	secretGroup.GET("/go/*", controller.ProxyGo)
+	secretGroup.GET("/pypi", controller.ProxyPyPI)
+	secretGroup.GET("/pypi/*", controller.ProxyPyPI)
+
 	return DependencyProxyRouter{Group: group}
 }

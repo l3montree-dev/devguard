@@ -139,7 +139,6 @@ func main() {
 		fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 		fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
 		fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
-		fx.Invoke(func(shareDependencyProxyRouter router.ShareDependencyProxyRouter) {}),
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
