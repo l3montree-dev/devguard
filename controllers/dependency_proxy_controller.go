@@ -38,6 +38,14 @@ const (
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
 
+var (
+	npmProxyPrefixRe  = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?npm(?:/|$)`)
+	goProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?go(?:/|$)`)
+	pypiProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?pypi(?:/|$)`)
+	goPathRe          = regexp.MustCompile(`^([^@]+)(?:@v/([^/]+))?`)
+	pypiFilenameRe    = regexp.MustCompile(`^([a-zA-Z0-9_-]+)-([0-9\.]+[a-zA-Z0-9\.]*)(?:-|\.).*$`)
+)
+
 type ProxyType string
 
 const (
@@ -64,10 +72,21 @@ type DependencyProxyController struct {
 	client                 *http.Client
 }
 
-// trimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix from the path.
+// TrimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix from the path.
 // The secret segment is optional to support routes with and without a secret.
 func TrimProxyPrefix(path string, ecosystem ProxyType) string {
-	encodedPackage := regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?`+regexp.QuoteMeta(string(ecosystem))+`(?:/|$)`).ReplaceAllString(path, "")
+	var re *regexp.Regexp
+	switch ecosystem {
+	case NPMProxy:
+		re = npmProxyPrefixRe
+	case GoProxy:
+		re = goProxyPrefixRe
+	case PyPIProxy:
+		re = pypiProxyPrefixRe
+	default:
+		return path
+	}
+	encodedPackage := re.ReplaceAllString(path, "")
 	decodedPackage, err := url.PathUnescape(encodedPackage)
 	if err != nil {
 		return encodedPackage
@@ -83,6 +102,9 @@ func NewDependencyProxyController(
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
 ) *DependencyProxyController {
+	if maliciousChecker == nil {
+		panic("maliciousChecker must not be nil: dependency proxy firewall would be silently disabled")
+	}
 	return &DependencyProxyController{
 		dependencyProxyService: dependencyProxyService,
 		maliciousChecker:       maliciousChecker,
