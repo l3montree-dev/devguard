@@ -13,9 +13,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Copyright 2025 l3montree GmbH.
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 package dependencyfirewall
 
 import (
@@ -46,17 +43,34 @@ import (
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
 
-type ProxyType string
+// ecosystem abstracts the per-protocol behavior needed by the shared proxy logic.
+type ecosystem interface {
+	// name returns the identifier used in PURLs, log fields, and cache subdirectories.
+	name() string
+	// trimPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix.
+	trimPrefix(path string) string
+	// parsePackage extracts the package name and version from the cleaned request path.
+	parsePackage(path string) (packageName, version string)
+	// isCached reports whether the local cache entry is still fresh enough to serve.
+	isCached(cachePath string) bool
+	// writeResponse writes the proxied payload to the HTTP response.
+	writeResponse(c shared.Context, data []byte, path string, cached bool) error
+}
 
-const (
-	NPMProxy  ProxyType = "npm"
-	GoProxy   ProxyType = "go"
-	PyPIProxy ProxyType = "pypi"
-)
+// trimWithRegex is a shared helper for ecosystem.trimPrefix implementations.
+func trimWithRegex(path string, re *regexp.Regexp) string {
+	encoded := re.ReplaceAllString(path, "")
+	decoded, err := url.PathUnescape(encoded)
+	if err != nil {
+		return encoded
+	}
+	return decoded
+}
 
 type DependencyProxyCache struct {
 	CacheDir string
 }
+
 type DependencyProxyConfigs struct {
 	Rules         []string `json:"rules"`
 	MinReleaseAge int      `json:"minReleaseAge"` // in hours
@@ -70,28 +84,6 @@ type DependencyProxyController struct {
 	maliciousChecker       shared.MaliciousPackageChecker
 	cacheDir               string
 	client                 *http.Client
-}
-
-// TrimProxyPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix from the path.
-// The secret segment is optional to support routes with and without a secret.
-func TrimProxyPrefix(path string, ecosystem ProxyType) string {
-	var re *regexp.Regexp
-	switch ecosystem {
-	case NPMProxy:
-		re = npmProxyPrefixRe
-	case GoProxy:
-		re = goProxyPrefixRe
-	case PyPIProxy:
-		re = pypiProxyPrefixRe
-	default:
-		return path
-	}
-	encodedPackage := re.ReplaceAllString(path, "")
-	decodedPackage, err := url.PathUnescape(encodedPackage)
-	if err != nil {
-		return encodedPackage
-	}
-	return decodedPackage
 }
 
 func NewDependencyProxyController(
@@ -119,22 +111,19 @@ func NewDependencyProxyController(
 	}
 }
 
-func (d *DependencyProxyController) getCachePath(proxyType ProxyType, requestPath string) string {
+func (d *DependencyProxyController) getCachePath(eco ecosystem, requestPath string) string {
 	cleanPath := strings.TrimPrefix(requestPath, "/")
-	subDir := string(proxyType)
-	return filepath.Join(d.cacheDir, subDir, cleanPath)
+	return filepath.Join(d.cacheDir, eco.name(), cleanPath)
 }
 
-func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, proxyType ProxyType, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
-	// remove any trailing slashes from requestPath
+func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(upstreamURL, requestPath)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
 	}
-	slog.Debug("Fetching from upstream", "proxy", proxyType, "url", url, "bodyPresent", body != nil)
+	slog.Debug("Fetching from upstream", "proxy", eco.name(), "url", url, "bodyPresent", body != nil)
 
-	// Determine HTTP method based on body presence
 	method := "GET"
 	if body != nil {
 		method = "POST"
@@ -145,7 +134,6 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, proxy
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Forward Content-Type for POST requests
 	if method == "POST" {
 		if contentType := headers.Get("Content-Type"); contentType != "" {
 			req.Header.Set("Content-Type", contentType)
@@ -174,14 +162,12 @@ func (d *DependencyProxyController) cacheData(cachePath string, data []byte) err
 	return os.WriteFile(cachePath, data, 0644)
 }
 
-// CacheDataWithIntegrity stores data and its SHA256 hash for integrity verification
+// CacheDataWithIntegrity stores data and its SHA256 hash for integrity verification.
 func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, data []byte) error {
-	// Write the data file
 	if err := d.cacheData(cachePath, data); err != nil {
 		return err
 	}
 
-	// Calculate and store SHA256 hash
 	hash := sha256.Sum256(data)
 	hashStr := hex.EncodeToString(hash[:])
 	hashPath := cachePath + ".sha256"
@@ -195,7 +181,6 @@ func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, dat
 }
 
 func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
-	//get registry url from env
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {
 		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
@@ -258,9 +243,7 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 		if err != nil {
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
-
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
-
 	case "project":
 		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid)
 		if err != nil {
@@ -322,15 +305,12 @@ func (d *DependencyProxyController) ReadCachedReleaseTime(cachePath string) (tim
 	return t, true
 }
 
-// VerifyCacheIntegrity checks if the cached data matches its stored hash
+// VerifyCacheIntegrity checks if the cached data matches its stored hash.
 func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data []byte) bool {
 	hashPath := cachePath + ".sha256"
 
-	// Read stored hash
 	storedHashBytes, err := os.ReadFile(hashPath)
 	if err != nil {
-		// If hash file doesn't exist, consider it valid for backward compatibility
-		// but log a warning
 		if os.IsNotExist(err) {
 			slog.Debug("No integrity hash found for cached file", "path", cachePath)
 			return true
@@ -340,12 +320,9 @@ func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data 
 	}
 
 	storedHash := string(storedHashBytes)
-
-	// Calculate current hash
 	hash := sha256.Sum256(data)
 	currentHash := hex.EncodeToString(hash[:])
 
-	// Compare
 	if currentHash != storedHash {
 		slog.Error("Cache integrity verification failed",
 			"path", cachePath,
@@ -357,91 +334,18 @@ func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data 
 	return true
 }
 
-func (d *DependencyProxyController) ParsePackageFromPath(proxyType ProxyType, path string) (string, string) {
-	switch proxyType {
-	case NPMProxy:
-		if strings.HasSuffix(path, ".tgz") {
-			parts := strings.Split(path, "/-/")
-			if len(parts) == 2 {
-				pkgName := strings.TrimPrefix(parts[0], "/")
-				filename := strings.TrimSuffix(parts[1], ".tgz")
-
-				// For scoped packages like @babel/core, the tarball is named core-7.23.0.tgz
-				// For regular packages like lodash, the tarball is named lodash-4.17.21.tgz
-				var expectedPrefix string
-				if strings.HasPrefix(pkgName, "@") {
-					// Scoped package: @scope/name -> use just "name" as prefix
-					if idx := strings.LastIndex(pkgName, "/"); idx != -1 {
-						expectedPrefix = pkgName[idx+1:]
-					}
-				} else {
-					// Regular package: use full package name
-					expectedPrefix = pkgName
-				}
-
-				version := strings.TrimPrefix(filename, expectedPrefix+"-")
-				return pkgName, version
-			}
-		}
-		pkgName := strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/")
-		return pkgName, ""
-
-	case GoProxy:
-		matches := goPathRe.FindStringSubmatch(path)
-		if len(matches) > 1 {
-			moduleName := strings.TrimPrefix(matches[1], "/")
-			version := ""
-			if len(matches) > 2 && matches[2] != "" {
-				if matches[2] == "list" {
-					return strings.TrimRight(moduleName, "/"), ""
-				}
-				version = strings.TrimSuffix(strings.TrimSuffix(matches[2], ".info"), ".mod")
-				version = strings.TrimSuffix(version, ".zip")
-			}
-			return strings.TrimRight(moduleName, "/"), version
-		}
-
-	case PyPIProxy:
-		// PyPI simple API: /simple/<package-name>/ or /packages/<filename>
-		// Extract package name from path like /simple/django/ or /packages/django-3.2.0-py3-none-any.whl
-		path = strings.TrimPrefix(path, "/")
-		if after, ok := strings.CutPrefix(path, "simple/"); ok {
-			pkgName := after
-			pkgName = strings.TrimSuffix(pkgName, "/")
-			return pkgName, ""
-		} else if strings.HasPrefix(path, "/packages/") {
-			filename := filepath.Base(path)
-			// Try to extract package name and version from filename
-			matches := pypiFilenameRe.FindStringSubmatch(filename)
-			if len(matches) > 2 {
-				return matches[1], matches[2]
-			}
-		}
-	}
-
-	return "", ""
-}
-
 // matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
-// - *pattern* → contains
-// - *pattern  → contains (suffix match)
-// - pattern*  → starts with
-// - a*b       → starts with "a" and ends with "b"
-// - pattern   → exact match
 func matchPattern(pattern, packagePurl string) bool {
 	parts := strings.Split(pattern, "*")
 	if len(parts) == 1 {
 		return packagePurl == pattern
 	}
-	// First part must be a prefix (empty if pattern starts with *)
 	if parts[0] != "" && !strings.HasPrefix(packagePurl, parts[0]) {
 		return false
 	}
-	// Last part must be a suffix (empty if pattern ends with *)
 	if parts[len(parts)-1] != "" && !strings.HasSuffix(packagePurl, parts[len(parts)-1]) {
 		return false
 	}
-	// Middle parts must appear in order
 	rest := packagePurl
 	for _, part := range parts {
 		if part == "" {
@@ -456,17 +360,16 @@ func matchPattern(pattern, packagePurl string) bool {
 	return true
 }
 
-func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, proxyType ProxyType, path string, configs DependencyProxyConfigs) (bool, string) {
+func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, eco ecosystem, path string, configs DependencyProxyConfigs) (bool, string) {
 	var packageName, version, packagePurl string
 	if strings.HasPrefix(path, "pkg:") {
-		// Path is already a PURL — use it directly.
 		packagePurl = path
 	} else {
-		packageName, version = d.ParsePackageFromPath(proxyType, path)
+		packageName, version = eco.parsePackage(path)
 		if packageName == "" {
 			return false, ""
 		}
-		packagePurl = fmt.Sprintf("pkg:%s/%s", proxyType, packageName)
+		packagePurl = fmt.Sprintf("pkg:%s/%s", eco.name(), packageName)
 		if version != "" {
 			packagePurl += "@" + version
 		}
@@ -480,9 +383,7 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
-		matched := matchPattern(pattern, packagePurl)
-
-		if matched {
+		if matchPattern(pattern, packagePurl) {
 			blocked = !negate
 			matchedRule = rule
 		}
@@ -498,26 +399,16 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	return false, ""
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, proxyType ProxyType, path string) (bool, string) {
-	packageName, version := d.ParsePackageFromPath(proxyType, path)
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
+	packageName, version := eco.parsePackage(path)
 	if packageName == "" {
 		return false, ""
 	}
 
-	ecosystem := ""
-	switch proxyType {
-	case NPMProxy:
-		ecosystem = "npm"
-	case GoProxy:
-		ecosystem = "go"
-	case PyPIProxy:
-		ecosystem = "pypi"
-	}
-
-	slog.Debug("Checking package against malicious database", "ecosystem", ecosystem, "package", packageName, "version", version)
-	isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, ecosystem, packageName, version)
+	slog.Debug("Checking package against malicious database", "ecosystem", eco.name(), "package", packageName, "version", version)
+	isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, eco.name(), packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", proxyType, "error", err)
+		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
 		return false, ""
 	}
 
@@ -532,7 +423,7 @@ func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, p
 	return false, ""
 }
 
-func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
+func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {
 	span := trace.SpanFromContext(c.Request().Context())
 	span.SetAttributes(
 		attribute.Bool("proxy.not_allowed_blocked", true),
@@ -544,24 +435,22 @@ func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, pro
 
 	slog.Warn("BLOCKED NOT ALLOWED PACKAGE", "path", path, "reason", reason)
 
-	packageName, _ := d.ParsePackageFromPath(proxyType, path)
+	packageName, _ := eco.parsePackage(path)
 	if packageName == "" {
 		packageName = "unknown"
 	}
 	span.SetAttributes(attribute.String("proxy.package", packageName))
 
-	response := map[string]any{
+	return c.JSON(http.StatusForbidden, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the dependency proxy rules",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,
-	}
-
-	return c.JSON(http.StatusForbidden, response)
+	})
 }
 
-func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, proxyType ProxyType, path, reason string) error {
+func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco ecosystem, path, reason string) error {
 	span := trace.SpanFromContext(c.Request().Context())
 	span.SetAttributes(
 		attribute.Bool("proxy.malicious_blocked", true),
@@ -573,34 +462,29 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, prox
 
 	slog.Warn("BLOCKED MALICIOUS PACKAGE", "path", path, "reason", reason)
 
-	// Extract package name from path
-	packageName, _ := d.ParsePackageFromPath(proxyType, path)
+	packageName, _ := eco.parsePackage(path)
 	if packageName == "" {
 		packageName = "unknown"
 	}
 	span.SetAttributes(attribute.String("proxy.package", packageName))
 
-	response := map[string]any{
+	return c.JSON(http.StatusForbidden, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,
-	}
-
-	return c.JSON(http.StatusForbidden, response)
+	})
 }
 
-func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyType ProxyType, path string, releaseTime time.Time, minReleaseAge int) error {
+func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, eco ecosystem, path string, releaseTime time.Time, minReleaseAge int) error {
 	span := trace.SpanFromContext(c.Request().Context())
-	span.SetAttributes(
-		attribute.Bool("proxy.too_new_blocked", true),
-	)
+	span.SetAttributes(attribute.Bool("proxy.too_new_blocked", true))
 	span.SetStatus(codes.Error, "package too new")
 
 	c.Response().Header().Set("X-Too-New-Package", "blocked")
 
-	packageName, _ := d.ParsePackageFromPath(proxyType, path)
+	packageName, _ := eco.parsePackage(path)
 	if packageName == "" {
 		packageName = "unknown"
 	}
@@ -613,13 +497,11 @@ func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, proxyTy
 	)
 	slog.Warn("BLOCKED TOO NEW PACKAGE", "path", path, "reason", reason)
 
-	response := map[string]any{
+	return c.JSON(http.StatusForbidden, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked because it was released too recently",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,
-	}
-
-	return c.JSON(http.StatusForbidden, response)
+	})
 }
