@@ -18,6 +18,8 @@ package dependencyfirewall
 import (
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -96,4 +98,50 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("expected Content-Type application/json, got %q", got)
 	}
+}
+
+func TestGetCachePathPreventsTraversal(t *testing.T) {
+	d := &DependencyProxyController{cacheDir: t.TempDir()}
+	cacheRoot := filepath.Join(d.cacheDir, npm.name())
+
+	t.Run("normal path stays in cache root", func(t *testing.T) {
+		path, err := d.getCachePath(npm, "lodash/-/lodash-4.17.21.tgz")
+		if err != nil {
+			t.Fatalf("expected no error for normal path, got %v", err)
+		}
+
+		rel, err := filepath.Rel(cacheRoot, path)
+		if err != nil {
+			t.Fatalf("failed to compute relative path: %v", err)
+		}
+		if strings.HasPrefix(rel, "..") {
+			t.Fatalf("normal path escaped cache root: %q", path)
+		}
+	})
+
+	t.Run("traversal-like paths cannot escape cache root", func(t *testing.T) {
+		cases := []string{
+			"../../etc/passwd",
+			"/../../etc/passwd",
+			"foo/../../../bar",
+			"./../../tmp/file",
+		}
+
+		for _, tc := range cases {
+			t.Run(tc, func(t *testing.T) {
+				path, err := d.getCachePath(npm, tc)
+				if err != nil {
+					t.Fatalf("expected traversal input to be sanitized in-root, got error: %v", err)
+				}
+
+				rel, err := filepath.Rel(cacheRoot, path)
+				if err != nil {
+					t.Fatalf("failed to compute relative path: %v", err)
+				}
+				if strings.HasPrefix(rel, "..") {
+					t.Fatalf("path traversal escaped cache root for %q: %q", tc, path)
+				}
+			})
+		}
+	})
 }

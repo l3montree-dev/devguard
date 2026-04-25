@@ -111,9 +111,21 @@ func NewDependencyProxyController(
 	}
 }
 
-func (d *DependencyProxyController) getCachePath(eco ecosystem, requestPath string) string {
-	cleanPath := strings.TrimPrefix(requestPath, "/")
-	return filepath.Join(d.cacheDir, eco.name(), cleanPath)
+func (d *DependencyProxyController) getCachePath(eco ecosystem, requestPath string) (string, error) {
+	cleanPath := filepath.Clean("/" + requestPath)
+	cleanPath = strings.TrimPrefix(cleanPath, "/")
+
+	if cleanPath == "" || cleanPath == "." {
+		return "", fmt.Errorf("invalid cache path")
+	}
+
+	cacheRoot := filepath.Join(d.cacheDir, eco.name())
+	fullPath := filepath.Join(cacheRoot, cleanPath)
+	if rel, err := filepath.Rel(cacheRoot, fullPath); err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("cache path traversal detected")
+	}
+
+	return fullPath, nil
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
@@ -240,8 +252,10 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	var configs DependencyProxyConfigs
-
 	secret := c.Param("secret")
+	if secret == "" {
+		return configs, nil // no secret context means no custom configs
+	}
 	uuidSecret, err := uuid.Parse(secret)
 	if err != nil {
 		return configs, fmt.Errorf("invalid dependency proxy secret: %w", err)

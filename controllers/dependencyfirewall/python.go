@@ -120,6 +120,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
@@ -141,7 +142,11 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "package", "method", c.Request().Method, "path", requestPath)
 
-	cachePath := d.getCachePath(pypi, requestPath)
+	cachePath, err := d.getCachePath(pypi, requestPath)
+	if err != nil {
+		slog.Warn("Invalid cache path", "proxy", "pypi", "path", requestPath, "error", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
+	}
 
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, pypi, requestPath, configs)
 	if notAllowed {
@@ -219,6 +224,10 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
+		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
 	pkgName := c.Param("package")
@@ -241,7 +250,11 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "simple", "method", c.Request().Method, "path", requestPath)
 
-	cachePath := d.getCachePath(pypi, requestPath)
+	cachePath, err := d.getCachePath(pypi, requestPath)
+	if err != nil {
+		slog.Warn("Invalid cache path", "proxy", "pypi", "path", requestPath, "error", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
+	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 

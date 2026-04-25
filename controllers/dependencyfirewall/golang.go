@@ -132,6 +132,7 @@ func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
 	slog.Info("Proxy request", "proxy", "go", "method", c.Request().Method, "path", requestPath)
@@ -148,7 +149,11 @@ func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 
 // proxyGoExplicitVersion handles Go proxy requests for a specific version (.info, .mod, .zip).
 func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string) error {
-	cachePath := d.getCachePath(eco, requestPath)
+	cachePath, err := d.getCachePath(eco, requestPath)
+	if err != nil {
+		slog.Warn("Invalid cache path", "proxy", "go", "path", requestPath, "error", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
+	}
 
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, eco, requestPath, configs)
 	if notAllowed {
@@ -241,7 +246,11 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 
 // proxyGoLatest handles Go proxy requests for @latest and @v/list (version-resolution requests).
 func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string) error {
-	cachePath := d.getCachePath(eco, requestPath)
+	cachePath, err := d.getCachePath(eco, requestPath)
+	if err != nil {
+		slog.Warn("Invalid cache path", "proxy", "go", "path", requestPath, "error", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
+	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
