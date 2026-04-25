@@ -18,7 +18,6 @@ stages:
   nix_cache_public_key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
   nix_cache_s3_bucket: nix
   nix_cache_region: garage
-  version: applicative-systems-nix
 
 
 include:
