@@ -366,18 +366,18 @@ func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data 
 }
 
 // matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
-func matchPattern(pattern, packagePurl string) bool {
+func matchPattern(pattern, str string) bool {
 	parts := strings.Split(pattern, "*")
 	if len(parts) == 1 {
-		return packagePurl == pattern
+		return str == pattern
 	}
-	if parts[0] != "" && !strings.HasPrefix(packagePurl, parts[0]) {
+	if parts[0] != "" && !strings.HasPrefix(str, parts[0]) {
 		return false
 	}
-	if parts[len(parts)-1] != "" && !strings.HasSuffix(packagePurl, parts[len(parts)-1]) {
+	if parts[len(parts)-1] != "" && !strings.HasSuffix(str, parts[len(parts)-1]) {
 		return false
 	}
-	rest := packagePurl
+	rest := str
 	for _, part := range parts {
 		if part == "" {
 			continue

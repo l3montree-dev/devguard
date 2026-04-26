@@ -145,3 +145,41 @@ func TestGetCachePathPreventsTraversal(t *testing.T) {
 		}
 	})
 }
+
+func TestMatchPattern(t *testing.T) {
+	t.Run("matches exact pattern", func(t *testing.T) {
+		if !matchPattern("lodash", "lodash") {
+			t.Fatal("expected exact match to succeed")
+		}
+	})
+
+	t.Run("matches wildcard pattern", func(t *testing.T) {
+		if !matchPattern("lodash/*", "lodash/core") {
+			t.Fatal("expected wildcard match to succeed")
+		}
+	})
+
+	t.Run("does not match non-matching pattern", func(t *testing.T) {
+		if matchPattern("lodash/*", "react/core") {
+			t.Fatal("expected non-matching pattern to fail")
+		}
+	})
+
+	t.Run("matches wildcard inside string", func(t *testing.T) {
+		if !matchPattern("github.com/*/bar", "github.com/foo/bar") {
+			t.Fatal("expected wildcard match to succeed")
+		}
+	})
+
+	t.Run("does not match if wildcard does not align", func(t *testing.T) {
+		if matchPattern("github.com/*/bar", "github.com/foo/baz") {
+			t.Fatal("expected non-matching pattern to fail")
+		}
+	})
+
+	t.Run("matches multiple wildcards", func(t *testing.T) {
+		if !matchPattern("github.com/*/bar/*", "github.com/foo/bar/baz") {
+			t.Fatal("expected multiple wildcard match to succeed")
+		}
+	})
+}
