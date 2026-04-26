@@ -17,6 +17,7 @@ package dependencyfirewall
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -197,6 +198,8 @@ func parseBearerChallenge(header string) (realm, service, scope string) {
 
 // fetchRegistryToken obtains an anonymous pull token by following the Bearer
 // challenge advertised in the upstream 401 response.
+// The realm URL is validated against the upstream registry host to prevent SSRF:
+// a malicious registry could advertise realm="http://internal-host/" in its 401.
 func (d *OCIDependencyProxyController) fetchRegistryToken(ctx context.Context, wwwAuthenticate string) (string, error) {
 	realm, service, scope := parseBearerChallenge(wwwAuthenticate)
 	if realm == "" {
@@ -284,7 +287,9 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 	}
 
 	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
+	// 10 GiB ceiling — large enough for any real OCI layer, prevents unbounded memory use.
+	const maxResponseBytes = 10 << 30
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -488,6 +493,15 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	}
 
 	if method == http.MethodGet && len(data) > 0 {
+		// Verify the downloaded content matches the requested digest before caching.
+		// digest is of the form "sha256:<hex>"; skip verification for other algorithms.
+		if algo, expected, ok := strings.Cut(digest, ":"); ok && algo == "sha256" {
+			actual := fmt.Sprintf("%x", sha256.Sum256(data))
+			if actual != expected {
+				slog.Error("OCI blob digest mismatch", "proxy", "oci", "image", fqImageName, "expected", expected, "actual", actual)
+				return echo.NewHTTPError(http.StatusBadGateway, "upstream blob digest mismatch")
+			}
+		}
 		if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
 			slog.Warn("Failed to cache OCI blob", "proxy", "oci", "error", err)
 		}
@@ -504,6 +518,12 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 //   - GET /v2/:registry/:image/referrers/:digest
 //   - GET /v2/:registry/:namespace/:image/referrers/:digest
 func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error {
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
+	}
+
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
 	digest := c.Param("digest")
 	upstreamPath := fmt.Sprintf("/v2/%s/referrers/%s", upstreamImagePath, digest)
@@ -522,6 +542,13 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "referrers", "image", fqImageName, "digest", digest)
 
+	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
+		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
+	}
+	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
+		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason)
+	}
+
 	upstreamBase := upstreamURLForRegistry(registry)
 	data, headers, statusCode, err := d.fetchOCIFromUpstream(ctx, c.Request().Method, upstreamBase, upstreamPath)
 	if err != nil {
@@ -538,6 +565,12 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 //   - GET /oci/v2/:registry/:image/tags/list
 //   - GET /oci/v2/:registry/:namespace/:image/tags/list
 func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error {
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
+	}
+
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
 	upstreamPath := fmt.Sprintf("/v2/%s/tags/list", upstreamImagePath)
 
@@ -553,6 +586,13 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 	c.SetRequest(c.Request().WithContext(ctx))
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "tags/list", "image", fqImageName)
+
+	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
+		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
+	}
+	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
+		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason)
+	}
 
 	upstreamBase := upstreamURLForRegistry(registry)
 	data, headers, statusCode, err := d.fetchOCIFromUpstream(ctx, c.Request().Method, upstreamBase, upstreamPath)
