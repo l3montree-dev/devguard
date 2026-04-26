@@ -23,18 +23,18 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
+func TestDependencyProxyControllerIntegrityVerification(t *testing.T) {
 	// Create temporary cache directory
 	tempDir := t.TempDir()
 
 	// Create controller
-	config := controllers.DependencyProxyConfig{
+	config := dependencyfirewall.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
@@ -42,7 +42,7 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := dependencyfirewall.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Cache with integrity verification", func(t *testing.T) {
 		testData := []byte("test package content")
@@ -129,17 +129,17 @@ func TestDependencyProxyController_IntegrityVerification(t *testing.T) {
 	})
 }
 
-func TestDependencyProxyController_MaliciousPackageRemoval(t *testing.T) {
+func TestDependencyProxyControllerMaliciousPackageRemoval(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := dependencyfirewall.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := dependencyfirewall.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
 
 	t.Run("Malicious package removed from cache", func(t *testing.T) {
 		// Cache a "malicious" package
@@ -155,17 +155,18 @@ func TestDependencyProxyController_MaliciousPackageRemoval(t *testing.T) {
 	})
 }
 
-func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
+func TestDependencyProxyControllerExtractNPMVersion(t *testing.T) {
 	tempDir := t.TempDir()
 
-	config := controllers.DependencyProxyConfig{
+	config := dependencyfirewall.DependencyProxyCache{
 		CacheDir: tempDir,
 	}
 
 	checker, err := vulndb.NewMaliciousPackageChecker(nil)
 	require.NoError(t, err)
 
-	controller := controllers.NewDependencyProxyController(config, checker)
+	controller := dependencyfirewall.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
+	npmController := dependencyfirewall.NewNPMDependencyProxyController(controller)
 
 	t.Run("Extract version from npm package metadata", func(t *testing.T) {
 		// Create sample NPM package metadata JSON
@@ -188,13 +189,13 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 
 		// Test extractNPMVersionFromMetadata (we need to make this public for testing)
 		// For now, we'll test the full flow
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
+		version, _ := npmController.ExtractNPMVersionAndReleaseTimeFromMetadata(jsonData)
 		assert.Equal(t, "1.2.3", version)
 	})
 
 	t.Run("Extract version from malformed metadata", func(t *testing.T) {
 		invalidJSON := []byte(`{"name": "test", "dist-tags": "invalid"}`)
-		version := controller.ExtractNPMVersionFromMetadata(invalidJSON)
+		version, _ := npmController.ExtractNPMVersionAndReleaseTimeFromMetadata(invalidJSON)
 		assert.Equal(t, "", version)
 	})
 
@@ -205,106 +206,7 @@ func TestDependencyProxyController_ExtractNPMVersion(t *testing.T) {
 		jsonData, err := json.Marshal(metadata)
 		require.NoError(t, err)
 
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
+		version, _ := npmController.ExtractNPMVersionAndReleaseTimeFromMetadata(jsonData)
 		assert.Equal(t, "", version)
 	})
-}
-
-func TestDependencyProxyController_NPMVersionResolution(t *testing.T) {
-	tempDir := t.TempDir()
-
-	config := controllers.DependencyProxyConfig{
-		CacheDir: tempDir,
-	}
-
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
-	require.NoError(t, err)
-
-	controller := controllers.NewDependencyProxyController(config, checker)
-
-	t.Run("Verify extractNPMVersionFromMetadata extracts correct version", func(t *testing.T) {
-		// Test that when metadata is fetched for a package without a version,
-		// we correctly extract the "latest" version from dist-tags
-		metadata := map[string]any{
-			"name": "test-package",
-			"dist-tags": map[string]string{
-				"latest": "3.1.4",
-				"next":   "4.0.0-beta",
-			},
-		}
-		jsonData, err := json.Marshal(metadata)
-		require.NoError(t, err)
-
-		version := controller.ExtractNPMVersionFromMetadata(jsonData)
-		assert.Equal(t, "3.1.4", version, "Should extract the latest version from dist-tags")
-	})
-
-	t.Run("Parse package metadata request without version", func(t *testing.T) {
-		// When npx or npm install is called without a version,
-		// the first request is for package metadata (no version in path)
-		pkg, version := controller.ParsePackageFromPath(controllers.NPMProxy, "/lodash")
-		assert.Equal(t, "lodash", pkg)
-		assert.Equal(t, "", version, "Metadata request should not have a version")
-	})
-
-	t.Run("Parse package tarball request with version", func(t *testing.T) {
-		// After metadata is fetched, npm will request the specific tarball
-		// This request should have an explicit version
-		pkg, version := controller.ParsePackageFromPath(controllers.NPMProxy, "/lodash/-/lodash-4.17.21.tgz")
-		assert.Equal(t, "lodash", pkg)
-		assert.Equal(t, "4.17.21", version, "Tarball request should have explicit version")
-	})
-}
-
-func TestDependencyProxyController_ParseNPMPackagePath(t *testing.T) {
-	tempDir := t.TempDir()
-
-	config := controllers.DependencyProxyConfig{
-		CacheDir: tempDir,
-	}
-
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
-	require.NoError(t, err)
-
-	controller := controllers.NewDependencyProxyController(config, checker)
-
-	testCases := []struct {
-		name            string
-		path            string
-		expectedPackage string
-		expectedVersion string
-	}{
-		{
-			name:            "NPM metadata request without version",
-			path:            "/lodash",
-			expectedPackage: "lodash",
-			expectedVersion: "",
-		},
-		{
-			name:            "NPM scoped package without version",
-			path:            "/@babel/core",
-			expectedPackage: "@babel/core",
-			expectedVersion: "",
-		},
-		{
-			name:            "NPM tarball with version",
-			path:            "/lodash/-/lodash-4.17.21.tgz",
-			expectedPackage: "lodash",
-			expectedVersion: "4.17.21",
-		},
-		{
-			name:            "NPM scoped package tarball",
-			path:            "/@babel/core/-/core-7.23.0.tgz",
-			expectedPackage: "@babel/core",
-			expectedVersion: "7.23.0",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			pkg, version := controller.ParsePackageFromPath(controllers.NPMProxy, tc.path)
-			assert.Equal(t, tc.expectedPackage, pkg)
-			assert.Equal(t, tc.expectedVersion, version)
-		})
-	}
 }

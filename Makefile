@@ -27,6 +27,9 @@ lint-fix::
 test::
 	go list ./... | grep -v "/mocks" | xargs go test "$1"
 
+dependency-proxy-e2e::
+	bash scripts/run_dependency_proxy_e2e.sh
+
 devguard::
 	go build $(FLAGS) -o devguard ./cmd/devguard/main.go
 

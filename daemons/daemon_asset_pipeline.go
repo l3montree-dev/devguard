@@ -207,7 +207,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 				for _, el := range vuln.VulnerabilityPath {
 					elPURL, err := packageurl.FromString(el)
 					if err != nil {
-						slog.Error("could not parse purl from vulnerability path", "purl", el, "err", err)
+						slog.Warn("could not parse purl from vulnerability path", "purl", el, "err", err)
 						continue outer
 					}
 					purls = append(purls, elPURL)
@@ -215,7 +215,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 
 				directDependencyFixedVersion, err := runner.fixedVersionResolver.ResolveFixedVersions(purls, *vuln.ComponentFixedVersion)
 				if err != nil {
-					slog.Info("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
+					slog.Warn("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
 					continue
 				}
 

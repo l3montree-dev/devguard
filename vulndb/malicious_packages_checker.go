@@ -293,6 +293,7 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 		"pypi":      {"fake-malicious-pypi-package"},
 		"maven":     {"com.fake:malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
+		"oci":       {"fake-org/malicious-image"},
 	}
 
 	packages := make([]models.MaliciousPackage, 0)
@@ -338,35 +339,35 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 	return c.repository.UpsertAffectedComponents(ctx, nil, affectedComponents)
 }
 
-func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV) {
-	// Build a purl for the package (include version for proper version matching)
-	var purl string
-	if version != "" {
-		purl = fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
-	} else {
-		purl = fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
+
+	if version == "" {
+		return false, nil, fmt.Errorf("version is required to check if a package is malicious")
 	}
+
+	// construct purl for querying, the database uses purl matching to filter by version ranges, so we need to construct a valid purl here
+	purl := fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
 
 	// Parse to normalize
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
 		slog.Debug("Failed to parse purl", "purl", purl, "error", err)
-		return false, nil
+		return false, nil, fmt.Errorf("failed to parse purl: %w", err)
 	}
 
 	// Query database using purl matching (similar to PurlComparer)
 	components, err := c.repository.GetMaliciousAffectedComponents(ctx, nil, parsedPurl)
 	if err != nil {
 		slog.Debug("Failed to query malicious packages", "error", err)
-		return false, nil
+		return false, nil, fmt.Errorf("failed to query malicious packages: %w", err)
 	}
 
 	// If we got results from the query, the database already filtered by version ranges
 	if len(components) > 0 {
 		// Take the first match (database already did the version filtering)
 		osv := components[0].MaliciousPackage.ToOSV()
-		return true, &osv
+		return true, &osv, nil
 	}
 
-	return false, nil
+	return false, nil, nil
 }
