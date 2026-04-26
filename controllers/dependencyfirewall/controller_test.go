@@ -49,9 +49,9 @@ func TestCheckNotAllowedPackage(t *testing.T) {
 			expectedReasonPart: "",
 		},
 		{
-			name:               "accepts purl input directly",
+			name:               "blocks npm tarball path matching wildcard version rule",
 			eco:                npm,
-			path:               "pkg:npm/left-pad@1.3.0",
+			path:               "/left-pad/-/left-pad-1.3.0.tgz",
 			rules:              []string{"pkg:npm/left-pad@*"},
 			expectedBlocked:    true,
 			expectedReasonPart: "pkg:npm/left-pad@*",

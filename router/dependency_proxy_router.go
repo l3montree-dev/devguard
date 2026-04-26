@@ -16,9 +16,11 @@ func registerNPMRoutes(group *echo.Group, npmController *dependencyfirewall.NPMD
 	// NPM tarballs: unscoped (lodash/-/lodash-4.17.21.tgz) and scoped (@babel/core/-/@babel/core-7.0.0.tgz)
 	group.GET("/npm/:package/-/*", npmController.ProxyNPMTarball)
 	group.GET("/npm/:scope/:name/-/*", npmController.ProxyNPMTarball)
-	// NPM metadata: unscoped (lodash) and scoped (@babel/core)
+	// NPM metadata: unscoped (lodash) and scoped (@babel/core), with and without trailing slash
 	group.GET("/npm/:package", npmController.ProxyNPMMetadata)
+	group.GET("/npm/:package/", npmController.ProxyNPMMetadata)
 	group.GET("/npm/:scope/:name", npmController.ProxyNPMMetadata)
+	group.GET("/npm/:scope/:name/", npmController.ProxyNPMMetadata)
 	// NPM audit
 	group.POST("/npm/*", npmController.ProxyNPMAudit)
 }

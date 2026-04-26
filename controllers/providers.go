@@ -115,4 +115,5 @@ var ControllerModule = fx.Options(
 	fx.Provide(dependencyfirewall.NewNPMDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewGoDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewPythonDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewOCIDependencyProxyController),
 )

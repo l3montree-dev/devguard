@@ -45,12 +45,16 @@ var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
 
 // ecosystem abstracts the per-protocol behavior needed by the shared proxy logic.
 type ecosystem interface {
-	// name returns the identifier used in PURLs, log fields, and cache subdirectories.
+	// name returns the identifier used in log fields and cache subdirectories.
 	name() string
 	// trimPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix.
 	trimPrefix(path string) string
 	// parsePackage extracts the package name and version from the cleaned request path.
 	parsePackage(path string) (packageName, version string)
+	// packageIdentifier builds the string that firewall rules are matched against.
+	// Most ecosystems use PURL format (pkg:<eco>/<name>@<version>).
+	// OCI uses plain image reference format (registry/image:tag).
+	packageIdentifier(packageName, version string) string
 	// isCached reports whether the local cache entry is still fresh enough to serve.
 	isCached(cachePath string) bool
 	// writeResponse writes the proxied payload to the HTTP response.
@@ -246,15 +250,24 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies["npm"] = registryURL + "/" + secret.String() + "/npm/"
 	proxies["go"] = registryURL + "/" + secret.String() + "/go/"
 	proxies["pypi"] = registryURL + "/" + secret.String() + "/pypi/simple/"
+	// OCI: images are pulled via the root /v2/ endpoint so standard Docker clients work.
+	// Usage: docker pull <ociPrefix>/docker.io/library/nginx:latest
+	ociBaseURL := os.Getenv("OCI_REGISTRY_BASE_URL")
+	if ociBaseURL == "" {
+		// Derive from DEPENDENCY_PROXY_BASE_URL by stripping the /api/v1/dependency-proxy suffix.
+		ociBaseURL = strings.TrimSuffix(registryURL, "/api/v1/dependency-proxy")
+	}
+	proxies["oci"] = ociBaseURL + "/" + secret.String()
 
 	return ctx.JSON(http.StatusOK, proxies)
 }
 
-func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
+// LoadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
+// An empty secret returns empty (permissive) configs without error.
+func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
 	var configs DependencyProxyConfigs
-	secret := c.Param("secret")
 	if secret == "" {
-		return configs, nil // no secret context means no custom configs
+		return configs, nil
 	}
 	uuidSecret, err := uuid.Parse(secret)
 	if err != nil {
@@ -313,6 +326,12 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	}
 
 	return configs, nil
+}
+
+// GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
+// parameter and delegates to LoadConfigsBySecret.
+func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
+	return d.LoadConfigsBySecret(c, c.Param("secret"))
 }
 
 // CacheReleaseTime stores the release time for a cached entry to enable MinReleaseAge checks on cache hits.
@@ -392,19 +411,11 @@ func matchPattern(pattern, str string) bool {
 }
 
 func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, eco ecosystem, path string, configs DependencyProxyConfigs) (bool, string) {
-	var packageName, version, packagePurl string
-	if strings.HasPrefix(path, "pkg:") {
-		packagePurl = path
-	} else {
-		packageName, version = eco.parsePackage(path)
-		if packageName == "" {
-			return false, ""
-		}
-		packagePurl = fmt.Sprintf("pkg:%s/%s", eco.name(), packageName)
-		if version != "" {
-			packagePurl += "@" + version
-		}
+	packageName, version := eco.parsePackage(path)
+	if packageName == "" {
+		return false, ""
 	}
+	packageIdentifier := eco.packageIdentifier(packageName, version)
 
 	// Rules are applied in order like gitignore: last matching rule wins.
 	// A rule prefixed with "!" negates the match (allowlist).
@@ -414,18 +425,14 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
-		if matchPattern(pattern, packagePurl) {
+		if matchPattern(pattern, packageIdentifier) {
 			blocked = !negate
 			matchedRule = rule
 		}
 	}
 
 	if blocked {
-		displayName := packageName
-		if displayName == "" {
-			displayName = packagePurl
-		}
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", displayName, matchedRule)
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
 	}
 	return false, ""
 }

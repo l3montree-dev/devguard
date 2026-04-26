@@ -21,6 +21,10 @@ if ! command -v curl >/dev/null 2>&1; then
   echo "curl is required"
   exit 1
 fi
+if ! command -v docker >/dev/null 2>&1; then
+  echo "docker is required"
+  exit 1
+fi
 
 echo "Checking dependency proxy availability at ${PROXY_BASE_URL}"
 if ! curl --max-time 3 --silent --show-error "${PROXY_BASE_URL}" >/dev/null; then
@@ -146,8 +150,40 @@ run_pypi_test() {
   popd >/dev/null
 }
 
+run_oci_test() {
+  # The OCI registry sits at /v2/ on the same host as the API.
+  # Strip scheme and /api/v1/dependency-proxy suffix to get bare host:port.
+  local api_host
+  api_host="$(echo "${PROXY_BASE_URL}" | sed 's|https\?://||; s|/api/v1/dependency-proxy||')"
+
+  # On macOS, Docker Desktop's daemon runs inside a Linux VM and cannot reach
+  # the host via 'localhost'. Use host.docker.internal instead.
+  local proxy_host="${api_host}"
+  if [[ "$(uname)" == "Darwin" ]]; then
+    proxy_host="$(echo "${api_host}" | sed 's|localhost|host.docker.internal|; s|127\.0\.0\.1|host.docker.internal|')"
+  fi
+
+  # Docker pull format: <host>/<registry>/<namespace>/<image>:<tag>
+  # Docker connects to <host>, sends GET /v2/<registry>/<namespace>/<image>/manifests/<tag>
+
+  # Positive — pull a well-known public image through the proxy.
+  run_expect_success \
+    "oci-pull-positive" \
+    "${WORK_DIR}/oci-positive.log" \
+    docker pull --quiet "${proxy_host}/docker.io/library/alpine:latest"
+
+  docker rmi "${proxy_host}/docker.io/library/alpine:latest" >/dev/null 2>&1 || true
+
+  # Negative — the fake malicious OCI image must be blocked.
+  run_expect_failure \
+    "oci-pull-negative" \
+    "${WORK_DIR}/oci-negative.log" \
+    docker pull "${proxy_host}/docker.io/fake-org/malicious-image:latest"
+}
+
 run_go_test
 run_npm_test
 run_pypi_test
+run_oci_test
 
 echo "Dependency proxy e2e checks passed"

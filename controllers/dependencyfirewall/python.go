@@ -77,6 +77,13 @@ func (pypiEcosystem) parsePackage(path string) (string, string) {
 	return "", ""
 }
 
+func (pypiEcosystem) packageIdentifier(packageName, version string) string {
+	if version != "" {
+		return fmt.Sprintf("pkg:pypi/%s@%s", packageName, version)
+	}
+	return fmt.Sprintf("pkg:pypi/%s", packageName)
+}
+
 func (pypiEcosystem) isCached(cachePath string) bool {
 	info, err := os.Stat(cachePath)
 	if err != nil {

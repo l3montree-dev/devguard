@@ -77,6 +77,13 @@ func (goEcosystem) parsePackage(path string) (string, string) {
 	return "", ""
 }
 
+func (goEcosystem) packageIdentifier(packageName, version string) string {
+	if version != "" {
+		return fmt.Sprintf("pkg:go/%s@%s", packageName, version)
+	}
+	return fmt.Sprintf("pkg:go/%s", packageName)
+}
+
 func (goEcosystem) isCached(cachePath string) bool {
 	info, err := os.Stat(cachePath)
 	if err != nil {

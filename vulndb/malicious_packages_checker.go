@@ -293,6 +293,7 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 		"pypi":      {"fake-malicious-pypi-package"},
 		"maven":     {"com.fake:malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
+		"oci":       {"fake-org/malicious-image"},
 	}
 
 	packages := make([]models.MaliciousPackage, 0)

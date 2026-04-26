@@ -70,6 +70,13 @@ func (npmEcosystem) parsePackage(path string) (string, string) {
 	return pkgName, ""
 }
 
+func (npmEcosystem) packageIdentifier(packageName, version string) string {
+	if version != "" {
+		return fmt.Sprintf("pkg:npm/%s@%s", packageName, version)
+	}
+	return fmt.Sprintf("pkg:npm/%s", packageName)
+}
+
 func (npmEcosystem) isCached(cachePath string) bool {
 	info, err := os.Stat(cachePath)
 	if err != nil {
