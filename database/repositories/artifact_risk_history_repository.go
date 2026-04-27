@@ -46,10 +46,8 @@ func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Contex
 	return r.Repository.GetDB(ctx, tx).Save(assetRisk).Error
 }
 
-// GetLatestRiskHistory returns the rows from the most recent day for the given
-// asset/version. When artifactName is non-nil the result contains at most one
-// row; otherwise it contains the latest snapshot's row for each artifact, so
-// callers can aggregate across all artifacts of the asset.
+// GetLatestRiskHistory returns the row from the most recent day for the given
+// asset/version.
 func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.ArtifactRiskHistory, error) {
 	var rows []models.ArtifactRiskHistory
 	db := r.GetDB(ctx, tx).
@@ -61,10 +59,13 @@ func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context
 		db = db.Where("artifact_name = ?", *artifactName)
 		sub = sub.Where("artifact_name = ?", *artifactName)
 	}
-	if err := db.Where("day = (?)", sub).Find(&rows).Error; err != nil {
+	if err := db.Where("day = (?)", sub).Order("day DESC").Limit(1).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	return rows, nil
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return rows[:1], nil
 }
 
 func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
