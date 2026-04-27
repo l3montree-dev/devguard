@@ -183,16 +183,16 @@ func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // GetCVSSBadgeSVG provides a mock function for the type AssetService
-func (_mock *AssetService) GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string {
-	ret := _mock.Called(ctx, results)
+func (_mock *AssetService) GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string {
+	ret := _mock.Called(ctx, latest)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetCVSSBadgeSVG")
 	}
 
 	var r0 string
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.ArtifactRiskHistory) string); ok {
-		r0 = returnFunc(ctx, results)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.ArtifactRiskHistory) string); ok {
+		r0 = returnFunc(ctx, latest)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -206,20 +206,20 @@ type AssetService_GetCVSSBadgeSVG_Call struct {
 
 // GetCVSSBadgeSVG is a helper method to define mock.On call
 //   - ctx context.Context
-//   - results []models.ArtifactRiskHistory
-func (_e *AssetService_Expecter) GetCVSSBadgeSVG(ctx interface{}, results interface{}) *AssetService_GetCVSSBadgeSVG_Call {
-	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", ctx, results)}
+//   - latest *models.ArtifactRiskHistory
+func (_e *AssetService_Expecter) GetCVSSBadgeSVG(ctx interface{}, latest interface{}) *AssetService_GetCVSSBadgeSVG_Call {
+	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", ctx, latest)}
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(ctx context.Context, results []models.ArtifactRiskHistory)) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(ctx context.Context, latest *models.ArtifactRiskHistory)) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.ArtifactRiskHistory
+		var arg1 *models.ArtifactRiskHistory
 		if args[1] != nil {
-			arg1 = args[1].([]models.ArtifactRiskHistory)
+			arg1 = args[1].(*models.ArtifactRiskHistory)
 		}
 		run(
 			arg0,
@@ -234,7 +234,7 @@ func (_c *AssetService_GetCVSSBadgeSVG_Call) Return(s string) *AssetService_GetC
 	return _c
 }
 
-func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(ctx context.Context, results []models.ArtifactRiskHistory) string) *AssetService_GetCVSSBadgeSVG_Call {
+func (_c *AssetService_GetCVSSBadgeSVG_Call) RunAndReturn(run func(ctx context.Context, latest *models.ArtifactRiskHistory) string) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Return(run)
 	return _c
 }

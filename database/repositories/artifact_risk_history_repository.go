@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,25 +48,22 @@ func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Contex
 }
 
 // GetLatestRiskHistory returns the row from the most recent day for the given
-// asset/version.
-func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.ArtifactRiskHistory, error) {
-	var rows []models.ArtifactRiskHistory
+// asset/version, or nil when no snapshot has been recorded yet.
+func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error) {
+	var row models.ArtifactRiskHistory
 	db := r.GetDB(ctx, tx).
-		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
-	sub := r.GetDB(ctx, tx).Model(&models.ArtifactRiskHistory{}).
-		Select("MAX(day)").
 		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 	if artifactName != nil {
 		db = db.Where("artifact_name = ?", *artifactName)
-		sub = sub.Where("artifact_name = ?", *artifactName)
 	}
-	if err := db.Where("day = (?)", sub).Order("day DESC").Limit(1).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	if len(rows) == 0 {
+	err := db.Order("day DESC").Limit(1).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return rows[:1], nil
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
 }
 
 func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {

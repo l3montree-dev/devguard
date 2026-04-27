@@ -387,18 +387,15 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: assetID}})
 
 		defaultVersion := models.AssetVersion{Name: "main"}
-		latestRows := []models.ArtifactRiskHistory{
-			{ArtifactName: "artifact-a", AssetVersionName: "main", AssetID: assetID},
-			{ArtifactName: "artifact-b", AssetVersionName: "main", AssetID: assetID},
-		}
+		latestRow := &models.ArtifactRiskHistory{ArtifactName: "artifact-a", AssetVersionName: "main", AssetID: assetID}
 
 		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		mockArtifactRiskHistoryRepository := mocks.NewArtifactRiskHistoryRepository(t)
 		mockAssetService := mocks.NewAssetService(t)
 
 		mockAssetVersionRepository.On("GetDefaultAssetVersion", mock.Anything, mock.Anything, assetID).Return(defaultVersion, nil).Once()
-		mockArtifactRiskHistoryRepository.On("GetLatestRiskHistory", mock.Anything, mock.Anything, (*string)(nil), defaultVersion.Name, assetID).Return(latestRows, nil).Once()
-		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRows).Return("<svg>ok</svg>").Once()
+		mockArtifactRiskHistoryRepository.On("GetLatestRiskHistory", mock.Anything, mock.Anything, (*string)(nil), defaultVersion.Name, assetID).Return(latestRow, nil).Once()
+		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRow).Return("<svg>ok</svg>").Once()
 
 		controller := &AssetController{
 			assetVersionRepository:        mockAssetVersionRepository,
@@ -430,9 +427,7 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		shared.SetAssetVersion(ctx, models.AssetVersion{Name: assetVersionName})
 		shared.SetArtifact(ctx, models.Artifact{ArtifactName: artifactName})
 
-		latestRows := []models.ArtifactRiskHistory{
-			{ArtifactName: artifactName, AssetVersionName: assetVersionName, AssetID: assetID},
-		}
+		latestRow := &models.ArtifactRiskHistory{ArtifactName: artifactName, AssetVersionName: assetVersionName, AssetID: assetID}
 
 		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		mockArtifactRiskHistoryRepository := mocks.NewArtifactRiskHistoryRepository(t)
@@ -445,8 +440,8 @@ func TestAssetControllerGetBadges(t *testing.T) {
 			mock.MatchedBy(func(v *string) bool { return v != nil && *v == artifactName }),
 			assetVersionName,
 			assetID,
-		).Return(latestRows, nil).Once()
-		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRows).Return("<svg>artifact</svg>").Once()
+		).Return(latestRow, nil).Once()
+		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRow).Return("<svg>artifact</svg>").Once()
 
 		controller := &AssetController{
 			assetVersionRepository:        mockAssetVersionRepository,

@@ -484,14 +484,12 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 
 	if badge == "cvss" {
 		// Use the latest snapshot regardless of when the daily aggregation last ran —
-		// a public badge should not go gray on days the daemon hasn't ticked yet. When
-		// no specific artifact is in scope, the repo returns one row per artifact so
-		// the badge aggregates across the whole asset/version.
-		results, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
+		// a public badge should not go gray on days the daemon hasn't ticked yet.
+		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 		if err != nil {
 			return err
 		}
-		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, results)
+		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, latest)
 
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")
