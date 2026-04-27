@@ -372,3 +372,92 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 }
+
+func TestAssetControllerGetBadges(t *testing.T) {
+	e := echo.New()
+
+	t.Run("uses latest snapshot for whole asset version when no artifact is in scope", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("badge")
+		ctx.SetParamValues("cvss")
+
+		assetID := uuid.New()
+		shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: assetID}})
+
+		defaultVersion := models.AssetVersion{Name: "main"}
+		latestRows := []models.ArtifactRiskHistory{
+			{ArtifactName: "artifact-a", AssetVersionName: "main", AssetID: assetID},
+			{ArtifactName: "artifact-b", AssetVersionName: "main", AssetID: assetID},
+		}
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+		mockArtifactRiskHistoryRepository := mocks.NewArtifactRiskHistoryRepository(t)
+		mockAssetService := mocks.NewAssetService(t)
+
+		mockAssetVersionRepository.On("GetDefaultAssetVersion", mock.Anything, mock.Anything, assetID).Return(defaultVersion, nil).Once()
+		mockArtifactRiskHistoryRepository.On("GetLatestRiskHistory", mock.Anything, mock.Anything, (*string)(nil), defaultVersion.Name, assetID).Return(latestRows, nil).Once()
+		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRows).Return("<svg>ok</svg>").Once()
+
+		controller := &AssetController{
+			assetVersionRepository:        mockAssetVersionRepository,
+			artifactRiskHistoryRepository: mockArtifactRiskHistoryRepository,
+			assetService:                  mockAssetService,
+		}
+
+		err := controller.GetBadges(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "<svg>ok</svg>", rec.Body.String())
+		assert.Equal(t, "image/svg+xml", rec.Header().Get(echo.HeaderContentType))
+		assert.Equal(t, "no-cache, no-store", rec.Header().Get(echo.HeaderCacheControl))
+	})
+
+	t.Run("uses artifact-scoped latest snapshot when artifact is in context", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("badge")
+		ctx.SetParamValues("cvss")
+
+		assetID := uuid.New()
+		assetVersionName := "release-2026-04"
+		artifactName := "pkg:npm/lodash@4.17.21"
+
+		shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: assetID}})
+		shared.SetAssetVersion(ctx, models.AssetVersion{Name: assetVersionName})
+		shared.SetArtifact(ctx, models.Artifact{ArtifactName: artifactName})
+
+		latestRows := []models.ArtifactRiskHistory{
+			{ArtifactName: artifactName, AssetVersionName: assetVersionName, AssetID: assetID},
+		}
+
+		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
+		mockArtifactRiskHistoryRepository := mocks.NewArtifactRiskHistoryRepository(t)
+		mockAssetService := mocks.NewAssetService(t)
+
+		mockArtifactRiskHistoryRepository.On(
+			"GetLatestRiskHistory",
+			mock.Anything,
+			mock.Anything,
+			mock.MatchedBy(func(v *string) bool { return v != nil && *v == artifactName }),
+			assetVersionName,
+			assetID,
+		).Return(latestRows, nil).Once()
+		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRows).Return("<svg>artifact</svg>").Once()
+
+		controller := &AssetController{
+			assetVersionRepository:        mockAssetVersionRepository,
+			artifactRiskHistoryRepository: mockArtifactRiskHistoryRepository,
+			assetService:                  mockAssetService,
+		}
+
+		err := controller.GetBadges(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "<svg>artifact</svg>", rec.Body.String())
+	})
+}

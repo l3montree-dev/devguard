@@ -7,11 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -21,27 +19,29 @@ import (
 )
 
 type AssetController struct {
-	assetRepository        shared.AssetRepository
-	assetVersionRepository shared.AssetVersionRepository
-	assetService           shared.AssetService
-	dependencyVulnService  shared.DependencyVulnService
-	statisticsService      shared.StatisticsService
-	thirdPartyIntegration  shared.IntegrationAggregate
-	daemonRunner           shared.DaemonRunner
+	assetRepository              shared.AssetRepository
+	assetVersionRepository       shared.AssetVersionRepository
+	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
+	assetService                 shared.AssetService
+	dependencyVulnService        shared.DependencyVulnService
+	statisticsService            shared.StatisticsService
+	thirdPartyIntegration        shared.IntegrationAggregate
+	daemonRunner                 shared.DaemonRunner
 
 	utils.FireAndForgetSynchronizer
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
 	return &AssetController{
-		assetRepository:           repository,
-		assetVersionRepository:    assetVersionRepository,
-		assetService:              assetService,
-		dependencyVulnService:     dependencyVulnService,
-		statisticsService:         statisticsService,
-		thirdPartyIntegration:     thirdPartyIntegration,
-		FireAndForgetSynchronizer: synchronizer,
-		daemonRunner:              daemonRunner,
+		assetRepository:               repository,
+		assetVersionRepository:        assetVersionRepository,
+		artifactRiskHistoryRepository: artifactRiskHistoryRepository,
+		assetService:                  assetService,
+		dependencyVulnService:         dependencyVulnService,
+		statisticsService:             statisticsService,
+		thirdPartyIntegration:         thirdPartyIntegration,
+		FireAndForgetSynchronizer:     synchronizer,
+		daemonRunner:                  daemonRunner,
 	}
 }
 
@@ -483,15 +483,13 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		// Show the latest available snapshot regardless of when the daily aggregation
-		// last ran — a public badge should not go gray on days the daemon hasn't ticked yet.
-		history, err := a.statisticsService.GetArtifactRiskHistory(reqCtx, artifactName, assetVersion.Name, asset.ID, time.Unix(0, 0), time.Now())
+		// Use the latest snapshot regardless of when the daily aggregation last ran —
+		// a public badge should not go gray on days the daemon hasn't ticked yet. When
+		// no specific artifact is in scope, the repo returns one row per artifact so
+		// the badge aggregates across the whole asset/version.
+		results, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 		if err != nil {
 			return err
-		}
-		var results []models.ArtifactRiskHistory
-		if n := len(history); n > 0 {
-			results = history[n-1:] // ordered day ASC; the last row is the most recent snapshot
 		}
 		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, results)
 
