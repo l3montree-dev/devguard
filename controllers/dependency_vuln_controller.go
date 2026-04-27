@@ -403,6 +403,11 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
+	userAgent := ctx.Request().UserAgent()
+	if userAgent == "devguard-mcp-server" {
+		userID = userID + "@mcp-server"
+	}
+
 	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
 	if err != nil {
 		return err
