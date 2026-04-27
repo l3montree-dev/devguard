@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -482,9 +483,15 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetArtifactRiskHistory(reqCtx, artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		// Show the latest available snapshot regardless of when the daily aggregation
+		// last ran — a public badge should not go gray on days the daemon hasn't ticked yet.
+		history, err := a.statisticsService.GetArtifactRiskHistory(reqCtx, artifactName, assetVersion.Name, asset.ID, time.Unix(0, 0), time.Now())
 		if err != nil {
 			return err
+		}
+		var results []models.ArtifactRiskHistory
+		if n := len(history); n > 0 {
+			results = history[n-1:] // ordered day ASC; the last row is the most recent snapshot
 		}
 		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, results)
 
