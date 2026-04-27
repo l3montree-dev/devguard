@@ -371,7 +371,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
-	GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string
+	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 }
@@ -572,6 +572,8 @@ type StatisticsRepository interface {
 type ArtifactRiskHistoryRepository interface {
 	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
 	GetRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
+	GetLatestRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)

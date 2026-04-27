@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"strings"
-	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -20,27 +19,29 @@ import (
 )
 
 type AssetController struct {
-	assetRepository        shared.AssetRepository
-	assetVersionRepository shared.AssetVersionRepository
-	assetService           shared.AssetService
-	dependencyVulnService  shared.DependencyVulnService
-	statisticsService      shared.StatisticsService
-	thirdPartyIntegration  shared.IntegrationAggregate
-	daemonRunner           shared.DaemonRunner
+	assetRepository              shared.AssetRepository
+	assetVersionRepository       shared.AssetVersionRepository
+	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
+	assetService                 shared.AssetService
+	dependencyVulnService        shared.DependencyVulnService
+	statisticsService            shared.StatisticsService
+	thirdPartyIntegration        shared.IntegrationAggregate
+	daemonRunner                 shared.DaemonRunner
 
 	utils.FireAndForgetSynchronizer
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
 	return &AssetController{
-		assetRepository:           repository,
-		assetVersionRepository:    assetVersionRepository,
-		assetService:              assetService,
-		dependencyVulnService:     dependencyVulnService,
-		statisticsService:         statisticsService,
-		thirdPartyIntegration:     thirdPartyIntegration,
-		FireAndForgetSynchronizer: synchronizer,
-		daemonRunner:              daemonRunner,
+		assetRepository:               repository,
+		assetVersionRepository:        assetVersionRepository,
+		artifactRiskHistoryRepository: artifactRiskHistoryRepository,
+		assetService:                  assetService,
+		dependencyVulnService:         dependencyVulnService,
+		statisticsService:             statisticsService,
+		thirdPartyIntegration:         thirdPartyIntegration,
+		FireAndForgetSynchronizer:     synchronizer,
+		daemonRunner:                  daemonRunner,
 	}
 }
 
@@ -482,11 +483,13 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	svg := ""
 
 	if badge == "cvss" {
-		results, err := a.statisticsService.GetArtifactRiskHistory(reqCtx, artifactName, assetVersion.Name, asset.ID, time.Now(), time.Now()) // only the last entry
+		// Use the latest snapshot regardless of when the daily aggregation last ran —
+		// a public badge should not go gray on days the daemon hasn't ticked yet.
+		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 		if err != nil {
 			return err
 		}
-		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, results)
+		svg = a.assetService.GetCVSSBadgeSVG(reqCtx, latest)
 
 		if svg == "" {
 			return echo.NewHTTPError(404, "badge not found")

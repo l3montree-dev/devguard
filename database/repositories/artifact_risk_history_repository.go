@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,6 +45,25 @@ func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *
 
 func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx *gorm.DB, assetRisk *models.ArtifactRiskHistory) error {
 	return r.Repository.GetDB(ctx, tx).Save(assetRisk).Error
+}
+
+// GetLatestRiskHistory returns the row from the most recent day for the given
+// asset/version, or nil when no snapshot has been recorded yet.
+func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error) {
+	var row models.ArtifactRiskHistory
+	db := r.GetDB(ctx, tx).
+		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	if artifactName != nil {
+		db = db.Where("artifact_name = ?", *artifactName)
+	}
+	err := db.Order("day DESC").Limit(1).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
 }
 
 func (r *artifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
