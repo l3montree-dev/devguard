@@ -133,21 +133,18 @@ DevGuard is licensed under **AGPL-3.0-or-later**. See [LICENSE.txt](LICENSE.txt)
 
 <p align="center">
   <a href="https://owasp.org/"><img src="docs/sponsors/sp-owasp.png" alt="OWASP" height="60"></a>
-  <a href="https://www.zendis.de/"><img src="docs/sponsors/ozendis_logo.svg" alt="ZenDiS" height="60"></a>
+  <a href="https://www.zendis.de/"><img src="docs/sponsors/sp-zendis.png" alt="ZenDiS" height="60"></a>
   <a href="https://www.h-brs.de/"><img src="docs/sponsors/sp-hbrs.png" alt="Bonn-Rhein-Sieg University of Applied Sciences" height="60"></a>
-  <a href="https://wheregroup.com/"><img src="docs/sponsors/sp-wheregroup.png" alt="WhereGroup" height="60"></a>
-  <a href="https://www.digitalhub.de/"><img src="docs/sponsors/sp-digitalhub.png" alt="DigitalHub" height="60"></a>
-  <a href="https://wetteronline.de/"><img src="docs/sponsors/sp-wetteronline.png" alt="WetterOnline" height="60"></a>
+  <a href="https://wheregroup.com/"><img src="docs/sponsors/sp-wg.png" alt="WhereGroup" height="60"></a>
+  <a href="https://wetteronline.de/"><img src="docs/sponsors/sp-wo.png" alt="WetterOnline" height="60"></a>
   <a href="https://ikor.one/"><img src="docs/sponsors/sp-ikor.png" alt="Ikor" height="60"></a>
-  <a href="https://www.bonnconsulting.group/"><img src="docs/sponsors/sp-bcg.png" alt="BCG" height="60"></a>
-  <a href="https://www.uni-giessen.de/de"><img src="docs/sponsors/sp-jlu.svg" alt="JLU" height="60"></a>
-  <a href="https://l3montree.com/"><img src="docs/sponsors/sp-l3montree.svg" alt="l3montree" height="60"></a>
+  <a href="https://www.uni-giessen.de/de"><img src="docs/sponsors/sp-jlu.png" alt="JLU" height="60"></a>
   <a href="https://www.saltrock.de/"><img src="docs/sponsors/sp-saltrock.png" alt="Saltrock" height="60"></a>
-  <a href="https://ready-labs.de/"><img src="docs/sponsors/Ready-Labs-Logo-weiß.png" alt="Ready Labs" height="60"></a>
-  <a href="https://business-code.de/"><img src="docs/sponsors/bc-logo-white.png" alt="BC" height="60"></a>
-  <a href="https://www.cps-it.de/"><img src="docs/sponsors/cps-logo.svg" alt="CPS" height="60"></a>
-  <a href="https://www.cronn.de/"><img src="docs/sponsors/cronn-logo.svg" alt="Cronn" height="60"></a>
-  <a href="https://www.heylogin.com/de"><img src="docs/sponsors/heylogin-logo.svg" alt="HeyLogin" height="60"></a>
-  <a href="https://opencode.de/de"><img src="docs/sponsors/opencode-logo.svg" alt="OpenCode" height="60"></a>
-  <a href="https://www.opendesk.eu/de"><img src="docs/sponsors/opendesk-logo.svg" alt="OpenDesk" height="60"></a>
+  <a href="https://ready-labs.de/"><img src="docs/sponsors/sp-readylabs.png" alt="Ready Labs" height="60"></a>
+  <a href="https://business-code.de/"><img src="docs/sponsors/sp-bc.png" alt="Business Code" height="60"></a>
+  <a href="https://www.cps-it.de/"><img src="docs/sponsors/sp-cps.png" alt="CPS" height="60"></a>
+  <a href="https://www.cronn.de/"><img src="docs/sponsors/sp-cronn.png" alt="Cronn" height="60"></a>
+  <a href="https://www.heylogin.com/de"><img src="docs/sponsors/sp-heylogin.png" alt="HeyLogin" height="60"></a>
+  <a href="https://opencode.de/de"><img src="docs/sponsors/sp-opencode.png" alt="OpenCode" height="60"></a>
+  <a href="https://www.opendesk.eu/de"><img src="docs/sponsors/sp-opendesk.png" alt="OpenDesk" height="60"></a>
 </p>
