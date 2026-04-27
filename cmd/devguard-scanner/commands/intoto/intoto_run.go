@@ -29,6 +29,7 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -183,5 +184,6 @@ func NewInTotoRunCommand() *cobra.Command {
 	}
 	cmd.Flags().String("supplyChainOutputDigest", "", "If defined, sends this digest to devguard. This should be the digest of the whole supply chain.")
 
+	scanner.AddAssetRefFlags(cmd)
 	return cmd
 }
