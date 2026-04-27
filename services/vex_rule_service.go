@@ -176,6 +176,7 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 			rule.MechanicalJustification,
 			"",
 			true,
+			"",
 		), nil
 
 	case dtos.EventTypeAccepted:
@@ -185,6 +186,7 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 			rule.CreatedByID,
 			rule.Justification,
 			true,
+			"",
 		), nil
 
 	default:

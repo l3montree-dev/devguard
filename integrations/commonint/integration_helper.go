@@ -145,13 +145,13 @@ func CreateNewVulnEventBasedOnComment(vulnID uuid.UUID, vulnType dtos.VulnType, 
 
 	switch event {
 	case dtos.EventTypeAccepted:
-		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, false)
+		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, false, "")
 	case dtos.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, false)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, false, "")
 	case dtos.EventTypeReopened:
-		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, false)
+		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, false, "")
 	case dtos.EventTypeComment:
-		return models.NewCommentEvent(vulnID, vulnType, userID, comment, false)
+		return models.NewCommentEvent(vulnID, vulnType, userID, comment, false, "")
 	}
 
 	return models.VulnEvent{}

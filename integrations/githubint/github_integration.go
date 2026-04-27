@@ -269,7 +269,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		switch action {
 		case "closed":
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()), false)
+			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()), false, "")
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -278,7 +278,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			doUpdateArtifactRiskHistory = true
 
 		case "reopened":
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), false)
+			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), false, "")
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -287,7 +287,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			doUpdateArtifactRiskHistory = true
 
 		case "deleted":
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, "")
 
 			err := githubIntegration.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -775,7 +775,7 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, "")
 			// save the event
 			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -893,7 +893,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
 		"ticketId":  vuln.GetTicketID(),
 		"ticketUrl": vuln.GetTicketURL(),
-	})
+	}, "")
 	// save the dependencyVuln and the event in a transaction
 	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	// if an error did happen, delete the issue from github

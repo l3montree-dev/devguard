@@ -40,7 +40,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false, "")
 
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -61,7 +61,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context,
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false, "")
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -95,31 +95,31 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
-func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.firstPartyVulnRepository.Transaction(ctx, func(d shared.DB) error {
-			ev, err = s.updateFirstPartyVulnState(ctx, d, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+			ev, err = s.updateFirstPartyVulnState(ctx, d, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateFirstPartyVulnState(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+	return s.updateFirstPartyVulnState(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 }
 
-func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch dtos.VulnEventType(statusType) {
 	case dtos.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, false)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, false, userAgent)
 	case dtos.EventTypeReopened:
-		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
-		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	}
 
 	return s.applyAndSave(ctx, tx, firstPartyVuln, &ev)

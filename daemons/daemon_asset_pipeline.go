@@ -715,7 +715,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 			span.SetAttributes(attribute.Int("asset.vulns_to_reopen", len(vulnerabilities)))
 			errs := make([]error, 0)
 			for _, vuln := range vulnerabilities {
-				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), false)
+				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), false, "")
 
 				if err := runner.dependencyVulnRepository.ApplyAndSave(stageCtx, nil, &vuln, &event); err != nil {
 					slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)
