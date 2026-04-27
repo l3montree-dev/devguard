@@ -445,6 +445,23 @@ func (controller *OrgController) Members(ctx shared.Context) error {
 	return ctx.JSON(200, users)
 }
 
+// @Summary Get organization admin settings
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} dtos.OrgSettingsDTO
+// @Router /organizations/{organization}/settings [get]
+func (controller *OrgController) AdminSettings(ctx shared.Context) error {
+	organization := shared.GetOrg(ctx)
+	members, err := shared.FetchMembersOfOrganization(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	return ctx.JSON(200, transformer.OrgSettingsDTOFromModel(organization, members))
+}
+
 // @Summary Get organization details
 // @Tags Organizations
 // @Security CookieAuth
@@ -453,6 +470,10 @@ func (controller *OrgController) Members(ctx shared.Context) error {
 // @Success 200 {object} dtos.OrgDetailsDTO
 // @Router /organizations/{organization} [get]
 func (controller *OrgController) Read(ctx shared.Context) error {
+	return controller.readDetails(ctx)
+}
+
+func (controller *OrgController) readDetails(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
 	// fetch the regular members of the current organization

@@ -180,9 +180,18 @@ func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
 		GithubAppInstallations:   utils.Map(org.GithubAppInstallations, GithubAppInstallationToDTO),
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
-		Webhooks:                 utils.Map(org.Webhooks, obfuscateWebhookIntegrations),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,
+	}
+}
+
+func OrgSettingsDTOFromModel(org models.Org, members []dtos.UserDTO) dtos.OrgSettingsDTO {
+	return dtos.OrgSettingsDTO{
+		OrgDetailsDTO: dtos.OrgDetailsDTO{
+			OrgDTO:  OrgDTOFromModel(org),
+			Members: members,
+		},
+		Webhooks: utils.Map(org.Webhooks, obfuscateWebhookIntegrations),
 	}
 }
