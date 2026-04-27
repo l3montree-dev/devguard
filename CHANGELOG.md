@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.0] - 2026-04-27
+
+### Added
+
+- **OCI Dependency Proxy** — New proxy for OCI registries with content digest verification, protecting against supply chain attacks
+- **Package Rules** — Configurable allow/block patterns for NPM, PyPI, and Go packages; path traversal protection built in
+- **Dependency Proxy Secrets** — Per-organization/project secret management for authenticated upstream registries; dedicated ecosystem controllers with independent routing per package manager
+- **Renovate Integration** — New recommendation endpoint returning update suggestions scoped to `packageName` and `currentValue`
+- Daily fixable vulnerability history now tracked per artifact and exposed via API
+- Vulnerabilities are automatically reopened with an event when re-detected in subsequent scans
+- Quickfix dashboard statistics: vulnerability distribution added to artifact risk history
+- All DevGuard images now built with Nix for fully reproducible, hermetic builds with multi-architecture support (AMD64 + ARM64); Python dependencies (Semgrep, Checkov) built via `uv2nix`
+- `DISABLE_TICKET_SYNC` environment variable added
+
+### Fixed
+
+- Webhook retry logic now only retries on 5xx, 408, and 429 responses
+- Remote descriptor retrieval in attestation fetching now authenticates correctly
+- VEX rules not applying for direct dependencies; `ROOT` wildcard removed
+- SARIF upload size limit enforced with nil-pointer guards
+- CVSS conversion panics from OSV data removed
+- Search query trimming fixed to use whitespace-specific function
+
+### Changed
+
+- Internal vulnerability IDs migrated to 128-bit UUIDs (fully transparent — no API changes)
+- Mutex guards added around Casbin enforcer calls to prevent race conditions
+
+### Contributors
+
+Thanks to everyone who contributed to this release:
+[@timbastin](https://github.com/timbastin), [@Hubtrick-Git](https://github.com/Hubtrick-Git), [@refoo0](https://github.com/refoo0), [@Dboy0ZDev](https://github.com/Dboy0ZDev), [@seb-kw](https://github.com/seb-kw), [@5byuri](https://github.com/5byuri), [@l3monKenji](https://github.com/l3monKenji)
+
+Special thanks to the external contributor [@gauravshinde1729](https://github.com/gauravshinde1729) for fixing VEX rules for direct dependencies!
+
 ## [v1.2.3] - 2026-04-23
 
 ### Fixed
