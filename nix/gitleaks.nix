@@ -24,6 +24,9 @@ buildGoModule rec {
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = "";
+  env = {
+    CGO_ENABLED = 0;
+  };
 
   doCheck = false;
 

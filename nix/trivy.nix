@@ -25,6 +25,7 @@ buildGoModule rec {
     # aws-sdk-go-v2/service/ec2 is extremely large; compiling it with full
     # parallelism OOM-kills the builder.  Cap to 1 parallel codegen unit.
     GOMAXPROCS = "1";
+    CGO_ENABLED = 0;
   };
 
   ldflags = [

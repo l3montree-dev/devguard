@@ -27,7 +27,9 @@ buildGoModule rec {
     "-X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v${version}"
     "-X github.com/google/go-containerregistry/internal/version.Version=${version}"
   ];
-
+  env = {
+    CGO_ENABLED = 0;
+  };
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = "";
