@@ -1,6 +1,9 @@
 <p align="center">
   <a href="https://devguard.org">
-    <img src="docs/logo_horizontal.svg" alt="DevGuard logo" width="520">
+    <picture>
+      <source srcset="docs/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
+      <img src="docs/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
+  </picture>
   </a>
 </p>
 
