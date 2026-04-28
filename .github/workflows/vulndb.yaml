@@ -1,12 +1,6 @@
 name: VulnDB Workflow
 
 on:
-  workflow_dispatch:
-    inputs:
-      run_generate_snapshot:
-        description: "Run generate snapshot job"
-        required: false
-        default: "false"
   schedule:
     - cron: "0 */6 * * *" # every hour
 
