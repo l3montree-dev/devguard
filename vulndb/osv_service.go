@@ -17,6 +17,7 @@ package vulndb
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/csv"
 	"encoding/json"
@@ -41,6 +42,9 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 type osvService struct {
@@ -134,19 +138,34 @@ type zipJob struct {
 	Ecosystem string
 }
 
+type zipJobWithID struct {
+	File          *zip.File
+	Ecosystem, ID string
+}
+
+func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
+	return integrity.TotalCount == compareInformation.TotalCount && bytes.Compare(integrity.Checksum, compareInformation.Checksum) == 0
+}
+
 // imports the newest vulnerability data from the OSV database (using the recently changed csv) and applies it to our vulndb tables (cves, cve_relationships, affected_components, cve_affected_componentss)
 func (s osvService) ImportRC(ctx context.Context) error {
 	slog.Info("start vulndb import")
 
-	var lastUpdate string
-	var idsPerEcosystem map[string][]string
-	err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
+	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
+	if err != nil {
+		return fmt.Errorf("could not pull from remote repository: %w", err)
+	}
+	defer os.RemoveAll(workingDir)
 
 	var importTimestamp time.Time
+	var lastUpdate string
+	var idsPerEcosystem map[string][]string
+
 	start := time.Now()
+	err = s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
 	if err != nil {
 		slog.Info("could not get last RC import timestamp, assuming no import took place yet")
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(nil, nil)
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystemFromMirror(nil, workingDir)
 		if err != nil {
 			return err
 		}
@@ -155,7 +174,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp, nil)
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystemFromMirror(&lastUpdateTimestamp, workingDir)
 		if err != nil {
 			return err
 		}
@@ -174,52 +193,34 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		return nil
 	}
 
-	httpWaitGroup := &sync.WaitGroup{}
+	var fetchFailures atomic.Int64
+
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
-	var fetchFailures atomic.Int64
-
-	fetchingJobs := make(chan fetchingJob, 10_000)
-	zipJobs := make(chan zipJob, 10_000)
-	vulnData := make(chan OSVWithEcosystem, 5000)
+	vulnData := make(chan *dtos.OSV, 5000)
+	zipJobs := make(chan zipJobWithID, 10_000)
 
 	fetchingStart := time.Now()
 
-	// check if we need to fetch any zips
-	anyZip := false
-	for _, ids := range idsPerEcosystem {
+	zipPushWaitGroup.Add(1)
+	go extractAndDistributeOSVJobs(zipPushWaitGroup, workingDir, zipJobs, &fetchFailures)
+
+	shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, len(idsPerEcosystem))
+	for ecosystem, ids := range idsPerEcosystem {
 		if len(ids) >= zipThreshold {
-			anyZip = true
-			break
-		}
-	}
-
-	for range numberOfSingleFetchers {
-		httpWaitGroup.Add(1)
-		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData, &fetchFailures)
-	}
-
-	if anyZip {
-		shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, len(idsPerEcosystem))
-		for ecosystem, ids := range idsPerEcosystem {
-			if len(ids) >= zipThreshold {
-				if shouldProcessIDInEcosystem[ecosystem] == nil {
-					shouldProcessIDInEcosystem[ecosystem] = make(map[string]struct{}, len(ids))
-				}
-				for _, id := range ids {
-					shouldProcessIDInEcosystem[ecosystem][id] = struct{}{}
-				}
+			if shouldProcessIDInEcosystem[ecosystem] == nil {
+				shouldProcessIDInEcosystem[ecosystem] = make(map[string]struct{}, len(ids))
+			}
+			for _, id := range ids {
+				shouldProcessIDInEcosystem[ecosystem][id] = struct{}{}
 			}
 		}
-		for range numberOfZipWorkers {
-			zipWorkWaitGroup.Add(1)
-			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, &fetchFailures)
-		}
 	}
-
-	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, &fetchFailures)
+	for range numberOfZipWorkers {
+		zipWorkWaitGroup.Add(1)
+		go s.importZipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, &fetchFailures)
+	}
 
 	// handle sync via independent go routines
 	go func() {
@@ -228,7 +229,6 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}()
 
 	go func() {
-		httpWaitGroup.Wait()
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
@@ -236,7 +236,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
-		allOSVVulns = append(allOSVVulns, osvObject.OSV)
+		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
@@ -269,14 +269,87 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 
+	integrityInformation, err := calculateTotalIntegrityInformation(ctx, s.pool)
+	if err != nil {
+		return fmt.Errorf("could not calculate integrity information; %w", err)
+	}
+
+	valid, err := validateIntegrityInformation(workingDir, integrityInformation)
+	if err != nil {
+		return fmt.Errorf("could not validate information; %w", err)
+	}
+	if !valid {
+		return fmt.Errorf("validation was not successful!")
+	}
+	slog.Info("successfully validated checksums")
+
 	// lastly update the import timestamp to the earliest possible fetching time
 	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", importTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
 
 	// the core job is done; run sanity checks/clean ups afterwards
-	runCleanUpJobs(ctx, conn.Conn())
+	//runCleanUpJobs(ctx, conn.Conn())
 	slog.Info("finished vulndb import", "time", time.Since(start))
+	return nil
+}
+
+func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
+	fd, err := os.Open(workingDir + "/integrity_checks.json")
+	if err != nil {
+		return false, fmt.Errorf("could not open integrity check json file: %w", err)
+	}
+
+	var groundTruth []tableIntegrityInformation
+	err = json.NewDecoder(fd).Decode(&groundTruth)
+	if err != nil {
+		return false, fmt.Errorf("could not decode remote integrity information")
+	}
+
+	for _, tableIntegrity := range localIntegrityInformation {
+		found := false
+		for _, tableGroundTruth := range groundTruth {
+			if tableGroundTruth.TableName == tableIntegrity.TableName {
+				if !tableIntegrity.isEqual(tableGroundTruth) {
+					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName)
+					return false, nil
+				}
+			}
+		}
+		if !found {
+			return false, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
+		}
+	}
+	return true, nil
+}
+
+func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, jobs chan zipJobWithID, errors *atomic.Int64) error {
+	defer close(jobs)
+	defer waitGroup.Done()
+	fd, err := os.Open(workingDir + "/ecosystem.zip")
+	if err != nil {
+		errors.Add(1)
+		return fmt.Errorf("could not open ecosystem zip: %w", err)
+	}
+	stat, err := fd.Stat()
+	if err != nil {
+		errors.Add(1)
+		return fmt.Errorf("could not get stats for file: %w", err)
+	}
+	reader, err := zip.NewReader(fd, stat.Size())
+	if err != nil {
+		errors.Add(1)
+		return fmt.Errorf("could not create zip reader")
+	}
+	for _, file := range reader.File {
+		ecosystem, id, ok := strings.Cut(file.Name, "/")
+		if !ok {
+			errors.Add(1)
+			slog.Error("unexpected name format for zip file", "error", err)
+			continue
+		}
+		jobs <- zipJobWithID{Ecosystem: ecosystem, ID: id, File: file}
+	}
 	return nil
 }
 
@@ -298,21 +371,16 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return nil
 	}
 
-	bundleFD, err := os.Create("vulndb.zip")
+	// write each artifact straight to disk so the workflow can push them as
+	// independent layers of a single ORAS artifact (no outer vulndb.zip wrapper)
+	modifiedFD, err := os.Create("modified_id.csv")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not create modified_id.csv: %w", err)
 	}
-	defer bundleFD.Close()
-	bundleWriter := zip.NewWriter(bundleFD)
-	defer bundleWriter.Close()
-
-	modifiedFD, err := bundleWriter.Create("modified_id_mirror.csv")
-	if err != nil {
-		panic(err)
-	}
+	defer modifiedFD.Close()
 
 	start := time.Now()
-	idsPerEcosystem, _, err := s.getRecentlyChangedIDsPerEcosystem(nil, modifiedFD)
+	idsPerEcosystem, _, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(nil, modifiedFD)
 	if err != nil {
 		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
 	}
@@ -366,7 +434,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 
 	zipPushWaitGroup.Add(1)
-	go s.exportFetchingController(zipPushWaitGroup, idsPerEcosystem, zipJobs, &fetchFailures)
+	go s.importFetchingController(zipPushWaitGroup, idsPerEcosystem, zipJobs, &fetchFailures)
 
 	// handle sync via independent go routines
 	go func() {
@@ -378,10 +446,12 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
-	ecosystemsFD, err := bundleWriter.CreateHeader(&zip.FileHeader{Name: "ecosystems.zip", Method: zip.Store})
+
+	ecosystemsFD, err := os.Create("ecosystem.zip")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not create ecosystem.zip: %w", err)
 	}
+	defer ecosystemsFD.Close()
 	zipWriter := zip.NewWriter(ecosystemsFD)
 
 	// collect all OSV objects first
@@ -390,14 +460,17 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		allOSVVulns = append(allOSVVulns, osvObject.OSV)
 		zipFd, err := zipWriter.Create(osvObject.Ecosystem + "/" + osvObject.OSV.ID + ".json")
 		if err != nil {
-			panic(err)
+			zipWriter.Close()
+			return fmt.Errorf("could not create entry in ecosystem.zip: %w", err)
 		}
-		err = json.NewEncoder(zipFd).Encode(osvObject.OSV)
-		if err != nil {
-			panic(err)
+		if err := json.NewEncoder(zipFd).Encode(osvObject.OSV); err != nil {
+			zipWriter.Close()
+			return fmt.Errorf("could not encode osv entry: %w", err)
 		}
 	}
-	zipWriter.Close()
+	if err := zipWriter.Close(); err != nil {
+		return fmt.Errorf("could not finalize ecosystem.zip: %w", err)
+	}
 
 	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
 	if n := fetchFailures.Load(); n > 0 {
@@ -446,23 +519,81 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return strings.Compare(a.TableName, b.TableName)
 	})
 
-	fd, err := bundleWriter.Create("integrity_checks.json")
+	integrityFD, err := os.Create("integrity_checks.json")
 	if err != nil {
-		return fmt.Errorf("could not create checksum file: %w", err)
+		return fmt.Errorf("could not create integrity_checks.json: %w", err)
 	}
+	defer integrityFD.Close()
 
 	jsonContents, err := json.Marshal(integrityInformation)
 	if err != nil {
 		return fmt.Errorf("could not parse integrity information to json format: %w", err)
 	}
 
-	_, err = fd.Write(jsonContents)
-	if err != nil {
+	if _, err := integrityFD.Write(jsonContents); err != nil {
 		return fmt.Errorf("could not write json to file: %w", err)
 	}
 
 	slog.Info("finished vulndb export", "time", time.Since(start))
 	return nil
+}
+
+// vulnDBArtifactFiles enumerates the per-file blobs that the workflow pushes
+// to the OCI registry. Each file is cosign-signed independently and must
+// pass verification before the importer is allowed to read it.
+var vulnDBArtifactFiles = []string{
+	"modified_id.csv",
+	"ecosystem.zip",
+	"integrity_checks.json",
+}
+
+const vulnDBPubKeyFile = "cosign.pub"
+
+func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror"
+	repo, err := remote.NewRepository(reg)
+	if err != nil {
+		return "", fmt.Errorf("could not connect to remote repository: %w", err)
+	}
+
+	outpath, err := os.MkdirTemp("", "vulndb")
+	if err != nil {
+		return "", fmt.Errorf("could not create temp directory: %w", err)
+	}
+
+	fs, err := file.New(outpath)
+	if err != nil {
+		os.RemoveAll(outpath)
+		return "", fmt.Errorf("could not create file store: %w", err)
+	}
+
+	// pull the multi-file artifact (modified_id.csv, ecosystem.zip, integrity_checks.json)
+	const tag = "latest"
+	if _, err = oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions); err != nil {
+		os.RemoveAll(outpath)
+		return "", fmt.Errorf("could not copy artifact from remote repository: %w", err)
+	}
+
+	// pull the matching signatures (one .sig per file) from the sibling tag
+	const sigTag = "latest.sig"
+	if _, err = oras.Copy(ctx, repo, sigTag, fs, sigTag, oras.DefaultCopyOptions); err != nil {
+		os.RemoveAll(outpath)
+		return "", fmt.Errorf("could not copy signatures from remote repository: %w", err)
+	}
+
+	// verify each blob against its signature before any caller is allowed
+	// to use the working dir. If any signature fails we wipe the dir so a
+	// partial/untrusted state cannot leak into the import path.
+	for _, name := range vulnDBArtifactFiles {
+		blob := outpath + "/" + name
+		sig := blob + ".sig"
+		if err := verifySignature(ctx, vulnDBPubKeyFile, sig, blob); err != nil {
+			os.RemoveAll(outpath)
+			return "", fmt.Errorf("could not verify signature for %s: %w", name, err)
+		}
+	}
+	slog.Info("successfully verified signatures for all vulndb files")
+	return outpath, nil
 }
 
 type tableIntegrityInformation struct {
@@ -610,7 +741,28 @@ func (s osvService) getEcosystems() ([]string, error) {
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, fd io.Writer) (map[string][]string, time.Time, error) {
+func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time.Time, workingDir string) (map[string][]string, time.Time, error) {
+	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
+
+	modifiedIDsFD, err := os.Open(workingDir + "/modified_id.csv")
+	if err != nil {
+		return nil, importStart, fmt.Errorf("could not read modified_id file:%w", err)
+	}
+
+	records, err := csv.NewReader(modifiedIDsFD).ReadAll()
+	if err != nil {
+		return nil, importStart, errors.Wrap(err, "could not read csv")
+	}
+
+	idsPerEcosystem, err := extractRecentlyChangedIDs(records, lastUpdate)
+	if err != nil {
+		return nil, importStart, err
+	}
+	return idsPerEcosystem, importStart, nil
+}
+
+// fetches the list of all recent changes and returns a map of recent changes for each ecosystem
+func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(lastUpdate *time.Time, fd io.Writer) (map[string][]string, time.Time, error) {
 	closed := false
 	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
 
@@ -639,17 +791,21 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, fd 
 	if fd != nil {
 		reader = io.TeeReader(reader, fd)
 	}
-
 	records, err := csv.NewReader(reader).ReadAll()
 	if err != nil {
 		return nil, importStart, errors.Wrap(err, "could not read csv")
 	}
-
-	// we read everything from the body so we can close it and mark it as closed
 	resp.Body.Close()
 	closed = true
+	idsPerEcosystem, err := extractRecentlyChangedIDs(records, lastUpdate)
+	if err != nil {
+		return nil, importStart, err
+	}
+	return idsPerEcosystem, importStart, nil
+}
 
-	// now we can map the changed OSV ID to its ecosystem
+func extractRecentlyChangedIDs(records [][]string, lastUpdate *time.Time) (map[string][]string, error) {
+	//  map the changed OSV IDs to their ecosystems
 	idsPerEcosystem := make(map[string][]string, len(importEcosystems))
 
 	// use a map to process each vuln only once
@@ -662,7 +818,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, fd 
 
 		ecosystem, id, found := strings.Cut(record[1], "/")
 		if !found {
-			return nil, importStart, fmt.Errorf("invalid format for vuln id: %s", record[1])
+			return nil, fmt.Errorf("invalid format for vuln id: %s", record[1])
 		}
 
 		if !slices.Contains(importEcosystems, ecosystem) || shouldIgnoreVulnerabilityID(id) {
@@ -678,21 +834,17 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, fd 
 		// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
 		entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
 		if err != nil {
-			return nil, importStart, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
+			return nil, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
 		}
 		// entries are sorted descending by timestamp; only process changes which happened after our latest update
 		if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
 			break
 		}
 
-		if entryTimestamp.After(importStart) {
-			continue // skip "newer" vulns than our import start
-		}
-
 		alreadyProcessed[id] = struct{}{}
 		idsPerEcosystem[ecosystem] = append(idsPerEcosystem[ecosystem], id)
 	}
-	return idsPerEcosystem, importStart, nil
+	return idsPerEcosystem, nil
 }
 
 // controls in what order and what method to use for each ecosystem
@@ -732,7 +884,7 @@ func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerE
 }
 
 // controls in what order and what method to use for each ecosystem
-func (s osvService) exportFetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
+func (s osvService) importFetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 
 	for ecosystem, ids := range idsPerEcosystem {
@@ -778,6 +930,32 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 	}
 
 	return utils.ZipReaderFromResponse(res)
+}
+
+func (s osvService) importZipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJobWithID, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
+	defer zipWorkWaitGroup.Done()
+	for zipJob := range zipJobs {
+		// first check if we should even process this id, using the filename
+		if _, ok := shouldProcessID[zipJob.Ecosystem][zipJob.ID]; !ok {
+			continue
+		}
+		readCloser, err := zipJob.File.Open()
+		if err != nil {
+			fetchFailures.Add(1)
+			slog.Error("could not open osv file", "file", zipJob.File.Name, "err", err)
+			continue
+		}
+
+		osvEntry := dtos.OSV{}
+		if err = json.NewDecoder(readCloser).Decode(&osvEntry); err != nil {
+			readCloser.Close()
+			fetchFailures.Add(1)
+			slog.Error("could not parse osv file to OSV dto", "file", zipJob.File.Name, "err", err)
+			continue
+		}
+		readCloser.Close()
+		output <- &osvEntry
+	}
 }
 
 func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan OSVWithEcosystem, fetchFailures *atomic.Int64) {
