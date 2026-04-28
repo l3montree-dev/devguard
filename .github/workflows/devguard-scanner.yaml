@@ -71,6 +71,7 @@ jobs:
 
 
   api-pipeline:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
@@ -94,6 +95,7 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
   scanner-pipeline:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     needs: [tests]
     uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
@@ -119,6 +121,7 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
   postgresql-pipeline:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     uses: l3montree-dev/devguard-action/.github/workflows/full-nix.yml@nix
     permissions:
       contents: read
@@ -219,7 +222,7 @@ jobs:
           echo "Generated checksums for all release artifacts"
 
       - name: Sign release artifacts with devguard-scanner
-        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main-latest
+        uses: docker://ghcr.io/l3montree-dev/devguard/scanner:main
         with:
           entrypoint: /bin/sh
           args: |

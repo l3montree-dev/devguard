@@ -2,6 +2,72 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.1] - 2026-04-28
+
+### Fixed
+
+- Wrong digest verification — Added trim suffix to correctly parse and compare image digests (oci dependency proxy)
+- PostgreSQL exporter tag being updated unintentionally during release
+- Go scanner helper binaries — Added `CGO_ENABLED` flag to ensure static binaries
+
+### Changed
+
+- Release scripts — Added confirmation message before applying changes; files are now auto-staged after confirmation
+- Helm chart — `values.yaml` is now included in release script updates
+
+## [v1.3.0] - 2026-04-27
+
+### Added
+
+- **OCI Dependency Proxy** — New proxy for OCI registries with content digest verification, protecting against supply chain attacks
+- **Package Rules** — Configurable allow/block patterns for NPM, PyPI, and Go packages; path traversal protection built in
+- **Dependency Proxy Secrets** — Per-organization/project secret management for authenticated upstream registries; dedicated ecosystem controllers with independent routing per package manager
+- **Renovate Integration** — New recommendation endpoint returning update suggestions scoped to `packageName` and `currentValue`
+- Daily fixable vulnerability history now tracked per artifact and exposed via API
+- Vulnerabilities are automatically reopened with an event when re-detected in subsequent scans
+- Quickfix dashboard statistics: vulnerability distribution added to artifact risk history
+- All DevGuard images now built with Nix for fully reproducible, hermetic builds with multi-architecture support (AMD64 + ARM64); Python dependencies (Semgrep, Checkov) built via `uv2nix`
+- `DISABLE_TICKET_SYNC` environment variable added
+
+### Fixed
+
+- Webhook retry logic now only retries on 5xx, 408, and 429 responses
+- Remote descriptor retrieval in attestation fetching now authenticates correctly
+- VEX rules not applying for direct dependencies; `ROOT` wildcard removed
+- SARIF upload size limit enforced with nil-pointer guards
+- CVSS conversion panics from OSV data removed
+- Search query trimming fixed to use whitespace-specific function
+
+### Changed
+
+- Internal vulnerability IDs migrated to 128-bit UUIDs (fully transparent — no API changes)
+- Mutex guards added around Casbin enforcer calls to prevent race conditions
+
+### Contributors
+
+Thanks to everyone who contributed to this release:
+[@timbastin](https://github.com/timbastin), [@Hubtrick-Git](https://github.com/Hubtrick-Git), [@refoo0](https://github.com/refoo0), [@Dboy0ZDev](https://github.com/Dboy0ZDev), [@seb-kw](https://github.com/seb-kw), [@5byuri](https://github.com/5byuri), [@l3monKenji](https://github.com/l3monKenji)
+
+Special thanks to the external contributor [@gauravshinde1729](https://github.com/gauravshinde1729) for fixing VEX rules for direct dependencies!
+
+## [v1.2.3] - 2026-04-23
+
+### Fixed
+
+- Remote authentication flow for attestations now works correctly when fetching attestations
+
+## [v1.2.2] - 2026-04-22
+
+### Fixed
+
+- Security vulnerability in middleware implementation (more details will be added later)
+
+## [v1.2.1] - 2026-04-08
+
+### Fixed
+
+- Renaming an asset, project, or organization no longer overwrites its slug — slugs are now immutable after creation, preventing broken URLs and references when a resource is renamed
+
 ## [v1.2.0] - 2026-03-30
 
 ### Added
@@ -174,7 +240,12 @@ This is the first stable release of DevGuard. It marks the transition from the `
 - GitLab ticket links using un-slugified refs
 - Various database constraint and migration errors
 
-[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.1.0...main
+[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.2.3...main
+[v1.2.3]: https://github.com/l3montree-dev/devguard/compare/v1.2.2...v1.2.3
+[v1.2.2]: https://github.com/l3montree-dev/devguard/compare/v1.2.1...v1.2.2
+[v1.2.1]: https://github.com/l3montree-dev/devguard/compare/v1.2.0...v1.2.1
+[v1.2.0]: https://github.com/l3montree-dev/devguard/compare/v1.1.1...v1.2.0
+[v1.1.1]: https://github.com/l3montree-dev/devguard/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/l3montree-dev/devguard/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/l3montree-dev/devguard/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/l3montree-dev/devguard/compare/v0.4.7...v1.0.0

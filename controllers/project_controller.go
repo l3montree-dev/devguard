@@ -429,6 +429,16 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
+// @Summary Get project config file
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param config-file path string true "Config file ID"
+// @Produce text/plain
+// @Success 200 {string} string "Config file content"
+// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [get]
 func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
@@ -445,6 +455,17 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 	return ctx.String(200, configContent.(string))
 }
 
+// @Summary Update project config file
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param config-file path string true "Config file ID"
+// @Param body body string true "Config file content"
+// @Produce text/plain
+// @Success 200 {string} string "Updated config file content"
+// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [put]
 func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	configID := ctx.Param("config-file")

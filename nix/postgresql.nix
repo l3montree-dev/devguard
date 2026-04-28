@@ -10,7 +10,7 @@
     name = "docker-entrypoint";
     src = fetchurl {
       url = "https://raw.githubusercontent.com/docker-library/postgres/master/16/bookworm/docker-entrypoint.sh";
-      hash = "sha256-Gm/1aMecuEfP/EFysiofUBzvBQAbCwl1H0gyNoP7ZKI=";
+      hash = "sha256-qjXPpnWmSsdoeQnIOph5jJ/3KrOFVyKg2WQ+SECLbBI=";
     };
     dontUnpack = true;
     installPhase = ''

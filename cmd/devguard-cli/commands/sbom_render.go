@@ -429,7 +429,7 @@ func generateDOT(graph *normalize.SBOMGraph, layout, fromBOMRef string, maxDepth
 	// Optionally add vulnerability information
 	if showVulns {
 		sb.WriteString("\n  // Vulnerabilities\n")
-		for vuln := range graph.Vulnerabilities() {
+		for vuln := range graph.VulnerabilitiesIter() {
 			if vuln.ID == "" {
 				continue
 			}

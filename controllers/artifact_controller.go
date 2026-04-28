@@ -93,7 +93,7 @@ func informationSourceToString(source informationSource) string {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param body body object true "Artifact data"
 // @Success 201 {object} models.Artifact
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [post]
 func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -225,7 +225,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/ [delete]
 func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	reqCtx := ctx.Request().Context()
@@ -286,7 +286,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 // @Param artifactName path string true "Artifact name"
 // @Param body body object true "Artifact data"
 // @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName} [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/ [put]
 func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
@@ -438,8 +438,9 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json [get]
+// @Produce application/json
+// @Success 200 {object} object "CycloneDX BOM in JSON format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/ [get]
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -461,6 +462,18 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
 
+// @Summary Get SBOM in XML format
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Produce application/xml
+// @Success 200 {string} string "CycloneDX BOM in XML format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.xml/ [get]
 func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
@@ -472,16 +485,30 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
 		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
+	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
 
+// @Summary Get VEX in XML format
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Produce application/xml
+// @Success 200 {string} string "CycloneDX VEX in XML format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.xml/ [get]
 func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
 	if err != nil {
 		return err
 	}
 
+	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
@@ -496,8 +523,9 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json [get]
+// @Produce application/json
+// @Success 200 {object} object "CycloneDX VEX in JSON format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/ [get]
 func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	sbom, err := c.buildVeX(ctx)
 	if err != nil {
@@ -510,6 +538,18 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
 
+// @Summary Get VEX in OpenVEX JSON format
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Produce application/json
+// @Success 200 {object} object "OpenVEX document in JSON format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/ [get]
 func (c *ArtifactController) OpenVEXJSON(ctx shared.Context) error {
 	vex, err := c.buildOpenVeX(ctx)
 	if err != nil {
@@ -553,6 +593,18 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns), nil
 }
 
+// @Summary Get vulnerability report as PDF
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Produce application/pdf
+// @Success 200 {string} string "Vulnerability report as PDF"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vulnerability-report.pdf/ [get]
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -605,7 +657,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				m[dv.CVEID] = dv
 			}
 
-			for v := range vex.Vulnerabilities() {
+			for v := range vex.VulnerabilitiesIter() {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue
@@ -763,6 +815,18 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	return err
 }
 
+// @Summary Get SBOM as PDF
+// @Tags Artifacts
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Produce application/pdf
+// @Success 200 {string} string "SBOM as PDF"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.pdf/ [get]
 func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)

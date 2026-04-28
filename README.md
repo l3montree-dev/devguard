@@ -1,309 +1,153 @@
-<!--
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a name="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
-
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-
-  <picture>
-    <source srcset="docs/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
-    <img src="docs/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
+<p align="center">
+  <a href="https://devguard.org">
+    <picture>
+      <source srcset="docs/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
+      <img src="docs/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
   </picture>
+  </a>
+</p>
 
-  <h3 align="center">DevGuard - Develop Secure Software - Backend</h3>
-
-  <p align="center">
-    Manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Documentation made easy, Compliance to security Frameworks
-    <br />
-    <br />
-    <a href="https://github.com/l3montree-dev/devguard/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/l3montree-dev/devguard/issues">Request Feature</a>
-    ·
-    <a href="https://github.com/l3montree-dev/devguard?tab=readme-ov-file#sponsors-and-supporters-">Sponsors</a>
-  </p>
-</div>
+<h3 align="center">Open-source vulnerability management for the full software supply chain</h3>
 
 <p align="center">
-   <a href="https://www.bestpractices.dev/projects/8928"><img src="https://www.bestpractices.dev/projects/8928/badge" alt="OpenSSF Badge"></a>
-   <a href="https://goreportcard.com/report/github.com/l3montree-dev/devguard"><img src="https://goreportcard.com/badge/github.com/l3montree-dev/devguard" alt="Go Report Card"></a>
-   <a href="https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"></a>
-   <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue"></a>
-   <a href="https://matrix.to/#/#devguard:matrix.org"><img src="https://img.shields.io/matrix/devguard%3Amatrix.org?logo=matrix&label=matrix"></a>
-   <a href="https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main"><img src="https://api.main.devguard.org/api/v1/badges/cvss/7d404549-3a17-47d8-b732-b26e6a4eeb00" alt="CVSS"></a>
+  An <a href="https://owasp.org/www-project-devguard/">OWASP Incubating Project</a> · Made in Germany 🇩🇪 for the world 🌍
 </p>
 
 <p align="center">
-Get in touch with the developers directly via 
-  <a href="https://matrix.to/#/#devguard:matrix.org">Matrix-Chat</a>
+  <a href="https://docs.devguard.org">Documentation</a>
+  ·
+  <a href="https://main.devguard.org/l3montree-cybersecurity/projects/devguard">Live Demo</a>
+  ·
+  <a href="https://github.com/l3montree-dev/devguard/issues">Report Bug</a>
+  ·
+  <a href="https://matrix.to/#/#devguard:matrix.org">Chat (Matrix)</a>
 </p>
-Visit the Documentation at: https://devguard.org
 
-<!-- ABOUT THE PROJECT -->
-## Mission
+<p align="center">
+  <a href="https://www.bestpractices.dev/projects/8928"><img src="https://www.bestpractices.dev/projects/8928/badge" alt="OpenSSF Best Practices"></a>
+  <a href="https://goreportcard.com/report/github.com/l3montree-dev/devguard"><img src="https://goreportcard.com/badge/github.com/l3montree-dev/devguard" alt="Go Report Card"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License: AGPL-3.0"></a>
+  <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue" alt="Help Wanted"></a>
+  <a href="https://matrix.to/#/#devguard:matrix.org"><img src="https://img.shields.io/matrix/devguard%3Amatrix.org?logo=matrix&label=matrix" alt="Matrix"></a>
+  <a href="https://main.devguard.org/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main"><img src="https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard%26arch%3Damd64%26tag%3Dmain-amd64/badges/cvss/" alt="CVSS"></a>
+</p>
 
-DevGuard is built by developers, for developers, aiming to simplify the complex world of vulnerability management. Our goal is to integrate security seamlessly into the software development lifecycle, ensuring that security practices are accessible and efficient for everyone, regardless of their security expertise.
+> [!NOTE]
+> Join the monthly [DevGuard Open Community Call](https://meet.mailbox.org/room/dad9052b-7b28-40c8-bf6c-462798a88827?invite=1b3e44cc-2e46-4050-8359-bee002d8bbfe) — always at 17:00 (UTC+2). Help shape new features and discuss contributions. For support, join the [community Matrix space](https://matrix.to/#/#devguard:matrix.org).
 
-### Demo
+---
 
-We are using DevGuard to scan and manage the risks of DevGuard itself—essentially eating our own dogfood. The project can be found here:
+## What is DevGuard?
 
-[DEMO](https://main.devguard.org/l3montree-cybersecurity/projects/devguard)
+**DevGuard is a single platform that finds, prioritizes, and tracks vulnerabilities across your entire software supply chain** — from source code and third-party dependencies to container images, infrastructure-as-code, and deployed artifacts.
 
-We believe VEX information should be shared via a link due to its dynamic nature, as what is risk-free today may be affected by a CVE tomorrow. We've integrated the DevGuard risk scoring into the metrics, with detailed documentation on its calculation to follow soon. SBOM and VEX data are always up to date at these links: 
+It replaces the patchwork of disconnected scanners, spreadsheets, and manual triage with one system that **scans, prioritizes, tracks, and documents** security findings across the whole SDLC. DevGuard is built exclusively on open standards — SBOM, VEX, SARIF, SLSA, in-toto — so there's no vendor lock-in and no proprietary formats.
 
-https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/vex.json/
+> This repository contains the **DevGuard Backend** (Go API + PostgreSQL). The web frontend lives at [l3montree-dev/devguard-web](https://github.com/l3montree-dev/devguard-web).
 
-|Project|SBOM|VeX|
-|---|---|---|
-|[Devguard Golang API](https://github.com/l3montree-dev/devguard)|[SBOM](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/sbom.json/)|[VeX](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard/vex.json/)|
-|[Devguard Web-Frontend](https://github.com/l3montree-dev/devguard-web)|[SBOM](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web/sbom.json/)|[VeX](https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/devguard/assets/devguard-web/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web/vex.json/)|
+[![Dependency risk overview](docs/screenshots/dependency-risks.png)](docs/screenshots/dependency-risks.png)
 
-### The problem we solve
+## Why DevGuard?
 
-Identifying and managing software vulnerabilities is an increasingly critical challenge. Developers often face security issues without the proper training or tools that fit into their everyday workflows. DevGuard is a developer-centered software designed to provide simple, modern solutions for vulnerability detection and management, compliant with common security frameworks.
+Traditional security tools treat vulnerability management as something separate from development — generating 50–80% false-positive noise, living in spreadsheets, and demanding context switches from engineers who just want to ship. DevGuard flips that: security intelligence is delivered where developers already work (pull requests, CI, issue trackers), and real risks surface first thanks to multi-dimensional scoring.
 
-In 2023 alone, cyberattacks caused approximately 206 billion euros in damage only in Germany. Many of these attacks exploited software vulnerabilities. With agile and DevOps methodologies becoming standard, the need for integrating security into the development process has never been greater. We aim to fill this gap with DevGuard, offering a seamless integration of vulnerability management into development workflows.
+Use DevGuard if you need to:
 
+- **Know what's in your software** — automated SBOM generation and dependency tracking across all projects.
+- **Find vulnerabilities continuously** — SCA, SAST, secret scanning, IaC, container scanning, and license compliance, all from one CLI.
+- **Cut through the noise** — risk-based prioritization using CVSS + EPSS + component depth + your CIA assessment, not raw CVSS alone.
+- **Triage at scale** — VEX-based assessment workflows and reusable VEX rules to handle recurring false positives once, not per project.
+- **Block malicious packages** — Dependency Firewall for npm, Go, and Python that checks packages before they enter your codebase.
+- **Meet compliance requirements** — automated evidence for ISO 27001, Cyber Resilience Act (CRA), BSI IT-Grundschutz, and SLSA.
+- **Share transparency data** — live SBOM and VEX endpoints that stay current, because a dependency safe today can have a CVE tomorrow.
 
-### DevGuard Features
+DevGuard is for developers, DevOps engineers, and security teams. No specialized security knowledge required.
 
-DevGuard comes with a lot of features to make safe Software Development as easy as possible for you. Here are some impressions of feature you will experience while using DevGuard:
+[![VEX rules for triage at scale](docs/screenshots/vex-rules.png)](docs/screenshots/vex-rules.png)
 
-#### Auto-Setup
+## Key Capabilities
 
-We developed an auto setup functionality to speed up the DevGuard integration process.
+| Capability | What it does |
+| --- | --- |
+| **Full DevSecOps pipeline** | Secret scanning, SAST, SCA, IaC scanning, container scanning, and license compliance — one CLI, one CI integration |
+| **Risk-based prioritization** | Scores every finding as `(CVSS-BE × (EPSS + 1)) / 2 / Component Depth` so you fix what actually matters first |
+| **SBOM & VEX management** | CycloneDX SBOMs, full VEX workflows, and **live** SBOM/VEX endpoints that always reflect current state |
+| **Dependency Firewall** | Proxies npm, Go, and Python registries — blocks known-malicious and vulnerable packages before download |
+| **Supply-chain integrity** | in-toto attestations, SLSA provenance, cosign signatures, reproducible builds with Nix |
+| **Policy enforcement** | Organization-wide security policies written in OPA/Rego, enforced automatically |
+| **Bring your own scanner** | Ingests SBOM (CycloneDX) and SARIF from Trivy, Grype, Semgrep, and any standards-compliant tool |
+| **Issue tracker integration** | GitHub Issues, GitLab Issues, and Jira — bidirectional sync with slash-command triage |
 
-<img width="3000" height="1680" alt="auto-setup" src="https://github.com/user-attachments/assets/ec7817ce-92cb-4cfc-a019-0129ffc6dcbf" />
+[![Dependency insights and analytics](docs/screenshots/dependency-insights.png)](docs/screenshots/dependency-insights.png)
 
+[![Code risk analysis](docs/screenshots/code-risks.png)](docs/screenshots/code-risks.png)
 
-#### Enhanced Risk Calculation
+## Getting started
 
-When it comes to your actual vulnerability risk, the CVSS score is not enough. To help you prioritise based on the actual risk to your project, we enhance the CVSS score with information about exploitability and calculate the risk score based on your confidentiality, integrity and availability assessment. This ensures that the most important things come first!
+The full documentation lives at **[docs.devguard.org](https://docs.devguard.org)**. It covers installation, quickstart, CI/CD integration, scanner usage, and configuration.
 
-<img width="1706" height="973" alt="management" src="https://github.com/user-attachments/assets/1774eef0-2122-4601-a379-9b1c7b49394a" />
+For details on connecting to your CI, setting up the dependency firewall, or self-hosting in production, see the [documentation](https://docs.devguard.org).
 
 
 
-#### Dependency overview
+## Documentation
 
-Security through obscurity may have worked in the past, but we want to develop software using modern methods! The obscurity shouldn't affect you either. That's why we developed DevGuard: to give you full transparency over your dependencies and highlight any vulnerabilities. This is also visible in a fancy dependency graph.
+The full documentation lives at **[docs.devguard.org](https://docs.devguard.org)**. Start here:
 
-<img width="1702" height="688" alt="deps" src="https://github.com/user-attachments/assets/3dce3e70-3e5b-49c0-8d99-803f7c95d9a2" />
+- 🚀 [Quickstart](https://docs.devguard.org/getting-started) — spin up DevGuard and run your first scan
+- 🧠 [Key Concepts in 2 minutes](https://docs.devguard.org/getting-started/key-concepts) — organizations, groups, assets, artifacts
+- 📊 [Risk Calculation](https://docs.devguard.org/explanations/core-concepts/risk-scoring) — how findings are scored and prioritized
+- 🛡️ [Dependency Firewall](https://docs.devguard.org/how-to-guides/security/dependency-proxy) — block malicious packages before they reach your code
+- ✅ [CRA Compliance](https://devguard.org/cra_compliance) — what DevGuard covers under the EU Cyber Resilience Act
 
+## Live Demo
 
-<!-- INSTALLATION -->
-## Scanner Installation
+We scan DevGuard with DevGuard. Browse the public instance to see real vulnerability data, SBOMs, and VEX assessments on a live project:
 
-DevGuard Scanner can be installed in multiple ways. Choose the method that best fits your environment:
+**[main.devguard.org/l3montree-cybersecurity/projects/devguard](https://main.devguard.org/l3montree-cybersecurity/projects/devguard)**
 
-### Go Install (Recommended)
+Live (always-current) SBOM and VEX endpoints for this project:
 
-The easiest way to install the latest version:
+| Component | SBOM | VEX |
+| --- | --- | --- |
+| [Backend (this repo)](https://github.com/l3montree-dev/devguard) | [SBOM](https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard%26arch%3Damd64%26tag%3Dmain-amd64/sbom.json/) | [VEX](https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/main/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard%26arch%3Damd64%26tag%3Dmain-amd64/vex.json/) |
+| [Web Frontend](https://github.com/l3montree-dev/devguard-web) | [SBOM](https://api.main.devguard.org/api/v1/public/169319b7-8170-469f-9e31-f87b6054e507/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web%26arch%3Damd64%26tag%3Dmain-amd64/sbom.json/) | [VEX](https://api.main.devguard.org/api/v1/public/169319b7-8170-469f-9e31-f87b6054e507/refs/main/artifacts/pkg%3Aoci%2Fdevguard-web%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard-web%26arch%3Damd64%26tag%3Dmain-amd64/vex.json/) |
 
-```bash
-# Install the latest version
-go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@latest
+## Talks & Presentations
 
-# Install a specific version
-go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@v1.0.0
-```
+- **FOSDEM 2026** — *Securing Software for the Public Sector* — [Recording](https://ftp.belnet.be/mirror/FOSDEM/video/2026/aw1120/NK3MJY-securing-software-for-the-public-sector.mp4)
+- **FrOSCon 2025** — *Develop Secure Software — The DevGuard Project* — [Recording](https://media.ccc.de/v/froscon2025-3322-develop_secure_software_-_the_devguard_project)
 
-### Pre-built Binaries
+## Community & Contributing
 
-Download pre-built binaries from our [releases page](https://github.com/l3montree-dev/devguard/releases):
+- 💬 **Chat:** [Matrix space](https://matrix.to/#/#devguard:matrix.org)
+- 💡 **Discussions:** [GitHub Discussions](https://github.com/l3montree-dev/devguard/discussions)
+- 🐛 **Bugs / feature requests:** [GitHub Issues](https://github.com/l3montree-dev/devguard/issues)
+- 📅 **Monthly community call:** see the note at the top of this README
+- 👷 **Contribute:** read the [contribution guide](CONTRIBUTING.md) and pick up a [help wanted](https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) issue
 
-```bash
-# Download and verify (example for Linux AMD64)
-curl -L https://github.com/l3montree-dev/devguard/releases/download/v1.0.0/devguard-scanner_1.0.0_Linux_x86_64.tar.gz -o devguard-scanner.tar.gz
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) when participating.
 
-# Verify the download (optional but recommended)
-curl -L https://github.com/l3montree-dev/devguard/releases/download/v1.0.0/checksums.txt -o checksums.txt
-sha256sum --check --ignore-missing checksums.txt
-
-# Extract and install
-tar -xzf devguard-scanner.tar.gz
-sudo mv devguard-scanner /usr/local/bin/
-```
-
-### Docker
-
-```bash
-# Run directly from Docker Hub
-docker run --rm -v $(pwd):/app ghcr.io/l3montree-dev/devguard-scanner:latest sca /app
-
-# Pull the image first
-docker pull ghcr.io/l3montree-dev/devguard-scanner:latest
-```
-
-### Building from Source
-
-#### Nix Binary Cache
-
-Build outputs are cached at `https://nix.garage.l3montree.cloud`. To push all local derivations to the cache (requires credentials):
-
-```bash
-AWS_ACCESS_KEY_ID=<access-key> \
-AWS_SECRET_ACCESS_KEY=<secret-key> \
-nix copy $(nix-store -qR $(nix path-info --derivation .#devguardOCI)) \
-  --to 's3://nix?endpoint=s3.garage.l3montree.cloud&region=garage&scheme=https&secret-key=/etc/nix/cache-priv-key.pem'
-```
-
-
-
-```bash
-# Clone the repository
-git clone https://github.com/l3montree-dev/devguard.git
-cd devguard
-
-# Build the scanner
-make devguard-scanner
-
-# Or build with release flags for production
-make release-devguard-scanner
-```
-
-### Security Verification
-
-All our releases are cryptographically signed and include SLSA Level 3 provenance for supply chain security.
-
-**Verify binary signatures:**
-```bash
-# Install cosign
-go install github.com/sigstore/cosign/v2/cmd/cosign@latest
-
-# Verify the checksums file signature
-cosign verify-blob \
-  --certificate-identity-regexp="^https://github.com/l3montree-dev/devguard/.github/workflows/" \
-  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-  --bundle checksums.txt.sig.bundle \
-  checksums.txt
-```
-
-**Verify container images:**
-```bash
-cosign verify ghcr.io/l3montree-dev/devguard-scanner:latest \
-  --certificate-identity-regexp="^https://github.com/l3montree-dev/devguard/.github/workflows/" \
-  --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
-```
-
-### ✅ Verify Installation
-
-```bash
-# Check if installation was successful
-devguard-scanner --version
-
-# Get help
-devguard-scanner --help
-
-# Run a quick security scan
-devguard-scanner sca --help
-```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-We welcome contributions! Please read our [contribution guide](./CONTRIBUTING.md) if you would like to report a bug, ask a question, write issues, or help us with coding. All help is appreciated!
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- Code of Conduct -->
-## Code of Conduct
-
-Help us keep DevGuard open and inclusive. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Built With
-
-DevGuard is divided into two projects: A frontend (DevGuard Web) and a backend (DevGuard Backend). 
-
-**Backend (this project):**
-* [![Go][go.dev]][go-url]
-
-**Frontend:**
-* Please refer to: [DevGuard-Web on Github](https://github.com/l3montree-dev/devguard-web)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- LICENSE -->
 ## License
 
-Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt) for more information.
+DevGuard is licensed under **AGPL-3.0-or-later**. See [LICENSE.txt](LICENSE.txt).
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Sponsors & Supporters
 
-## Sponsors and Supporters 🚀
-
-We are proud to be supported and working together with the following organizations:
-
-[![OWASP](./docs/sponsors/sp-owasp.png)](https://owasp.org/)
-[![Bonn-Rhein-Sieg University of Applied Science](./docs/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
-[![WhereGroup](./docs/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
-[![DigitalHub](./docs/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
-[![WetterOnline](./docs/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
-[![Ikor](./docs/sponsors/sp-ikor.png)](https://ikor.one/)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[go.dev]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
-[go-url]: https://go.dev
-
-
-### DEVGUARD-SCANNER
-
-#### Build the scanner
-```bash
-docker build . -f Dockerfile.scanner -t devguard-scanner  
-```
-
-#### Use the scanner for sca
-
-```bash
-docker run -v "$(PWD):/app" scanner devguard-scanner sca \
-  --assetName="<ASSET NAME>" \
-  --apiUrl="http://host.docker.internal:8080" \
-  --token="<TOKEN>" \
-  --path="/app"
-```
-
-#### Using the scanner during development
-
-```bash
-go run ./cmd/devguard-scanner/main.go sca \
-  --assetName="<ASSET NAME>" \
-  --apiUrl="http://localhost:8080" \
-  --token="<TOKEN>"
-```
-
-
-#### Scan a container
-
-##### Build a image.tar from a dockerfile using kaniko
-
-```bash
-docker run --rm -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest --dockerfile=/workspace/Dockerfile --context=/workspace --tarPath=/workspace/image.tar --no-push
-```
-
-##### Scan the .tar
-```bash
-docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
-  --assetName="<ASSET NAME>" \
-  --apiUrl="http://host.docker.internal:8080" \
-  --token="<TOKEN>" \
-  --path="/app/image.tar"
-```
-
+<p align="center">
+  <a href="https://owasp.org/"><img src="docs/sponsors/sp-owasp.png" alt="OWASP" height="60"></a>
+  <a href="https://www.zendis.de/"><img src="docs/sponsors/sp-zendis.png" alt="ZenDiS" height="60"></a>
+  <a href="https://www.h-brs.de/"><img src="docs/sponsors/sp-hbrs.png" alt="Bonn-Rhein-Sieg University of Applied Sciences" height="60"></a>
+  <a href="https://wheregroup.com/"><img src="docs/sponsors/sp-wg.png" alt="WhereGroup" height="60"></a>
+  <a href="https://wetteronline.de/"><img src="docs/sponsors/sp-wo.png" alt="WetterOnline" height="60"></a>
+  <a href="https://ikor.one/"><img src="docs/sponsors/sp-ikor.png" alt="Ikor" height="60"></a>
+  <a href="https://www.uni-giessen.de/de"><img src="docs/sponsors/sp-jlu.png" alt="JLU" height="60"></a>
+  <a href="https://www.saltrock.de/"><img src="docs/sponsors/sp-saltrock.png" alt="Saltrock" height="60"></a>
+  <a href="https://ready-labs.de/"><img src="docs/sponsors/sp-readylabs.png" alt="Ready Labs" height="60"></a>
+  <a href="https://business-code.de/"><img src="docs/sponsors/sp-bc.png" alt="Business Code" height="60"></a>
+  <a href="https://www.cps-it.de/"><img src="docs/sponsors/sp-cps.png" alt="CPS" height="60"></a>
+  <a href="https://www.cronn.de/"><img src="docs/sponsors/sp-cronn.png" alt="Cronn" height="60"></a>
+  <a href="https://www.heylogin.com/de"><img src="docs/sponsors/sp-heylogin.png" alt="HeyLogin" height="60"></a>
+  <a href="https://opencode.de/de"><img src="docs/sponsors/sp-opencode.png" alt="OpenCode" height="60"></a>
+  <a href="https://www.opendesk.eu/de"><img src="docs/sponsors/sp-opendesk.png" alt="OpenDesk" height="60"></a>
+</p>

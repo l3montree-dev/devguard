@@ -482,6 +482,8 @@ components:
           $ref: '#/components/schemas/dtos.CVEDTO'
         cveID:
           type: string
+        directDependencyFixedVersion:
+          type: string
         effort:
           type: integer
         exploits:
@@ -537,6 +539,8 @@ components:
         cve:
           $ref: '#/components/schemas/dtos.CVEDTO'
         cveID:
+          type: string
+        directDependencyFixedVersion:
           type: string
         effort:
           type: integer
@@ -644,6 +648,14 @@ components:
           type: integer
         cvePurlCriticalCvss:
           type: integer
+        cvePurlFixableCritical:
+          type: integer
+        cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableLow:
+          type: integer
+        cvePurlFixableMedium:
+          type: integer
         cvePurlHigh:
           type: integer
         cvePurlHighCvss:
@@ -655,6 +667,14 @@ components:
         cvePurlMedium:
           type: integer
         cvePurlMediumCvss:
+          type: integer
+        fixableCritical:
+          type: integer
+        fixableHigh:
+          type: integer
+        fixableLow:
+          type: integer
+        fixableMedium:
           type: integer
         high:
           type: integer
@@ -1060,23 +1080,55 @@ components:
       type: object
     dtos.OrgRiskHistory:
       properties:
-        criticalCVSS:
+        critical:
           type: integer
-        criticalRisk:
+        criticalCvss:
+          type: integer
+        cvePurlCritical:
+          type: integer
+        cvePurlCriticalCvss:
+          type: integer
+        cvePurlFixableCritical:
+          type: integer
+        cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableLow:
+          type: integer
+        cvePurlFixableMedium:
+          type: integer
+        cvePurlHigh:
+          type: integer
+        cvePurlHighCvss:
+          type: integer
+        cvePurlLow:
+          type: integer
+        cvePurlLowCvss:
+          type: integer
+        cvePurlMedium:
+          type: integer
+        cvePurlMediumCvss:
           type: integer
         day:
           type: string
-        highCVSS:
+        fixableCritical:
           type: integer
-        highRisk:
+        fixableHigh:
           type: integer
-        lowCVSS:
+        fixableLow:
           type: integer
-        lowRisk:
+        fixableMedium:
           type: integer
-        mediumCVSS:
+        high:
           type: integer
-        mediumRisk:
+        highCvss:
+          type: integer
+        low:
+          type: integer
+        lowCvss:
+          type: integer
+        medium:
+          type: integer
+        mediumCvss:
           type: integer
       type: object
     dtos.OrgStructureDistribution:
@@ -1381,6 +1433,14 @@ components:
           type: integer
         cvePurlCriticalCvss:
           type: integer
+        cvePurlFixableCritical:
+          type: integer
+        cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableLow:
+          type: integer
+        cvePurlFixableMedium:
+          type: integer
         cvePurlHigh:
           type: integer
         cvePurlHighCvss:
@@ -1396,6 +1456,14 @@ components:
         day:
           description: on the day 2024-08-12 the asset had a sumRisk of 25.
           type: string
+        fixableCritical:
+          type: integer
+        fixableHigh:
+          type: integer
+        fixableLow:
+          type: integer
+        fixableMedium:
+          type: integer
         fixedDependencyVulns:
           type: integer
         high:
@@ -1520,6 +1588,14 @@ components:
           type: integer
         cvePurlCriticalCvss:
           type: integer
+        cvePurlFixableCritical:
+          type: integer
+        cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableLow:
+          type: integer
+        cvePurlFixableMedium:
+          type: integer
         cvePurlHigh:
           type: integer
         cvePurlHighCvss:
@@ -1531,6 +1607,14 @@ components:
         cvePurlMedium:
           type: integer
         cvePurlMediumCvss:
+          type: integer
+        fixableCritical:
+          type: integer
+        fixableHigh:
+          type: integer
+        fixableLow:
+          type: integer
+        fixableMedium:
           type: integer
         high:
           type: integer
@@ -1749,6 +1833,14 @@ components:
           type: integer
         cvePurlCriticalCvss:
           type: integer
+        cvePurlFixableCritical:
+          type: integer
+        cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableLow:
+          type: integer
+        cvePurlFixableMedium:
+          type: integer
         cvePurlHigh:
           type: integer
         cvePurlHighCvss:
@@ -1764,6 +1856,14 @@ components:
         day:
           description: on the day 2024-08-12 the asset had a sumRisk of 25.
           type: string
+        fixableCritical:
+          type: integer
+        fixableHigh:
+          type: integer
+        fixableLow:
+          type: integer
+        fixableMedium:
+          type: integer
         fixedDependencyVulns:
           type: integer
         high:
@@ -2122,6 +2222,8 @@ components:
         cve:
           $ref: '#/components/schemas/models.CVE'
         cveId:
+          type: string
+        directDependencyFixedVersion:
           type: string
         effort:
           type: integer
@@ -2539,11 +2641,15 @@ components:
           type: string
         createdByVexRule:
           type: boolean
-        dtos.VulnType:
-          $ref: '#/components/schemas/dtos.VulnType'
+        dependencyVulnId:
+          type: string
+        firstPartyVulnId:
+          type: string
         id:
           type: string
         justification:
+          type: string
+        licenseRiskId:
           type: string
         mechanicalJustification:
           $ref: '#/components/schemas/dtos.MechanicalJustificationType'
@@ -2551,11 +2657,7 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.VulnEventType'
-        updatedAt:
-          type: string
         userId:
-          type: string
-        vulnId:
           type: string
       type: object
     models.Weakness:
@@ -2879,7 +2981,7 @@ paths:
       summary: Update organization
       tags:
       - Organizations
-  /organizations/{organization}/config-files/{config-file}:
+  /organizations/{organization}/config-files/{config-file}/:
     get:
       parameters:
       - description: Organization slug
@@ -2897,14 +2999,49 @@ paths:
       responses:
         "200":
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-          description: OK
+                type: string
+          description: Config file content
       security:
       - CookieAuth: []
       - PATAuth: []
       summary: Get organization config file
+      tags:
+      - Organizations
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: string
+        description: Config file content
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Updated config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Update organization config file
       tags:
       - Organizations
   /organizations/{organization}/content-tree:
@@ -3398,6 +3535,93 @@ paths:
       summary: Update asset
       tags:
       - Assets
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get asset config file
+      tags:
+      - Assets
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: string
+        description: Config file content
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Updated config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Update asset config file
+      tags:
+      - Assets
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version}:
     get:
       parameters:
@@ -3544,7 +3768,7 @@ paths:
       summary: Get CVEs with known exploits for an asset
       tags:
       - Statistics
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/:
     get:
       parameters:
       - description: Organization slug
@@ -3571,7 +3795,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.AssetVersion'
+                  $ref: '#/components/schemas/dtos.AssetVersionDTO'
                 type: array
           description: OK
       security:
@@ -3620,7 +3844,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.AssetVersion'
+                $ref: '#/components/schemas/dtos.AssetVersionDTO'
           description: Created
       security:
       - CookieAuth: []
@@ -3628,7 +3852,7 @@ paths:
       summary: Create asset version
       tags:
       - Asset Versions
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/:
     delete:
       parameters:
       - description: Organization slug
@@ -3695,7 +3919,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.AssetVersion'
+                $ref: '#/components/schemas/dtos.AssetVersionDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -3703,7 +3927,7 @@ paths:
       summary: Get asset version details
       tags:
       - Asset Versions
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/:
     post:
       parameters:
       - description: Organization slug
@@ -3751,7 +3975,7 @@ paths:
       summary: Create artifact
       tags:
       - Artifacts
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}:
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/:
     delete:
       parameters:
       - description: Organization slug
@@ -3846,7 +4070,7 @@ paths:
       summary: Update artifact
       tags:
       - Artifacts
-  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/
   : get:
       parameters:
       - description: Organization slug
@@ -3885,14 +4109,152 @@ paths:
             application/json:
               schema:
                 type: object
-          description: OK
+          description: OpenVEX document in JSON format
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get VEX in OpenVEX JSON format
+      tags:
+      - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: CycloneDX BOM in JSON format
       security:
       - CookieAuth: []
       - PATAuth: []
       summary: Get SBOM in JSON format
       tags:
       - Artifacts
-  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.pdf/
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/pdf:
+              schema:
+                type: string
+          description: SBOM as PDF
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get SBOM as PDF
+      tags:
+      - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.xml/
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/xml:
+              schema:
+                type: string
+          description: CycloneDX BOM in XML format
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get SBOM in XML format
+      tags:
+      - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/
   : get:
       parameters:
       - description: Organization slug
@@ -3931,11 +4293,103 @@ paths:
             application/json:
               schema:
                 type: object
-          description: OK
+          description: CycloneDX VEX in JSON format
       security:
       - CookieAuth: []
       - PATAuth: []
       summary: Get VEX in JSON format
+      tags:
+      - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.xml/
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/xml:
+              schema:
+                type: string
+          description: CycloneDX VEX in XML format
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get VEX in XML format
+      tags:
+      - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vulnerability-report.pdf/
+  : get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/pdf:
+              schema:
+                type: string
+          description: Vulnerability report as PDF
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get vulnerability report as PDF
       tags:
       - Artifacts
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/attestations:
@@ -4896,6 +5350,81 @@ paths:
       summary: Scan SBOM file
       tags:
       - Scanning
+  /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get project config file
+      tags:
+      - Projects
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Config file ID
+        in: path
+        name: config-file
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: string
+        description: Config file content
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Updated config file content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Update project config file
+      tags:
+      - Projects
   /organizations/{organization}/projects/{projectSlug}/members:
     get:
       parameters:

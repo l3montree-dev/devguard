@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
@@ -39,6 +40,9 @@ import (
 )
 
 type baseConfig struct {
+	// will be set internally...
+	ConfigFilePath string
+
 	CI        bool   `json:"ci" mapstructure:"ci"`
 	Token     string `json:"token" mapstructure:"token"`
 	AssetName string `json:"assetName" mapstructure:"assetName"`
@@ -274,20 +278,21 @@ func getSlugsFromAssetName(assetName string) (string, string, string, error) {
 	return assetParts[0], assetParts[1], assetParts[2], nil
 }
 
-func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) error {
+func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) (string, error) {
 	configContent, err := GetConfigFile(ctx, configFileName, assetName)
 
 	if err != nil {
-		slog.Warn("could not get config file, using default trivy config", "err", err)
+		return "", err
 	} else {
+		dir := os.TempDir()
+		filePath := path.Join(dir, configFileName)
 		// write the config to a file
-		err = os.WriteFile(configFileName, []byte(configContent), 0644)
+		err = os.WriteFile(filePath, []byte(configContent), 0644)
 		if err != nil {
-			slog.Warn("could not write config file, using default trivy config", "err", err)
+			return "", err
 		}
+		return filePath, nil
 	}
-
-	return nil
 }
 
 func GetConfigFile(ctx context.Context, configID string, assetName string) (string, error) {
@@ -324,5 +329,10 @@ func GetConfigFile(ctx context.Context, configID string, assetName string) (stri
 		return "", errors.Wrap(err, "could not read response body")
 	}
 
-	return string(body), nil
+	bodyStr := strings.TrimSpace(string(body))
+	if bodyStr == "" {
+		return "", fmt.Errorf("config file is empty")
+	}
+
+	return bodyStr, nil
 }

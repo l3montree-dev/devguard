@@ -18,12 +18,12 @@ jobs:
           persist-credentials: false
 
       - name: Mirror to GitLab
-        continue-on-error: true
         run: |
           git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_REPO}.git"
           # Avoid --mirror, which also pushes refs/remotes/* that GitLab rejects as hidden refs.
-          git push --prune gitlab 'refs/heads/*:refs/heads/*'
-          git push --prune gitlab 'refs/tags/*:refs/tags/*'
+          # Push from refs/remotes/origin/* so all branches are present and --prune never deletes the default branch.
+          git push --prune gitlab 'refs/remotes/origin/*:refs/heads/*'
+          git push --force gitlab 'refs/tags/*:refs/tags/*'
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
           GITLAB_HOST: ${{ vars.GITLAB_HOST }}

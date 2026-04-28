@@ -116,6 +116,23 @@ type PolicyRepository interface {
 	FindCommunityManagedPolicies(ctx context.Context, tx DB) ([]models.Policy, error)
 }
 
+type DependencyProxySecretRepository interface {
+	utils.Repository[uuid.UUID, models.DependencyProxySecret, DB]
+	GetOrCreateByOrgID(ctx context.Context, tx DB, orgID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.DependencyProxySecret, error)
+	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
+	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
+}
+
+type DependencyProxySecretService interface {
+	GetOrCreateByOrgID(ctx context.Context, orgID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByProjectID(ctx context.Context, projectID uuid.UUID) (models.DependencyProxySecret, error)
+	GetOrCreateByAssetID(ctx context.Context, assetID uuid.UUID) (models.DependencyProxySecret, error)
+	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
+	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
+}
+
 type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
@@ -192,7 +209,7 @@ type AffectedComponentRepository interface {
 
 type MaliciousPackageChecker interface {
 	DownloadAndProcessDB(ctx context.Context) error
-	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV)
+	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
 }
 
 type ComponentRepository interface {
@@ -352,7 +369,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
-	GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string
+	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 }
@@ -553,6 +570,8 @@ type StatisticsRepository interface {
 type ArtifactRiskHistoryRepository interface {
 	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
 	GetRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
+	GetLatestRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)

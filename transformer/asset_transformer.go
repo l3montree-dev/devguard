@@ -121,7 +121,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.Name != nil {
 		updated = true
 		asset.Name = *assetPatch.Name
-		asset.Slug = slug.Make(*assetPatch.Name)
 	}
 
 	if assetPatch.SharesInformation != nil {

@@ -138,17 +138,58 @@ ALTER TABLE public.vuln_events DROP COLUMN IF EXISTS updated_at;
 
 -- Now we want to migrate the existing single vuln_id column to 3 columns referencing the respective vuln id column
 
--- first create the new rows referencing the id columns
+-- first create the new rows without immediate FK enforcement so backfill stays fast
 ALTER TABLE public.vuln_events
-  ADD COLUMN dependency_vuln_id   UUID REFERENCES public.dependency_vulns(id)        ON DELETE CASCADE,
-  ADD COLUMN license_risk_id      UUID REFERENCES public.license_risks(id)           ON DELETE CASCADE,
-  ADD COLUMN first_party_vuln_id  UUID REFERENCES public.first_party_vulnerabilities(id) ON DELETE CASCADE;
+  ADD COLUMN dependency_vuln_id   UUID,
+  ADD COLUMN license_risk_id      UUID,
+  ADD COLUMN first_party_vuln_id  UUID;
 
--- then transform and copy the old values into the new columns
+-- delete orphaned vuln_events before backfilling FK columns
+DELETE FROM public.vuln_events ve
+WHERE ve.vuln_type = 'dependencyVuln'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.dependency_vulns dv
+    WHERE dv.id = substring(ve.vuln_id,1,32)::UUID
+  );
 
-UPDATE public.vuln_events SET dependency_vuln_id  = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'dependencyVuln';
-UPDATE public.vuln_events SET license_risk_id     = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'licenseRisk';
-UPDATE public.vuln_events SET first_party_vuln_id = substring(vuln_id,1,32)::UUID WHERE vuln_type = 'firstPartyVuln';
+DELETE FROM public.vuln_events ve
+WHERE ve.vuln_type = 'licenseRisk'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.license_risks lr
+    WHERE lr.id = substring(ve.vuln_id,1,32)::UUID
+  );
+
+DELETE FROM public.vuln_events ve
+WHERE ve.vuln_type = 'firstPartyVuln'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.first_party_vulnerabilities fpv
+    WHERE fpv.id = substring(ve.vuln_id,1,32)::UUID
+  );
+
+-- delete rows with unsupported vuln_type because they cannot be mapped to a parent FK
+DELETE FROM public.vuln_events
+WHERE vuln_type NOT IN ('dependencyVuln', 'licenseRisk', 'firstPartyVuln');
+
+-- then transform and copy the old values into the new columns in one pass
+
+UPDATE public.vuln_events
+SET
+  dependency_vuln_id = CASE
+    WHEN vuln_type = 'dependencyVuln' THEN substring(vuln_id,1,32)::UUID
+    ELSE dependency_vuln_id
+  END,
+  license_risk_id = CASE
+    WHEN vuln_type = 'licenseRisk' THEN substring(vuln_id,1,32)::UUID
+    ELSE license_risk_id
+  END,
+  first_party_vuln_id = CASE
+    WHEN vuln_type = 'firstPartyVuln' THEN substring(vuln_id,1,32)::UUID
+    ELSE first_party_vuln_id
+  END
+WHERE vuln_type IN ('dependencyVuln', 'licenseRisk', 'firstPartyVuln');
 
 -- add constraint to check that each vuln event has exactly one vuln_id as parent but don't validate yet
 
@@ -157,6 +198,15 @@ ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
   (license_risk_id     IS NOT NULL)::int +
   (first_party_vuln_id IS NOT NULL)::int = 1
 );
+
+ALTER TABLE public.vuln_events ADD CONSTRAINT vuln_events_dependency_vuln_id_fkey
+  FOREIGN KEY (dependency_vuln_id) REFERENCES public.dependency_vulns(id) ON DELETE CASCADE;
+
+ALTER TABLE public.vuln_events ADD CONSTRAINT vuln_events_license_risk_id_fkey
+  FOREIGN KEY (license_risk_id) REFERENCES public.license_risks(id) ON DELETE CASCADE;
+
+ALTER TABLE public.vuln_events ADD CONSTRAINT vuln_events_first_party_vuln_id_fkey
+  FOREIGN KEY (first_party_vuln_id) REFERENCES public.first_party_vulnerabilities(id) ON DELETE CASCADE;
 
 -- lastly drop the old columns
 ALTER TABLE public.vuln_events
