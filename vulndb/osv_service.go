@@ -146,7 +146,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	start := time.Now()
 	if err != nil {
 		slog.Info("could not get last RC import timestamp, assuming no import took place yet")
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(nil, false)
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(nil, nil)
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp, false)
+		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystem(&lastUpdateTimestamp, nil)
 		if err != nil {
 			return err
 		}
@@ -297,11 +297,24 @@ func (s osvService) ExportRC(ctx context.Context) error {
 
 		return nil
 	}
-	var idsPerEcosystem map[string][]string
-	start := time.Now()
-	idsPerEcosystem, _, err := s.getRecentlyChangedIDsPerEcosystem(nil, true)
+
+	bundleFD, err := os.Create("vulndb_export.zip")
 	if err != nil {
-		return fmt.Errorf("could not get ids from modified_id.csv")
+		panic(err)
+	}
+	defer bundleFD.Close()
+	bundleWriter := zip.NewWriter(bundleFD)
+	defer bundleWriter.Close()
+
+	modifiedFD, err := bundleWriter.Create("modified_id_mirror.csv")
+	if err != nil {
+		panic(err)
+	}
+
+	start := time.Now()
+	idsPerEcosystem, _, err := s.getRecentlyChangedIDsPerEcosystem(nil, modifiedFD)
+	if err != nil {
+		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
 	}
 	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
 
@@ -315,13 +328,11 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return fmt.Errorf("could not get any vulnerability information from osv")
 	}
 
-	httpWaitGroup := &sync.WaitGroup{}
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
 	var fetchFailures atomic.Int64
 
-	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
 	vulnData := make(chan OSVWithEcosystem, 5000)
 
@@ -334,11 +345,6 @@ func (s osvService) ExportRC(ctx context.Context) error {
 			anyZip = true
 			break
 		}
-	}
-
-	for range numberOfSingleFetchers {
-		httpWaitGroup.Add(1)
-		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData, &fetchFailures)
 	}
 
 	if anyZip {
@@ -360,7 +366,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 
 	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, &fetchFailures)
+	go s.exportFetchingController(zipPushWaitGroup, idsPerEcosystem, zipJobs, &fetchFailures)
 
 	// handle sync via independent go routines
 	go func() {
@@ -369,34 +375,29 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}()
 
 	go func() {
-		httpWaitGroup.Wait()
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
-	fd, err := os.Create("ecosystems.zip")
+	ecosystemsFD, err := bundleWriter.CreateHeader(&zip.FileHeader{Name: "ecosystems.zip", Method: zip.Store})
 	if err != nil {
 		panic(err)
 	}
-	zipWriter := zip.NewWriter(fd)
+	zipWriter := zip.NewWriter(ecosystemsFD)
 
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
 		allOSVVulns = append(allOSVVulns, osvObject.OSV)
-		zipFd, err := zipWriter.Create(osvObject.Ecosystem + "/" + osvObject.OSV.ID)
+		zipFd, err := zipWriter.Create(osvObject.Ecosystem + "/" + osvObject.OSV.ID + ".json")
 		if err != nil {
 			panic(err)
 		}
-		json, err := json.Marshal(osvObject.OSV)
-		if err != nil {
-			panic(err)
-		}
-		_, err = zipFd.Write(json)
+		err = json.NewEncoder(zipFd).Encode(osvObject.OSV)
 		if err != nil {
 			panic(err)
 		}
 	}
-	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
+	zipWriter.Close()
 
 	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
 	if n := fetchFailures.Load(); n > 0 {
@@ -407,6 +408,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		slog.Warn("could not fetch any OSV vulns")
 		return nil
 	}
+	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
 	// build all the rows from the OSV objects
 	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
@@ -440,27 +442,11 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return fmt.Errorf("could not calculate the integrity information for tables: %w", err)
 	}
 
-	err = buildIntegrityInformationFile(integrityInformation, "groundTruth")
-	if err != nil {
-		return fmt.Errorf("could not build checksum file: %w", err)
-	}
-
-	slog.Info("finished vulndb export", "time", time.Since(start))
-	return nil
-}
-
-type tableIntegrityInformation struct {
-	TableName  string `json:"table_name"`
-	Checksum   []byte `json:"checksum"`
-	TotalCount int    `json:"total_count"`
-}
-
-func buildIntegrityInformationFile(integrityInformation []tableIntegrityInformation, fileName string) error {
 	slices.SortFunc(integrityInformation, func(a, b tableIntegrityInformation) int {
 		return strings.Compare(a.TableName, b.TableName)
 	})
 
-	fd, err := os.Create(fileName + ".json")
+	fd, err := bundleWriter.Create("integrity_checks.json")
 	if err != nil {
 		return fmt.Errorf("could not create checksum file: %w", err)
 	}
@@ -474,6 +460,19 @@ func buildIntegrityInformationFile(integrityInformation []tableIntegrityInformat
 	if err != nil {
 		return fmt.Errorf("could not write json to file: %w", err)
 	}
+
+	slog.Info("finished vulndb export", "time", time.Since(start))
+	return nil
+}
+
+type tableIntegrityInformation struct {
+	TableName  string `json:"table_name"`
+	Checksum   []byte `json:"checksum"`
+	TotalCount int    `json:"total_count"`
+}
+
+func buildIntegrityInformationFile(integrityInformation []tableIntegrityInformation, fileName string) error {
+
 	return nil
 }
 
@@ -611,7 +610,7 @@ func (s osvService) getEcosystems() ([]string, error) {
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, copyCSV bool) (map[string][]string, time.Time, error) {
+func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, fd io.Writer) (map[string][]string, time.Time, error) {
 	closed := false
 	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
 
@@ -637,12 +636,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystem(lastUpdate *time.Time, cop
 	}
 
 	var reader io.Reader = resp.Body
-	if copyCSV {
-		fd, err := os.Create("modified_id_mirror.csv")
-		if err != nil {
-			return nil, importStart, errors.Wrap(err, "could not create mirror csv")
-		}
-		defer fd.Close()
+	if fd != nil {
 		reader = io.TeeReader(reader, fd)
 	}
 
@@ -733,6 +727,18 @@ func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerE
 			}
 		}
 
+	}
+	slog.Info("finished pushing all jobs")
+}
+
+// controls in what order and what method to use for each ecosystem
+func (s osvService) exportFetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
+	defer zipPushWaitGroup.Done()
+
+	for ecosystem, ids := range idsPerEcosystem {
+		slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
+		zipPushWaitGroup.Add(1)
+		go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs, fetchFailures)
 	}
 	slog.Info("finished pushing all jobs")
 }
