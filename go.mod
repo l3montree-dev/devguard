@@ -29,6 +29,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/jedib0t/go-pretty/v6 v6.7.9
 	github.com/joho/godotenv v1.5.1
+	github.com/klauspost/compress v1.18.5
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f
 	github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23
 	github.com/knqyf263/go-rpm-version v0.0.0-20240918084003-2afd7dc6a38f
@@ -319,7 +320,6 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
 	github.com/klauspost/asmfmt v1.3.2 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/ktrysmt/go-bitbucket v0.6.4 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect

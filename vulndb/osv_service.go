@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +36,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/klauspost/compress/zstd"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -113,10 +114,48 @@ type cveAffectedComponentRow struct {
 	AffectedComponentID int64 `gorm:"column:affected_component_id"`
 }
 
+// lean structs for gob export/import — only the fields written to the DB,
+// with time.Time replaced by int64 (Unix seconds) to avoid gob's verbose wall/ext/loc encoding
+type cveRow struct {
+	ID                    int64
+	CVE                   string
+	CreatedAt             int64
+	UpdatedAt             int64
+	DatePublished         int64
+	DateLastModified      int64
+	Description           string
+	CVSS                  float32
+	References            string
+	CISAExploitAdd        int64 // 0 = NULL
+	CISAActionDue         int64 // 0 = NULL
+	CISARequiredAction    string
+	CISAVulnerabilityName string
+	EPSS                  float64 // 0 = NULL
+	Percentile            float32 // 0 = NULL
+	Vector                string
+}
+
+type affectedComponentRow struct {
+	ID                 int64
+	PurlWithoutVersion string
+	Ecosystem          string
+	Version            string
+	SemverIntroduced   string
+	SemverFixed        string
+	VersionIntroduced  string
+	VersionFixed       string
+}
+
+type cveRelationshipRow struct {
+	SourceCVE        string
+	TargetCVE        string
+	RelationshipType string
+}
+
 type vulndbRows struct {
-	CVEs                  []models.CVE
-	CVERelationships      []models.CVERelationship
-	AffectedComponents    []models.AffectedComponent
+	CVEs                  []cveRow
+	CVERelationships      []cveRelationshipRow
+	AffectedComponents    []affectedComponentRow
 	CVEAffectedComponents []cveAffectedComponentRow
 }
 type fetchingJob struct {
@@ -133,6 +172,8 @@ const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 const zipThreshold = 4000
 
+var debugLocalZips = true
+
 type zipJob struct {
 	File      *zip.File
 	Ecosystem string
@@ -144,12 +185,13 @@ type zipJobWithID struct {
 }
 
 func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
-	return integrity.TotalCount == compareInformation.TotalCount && bytes.Compare(integrity.Checksum, compareInformation.Checksum) == 0
+	return integrity.TotalCount == compareInformation.TotalCount && bytes.Equal(integrity.Checksum, compareInformation.Checksum)
 }
 
-// imports the newest vulnerability data from the OSV database (using the recently changed csv) and applies it to our vulndb tables (cves, cve_relationships, affected_components, cve_affected_componentss)
+// imports the newest vulnerability data from the OCI registry (gob file) and applies it to our vulndb tables
 func (s osvService) ImportRC(ctx context.Context) error {
 	slog.Info("start vulndb import")
+	start := time.Now()
 
 	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
 	if err != nil {
@@ -157,115 +199,31 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	defer os.RemoveAll(workingDir)
 
-	var importTimestamp time.Time
-	var lastUpdate string
-	var idsPerEcosystem map[string][]string
-
-	start := time.Now()
-	err = s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate)
+	gobFile, err := os.Open(workingDir + "/vulndb.gob.zst")
 	if err != nil {
-		slog.Info("could not get last RC import timestamp, assuming no import took place yet")
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystemFromMirror(nil, workingDir)
-		if err != nil {
-			return err
-		}
-	} else {
-		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
-		if err != nil {
-			return fmt.Errorf("could not parse config timestamp: %w", err)
-		}
-		idsPerEcosystem, importTimestamp, err = s.getRecentlyChangedIDsPerEcosystemFromMirror(&lastUpdateTimestamp, workingDir)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("could not open vulndb gob file: %w", err)
 	}
+	defer gobFile.Close()
 
-	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
-
-	// calculate the work load
-	totalCount := 0
-	for _, ids := range idsPerEcosystem {
-		totalCount += len(ids)
-	}
-
-	if totalCount == 0 {
-		slog.Info("vulnerability database is already up to date")
-		return nil
-	}
-
-	var fetchFailures atomic.Int64
-
-	zipPushWaitGroup := &sync.WaitGroup{}
-	zipWorkWaitGroup := &sync.WaitGroup{}
-
-	vulnData := make(chan *dtos.OSV, 5000)
-	zipJobs := make(chan zipJobWithID, 10_000)
-
-	fetchingStart := time.Now()
-
-	zipPushWaitGroup.Add(1)
-	go extractAndDistributeOSVJobs(zipPushWaitGroup, workingDir, zipJobs, &fetchFailures)
-
-	shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, len(idsPerEcosystem))
-	for ecosystem, ids := range idsPerEcosystem {
-		if len(ids) >= zipThreshold {
-			if shouldProcessIDInEcosystem[ecosystem] == nil {
-				shouldProcessIDInEcosystem[ecosystem] = make(map[string]struct{}, len(ids))
-			}
-			for _, id := range ids {
-				shouldProcessIDInEcosystem[ecosystem][id] = struct{}{}
-			}
-		}
-	}
-	for range numberOfZipWorkers {
-		zipWorkWaitGroup.Add(1)
-		go s.importZipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, &fetchFailures)
-	}
-
-	// handle sync via independent go routines
-	go func() {
-		zipPushWaitGroup.Wait()
-		close(zipJobs)
-	}()
-
-	go func() {
-		zipWorkWaitGroup.Wait()
-		close(vulnData)
-	}()
-
-	// collect all OSV objects first
-	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
-	for osvObject := range vulnData {
-		allOSVVulns = append(allOSVVulns, osvObject)
-	}
-	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
-
-	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
-	if n := fetchFailures.Load(); n > 0 {
-		return fmt.Errorf("aborting import: %d ids could not be fetched; watermark not advanced, will retry on next run", n)
-	}
-
-	if len(allOSVVulns) == 0 {
-		slog.Warn("could not fetch any OSV vulns")
-		return nil
-	}
-
-	// build all the rows from the OSV objects
-	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
+	zstWriter, err := zstd.NewReader(gobFile)
 	if err != nil {
-		return fmt.Errorf("could not build vulndb rows: %w", err)
+		return fmt.Errorf("could not create zstd reader: %w", err)
 	}
+	defer zstWriter.Close()
 
-	// acquire a connection first
-	// use pgx for support of the COPY function
+	var rows vulndbRows
+	if err := gob.NewDecoder(zstWriter).Decode(&rows); err != nil {
+		return fmt.Errorf("could not decode vulndb gob file: %w", err)
+	}
+	slog.Info("decoded gob file", "cves", len(rows.CVEs), "affected_components", len(rows.AffectedComponents))
+
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("could acquire postgresql connection: %w", err)
 	}
 	defer conn.Release()
 
-	err = s.writeToDatabase(ctx, conn, rows)
-	if err != nil {
+	if err := s.writeToDatabase(ctx, conn, rows); err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 
@@ -283,13 +241,10 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	slog.Info("successfully validated checksums")
 
-	// lastly update the import timestamp to the earliest possible fetching time
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", importTimestamp.Format(time.RFC3339Nano)); err != nil {
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", time.Now().Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
 
-	// the core job is done; run sanity checks/clean ups afterwards
-	//runCleanUpJobs(ctx, conn.Conn())
 	slog.Info("finished vulndb import", "time", time.Since(start))
 	return nil
 }
@@ -449,29 +404,10 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		close(vulnData)
 	}()
 
-	ecosystemsFD, err := os.Create("ecosystem.zip")
-	if err != nil {
-		return fmt.Errorf("could not create ecosystem.zip: %w", err)
-	}
-	defer ecosystemsFD.Close()
-	zipWriter := zip.NewWriter(ecosystemsFD)
-
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
 		allOSVVulns = append(allOSVVulns, osvObject.OSV)
-		zipFd, err := zipWriter.Create(osvObject.Ecosystem + "/" + osvObject.OSV.ID + ".json")
-		if err != nil {
-			zipWriter.Close()
-			return fmt.Errorf("could not create entry in ecosystem.zip: %w", err)
-		}
-		if err := json.NewEncoder(zipFd).Encode(osvObject.OSV); err != nil {
-			zipWriter.Close()
-			return fmt.Errorf("could not encode osv entry: %w", err)
-		}
-	}
-	if err := zipWriter.Close(); err != nil {
-		return fmt.Errorf("could not finalize ecosystem.zip: %w", err)
 	}
 
 	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
@@ -491,6 +427,33 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return fmt.Errorf("could not build vulndb rows: %w", err)
 	}
 
+	// save the rows as gob file
+	gobFile, err := os.Create("vulndb.gob.zst")
+	if err != nil {
+		return fmt.Errorf("could not create gob file: %w", err)
+	}
+
+	zstdWriter, err := zstd.NewWriter(gobFile, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	if err != nil {
+		gobFile.Close()
+		return fmt.Errorf("could not create zstd writer: %w", err)
+	}
+
+	err = gob.NewEncoder(zstdWriter).Encode(rows)
+	if err != nil {
+		zstdWriter.Close()
+		gobFile.Close()
+		return fmt.Errorf("could not encode rows to gob file: %w", err)
+	}
+
+	// zstdWriter must be closed before gobFile to flush compressed bytes to disk
+	if err := zstdWriter.Close(); err != nil {
+		gobFile.Close()
+		return fmt.Errorf("could not finalize zstd stream: %w", err)
+	}
+	if err := gobFile.Close(); err != nil {
+		return fmt.Errorf("could not close gob file: %w", err)
+	}
 	// acquire a connection first
 	// use pgx for support of the COPY function
 	conn, err := s.pool.Acquire(ctx)
@@ -545,7 +508,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 // pass verification before the importer is allowed to read it.
 var vulnDBArtifactFiles = []string{
 	"modified_id.csv",
-	"ecosystem.zip",
+	"vulndb.gob.zst",
 	"integrity_checks.json",
 }
 
@@ -1046,9 +1009,9 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 	}
 
 	// allocate all slice for holding each entry
-	cves := make([]models.CVE, 0, len(allEntries))
-	cveRelationships := make([]models.CVERelationship, 0, len(allEntries)*2)
-	affectedComponents := make([]models.AffectedComponent, 0, len(allEntries)*12) // use existing size relations for approximating the upper bound the slices size
+	cves := make([]cveRow, 0, len(allEntries))
+	cveRelationships := make([]cveRelationshipRow, 0, len(allEntries)*2)
+	affectedComponents := make([]affectedComponentRow, 0, len(allEntries)*12)
 	cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*55)
 
 	slog.Info("start building rows", "amount", len(allEntries))
@@ -1064,28 +1027,86 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 		}
 
 		// only then process the rest
-		cveRelationships = append(cveRelationships, relationships...)
+		for _, r := range relationships {
+			cveRelationships = append(cveRelationships, cveRelationshipRow{
+				SourceCVE:        r.SourceCVE,
+				TargetCVE:        r.TargetCVE,
+				RelationshipType: string(r.RelationshipType),
+			})
+		}
 
 		// create the cve first
 		cve := transformer.OSVToCVE(allEntries[i])
 		cve.ID = cve.CalculateHash()
-		cves = append(cves, cve)
+
+		var cisaExploitAdd, cisaActionDue int64
+		if cve.CISAExploitAdd != nil {
+			cisaExploitAdd = time.Time(*cve.CISAExploitAdd).Unix()
+		}
+		if cve.CISAActionDue != nil {
+			cisaActionDue = time.Time(*cve.CISAActionDue).Unix()
+		}
+		var epss float64
+		if cve.EPSS != nil {
+			epss = *cve.EPSS
+		}
+		var percentile float32
+		if cve.Percentile != nil {
+			percentile = *cve.Percentile
+		}
+
+		cves = append(cves, cveRow{
+			ID:                    cve.ID,
+			CVE:                   cve.CVE,
+			CreatedAt:             cve.CreatedAt.Unix(),
+			UpdatedAt:             cve.UpdatedAt.Unix(),
+			DatePublished:         cve.DatePublished.Unix(),
+			DateLastModified:      cve.DateLastModified.Unix(),
+			Description:           cve.Description,
+			CVSS:                  cve.CVSS,
+			References:            cve.References,
+			CISAExploitAdd:        cisaExploitAdd,
+			CISAActionDue:         cisaActionDue,
+			CISARequiredAction:    cve.CISARequiredAction,
+			CISAVulnerabilityName: cve.CISAVulnerabilityName,
+			EPSS:                  epss,
+			Percentile:            percentile,
+			Vector:                cve.Vector,
+		})
 
 		// for each affected component check if its already present and create the respective pivot table entries
 		for _, affectedComponent := range affectedComponentsForCVE {
 			hash := affectedComponent.CalculateHashFast()
-			affectedComponent.ID = hash // assign hash for later use
+			affectedComponent.ID = hash
 			row := cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash}
 
 			if _, ok := isAffectedComponentPresent[hash]; !ok {
-				affectedComponents = append(affectedComponents, affectedComponent)
-				// add the new component, so that we do not have duplicates in the new data itself
+				ac := affectedComponentRow{
+					ID:                 hash,
+					PurlWithoutVersion: affectedComponent.PurlWithoutVersion,
+					Ecosystem:          affectedComponent.Ecosystem,
+				}
+				if affectedComponent.Version != nil {
+					ac.Version = *affectedComponent.Version
+				}
+				if affectedComponent.SemverIntroduced != nil {
+					ac.SemverIntroduced = *affectedComponent.SemverIntroduced
+				}
+				if affectedComponent.SemverFixed != nil {
+					ac.SemverFixed = *affectedComponent.SemverFixed
+				}
+				if affectedComponent.VersionIntroduced != nil {
+					ac.VersionIntroduced = *affectedComponent.VersionIntroduced
+				}
+				if affectedComponent.VersionFixed != nil {
+					ac.VersionFixed = *affectedComponent.VersionFixed
+				}
+				affectedComponents = append(affectedComponents, ac)
 				isAffectedComponentPresent[hash] = struct{}{}
 			}
 
 			if _, ok := isCVEAffectedComponentPresent[row]; !ok {
 				cveAffectedComponents = append(cveAffectedComponents, row)
-				// add the new cve-component, so that we do not have duplicates in the new data itself
 				isCVEAffectedComponentPresent[row] = struct{}{}
 			}
 		}
@@ -1163,7 +1184,7 @@ func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, row
 
 // insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
 // this lets us handle on conflicts and updates gracefully, while still having the speed of copy
-func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
+func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []cveRow) error {
 	if len(cves) == 0 {
 		return nil
 	}
@@ -1195,9 +1216,26 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 
 	// copy data straight into the staging table
 	columnNames := []string{"id", "cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
-		row := cves[i]
-		return []interface{}{row.ID, row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
+		r := cves[i]
+		var cisaExploitAdd, cisaActionDue *time.Time
+		if r.CISAExploitAdd != 0 {
+			t := time.Unix(r.CISAExploitAdd, 0).UTC()
+			cisaExploitAdd = &t
+		}
+		if r.CISAActionDue != 0 {
+			t := time.Unix(r.CISAActionDue, 0).UTC()
+			cisaActionDue = &t
+		}
+		var epss *float64
+		if r.EPSS != 0 {
+			epss = &r.EPSS
+		}
+		var percentile *float32
+		if r.Percentile != 0 {
+			percentile = &r.Percentile
+		}
+		return []any{r.ID, r.CVE, time.Unix(r.CreatedAt, 0).UTC(), time.Unix(r.UpdatedAt, 0).UTC(), time.Unix(r.DatePublished, 0).UTC(), time.Unix(r.DateLastModified, 0).UTC(), r.Description, r.CVSS, r.References, cisaExploitAdd, cisaActionDue, r.CISARequiredAction, r.CISAVulnerabilityName, epss, percentile, r.Vector}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
@@ -1224,7 +1262,7 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 
 // insert into cve relationships using copy in combination with a staging table
 // the staging table step is used to able to handle on conflict, effectively resulting in the deduplication of rows before applying the primary key
-func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
+func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []cveRelationshipRow) error {
 	if len(cveRelationships) == 0 {
 		return nil
 	}
@@ -1243,9 +1281,9 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 
 	// stream data straight into staging table
 	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]any, error) {
 		row := cveRelationships[i]
-		return []interface{}{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
+		return []any{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve relationship rows into staging table: %w", err)
@@ -1266,7 +1304,7 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 
 // inserts into affected components using copy + staging table approach
 // the staging table is needed in this case to be able to transform semver values to the semver datatype since COPY lacks this functionality
-func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
+func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []affectedComponentRow) error {
 	slog.Info("inserting into affected_components using bulk insert", "amount", len(components))
 	start := time.Now()
 
@@ -1288,10 +1326,16 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 	}
 
 	// stream the values into the staging table; all affected components attributes are already default postgresql types
+	nullableStr := func(s string) any {
+		if s == "" {
+			return nil
+		}
+		return s
+	}
 	columnNames := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]any, error) {
 		c := components[i]
-		return []interface{}{c.ID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
+		return []any{c.ID, c.PurlWithoutVersion, c.Ecosystem, nullableStr(c.Version), nullableStr(c.SemverIntroduced), nullableStr(c.SemverFixed), nullableStr(c.VersionIntroduced), nullableStr(c.VersionFixed)}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
@@ -1324,9 +1368,9 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	// stream data straight into the table using COPY (by pass query executioner)
 	// no ON CONFLICT needed since we deduplicated in memory
 	columnNames := []string{"affected_component_id", "cve_id"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 		row := pivotRows[i]
-		return []interface{}{row.AffectedComponentID, row.CveID}, nil
+		return []any{row.AffectedComponentID, row.CveID}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
