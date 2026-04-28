@@ -61,6 +61,51 @@ func newImportCommand() *cobra.Command {
 	return importCmd
 }
 
+func newExportCommand() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Import the latest state of the vulnerability database",
+		Long:  "Imports all changes since the last import from the OSV database",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shared.LoadConfig() // nolint
+
+			migrateDB()
+			app := fx.New(
+				fx.NopLogger,
+				database.Module,
+				fx.Supply(database.GetPoolConfigFromEnv()),
+				repositories.Module,
+				services.ServiceModule,
+				vulndb.Module,
+				fx.Invoke(func(
+					cveRepository shared.CveRepository,
+					cweRepository shared.CweRepository,
+					cveRelationshipRepository shared.CVERelationshipRepository,
+					affectedCmpRepository shared.AffectedComponentRepository,
+					configService shared.ConfigService,
+					pool *pgxpool.Pool,
+				) error {
+					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, configService, pool)
+					return osvService.ExportRC(context.Background())
+				}),
+			)
+
+			ctx := context.Background()
+			startCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+			defer cancel()
+			if err := app.Start(startCtx); err != nil {
+				return err
+			}
+
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+			return app.Stop(stopCtx)
+		},
+	}
+
+	return importCmd
+}
+
 func newImportRCCommand() *cobra.Command {
 	syncCmd := cobra.Command{
 		Use:   "importRC",
