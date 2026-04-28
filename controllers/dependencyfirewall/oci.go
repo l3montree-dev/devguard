@@ -497,7 +497,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		// digest is of the form "sha256:<hex>"; skip verification for other algorithms.
 		if algo, expected, ok := strings.Cut(digest, ":"); ok && algo == "sha256" {
 			actual := fmt.Sprintf("%x", sha256.Sum256(data))
-			if actual != expected {
+			if actual != strings.TrimSuffix(expected, "/") {
 				slog.Error("OCI blob digest mismatch", "proxy", "oci", "image", fqImageName, "expected", expected, "actual", actual)
 				return echo.NewHTTPError(http.StatusBadGateway, "upstream blob digest mismatch")
 			}
