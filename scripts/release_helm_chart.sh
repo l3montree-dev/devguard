@@ -1,72 +1,87 @@
 #!/bin/zsh
+set -euo pipefail
+
+# Configuration
+CHANGES_FILE="/tmp/release_helm_changes_${RANDOM}.log"
+ERRORS_FILE="/tmp/release_helm_errors_${RANDOM}.log"
+TOTAL_CHANGES=0
+
+# Cleanup on exit
+trap "rm -f $CHANGES_FILE $ERRORS_FILE" EXIT
+
+log_change() {
+    echo "  ✓ $1" >> "$CHANGES_FILE"
+    (( ++TOTAL_CHANGES ))
+}
+
+log_error() {
+    echo "  ✗ $1" >> "$ERRORS_FILE"
+}
 
 # Function to update docker-compose-try-it.yaml with new tags
 update_docker_compose_tags() {
     local tag=$1
     local compose_file="devguard/docker-compose-try-it.yaml"
-    
+
     echo "Updating $compose_file with tag $tag..."
-    
-    # Backup the original file
-    cp "$compose_file" "$compose_file.backup"
-    
-    # Update devguard API image tag
-    sed -i '' "s|ghcr.io/l3montree-dev/devguard:.*|ghcr.io/l3montree-dev/devguard:$tag|g" "$compose_file"
-    
-    # Update devguard-web image tag
-    sed -i '' "s|ghcr.io/l3montree-dev/devguard-web:.*|ghcr.io/l3montree-dev/devguard-web:$tag|g" "$compose_file"
-    
-    # Update devguard-postgresql image tag
-    sed -i '' "s|ghcr.io/l3montree-dev/devguard/postgresql:.*|ghcr.io/l3montree-dev/devguard/postgresql:$tag|g" "$compose_file"
-    
-    # Verify the changes were made
+
+    sed -i "s|ghcr.io/l3montree-dev/devguard:.*|ghcr.io/l3montree-dev/devguard:$tag|g" "$compose_file"
+    sed -i "s|ghcr.io/l3montree-dev/devguard-web:.*|ghcr.io/l3montree-dev/devguard-web:$tag|g" "$compose_file"
+    sed -i "s|ghcr.io/l3montree-dev/devguard/postgresql:.*|ghcr.io/l3montree-dev/devguard/postgresql:$tag|g" "$compose_file"
+
     if grep -q "ghcr.io/l3montree-dev/devguard:$tag" "$compose_file" && \
        grep -q "ghcr.io/l3montree-dev/devguard-web:$tag" "$compose_file"; then
-        echo "✅ Successfully updated docker-compose-try-it.yaml with version $tag"
-        rm "$compose_file.backup"
+        log_change "Updated docker-compose-try-it.yaml to $tag"
     else
         echo "❌ Failed to update docker-compose-try-it.yaml properly"
-        mv "$compose_file.backup" "$compose_file"
         exit 1
     fi
 }
 
-# Function to update Helm chart values.yaml with new tags
+# Function to update Helm chart Chart.yaml with new tags
 update_helm_chart_tags() {
     local tag=$1
     local chart_file="devguard-helm-chart/Chart.yaml"
-    
+    local values_file="devguard-helm-chart/values.yaml"
+    local semver="${tag#v}"
+
     echo "Updating Helm chart with tag $tag..."
-    
-    # Backup the original file
-    cp "$chart_file" "$chart_file.backup"
-    
-    # Update appVersion in Chart.yaml
-    sed -i '' "s|appVersion: .*|appVersion: $tag|g" "$chart_file"
-    
-    # Verify the changes were made
-    if grep -q "appVersion: $tag" "$chart_file"; then
-        echo "✅ Successfully updated Helm chart with version $tag"
-        rm "$chart_file.backup"
+
+    sed -i "s|^version: .*|version: $semver|g" "$chart_file"
+    sed -i "s|^appVersion: .*|appVersion: $tag|g" "$chart_file"
+
+    if grep -q "^version: $semver" "$chart_file" && grep -q "^appVersion: $tag" "$chart_file"; then
+        log_change "Updated Chart.yaml version to $semver, appVersion to $tag"
     else
         echo "❌ Failed to update Helm chart properly"
-        mv "$chart_file.backup" "$chart_file"
+        exit 1
+    fi
+
+    echo "Updating values.yaml image tags to $tag..."
+
+    sed -i "s|tag: v[0-9]\+\.[0-9]\+\.[0-9]\+$|tag: $tag|g" "$values_file"
+
+    if grep -q "tag: $tag" "$values_file"; then
+        log_change "Updated values.yaml image tags to $tag"
+    else
+        echo "❌ Failed to update values.yaml image tags"
+        exit 1
+    fi
+
+    sed -i "s|gitlab.com/l3montree/devguard/-/raw/[^\"]*|gitlab.com/l3montree/devguard/-/raw/$tag|g" "$values_file"
+
+    if grep -q "gitlab.com/l3montree/devguard/-/raw/$tag" "$values_file"; then
+        log_change "Updated values.yaml ciComponentBase (api + web) to $tag"
+    else
+        echo "❌ Failed to update values.yaml ciComponentBase"
         exit 1
     fi
 }
 
-# check if the folder structure is correct
-# expect the follwing structure:
-
-# - devguard (this repo)
-# - devguard-action
-# - devguard-ci-component
-# - devguard-web
-
 TAG=$1
-# check if TAG starts with 'v' and strip it for semver validation
+
 if [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
-    SEMVER="${TAG#v}"  # Remove 'v' prefix for validation
+    SEMVER="${TAG#v}"
 elif [[ $TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
     echo "Error: Version number must be prefixed with 'v' (e.g., v1.0.0 or v1.0.0-rc.1)."
     exit 1
@@ -75,84 +90,93 @@ else
     exit 1
 fi
 
-# great its a valid semver - lets check if the directories exist
-dirlist=(devguard)
-for dir in "${dirlist[@]}"; do
-    if [ ! -d "$dir" ]; then
-        echo "Error: Directory $dir does not exist."
-        exit 1
-    fi
-done
+if [ ! -d "devguard" ]; then
+    echo "Error: Directory devguard does not exist."
+    exit 1
+fi
 
-# Check if docker-compose-try-it.yaml exists
 if [ ! -f "devguard/docker-compose-try-it.yaml" ]; then
     echo "Error: devguard/docker-compose-try-it.yaml does not exist."
     exit 1
 fi
 
-# Check if Helm chart Chart.yaml exists
 if [ ! -f "devguard-helm-chart/Chart.yaml" ]; then
     echo "Error: devguard-helm-chart/Chart.yaml does not exist."
     exit 1
 fi
 
-
-# make sure every dir is on the main branch
-for dir in "${dirlist[@]}"; do
-    if [ -d "$dir/.git" ]; then
-        (cd "$dir" && git checkout main)
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to checkout main branch in $dir."
-            exit 1
-        fi
+# Make sure devguard is on main and clean
+if [ -d "devguard/.git" ]; then
+    (cd devguard && git checkout main)
+    if (cd devguard && git status --porcelain) | grep -q .; then
+        echo "Error: Working directory in devguard is not clean. Please commit or stash your changes."
+        exit 1
     fi
-done
+fi
 
-# make sure workdir is clean
-for dir in "${dirlist[@]}"; do
-    if [ -d "$dir/.git" ]; then
-        (cd "$dir" && git status --porcelain) | grep -q . && {
-            echo "Error: Working directory in $dir is not clean. Please commit or stash your changes."
-            exit 1
-        }
-    fi
-done
-
-# Update docker-compose-try-it.yaml with new tags
-echo "📝 Updating docker-compose-try-it.yaml with new release tags..."
 update_docker_compose_tags "$TAG"
-
-# Update Helm chart values.yaml with new tags
-echo "⎈ Updating Helm chart values.yaml with new release tags..."
 update_helm_chart_tags "$TAG"
 
-# commit docker compose
-echo "💾 Committing docker-compose"
-(cd devguard && git add docker-compose-try-it.yaml && git commit -m "chore: update docker-compose-try-it.yaml to $TAG" && git push)
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to commit docker-compose changes."
+# Display summary and prompt before committing
+echo ""
+echo "╔═════════════════════════════════════════╗"
+echo "║  CHANGE SUMMARY - READY FOR APPROVAL    ║"
+echo "╚═════════════════════════════════════════╝"
+echo ""
+echo "Total changes: $TOTAL_CHANGES"
+echo ""
+
+if [[ -f "$CHANGES_FILE" ]] && [[ -s "$CHANGES_FILE" ]]; then
+    echo "✓ Changes made:"
+    cat "$CHANGES_FILE"
+    echo ""
+fi
+
+if [[ -f "$ERRORS_FILE" ]] && [[ -s "$ERRORS_FILE" ]]; then
+    echo "✗ Issues detected:"
+    cat "$ERRORS_FILE"
+    echo ""
+    echo "WARNING: Some changes may not have been applied correctly."
+    echo "Please review the files manually before continuing."
+    echo ""
+fi
+
+read -q "CONFIRM?Continue with commit, push and tagging? (y/n) " -n 1; echo ""
+if [[ "$CONFIRM" != "y" ]]; then
+    echo "Operation cancelled by user."
     exit 1
 fi
 
-# Commit the docker-compose and Helm chart changes
-echo "💾 Committing Helm chart changes..."
-(cd devguard-helm-chart && git add Chart.yaml && git commit -m "chore: update docker-compose-try-it.yaml and Helm chart to $TAG
+(cd devguard && git add docker-compose-try-it.yaml && git commit -m "chore: update docker-compose-try-it.yaml to $TAG" && git push)
+log_change "Committed and pushed docker-compose-try-it.yaml"
+
+(cd devguard-helm-chart && git add Chart.yaml && git commit -m "chore: update Helm chart to $TAG
 
 - Updated devguard image to $TAG
 - Updated devguard-web image to $TAG
 - Updated devguard-postgresql image to $TAG
-- Updated Helm chart appVersion to $TAG" && git push)
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to commit docker-compose and Helm chart changes."
-    exit 1
-fi
-echo "✅ Successfully committed and pushed docker-compose and Helm chart changes"
+- Updated Helm chart version to $SEMVER, appVersion to $TAG" && git push)
+log_change "Committed and pushed Chart.yaml"
 
-# tag the helm chart repo
-echo "🏷️ Tagging Helm chart repository with $TAG..."
-(cd devguard-helm-chart && git tag -s -a "$TAG" -m "chore: release Helm chart version $TAG" && git push origin "$TAG")
+(cd devguard-helm-chart && git tag -s -a "$TAG" -m "chore: release Helm chart version $TAG" && git push origin "$TAG" || true)
+log_change "Tagged devguard-helm-chart with $TAG"
 
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to tag Helm chart repository."
-    exit 1
+# Final summary
+echo ""
+echo "╔═════════════════════════════════════════╗"
+echo "║  FINAL SUMMARY                          ║"
+echo "╚═════════════════════════════════════════╝"
+echo ""
+echo "Total operations: $TOTAL_CHANGES"
+if [[ -f "$CHANGES_FILE" ]] && [[ -s "$CHANGES_FILE" ]]; then
+    cat "$CHANGES_FILE"
 fi
+
+if [[ -f "$ERRORS_FILE" ]] && [[ -s "$ERRORS_FILE" ]]; then
+    echo ""
+    echo "⚠ Issues encountered:"
+    cat "$ERRORS_FILE"
+fi
+
+echo ""
+echo "✓ Script completed successfully!"
