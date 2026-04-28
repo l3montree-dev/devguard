@@ -150,7 +150,7 @@ fi
 (cd devguard && git add docker-compose-try-it.yaml && git commit -m "chore: update docker-compose-try-it.yaml to $TAG" && git push)
 log_change "Committed and pushed docker-compose-try-it.yaml"
 
-(cd devguard-helm-chart && git add Chart.yaml && git commit -m "chore: update Helm chart to $TAG
+(cd devguard-helm-chart && git add . && git commit -m "chore: update Helm chart to $TAG
 
 - Updated devguard image to $TAG
 - Updated devguard-web image to $TAG

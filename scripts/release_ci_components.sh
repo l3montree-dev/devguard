@@ -126,14 +126,6 @@ for dir in "${secondtrain[@]}"; do
     fi
 done
 
-# stage changes in the "secondtrain" directories (commit and push happen after confirmation)
-for dir in "${secondtrain[@]}"; do
-    if [ -d "$dir/.git" ]; then
-        (cd "$dir" && git add .)
-        log_change "Staged changes in $dir"
-    fi
-done
-
 # Display summary and prompt before tagging
 echo ""
 echo "╔═════════════════════════════════════════╗"
@@ -164,6 +156,14 @@ if [[ "$CONFIRM" != "y" ]]; then
     echo "Operation cancelled by user."
     exit 1
 fi
+
+# stage changes in the "secondtrain" directories (commit and push happen after confirmation)
+for dir in "${secondtrain[@]}"; do
+    if [ -d "$dir/.git" ]; then
+        (cd "$dir" && git add .)
+        log_change "Staged changes in $dir"
+    fi
+done
 
 # commit and push in the "secondtrain" directories
 for dir in "${secondtrain[@]}"; do
