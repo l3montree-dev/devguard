@@ -23,7 +23,7 @@ jobs:
           # Avoid --mirror, which also pushes refs/remotes/* that GitLab rejects as hidden refs.
           # Push from refs/remotes/origin/* so all branches are present and --prune never deletes the default branch.
           git push --prune gitlab 'refs/remotes/origin/*:refs/heads/*'
-          git push --prune gitlab 'refs/tags/*:refs/tags/*'
+          git push --force gitlab 'refs/tags/*:refs/tags/*'
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
           GITLAB_HOST: ${{ vars.GITLAB_HOST }}
