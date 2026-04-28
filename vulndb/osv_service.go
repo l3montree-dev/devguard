@@ -120,6 +120,11 @@ type fetchingJob struct {
 	ID        string
 }
 
+type OSVWithEcosystem struct {
+	OSV       *dtos.OSV
+	Ecosystem string
+}
+
 const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 const zipThreshold = 4000
@@ -177,7 +182,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
-	vulnData := make(chan *dtos.OSV, 5000)
+	vulnData := make(chan OSVWithEcosystem, 5000)
 
 	fetchingStart := time.Now()
 
@@ -231,7 +236,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
-		allOSVVulns = append(allOSVVulns, osvObject)
+		allOSVVulns = append(allOSVVulns, osvObject.OSV)
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
@@ -318,7 +323,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 
 	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
-	vulnData := make(chan *dtos.OSV, 5000)
+	vulnData := make(chan OSVWithEcosystem, 5000)
 
 	fetchingStart := time.Now()
 
@@ -368,11 +373,28 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
+	fd, err := os.Create("ecosystems.zip")
+	if err != nil {
+		panic(err)
+	}
+	zipWriter := zip.NewWriter(fd)
 
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
-		allOSVVulns = append(allOSVVulns, osvObject)
+		allOSVVulns = append(allOSVVulns, osvObject.OSV)
+		zipFd, err := zipWriter.Create(osvObject.Ecosystem + "/" + osvObject.OSV.ID)
+		if err != nil {
+			panic(err)
+		}
+		json, err := json.Marshal(osvObject.OSV)
+		if err != nil {
+			panic(err)
+		}
+		_, err = zipFd.Write(json)
+		if err != nil {
+			panic(err)
+		}
 	}
 	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
 
@@ -752,7 +774,7 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 	return utils.ZipReaderFromResponse(res)
 }
 
-func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan OSVWithEcosystem, fetchFailures *atomic.Int64) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
 		id, _, ok := strings.Cut(zipJob.File.Name, ".")
@@ -778,11 +800,11 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldPr
 			continue
 		}
 		readCloser.Close()
-		output <- &osvEntry
+		output <- OSVWithEcosystem{OSV: &osvEntry, Ecosystem: zipJob.Ecosystem}
 	}
 }
 
-func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
+func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan OSVWithEcosystem, fetchFailures *atomic.Int64) {
 	for job := range jobs {
 		url := fmt.Sprintf("%s/%s/%s.json", osvBaseURL, job.Ecosystem, job.ID)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -814,7 +836,7 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 			continue
 		}
 		resp.Body.Close()
-		output <- &osvVuln
+		output <- OSVWithEcosystem{OSV: &osvVuln, Ecosystem: job.Ecosystem}
 	}
 	waitGroup.Done()
 }
