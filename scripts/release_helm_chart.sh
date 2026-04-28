@@ -59,7 +59,12 @@ update_helm_chart_tags() {
 
     echo "Updating values.yaml image tags to $tag..."
 
-    sed -i "s|tag: v[0-9]\+\.[0-9]\+\.[0-9]\+$|tag: $tag|g" "$values_file"
+    # Only update tags for devguard-owned images; leave third-party images (e.g. postgres-exporter) untouched.
+    awk -v tag="$tag" '
+      /repository:/ { in_devguard = /ghcr\.io\/l3montree-dev\// }
+      in_devguard && /^[[:space:]]+tag:/ { sub(/tag: .*/, "tag: " tag) }
+      { print }
+    ' "$values_file" > /tmp/values_helm_tmp && mv /tmp/values_helm_tmp "$values_file"
 
     if grep -q "tag: $tag" "$values_file"; then
         log_change "Updated values.yaml image tags to $tag"
