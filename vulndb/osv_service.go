@@ -298,7 +298,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return nil
 	}
 
-	bundleFD, err := os.Create("vulndb_export.zip")
+	bundleFD, err := os.Create("vulndb.zip")
 	if err != nil {
 		panic(err)
 	}
