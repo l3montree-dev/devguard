@@ -313,6 +313,9 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName)
 					return false, nil
+				} else {
+					found = true
+					break
 				}
 			}
 		}
@@ -324,7 +327,6 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 }
 
 func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, jobs chan zipJobWithID, errors *atomic.Int64) error {
-	defer close(jobs)
 	defer waitGroup.Done()
 	fd, err := os.Open(workingDir + "/ecosystem.zip")
 	if err != nil {
@@ -342,7 +344,7 @@ func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, j
 		return fmt.Errorf("could not create zip reader")
 	}
 	for _, file := range reader.File {
-		ecosystem, id, ok := strings.Cut(file.Name, "/")
+		ecosystem, id, ok := strings.Cut(strings.TrimSuffix(file.Name, ".json"), "/")
 		if !ok {
 			errors.Add(1)
 			slog.Error("unexpected name format for zip file", "error", err)
