@@ -9,16 +9,8 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 )
-
-type DependencyNode struct {
-	Dependecy string            // Consists of dependency name and version
-	Children  []*DependencyNode // Will be [] if node is a leaf
-}
-
-type DependencyTree struct {
-	Nodes map[string]*DependencyNode
-}
 
 type User struct {
 	ID string
@@ -43,17 +35,16 @@ type Project struct {
 	Trustscore     float64
 }
 
-const (
-	FalsePositive = "false-positive"
-	Affected      = "affected"
-)
+var AssessmentOptions = []string{string(dtos.ComponentNotPresent), string(dtos.VulnerableCodeNotPresent), string(dtos.VulnerableCodeNotInExecutePath), string(dtos.VulnerableCodeCannotBeControlledByAdversary), string(dtos.InlineMitigationsAlreadyExist)}
 
 type VexRule struct {
-	PathPattern dtos.PathPattern
-	CVE         CVE
-	AssetID     string
-	Reasoning   string
-	Assessment  string // Use assessment constants for options, e.g. "false-positive", "affected"
+	ID               string
+	PathPattern      dtos.PathPattern
+	CVE              CVE
+	AssetID          string
+	AssetversionName string
+	Reasoning        string
+	Assessment       string
 }
 
 type CVE struct {
@@ -208,7 +199,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 
 		if rule.PathPattern.MatchesSuffix(dependencyPath) && rule.CVE.CVE == cve.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
-			if rule.Assessment == Affected || rule.Assessment == FalsePositive {
+			if utils.Contains(AssessmentOptions, rule.Assessment) {
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
 				diminishingFactor := tracker.recordVoteAndGetFactor(organization)
 				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
@@ -237,6 +228,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 						validVotesCount++
 					}
 				} else {
+					// This is the case if a vote was casted for a VexRule that hasn't been seen before
 					votes[rulePath] = &Vote{
 						Voters: []struct {
 							OrganizationID string
@@ -257,7 +249,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	// [Mitigation 15] Require a minimum number of voters for a decision; disabling the recommendation when too few voters remain
 	if validVotesCount < minVoterThreshold {
 		slog.Info("not enough valid votes to create a crowdsourced VEX rule", "validVotesCount", validVotesCount)
-		return VexRule{}, fmt.Errorf("not enough valid votes to create a crowdsourced VEX rule, validVotesCount: %d", validVotesCount)
+		return VexRule{}, nil
 	}
 
 	var crowdsourcedVexRule VexRule

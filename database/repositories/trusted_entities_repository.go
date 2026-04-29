@@ -30,7 +30,7 @@ func (r *trustedEntityRepository) UpsertOrganizationTrust(ctx context.Context, t
 
 	// Try to find existing entry
 	var existing models.TrustedEntity
-	err := db.Where("organization_id = ?", organizationID, "organization").First(&existing).Error
+	err := db.Where("organization_id = ?", organizationID).First(&existing).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// Create new entry
@@ -56,7 +56,7 @@ func (r *trustedEntityRepository) UpsertProjectTrust(ctx context.Context, tx *go
 
 	// Try to find existing entry
 	var existing models.TrustedEntity
-	err := db.Where("project_id = ?", projectID, "project").First(&existing).Error
+	err := db.Where("project_id = ?", projectID).First(&existing).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// Create new entry
@@ -100,7 +100,7 @@ func (r *trustedEntityRepository) DeleteOrganizationTrust(ctx context.Context, t
 }
 
 func (r *trustedEntityRepository) DeleteProjectTrust(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) error {
-	return r.GetDB(ctx, tx).Where("project_id = ?", projectID, "project").Delete(&models.TrustedEntity{}).Error
+	return r.GetDB(ctx, tx).Where("project_id = ?", projectID).Delete(&models.TrustedEntity{}).Error
 }
 
 func (r *trustedEntityRepository) ListAllTrustedEntities(ctx context.Context, tx *gorm.DB) ([]models.TrustedEntity, error) {

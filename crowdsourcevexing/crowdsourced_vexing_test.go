@@ -14,6 +14,11 @@ import (
 
 var testCVE = CVE{CVE: "CVE-2025-TEST"}
 
+const (
+	testAssessmentPrimary = string(dtos.ComponentNotPresent)
+	testAssessmentSecondary = string(dtos.VulnerableCodeNotPresent)
+)
+
 func oldOrg() time.Time {
 	return time.Now().Add(-365 * 24 * time.Hour)
 }
@@ -122,44 +127,44 @@ var branchPathB = []string{"ROOT", "frameworkX@3.0.0", "libY@1.2.0", "pluginB@2.
 // Helper function tests
 
 func TestPathToString(t *testing.T) {
-	rule := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", FalsePositive)
-	assert.Equal(t, "*->pkg@1->false-positive", PathToString(rule))
+	rule := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", testAssessmentPrimary)
+	assert.Equal(t, "*->pkg@1->component_not_present", PathToString(rule))
 
-	ruleShort := makeVexRule([]string{"pkg@1", "*", "pkg@2"}, testCVE, "a1", FalsePositive)
-	assert.Equal(t, "pkg@1->*->pkg@2->false-positive", PathToString(ruleShort))
+	ruleShort := makeVexRule([]string{"pkg@1", "*", "pkg@2"}, testCVE, "a1", testAssessmentPrimary)
+	assert.Equal(t, "pkg@1->*->pkg@2->component_not_present", PathToString(ruleShort))
 
-	ruleAff := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", Affected)
+	ruleAff := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", testAssessmentSecondary)
 	assert.NotEqual(t, PathToString(rule), PathToString(ruleAff))
 
-	deepRule := makeVexRule(deepPath, testCVE, "a1", Affected)
-	assert.Equal(t, "ROOT->frameworkX@3.0.0->libY@1.2.0->utilZ@0.5.0->coreW@4.1.0->affected", PathToString(deepRule))
+	deepRule := makeVexRule(deepPath, testCVE, "a1", testAssessmentSecondary)
+	assert.Equal(t, "ROOT->frameworkX@3.0.0->libY@1.2.0->utilZ@0.5.0->coreW@4.1.0->vulnerable_code_not_present", PathToString(deepRule))
 }
 
 func TestFindVexRuleFromPath(t *testing.T) {
 	rules := []VexRule{
-		makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", FalsePositive),
-		makeVexRule([]string{"*", "pkg@2"}, testCVE, "a2", Affected),
-		makeVexRule([]string{"*", "pkg@3"}, testCVE, "a3", Affected),
-		makeVexRule([]string{"*", "pkg@1"}, testCVE, "a4", Affected),
-		makeVexRule([]string{"pkg@1", "*", "pkg@2"}, testCVE, "a5", Affected),
-		makeVexRule([]string{"pkg@2", "*", "pkg@1"}, testCVE, "a6", Affected),
-		makeVexRule([]string{"pkg@1", "*", "pkg@3"}, testCVE, "a7", Affected),
+		makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", testAssessmentPrimary),
+		makeVexRule([]string{"*", "pkg@2"}, testCVE, "a2", testAssessmentSecondary),
+		makeVexRule([]string{"*", "pkg@3"}, testCVE, "a3", testAssessmentSecondary),
+		makeVexRule([]string{"*", "pkg@1"}, testCVE, "a4", testAssessmentSecondary),
+		makeVexRule([]string{"pkg@1", "*", "pkg@2"}, testCVE, "a5", testAssessmentSecondary),
+		makeVexRule([]string{"pkg@2", "*", "pkg@1"}, testCVE, "a6", testAssessmentSecondary),
+		makeVexRule([]string{"pkg@1", "*", "pkg@3"}, testCVE, "a7", testAssessmentSecondary),
 	}
 
 	found, ok := findVexRuleFromPath(PathToString(rules[0]), rules)
 	assert.True(t, ok)
 	assert.Equal(t, "a1", found.AssetID)
-	assert.Equal(t, FalsePositive, found.Assessment)
+	assert.Equal(t, testAssessmentPrimary, found.Assessment)
 
 	found, ok = findVexRuleFromPath(PathToString(rules[2]), rules)
 	assert.True(t, ok)
 	assert.Equal(t, "a3", found.AssetID)
-	assert.Equal(t, Affected, found.Assessment)
+	assert.Equal(t, testAssessmentSecondary, found.Assessment)
 
 	found, ok = findVexRuleFromPath(PathToString(rules[6]), rules)
 	assert.True(t, ok)
 	assert.Equal(t, "a7", found.AssetID)
-	assert.Equal(t, Affected, found.Assessment)
+	assert.Equal(t, testAssessmentSecondary, found.Assessment)
 
 	_, ok = findVexRuleFromPath("nonexistent", rules)
 	assert.False(t, ok)
@@ -185,14 +190,14 @@ func TestCrowdsourcedVexing_UniformVote(t *testing.T) {
 		path       []string
 		assessment string
 	}{
-		{"false-positive shallow", shallowPath, FalsePositive},
-		{"false-positive medium", mediumPath, FalsePositive},
-		{"false-positive deep", deepPath, FalsePositive},
-		{"false-positive very deep", veryDeepPath, FalsePositive},
-		{"affected shallow", shallowPath, Affected},
-		{"affected medium", mediumPath, Affected},
-		{"affected deep", deepPath, Affected},
-		{"affected very deep", veryDeepPath, Affected},
+		{"component_not_present shallow", shallowPath, testAssessmentPrimary},
+		{"component_not_present medium", mediumPath, testAssessmentPrimary},
+		{"component_not_present deep", deepPath, testAssessmentPrimary},
+		{"component_not_present very deep", veryDeepPath, testAssessmentPrimary},
+		{"vulnerable_code_not_present shallow", shallowPath, testAssessmentSecondary},
+		{"vulnerable_code_not_present medium", mediumPath, testAssessmentSecondary},
+		{"vulnerable_code_not_present deep", deepPath, testAssessmentSecondary},
+		{"vulnerable_code_not_present very deep", veryDeepPath, testAssessmentSecondary},
 	}
 
 	for _, tc := range cases {
@@ -228,14 +233,14 @@ func TestCrowdsourcedVexing_HigherTrustscoreWins(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			pattern := wildcardFor(tc.path)
-			lowR, lowO, lowP, lowA := generateDistinctVoters(4, pattern, testCVE, Affected, tc.lowTrust, oldOrg())
-			hiR, hiO, hiP, hiA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, tc.hiTrust, oldOrg())
+			lowR, lowO, lowP, lowA := generateDistinctVoters(4, pattern, testCVE, testAssessmentSecondary, tc.lowTrust, oldOrg())
+			hiR, hiO, hiP, hiA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, tc.hiTrust, oldOrg())
 			rekey("hi-", hiR, hiO, hiP, hiA)
 			allR, allO, allP, allA := merge(lowR, hiR, lowO, hiO, lowP, hiP, lowA, hiA)
 
 			result, err := CrowdsourcedVexing(tc.path, testCVE, allR, allO, allP, allA)
 			require.NoError(t, err)
-			assert.Equal(t, FalsePositive, result.Assessment, "higher trust score votes should win")
+			assert.Equal(t, testAssessmentPrimary, result.Assessment, "higher trust score votes should win")
 		})
 	}
 }
@@ -255,7 +260,7 @@ func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
 		orgs = append(orgs, makeOrgWithCreator("org-mal", 0.3, oldOrg(), "creator-mal"))
 		projects = append(projects, makeProject("proj-mal", "org-mal", 0.3))
 		assets = append(assets, makeAsset("asset-mal", "proj-mal"))
-		rules = append(rules, makeVexRule(pattern, testCVE, "asset-mal", Affected))
+		rules = append(rules, makeVexRule(pattern, testCVE, "asset-mal", testAssessmentSecondary))
 	}
 
 	for i := 0; i < 5; i++ {
@@ -263,39 +268,39 @@ func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
 		orgs = append(orgs, makeOrgWithCreator("org-"+s, 0.1, oldOrg(), "creator-"+s))
 		projects = append(projects, makeProject("proj-"+s, "org-"+s, 0.9))
 		assets = append(assets, makeAsset("asset-"+s, "proj-"+s))
-		rules = append(rules, makeVexRule(pattern, testCVE, "asset-"+s, FalsePositive))
+		rules = append(rules, makeVexRule(pattern, testCVE, "asset-"+s, testAssessmentPrimary))
 	}
 
 	result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
 	require.NoError(t, err)
-	assert.Equal(t, FalsePositive, result.Assessment)
+	assert.Equal(t, testAssessmentPrimary, result.Assessment)
 }
 
 func TestCrowdsourcedVexing_QuantityVsQuality(t *testing.T) {
 	t.Run("few high-trust voters beat many low-trust voters", func(t *testing.T) {
 		// 4 voters at 0.9 = 3.6  vs  10 voters at 0.1 = 1.0
 		pattern := wildcardFor(mediumPath)
-		hiR, hiO, hiP, hiA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.9, oldOrg())
-		loR, loO, loP, loA := generateDistinctVoters(10, pattern, testCVE, Affected, 0.1, oldOrg())
+		hiR, hiO, hiP, hiA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 0.9, oldOrg())
+		loR, loO, loP, loA := generateDistinctVoters(10, pattern, testCVE, testAssessmentSecondary, 0.1, oldOrg())
 		rekey("lo-", loR, loO, loP, loA)
 		allR, allO, allP, allA := merge(hiR, loR, hiO, loO, hiP, loP, hiA, loA)
 
 		result, err := CrowdsourcedVexing(mediumPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment, "quality should beat quantity")
+		assert.Equal(t, testAssessmentPrimary, result.Assessment, "quality should beat quantity")
 	})
 
 	t.Run("many moderate-trust voters beat few high-trust voters", func(t *testing.T) {
 		// 4 voters at 0.5 = 2.0  vs  10 voters at 0.3 = 3.0
 		pattern := wildcardFor(deepPath)
-		fewR, fewO, fewP, fewA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.5, oldOrg())
-		manyR, manyO, manyP, manyA := generateDistinctVoters(10, pattern, testCVE, Affected, 0.3, oldOrg())
+		fewR, fewO, fewP, fewA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 0.5, oldOrg())
+		manyR, manyO, manyP, manyA := generateDistinctVoters(10, pattern, testCVE, testAssessmentSecondary, 0.3, oldOrg())
 		rekey("many-", manyR, manyO, manyP, manyA)
 		allR, allO, allP, allA := merge(fewR, manyR, fewO, manyO, fewP, manyP, fewA, manyA)
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment, "enough moderate-trust quantity can outweigh fewer high-trust voters")
+		assert.Equal(t, testAssessmentSecondary, result.Assessment, "enough moderate-trust quantity can outweigh fewer high-trust voters")
 	})
 }
 
@@ -307,27 +312,27 @@ func TestCrowdsourcedVexing_QuantityVsQuality(t *testing.T) {
 func TestSecurity_MinOrganizationAge(t *testing.T) {
 	t.Run("young organizations are rejected", func(t *testing.T) {
 		pattern := wildcardFor(shallowPath)
-		oldR, oldO, oldP, oldA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.1, oldOrg())
-		yngR, yngO, yngP, yngA := generateDistinctVoters(4, pattern, testCVE, Affected, 0.8, youngOrg())
+		oldR, oldO, oldP, oldA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 0.1, oldOrg())
+		yngR, yngO, yngP, yngA := generateDistinctVoters(4, pattern, testCVE, testAssessmentSecondary, 0.8, youngOrg())
 		rekey("yng-", yngR, yngO, yngP, yngA)
 		allR, allO, allP, allA := merge(oldR, yngR, oldO, yngO, oldP, yngP, oldA, yngA)
 
 		rule, err := CrowdsourcedVexing(shallowPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, rule.Assessment)
+		assert.Equal(t, testAssessmentPrimary, rule.Assessment)
 	})
 
 	t.Run("boundary age is accepted", func(t *testing.T) {
 		pattern := wildcardFor(shallowPath)
 		boundary := time.Now().Add(-time.Duration(minOrganizationAgeInDays)*24*time.Hour - time.Minute)
-		oldR, oldO, oldP, oldA := generateDistinctVoters(3, pattern, testCVE, FalsePositive, 0.1, oldOrg())
-		yngR, yngO, yngP, yngA := generateDistinctVoters(3, pattern, testCVE, Affected, 0.8, boundary)
+		oldR, oldO, oldP, oldA := generateDistinctVoters(3, pattern, testCVE, testAssessmentPrimary, 0.1, oldOrg())
+		yngR, yngO, yngP, yngA := generateDistinctVoters(3, pattern, testCVE, testAssessmentSecondary, 0.8, boundary)
 		rekey("yng-", yngR, yngO, yngP, yngA)
 		allR, allO, allP, allA := merge(oldR, yngR, oldO, yngO, oldP, yngP, oldA, yngA)
 
 		rule, err := CrowdsourcedVexing(shallowPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, rule.Assessment)
+		assert.Equal(t, testAssessmentSecondary, rule.Assessment)
 	})
 }
 
@@ -335,22 +340,24 @@ func TestSecurity_MinOrganizationAge(t *testing.T) {
 func TestSecurity_MinVoterThreshold(t *testing.T) {
 	t.Run("exactly threshold voters succeeds", func(t *testing.T) {
 		pattern := wildcardFor(shallowPath)
-		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold, pattern, testCVE, FalsePositive, 0.8, oldOrg())
+		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
 		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment)
+		assert.Equal(t, testAssessmentPrimary, result.Assessment)
 	})
 
 	t.Run("threshold minus one returns error", func(t *testing.T) {
 		pattern := wildcardFor(shallowPath)
-		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold-1, pattern, testCVE, FalsePositive, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
-		assert.Error(t, err)
+		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold-1, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 
 	t.Run("zero voters returns error", func(t *testing.T) {
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, []VexRule{}, []Organization{}, []Project{}, []Asset{})
-		assert.Error(t, err)
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, []VexRule{}, []Organization{}, []Project{}, []Asset{})
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 }
 
@@ -364,11 +371,12 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 
 		var rules []VexRule
 		for i := 0; i < 5; i++ {
-			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, FalsePositive))
+			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, testAssessmentPrimary))
 		}
 
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
-		assert.Error(t, err, "5 duplicate votes from same org+project should count as 1 vote below threshold")
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result, "5 duplicate votes from same org+project should count as 1 vote below threshold")
 	})
 
 	t.Run("same org different projects count separately", func(t *testing.T) {
@@ -384,12 +392,12 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 			assetID := "diff-asset-" + s
 			projects = append(projects, makeProject(projID, "shared-org", 0.8))
 			assets = append(assets, makeAsset(assetID, projID))
-			rules = append(rules, makeVexRule(pattern, testCVE, assetID, FalsePositive))
+			rules = append(rules, makeVexRule(pattern, testCVE, assetID, testAssessmentPrimary))
 		}
 
 		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{org}, projects, assets)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment)
+		assert.Equal(t, testAssessmentPrimary, result.Assessment)
 	})
 
 	t.Run("replay protection on deep path", func(t *testing.T) {
@@ -400,11 +408,12 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 
 		var rules []VexRule
 		for i := 0; i < 10; i++ {
-			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, FalsePositive))
+			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, testAssessmentPrimary))
 		}
 
-		_, err := CrowdsourcedVexing(deepPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
-		assert.Error(t, err, "duplicate votes from same org+project should count as 1 even on deep paths")
+		result, err := CrowdsourcedVexing(deepPath, testCVE, rules, []Organization{org}, []Project{project}, []Asset{asset})
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result, "duplicate votes from same org+project should count as 1 even on deep paths")
 	})
 }
 
@@ -424,8 +433,9 @@ func TestSecurity_AssessmentInputValidation(t *testing.T) {
 		t.Run("invalid assessment: "+bad, func(t *testing.T) {
 			pattern := wildcardFor(deepPath)
 			rules, orgs, projects, assets := generateDistinctVoters(5, pattern, testCVE, bad, 0.8, oldOrg())
-			_, err := CrowdsourcedVexing(deepPath, testCVE, rules, orgs, projects, assets)
-			assert.Error(t, err, "assessment '%s' should not produce valid votes on deep path", bad)
+			result, err := CrowdsourcedVexing(deepPath, testCVE, rules, orgs, projects, assets)
+			require.NoError(t, err)
+			assert.Equal(t, VexRule{}, result, "assessment '%s' should not produce valid votes on deep path", bad)
 		})
 	}
 }
@@ -434,14 +444,14 @@ func TestSecurity_AssessmentInputValidation(t *testing.T) {
 func TestSecurity_TrustscoreWeighting(t *testing.T) {
 	t.Run("zero trust score contributes zero weight", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
-		zeroR, zeroO, zeroP, zeroA := generateDistinctVoters(4, pattern, testCVE, Affected, 0.0, oldOrg())
-		highR, highO, highP, highA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 1.0, oldOrg())
+		zeroR, zeroO, zeroP, zeroA := generateDistinctVoters(4, pattern, testCVE, testAssessmentSecondary, 0.0, oldOrg())
+		highR, highO, highP, highA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 1.0, oldOrg())
 		rekey("hi-", highR, highO, highP, highA)
 		allR, allO, allP, allA := merge(zeroR, highR, zeroO, highO, zeroP, highP, zeroA, highA)
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment)
+		assert.Equal(t, testAssessmentPrimary, result.Assessment)
 	})
 }
 
@@ -449,18 +459,18 @@ func TestSecurity_TrustscoreWeighting(t *testing.T) {
 func TestSecurity_NegativeTrustscores(t *testing.T) {
 	t.Run("negative trust on deep path", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
-		rules, orgs, projects, assets := generateDistinctVoters(5, pattern, testCVE, FalsePositive, -1.0, oldOrg())
+		rules, orgs, projects, assets := generateDistinctVoters(5, pattern, testCVE, testAssessmentPrimary, -1.0, oldOrg())
 		_, err := CrowdsourcedVexing(deepPath, testCVE, rules, orgs, projects, assets)
 		assert.Error(t, err)
 	})
 }
 
-// [Mitigation 31] Tie-breaking — "affected" wins deterministically when votes are equal.
+// [Mitigation 31] Tie-breaking — no recommendation is returned when scores are equal.
 func TestSecurity_TieBreaking(t *testing.T) {
 	t.Run("same rule different assessment tie - return nothing", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
-		affR, affO, affP, affA := generateDistinctVoters(4, pattern, testCVE, Affected, 0.5, oldOrg())
-		fpR, fpO, fpP, fpA := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.5, oldOrg())
+		affR, affO, affP, affA := generateDistinctVoters(4, pattern, testCVE, testAssessmentSecondary, 0.5, oldOrg())
+		fpR, fpO, fpP, fpA := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 0.5, oldOrg())
 		rekey("fp-", fpR, fpO, fpP, fpA)
 		allR, allO, allP, allA := merge(affR, fpR, affO, fpO, affP, fpP, affA, fpA)
 
@@ -484,32 +494,32 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 			sameOrgs = append(sameOrgs, makeOrgWithCreator("deep-same-org-"+s, 0.3, oldOrg(), "deep-single-user"))
 			sameProjs = append(sameProjs, makeProject("deep-same-proj-"+s, "deep-same-org-"+s, 0.3))
 			sameAssets = append(sameAssets, makeAsset("deep-same-asset-"+s, "deep-same-proj-"+s))
-			sameRules = append(sameRules, makeVexRule(pattern, testCVE, "deep-same-asset-"+s, FalsePositive))
+			sameRules = append(sameRules, makeVexRule(pattern, testCVE, "deep-same-asset-"+s, testAssessmentPrimary))
 		}
 
-		distinctR, distinctO, distinctP, distinctA := generateDistinctVoters(1, pattern, testCVE, Affected, 0.9, oldOrg())
+		distinctR, distinctO, distinctP, distinctA := generateDistinctVoters(1, pattern, testCVE, testAssessmentSecondary, 0.9, oldOrg())
 		rekey("dist-", distinctR, distinctO, distinctP, distinctA)
 
 		allR, allO, allP, allA := merge(sameRules, distinctR, sameOrgs, distinctO, sameProjs, distinctP, sameAssets, distinctA)
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment,
+		assert.Equal(t, testAssessmentSecondary, result.Assessment,
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
 	})
 
 	t.Run("creators on the same trustlevel can compete with each other using vote volume", func(t *testing.T) {
 		pattern := wildcardFor(deepPath)
 
-		distinct1R, distinct1O, distinct1P, distinct1A := generateDistinctVoters(4, pattern, testCVE, FalsePositive, 0.8, oldOrg())
-		distinct2R, distinct2O, distinct2P, distinct2A := generateDistinctVoters(5, pattern, testCVE, Affected, 0.8, oldOrg())
+		distinct1R, distinct1O, distinct1P, distinct1A := generateDistinctVoters(4, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		distinct2R, distinct2O, distinct2P, distinct2A := generateDistinctVoters(5, pattern, testCVE, testAssessmentSecondary, 0.8, oldOrg())
 		rekey("dist-", distinct1R, distinct1O, distinct1P, distinct1A)
 
 		allR, allO, allP, allA := merge(distinct2R, distinct1R, distinct2O, distinct1O, distinct2P, distinct1P, distinct2A, distinct1A)
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment,
+		assert.Equal(t, testAssessmentSecondary, result.Assessment,
 			"20 same-creator votes (≈1.0) should not outweigh 4 distinct voters (2.0)")
 	})
 }
@@ -520,14 +530,14 @@ func TestSecurity_UnrelatedPathsIgnored(t *testing.T) {
 		validPattern := wildcardFor(shallowPath)
 		NoMatchPattern := []string{"*", "nonexistent@9.9.9"}
 
-		validR, validO, validP, validA := generateDistinctVoters(5, validPattern, testCVE, FalsePositive, 0.9, oldOrg())
-		nMR, nMO, nMP, nMA := generateDistinctVoters(10, NoMatchPattern, testCVE, Affected, 0.9, oldOrg())
+		validR, validO, validP, validA := generateDistinctVoters(5, validPattern, testCVE, testAssessmentPrimary, 0.9, oldOrg())
+		nMR, nMO, nMP, nMA := generateDistinctVoters(10, NoMatchPattern, testCVE, testAssessmentSecondary, 0.9, oldOrg())
 		rekey("nM-", nMR, nMO, nMP, nMA)
 		allR, allO, allP, allA := merge(validR, nMR, validO, nMO, validP, nMP, validA, nMA)
 
 		result, err := CrowdsourcedVexing(shallowPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment,
+		assert.Equal(t, testAssessmentPrimary, result.Assessment,
 			"only votes for matching paths should count")
 	})
 
@@ -535,14 +545,14 @@ func TestSecurity_UnrelatedPathsIgnored(t *testing.T) {
 		validPattern := wildcardFor(deepPath)
 		noMatchPattern := []string{"*", "leaf@4.0.0"}
 
-		validR, validO, validP, validA := generateDistinctVoters(5, validPattern, testCVE, Affected, 0.9, oldOrg())
-		nMR, nMO, nMP, nMA := generateDistinctVoters(10, noMatchPattern, testCVE, FalsePositive, 1.0, oldOrg())
+		validR, validO, validP, validA := generateDistinctVoters(5, validPattern, testCVE, testAssessmentSecondary, 0.9, oldOrg())
+		nMR, nMO, nMP, nMA := generateDistinctVoters(10, noMatchPattern, testCVE, testAssessmentPrimary, 1.0, oldOrg())
 		rekey("nM-", nMR, nMO, nMP, nMA)
 		allR, allO, allP, allA := merge(validR, nMR, validO, nMO, validP, nMP, validA, nMA)
 
 		result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment)
+		assert.Equal(t, testAssessmentSecondary, result.Assessment)
 	})
 }
 
@@ -553,35 +563,40 @@ func TestSecurity_UnrelatedPathsIgnored(t *testing.T) {
 func TestEdgeCase_CVEMismatch(t *testing.T) {
 	pattern := wildcardFor(shallowPath)
 	otherCVE := CVE{CVE: "CVE-OTHER"}
-	rules, orgs, projects, assets := generateDistinctVoters(5, pattern, otherCVE, FalsePositive, 0.8, oldOrg())
-	_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
-	assert.Error(t, err, "rules with non-matching CVE should produce no valid votes")
+	rules, orgs, projects, assets := generateDistinctVoters(5, pattern, otherCVE, testAssessmentPrimary, 0.8, oldOrg())
+	result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, assets)
+	require.NoError(t, err)
+	assert.Equal(t, VexRule{}, result, "rules with non-matching CVE should produce no valid votes")
 }
 
 func TestEdgeCase_MissingEntities(t *testing.T) {
 	pattern := wildcardFor(shallowPath)
 
 	t.Run("missing assets", func(t *testing.T) {
-		rules, orgs, projects, _ := generateDistinctVoters(5, pattern, testCVE, FalsePositive, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, []Asset{})
-		assert.Error(t, err)
+		rules, orgs, projects, _ := generateDistinctVoters(5, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, projects, []Asset{})
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 
 	t.Run("missing projects", func(t *testing.T) {
-		rules, orgs, _, assets := generateDistinctVoters(5, pattern, testCVE, FalsePositive, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, []Project{}, assets)
-		assert.Error(t, err)
+		rules, orgs, _, assets := generateDistinctVoters(5, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, orgs, []Project{}, assets)
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 
 	t.Run("missing organizations", func(t *testing.T) {
-		rules, _, projects, assets := generateDistinctVoters(5, pattern, testCVE, FalsePositive, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{}, projects, assets)
-		assert.Error(t, err)
+		rules, _, projects, assets := generateDistinctVoters(5, pattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, rules, []Organization{}, projects, assets)
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 
 	t.Run("no rules returns error", func(t *testing.T) {
-		_, err := CrowdsourcedVexing(shallowPath, testCVE, []VexRule{}, []Organization{}, []Project{}, []Asset{})
-		assert.Error(t, err)
+		result, err := CrowdsourcedVexing(shallowPath, testCVE, []VexRule{}, []Organization{}, []Project{}, []Asset{})
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result)
 	})
 }
 
@@ -591,9 +606,10 @@ func TestEdgeCase_PathNotMatching(t *testing.T) {
 		depPath := []string{"ROOT", "packageA@1.0.0", "packageB@2.0.0"}
 		nonMatchingPattern := []string{"*", "nonexistent@1.0.0"}
 
-		rules, orgs, projects, assets := generateDistinctVoters(5, nonMatchingPattern, testCVE, FalsePositive, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(depPath, testCVE, rules, orgs, projects, assets)
-		assert.Error(t, err, "rules with non-matching paths should produce no valid votes")
+		rules, orgs, projects, assets := generateDistinctVoters(5, nonMatchingPattern, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		result, err := CrowdsourcedVexing(depPath, testCVE, rules, orgs, projects, assets)
+		require.NoError(t, err)
+		assert.Equal(t, VexRule{}, result, "rules with non-matching paths should produce no valid votes")
 	})
 
 	t.Run("a few votes are not matching, but still enough votes for the algorithm", func(t *testing.T) {
@@ -601,14 +617,14 @@ func TestEdgeCase_PathNotMatching(t *testing.T) {
 		matchingPattern := wildcardFor(depPath)
 		nonMatchingPattern := []string{"*", "nonexistent@1.0.0"}
 
-		nMrules, nMorgs, nMprojects, nMassets := generateDistinctVoters(5, nonMatchingPattern, testCVE, FalsePositive, 0.9, oldOrg())
-		mRules, mOrgs, mProjects, mAssets := generateDistinctVoters(4, matchingPattern, testCVE, Affected, 0.3, oldOrg())
+		nMrules, nMorgs, nMprojects, nMassets := generateDistinctVoters(5, nonMatchingPattern, testCVE, testAssessmentPrimary, 0.9, oldOrg())
+		mRules, mOrgs, mProjects, mAssets := generateDistinctVoters(4, matchingPattern, testCVE, testAssessmentSecondary, 0.3, oldOrg())
 		rekey("m-", mRules, mOrgs, mProjects, mAssets)
 
 		allRules, allOrgs, allProjects, allAssets := merge(nMrules, mRules, nMorgs, mOrgs, nMprojects, mProjects, nMassets, mAssets)
 		result, err := CrowdsourcedVexing(depPath, testCVE, allRules, allOrgs, allProjects, allAssets)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, result.Assessment, "rules with non-matching paths should produce no valid votes")
+		assert.Equal(t, testAssessmentSecondary, result.Assessment, "rules with non-matching paths should produce no valid votes")
 	})
 }
 
@@ -618,15 +634,15 @@ func TestEdgeCase_BranchedPaths(t *testing.T) {
 		patternA := wildcardFor(branchPathA)
 		patternB := wildcardFor(branchPathB)
 
-		fpR, fpO, fpP, fpA := generateDistinctVoters(5, patternA, testCVE, FalsePositive, 0.8, oldOrg())
-		affR, affO, affP, affA := generateDistinctVoters(5, patternB, testCVE, Affected, 0.9, oldOrg())
+		fpR, fpO, fpP, fpA := generateDistinctVoters(5, patternA, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		affR, affO, affP, affA := generateDistinctVoters(5, patternB, testCVE, testAssessmentSecondary, 0.9, oldOrg())
 		rekey("b-", affR, affO, affP, affA)
 
 		allR, allO, allP, allA := merge(fpR, affR, fpO, affO, fpP, affP, fpA, affA)
 
 		result, err := CrowdsourcedVexing(branchPathA, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, result.Assessment, "only votes matching inDependencyPath should count")
+		assert.Equal(t, testAssessmentPrimary, result.Assessment, "only votes matching inDependencyPath should count")
 	})
 
 	// Tests if overall it is possible in the system to request different recommendations without the system crashing
@@ -634,19 +650,19 @@ func TestEdgeCase_BranchedPaths(t *testing.T) {
 		patternA := wildcardFor(branchPathA)
 		patternB := wildcardFor(branchPathB)
 
-		fpR, fpO, fpP, fpA := generateDistinctVoters(5, patternA, testCVE, FalsePositive, 0.8, oldOrg())
-		affR, affO, affP, affA := generateDistinctVoters(5, patternB, testCVE, Affected, 0.9, oldOrg())
+		fpR, fpO, fpP, fpA := generateDistinctVoters(5, patternA, testCVE, testAssessmentPrimary, 0.8, oldOrg())
+		affR, affO, affP, affA := generateDistinctVoters(5, patternB, testCVE, testAssessmentSecondary, 0.9, oldOrg())
 		rekey("b-", affR, affO, affP, affA)
 
 		allR, allO, allP, allA := merge(fpR, affR, fpO, affO, fpP, affP, fpA, affA)
 
 		resultA, err := CrowdsourcedVexing(branchPathA, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, FalsePositive, resultA.Assessment)
+		assert.Equal(t, testAssessmentPrimary, resultA.Assessment)
 
 		resultB, err := CrowdsourcedVexing(branchPathB, testCVE, allR, allO, allP, allA)
 		require.NoError(t, err)
-		assert.Equal(t, Affected, resultB.Assessment)
+		assert.Equal(t, testAssessmentSecondary, resultB.Assessment)
 	})
 }
 
@@ -673,12 +689,12 @@ func TestEdgeCase_BranchedPaths(t *testing.T) {
 // But what about multiple users that act as attackers
 func TestEdgeCase_VerySmallTrustscores(t *testing.T) {
 	pattern := wildcardFor(deepPath)
-	rules, orgs, projects, assets := generateDistinctVoters(100, pattern, testCVE, Affected, 0.01, oldOrg())
-	tRules, tOrgs, tProjects, tAssets := generateDistinctVoters(1, pattern, testCVE, FalsePositive, 0.99, oldOrg())
+	rules, orgs, projects, assets := generateDistinctVoters(100, pattern, testCVE, testAssessmentSecondary, 0.01, oldOrg())
+	tRules, tOrgs, tProjects, tAssets := generateDistinctVoters(1, pattern, testCVE, testAssessmentPrimary, 0.99, oldOrg())
 
 	allR, allO, allP, allA := merge(rules, tRules, orgs, tOrgs, projects, tProjects, assets, tAssets)
 
 	result, err := CrowdsourcedVexing(deepPath, testCVE, allR, allO, allP, allA)
 	require.NoError(t, err)
-	assert.Equal(t, Affected, result.Assessment, "even very small positive trust should produce a result")
+	assert.Equal(t, testAssessmentSecondary, result.Assessment, "even very small positive trust should produce a result")
 }

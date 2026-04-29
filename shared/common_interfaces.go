@@ -471,6 +471,10 @@ type VEXRuleService interface {
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
 }
 
+type CrowdSourcedVexingService interface {
+	Recommend(ctx Context, tx DB, vulnId uuid.UUID) (models.VEXRule, error)
+}
+
 type VulnEventRepository interface {
 	SaveBatch(ctx context.Context, tx DB, events []models.VulnEvent) error
 	SaveBatchBestEffort(ctx context.Context, tx DB, events []models.VulnEvent) error
