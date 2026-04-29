@@ -198,7 +198,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	defer os.RemoveAll(workingDir)
 
-	gobFile, err := os.Open(workingDir + "/vulndb.gob.zst")
+	gobFile, err := os.Open(workingDir + "/allOSVVulns.gob.zst")
 	if err != nil {
 		return fmt.Errorf("could not open vulndb gob file: %w", err)
 	}
@@ -210,11 +210,45 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	defer zstWriter.Close()
 
-	var rows vulndbRows
-	if err := gob.NewDecoder(zstWriter).Decode(&rows); err != nil {
+	OSVVulns := make([]*dtos.OSV, 0, 1<<18)
+	if err := gob.NewDecoder(zstWriter).Decode(&OSVVulns); err != nil {
 		return fmt.Errorf("could not decode vulndb gob file: %w", err)
 	}
-	slog.Info("decoded gob file", "cves", len(rows.CVEs), "affected_components", len(rows.AffectedComponents))
+	slog.Info("decoded gob file", "amount", len(OSVVulns))
+
+	var lastUpdate string
+
+	rows := vulndbRows{}
+	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate); err == nil {
+		slog.Info("found last import timestamp, only loading diff since last import")
+		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
+		if err != nil {
+			return fmt.Errorf("could not parse config timestamp: %w", err)
+		}
+		filteredVulns := make([]*dtos.OSV, 0, 10_000)
+
+		// filter only the vulns since the last import
+		for i := range OSVVulns {
+			if !OSVVulns[i].Modified.Before(lastUpdateTimestamp) {
+				filteredVulns = append(filteredVulns, OSVVulns[i])
+			} else {
+				// sorted by modified date
+				break
+			}
+		}
+		OSVVulns = filteredVulns
+	} else {
+		slog.Info("could not determine last import, loading full database")
+	}
+
+	if len(OSVVulns) == 0 {
+		slog.Info("vulnerability database is already up to date")
+		return nil
+	}
+	rows, err = buildVulnDBRows(ctx, s.affectedCmpRepository, OSVVulns)
+	if err != nil {
+		return fmt.Errorf("could not build rows from osv objects: %w", err)
+	}
 
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
@@ -231,16 +265,16 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		return fmt.Errorf("could not calculate integrity information; %w", err)
 	}
 
-	valid, err := validateIntegrityInformation(workingDir, integrityInformation)
+	valid, databaseStateTime, err := validateIntegrityInformation(workingDir, integrityInformation)
 	if err != nil {
-		return fmt.Errorf("could not validate information; %w", err)
+		return fmt.Errorf("could not validate information: %w", err)
 	}
 	if !valid {
 		return fmt.Errorf("validation was not successful!")
 	}
 	slog.Info("successfully validated checksums")
 
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", time.Now().Format(time.RFC3339Nano)); err != nil {
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", databaseStateTime.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
 
@@ -248,25 +282,25 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	return nil
 }
 
-func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
+func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, time.Time, error) {
 	fd, err := os.Open(workingDir + "/integrity_checks.json")
 	if err != nil {
-		return false, fmt.Errorf("could not open integrity check json file: %w", err)
+		return false, time.Time{}, fmt.Errorf("could not open integrity check json file: %w", err)
 	}
 
-	var groundTruth []tableIntegrityInformation
+	var groundTruth integrityInformation
 	err = json.NewDecoder(fd).Decode(&groundTruth)
 	if err != nil {
-		return false, fmt.Errorf("could not decode remote integrity information")
+		return false, time.Time{}, fmt.Errorf("could not decode remote integrity information")
 	}
 
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
-		for _, tableGroundTruth := range groundTruth {
+		for _, tableGroundTruth := range groundTruth.TableIntegrity {
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName)
-					return false, nil
+					return false, time.Time{}, nil
 				} else {
 					found = true
 					break
@@ -274,10 +308,10 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 			}
 		}
 		if !found {
-			return false, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
+			return false, time.Time{}, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
 		}
 	}
-	return true, nil
+	return true, groundTruth.ImportTimestamp, nil
 }
 
 func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, jobs chan zipJobWithID, errors *atomic.Int64) error {
@@ -330,13 +364,13 @@ func writeGobFile(object any, fileName string) error {
 func (s osvService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 
-	start := time.Now()
-	idsPerEcosystem, _, err := s.getRecentlyChangedIDsPerEcosystemFromOSV()
+	importStart := time.Now()
+	idsPerEcosystem, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(importStart)
 	if err != nil {
 		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
 	}
 
-	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
+	slog.Info("calculated recently changed ids", "time", time.Since(importStart), "amount of ecosystem", len(idsPerEcosystem))
 
 	// calculate the total work load
 	totalCount := 0
@@ -388,7 +422,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		}
 		for range numberOfZipWorkers {
 			zipWorkWaitGroup.Add(1)
-			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, &fetchFailures)
+			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, importStart, &fetchFailures)
 		}
 	}
 
@@ -464,17 +498,12 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	// the core job is done; run sanity checks/clean ups afterwards
 	//runCleanUpJobs(ctx, conn.Conn())
 
-	// lastly update the import timestamp to the earliest possible fetching time
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", time.Now().Format(time.RFC3339Nano)); err != nil {
-		return fmt.Errorf("could not update last import time: %w", err)
-	}
-
-	integrityInformation, err := calculateTotalIntegrityInformation(ctx, s.pool)
+	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, s.pool)
 	if err != nil {
 		return fmt.Errorf("could not calculate the integrity information for tables: %w", err)
 	}
 
-	slices.SortFunc(integrityInformation, func(a, b tableIntegrityInformation) int {
+	slices.SortFunc(tableIntegrity, func(a, b tableIntegrityInformation) int {
 		return strings.Compare(a.TableName, b.TableName)
 	})
 
@@ -484,7 +513,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 	defer integrityFD.Close()
 
-	jsonContents, err := json.Marshal(integrityInformation)
+	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: importStart})
 	if err != nil {
 		return fmt.Errorf("could not parse integrity information to json format: %w", err)
 	}
@@ -493,7 +522,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return fmt.Errorf("could not write json to file: %w", err)
 	}
 
-	slog.Info("finished vulndb export", "time", time.Since(start))
+	slog.Info("finished vulndb export", "time", time.Since(importStart))
 	return nil
 }
 
@@ -514,7 +543,6 @@ func calculateOSVOBjectsSinceLastImport(allOSVVulns []*dtos.OSV) []*dtos.OSV {
 // to the OCI registry. Each file is cosign-signed independently and must
 // pass verification before the importer is allowed to read it.
 var vulnDBArtifactFiles = []string{
-	"modified_id.csv",
 	"allOSVVulns.gob.zst",
 	"diffOSVVulns.gob.zst",
 	"integrity_checks.json",
@@ -575,11 +603,6 @@ type tableIntegrityInformation struct {
 	TotalCount int    `json:"total_count"`
 }
 
-func buildIntegrityInformationFile(integrityInformation []tableIntegrityInformation, fileName string) error {
-
-	return nil
-}
-
 // computes and returns the tables integrity information using the provided query
 func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Pool, table string, query string) (tableIntegrityInformation, error) {
 	var result tableIntegrityInformation
@@ -596,6 +619,11 @@ func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Po
 	slog.Info("finished calculating integrity information", "table", table, "time", time.Since(start))
 
 	return result, nil
+}
+
+type integrityInformation struct {
+	TableIntegrity  []tableIntegrityInformation `json:"table_integrity"`
+	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
 func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool) ([]tableIntegrityInformation, error) {
@@ -727,7 +755,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time
 		return nil, importStart, errors.Wrap(err, "could not read csv")
 	}
 
-	idsPerEcosystem, err := extractRecentlyChangedIDs(records, lastUpdate)
+	idsPerEcosystem, err := extractRecentlyChangedIDs(records, nil, lastUpdate)
 	if err != nil {
 		return nil, importStart, err
 	}
@@ -735,19 +763,18 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV() (map[string][]string, time.Time, error) {
+func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(importStart time.Time) (map[string][]string, error) {
 	closed := false
-	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
 
 	// first get all the recent changes from the osv API
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/modified_id.csv", nil)
 	if err != nil {
-		return nil, importStart, errors.Wrap(err, "could not create request")
+		return nil, errors.Wrap(err, "could not create request")
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, importStart, fmt.Errorf("csv fetch http request ran into error: %w", err)
+		return nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
 	}
 
 	defer func() {
@@ -757,26 +784,26 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV() (map[string][]str
 	}()
 
 	if resp.StatusCode != 200 {
-		return nil, importStart, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
+		return nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
 	}
 
 	var reader io.Reader = resp.Body
 
 	records, err := csv.NewReader(reader).ReadAll()
 	if err != nil {
-		return nil, importStart, errors.Wrap(err, "could not read csv")
+		return nil, errors.Wrap(err, "could not read csv")
 	}
 
 	resp.Body.Close()
 	closed = true
-	idsPerEcosystem, err := extractRecentlyChangedIDs(records, nil)
+	idsPerEcosystem, err := extractRecentlyChangedIDs(records, &importStart, nil)
 	if err != nil {
-		return nil, importStart, err
+		return nil, err
 	}
-	return idsPerEcosystem, importStart, nil
+	return idsPerEcosystem, nil
 }
 
-func extractRecentlyChangedIDs(records [][]string, lastUpdate *time.Time) (map[string][]string, error) {
+func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastUpdate *time.Time) (map[string][]string, error) {
 	//  map the changed OSV IDs to their ecosystems
 	idsPerEcosystem := make(map[string][]string, len(importEcosystems))
 
@@ -803,15 +830,20 @@ func extractRecentlyChangedIDs(records [][]string, lastUpdate *time.Time) (map[s
 			continue
 		}
 
-		if lastUpdate != nil {
+		if lastUpdate != nil || importStart != nil {
 			// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
 			entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
 			if err != nil {
 				return nil, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
 			}
 			// entries are sorted descending by timestamp; only process changes which happened after our latest update
-			if entryTimestamp.Before(*lastUpdate) {
+			if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
 				break
+			}
+
+			// skip newer vulns
+			if importStart != nil && entryTimestamp.After(*importStart) {
+				continue
 			}
 		}
 
@@ -932,7 +964,7 @@ func (s osvService) importZipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, sh
 	}
 }
 
-func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV, importStart time.Time, fetchFailures *atomic.Int64) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
 		id, _, ok := strings.Cut(zipJob.File.Name, ".")
@@ -958,6 +990,11 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldPr
 			continue
 		}
 		readCloser.Close()
+
+		if osvEntry.Modified.After(importStart) {
+			slog.Warn("ran into race condition on import, skipping vuln with newer information")
+			continue
+		}
 		output <- &osvEntry
 	}
 }
