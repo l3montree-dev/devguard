@@ -129,7 +129,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	var q *gorm.DB
 
 	assetQuery := g.GetDB(ctx, tx).Model(&models.Asset{}).
-		Select("'asset' AS type, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
+		Select("'asset' AS resource_type, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
 		Where("project_id = ?", parentID)
 
 	if len(allowedAssetIDs) > 0 {
@@ -139,7 +139,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	}
 
 	projectQuery := g.GetDB(ctx, tx).Model(&models.Project{}).
-		Select("'project' AS type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
+		Select("'project' AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
 		Where("parent_id = ?", parentID)
 
 	if len(allowedProjectIDs) > 0 {
