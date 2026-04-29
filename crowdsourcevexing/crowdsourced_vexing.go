@@ -228,7 +228,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 						validVotesCount++
 					}
 				} else {
-					// This is the case if a vote was casted for a VexRule that hasn't been seen before
+					// This is the case if a vote was cast for a VexRule that hasn't been seen before
 					votes[rulePath] = &Vote{
 						Voters: []struct {
 							OrganizationID string

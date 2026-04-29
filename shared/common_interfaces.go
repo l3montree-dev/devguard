@@ -472,7 +472,7 @@ type VEXRuleService interface {
 }
 
 type CrowdSourcedVexingService interface {
-	Recommend(ctx Context, tx DB, vulnId uuid.UUID) (models.VEXRule, error)
+	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (models.VEXRule, error)
 }
 
 type VulnEventRepository interface {

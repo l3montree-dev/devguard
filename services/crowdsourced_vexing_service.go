@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -11,19 +13,17 @@ type CrowdsourcedVexingService struct {
 	vexRuleRepository        shared.VEXRuleRepository
 	organisationRepository   shared.OrganizationRepository
 	projectRepository        shared.ProjectRepository
-	assetRepository          shared.AssetRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	dependencyVulnRepository shared.DependencyVulnRepository
 	trustedEntityRepository  shared.TrustedEntityRepository
 	rbacProvider             shared.RBACProvider
 }
 
-func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider) *CrowdsourcedVexingService {
+func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider) *CrowdsourcedVexingService {
 	return &CrowdsourcedVexingService{
 		vexRuleRepository:        vexRuleRepository,
 		organisationRepository:   organisationRepository,
 		projectRepository:        projectRepository,
-		assetRepository:          assetRepository,
 		assetVersionRepository:   assetVersionRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
 		trustedEntityRepository:  trustedEntityRepository,
@@ -31,16 +31,22 @@ func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, or
 	}
 }
 
-func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnId uuid.UUID) (models.VEXRule, error) {
+func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (models.VEXRule, error) {
 	var formattedOrganizations []crowdsourcevexing.Organization
 	var formattedProjects []crowdsourcevexing.Project
 	var formattedAssets []crowdsourcevexing.Asset
 	var formattedVexRules []crowdsourcevexing.VexRule
 
+	assetversion := shared.GetAssetVersion(ctx)
+
 	// Find dependency path using the vulnID.
-	vuln, err := s.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnId)
+	vuln, err := s.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
 	if err != nil {
 		return models.VEXRule{}, err
+	}
+
+	if vuln.AssetID != assetversion.AssetID || vuln.AssetVersionName != assetversion.Name {
+		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
 	}
 
 	// Find all organizations.
