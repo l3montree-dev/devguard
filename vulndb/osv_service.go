@@ -172,8 +172,6 @@ const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 const zipThreshold = 4000
 
-var debugLocalZips = true
-
 type zipJob struct {
 	File      *zip.File
 	Ecosystem string
@@ -310,6 +308,24 @@ func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, j
 	return nil
 }
 
+func writeGobFile(object any, fileName string) error {
+	gobFile, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("could not create gob file: %w", err)
+	}
+	defer gobFile.Close()
+	// create a zstd encoder
+	zstdWriter, err := zstd.NewWriter(gobFile, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	if err != nil {
+		return fmt.Errorf("could not create zstd writer: %w", err)
+	}
+	defer zstdWriter.Close()
+	if err := gob.NewEncoder(zstdWriter).Encode(object); err != nil {
+		return fmt.Errorf("could not encode object to gob file: %w", err)
+	}
+	return nil
+}
+
 func (s osvService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 	var lastUpdate string
@@ -341,6 +357,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
 	}
+
 	slog.Info("calculated recently changed ids", "time", time.Since(start), "amount of ecosystem", len(idsPerEcosystem))
 
 	// calculate the total work load
@@ -408,6 +425,10 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
 	for osvObject := range vulnData {
 		allOSVVulns = append(allOSVVulns, osvObject.OSV)
+	}
+
+	if err := writeGobFile(allOSVVulns, "allOSVVulns.gob.zst"); err != nil {
+		return err
 	}
 
 	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
@@ -760,6 +781,11 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(lastUpdate *time.Ti
 	if err != nil {
 		return nil, importStart, errors.Wrap(err, "could not read csv")
 	}
+
+	if err := writeGobFile(records, "modified_id.gob.zst"); err != nil {
+		return nil, importStart, fmt.Errorf("could not write modified_id.gob.zst: %w", err)
+	}
+
 	resp.Body.Close()
 	closed = true
 	idsPerEcosystem, err := extractRecentlyChangedIDs(records, lastUpdate)
