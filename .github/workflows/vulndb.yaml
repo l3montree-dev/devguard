@@ -87,14 +87,14 @@ jobs:
       - name: Push the database files to GitHub Container Registry (snapshot)
         run: |
           oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date \
-            modified_id.csv \
-            ecosystem.zip \
+            allOSVVulns.gob.zst \
+            diffOSVVulns.gob.zst \
             integrity_checks.json
           oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date latest
       - name: Push the signatures to the GitHub Container Registry (snapshot)
         run: |
           oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig \
-            modified_id.csv.sig \
-            ecosystem.zip.sig \
+            allOSVVulns.gob.zst.sig \
+            diffOSVVulns.gob.zst.sig \
             integrity_checks.json.sig
           oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig latest.sig
