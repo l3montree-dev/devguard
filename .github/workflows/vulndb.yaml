@@ -69,8 +69,8 @@ jobs:
           COSIGN_PASSWORD: ""
         run: |
           cosign import-key-pair --key cosign.key
-          cosign sign-blob --yes --key import-cosign.key modified_id.csv      > modified_id.csv.sig
-          cosign sign-blob --yes --key import-cosign.key ecosystem.zip        > ecosystem.zip.sig
+          cosign sign-blob --yes --key import-cosign.key diffOSVVulns.gob.zst > diffOSVVulns.gob.zst.sig
+          cosign sign-blob --yes --key import-cosign.key allOSVVulns.gob.zst > allOSVVulns.gob.zst.sig
           cosign sign-blob --yes --key import-cosign.key integrity_checks.json > integrity_checks.json.sig
       - name: Login to GitHub Container Registry
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
