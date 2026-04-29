@@ -5,11 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # sbomnix walks the full Nix derivation graph (build + runtime closure)
-    # and emits CycloneDX / SPDX SBOMs — including the Go compiler, stdlib,
-    # every build tool, and all Go module dependencies.
-    sbomnix.url = "github:tiiuae/sbomnix";
-    sbomnix.inputs.nixpkgs.follows = "nixpkgs"; # share the same nixpkgs pin
+
     # uv2nix + pyproject-nix: build the scanner Python env from uv.lock,
     # replacing manual overridePythonAttrs for semgrep + checkov.
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
@@ -23,15 +19,14 @@
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, sbomnix, uv2nix, pyproject-nix, pyproject-build-systems }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, uv2nix, pyproject-nix, pyproject-build-systems }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = unstablePkgs.buildGoModule;
         };
-        sbomnixPkgs = sbomnix.packages.${system};
-
+     
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
           buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGoModule;
         };
