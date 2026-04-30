@@ -108,3 +108,15 @@ func (r *trustedEntityRepository) ListAllTrustedEntities(ctx context.Context, tx
 	err := r.GetDB(ctx, tx).Find(&entities).Error
 	return entities, err
 }
+
+func (r *trustedEntityRepository) GetTrustedEntitiesByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error) {
+	var trustedEntities []models.TrustedEntity
+	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("project_id IN ?", projectIDs).Find(&trustedEntities).Error
+	return trustedEntities, err
+}
+
+func (r *trustedEntityRepository) GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx *gorm.DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error) {
+	var trustedEntities []models.TrustedEntity
+	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("organization_id IN ?", organizationIDs).Find(&trustedEntities).Error
+	return trustedEntities, err
+}

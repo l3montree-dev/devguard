@@ -81,28 +81,69 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
 	}
 
-	rawTrustedEntities, err := s.trustedEntityRepository.ListAllTrustedEntities(requestCtx, tx)
+	rawVexRules, err := s.vexRuleRepository.FindByCVE(requestCtx, tx, vuln.CVEID)
 	if err != nil {
 		return models.VEXRule{}, err
 	}
-	trustedEntitiesTrustscores := make(map[string]float64, len(rawTrustedEntities))
-	for _, te := range rawTrustedEntities {
-		if te.OrganizationID != nil {
-			trustedEntitiesTrustscores[te.OrganizationID.String()] = te.TrustScore
-		} else if te.ProjectID != nil {
-			trustedEntitiesTrustscores[te.ProjectID.String()] = te.TrustScore
-		}
+	formattedVexRules := make([]crowdsourcevexing.VexRule, len(rawVexRules))
+	accordingAssetIDs := make([]uuid.UUID, len(rawVexRules))
+	for i, vexrule := range rawVexRules {
+		accordingAssetIDs[i] = vexrule.AssetID
+		formattedVexRules[i] = mapVexRule(vexrule)
 	}
 
-	rawOrganisations, err := s.organisationRepository.All(requestCtx, tx)
+	rawAssetVersions, err := s.assetVersionRepository.GetAssetVersionsByAssetIDs(requestCtx, tx, accordingAssetIDs)
 	if err != nil {
 		return models.VEXRule{}, err
+	}
+	formattedAssets := make([]crowdsourcevexing.Asset, len(rawAssetVersions))
+	accordingProjectIDs := make([]uuid.UUID, len(rawAssetVersions))
+	for i, assetVersion := range rawAssetVersions {
+		accordingProjectIDs[i] = assetVersion.Asset.ProjectID
+		formattedAssets[i] = mapAsset(assetVersion)
+	}
+
+	rawProjects, err := s.projectRepository.GetByProjectIDs(requestCtx, tx, accordingProjectIDs)
+	if err != nil {
+		return models.VEXRule{}, err
+	}
+	rawTrustedEntitiesByProject, err := s.trustedEntityRepository.GetTrustedEntitiesByProjectIDs(requestCtx, tx, accordingProjectIDs)
+	if err != nil {
+		return models.VEXRule{}, err
+	}
+	trustedEntitiesByProjectTrustscores := make(map[string]float64, len(rawTrustedEntitiesByProject))
+	for _, te := range rawTrustedEntitiesByProject {
+		if te.OrganizationID != nil {
+			trustedEntitiesByProjectTrustscores[te.OrganizationID.String()] = te.TrustScore
+		}
+	}
+	formattedProjects := make([]crowdsourcevexing.Project, len(rawProjects))
+	accordingOrganizationIDs := make([]uuid.UUID, len(rawProjects))
+	for i, proj := range rawProjects {
+		projTrustscore := trustedEntitiesByProjectTrustscores[proj.ID.String()]
+		accordingOrganizationIDs[i] = proj.OrganizationID
+		formattedProjects[i] = mapProject(proj, projTrustscore)
+	}
+
+	rawOrganisations, err := s.organisationRepository.GetOrgByIDs(requestCtx, tx, accordingOrganizationIDs)
+	if err != nil {
+		return models.VEXRule{}, err
+	}
+	rawTrustedEntitiesByOrg, err := s.trustedEntityRepository.GetTrustedEntitiesByOrganizationIDs(requestCtx, tx, accordingOrganizationIDs)
+	if err != nil {
+		return models.VEXRule{}, err
+	}
+	trustedEntitiesByOrgTrustscores := make(map[string]float64, len(rawTrustedEntitiesByOrg))
+	for _, te := range rawTrustedEntitiesByOrg {
+		if te.OrganizationID != nil {
+			trustedEntitiesByOrgTrustscores[te.OrganizationID.String()] = te.TrustScore
+		}
 	}
 	formattedOrganizations := make([]crowdsourcevexing.Organization, len(rawOrganisations))
 	for i, org := range rawOrganisations {
 		domainRBAC := s.rbacProvider.GetDomainRBAC(org.ID.String())
 
-		orgTrustscore := trustedEntitiesTrustscores[org.ID.String()]
+		orgTrustscore := trustedEntitiesByOrgTrustscores[org.ID.String()]
 
 		organizationMemberIDs, err := domainRBAC.GetAllMembersOfOrganization()
 		if err != nil {
@@ -115,34 +156,6 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 		}
 
 		formattedOrganizations[i] = mapOrg(org, orgTrustscore, ownerID, organizationMemberIDs)
-	}
-
-	rawProjects, err := s.projectRepository.All(requestCtx, tx)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-	formattedProjects := make([]crowdsourcevexing.Project, len(rawProjects))
-	for i, proj := range rawProjects {
-		projTrustscore := trustedEntitiesTrustscores[proj.ID.String()]
-		formattedProjects[i] = mapProject(proj, projTrustscore)
-	}
-
-	rawAssetVersions, err := s.assetVersionRepository.All(requestCtx, tx)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-	formattedAssets := make([]crowdsourcevexing.Asset, len(rawAssetVersions))
-	for i, assetVersion := range rawAssetVersions {
-		formattedAssets[i] = mapAsset(assetVersion)
-	}
-
-	rawVexRules, err := s.vexRuleRepository.All(requestCtx, tx)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-	formattedVexRules := make([]crowdsourcevexing.VexRule, len(rawVexRules))
-	for i, vexrule := range rawVexRules {
-		formattedVexRules[i] = mapVexRule(vexrule)
 	}
 
 	recommendedRule, err := crowdsourcevexing.CrowdsourcedVexing(

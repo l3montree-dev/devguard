@@ -53,6 +53,12 @@ func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB
 	return project, err
 }
 
+func (g *projectRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID IN ?", projectIDs).Find(&projects).Error
+	return projects, err
+}
+
 func (g *projectRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, slug string) (models.Project, error) {
 	var flatProjects []models.Project
 	err := g.GetDB(ctx, tx).Raw(`

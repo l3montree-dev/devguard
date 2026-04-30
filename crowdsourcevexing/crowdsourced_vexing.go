@@ -62,7 +62,8 @@ type Vote struct {
 
 const (
 	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 30
+	minOrganizationAgeInDays = 0
+	minTrustscore            = 0.01
 )
 
 // [Mitigation 8] userVoteTracker tracks how many times each user has voted
@@ -164,7 +165,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 
 	// Filtering for VexRules that apply to the dependecy tree
 	// Deduplucate VexRules based on organizationn and project to avoid replay
-	// (every combination of organization and project will be allow to have one non-contradicting VexRule for a Path submitted)
+	// (every combination of organization and project will be allowed to have one non-contradicting VexRule for a Path submitted)
 	for _, rule := range vexRules {
 
 		// For each VexRule, find organization and project id
@@ -206,7 +207,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 				// Note to mitigation 8: Using an exponential decay approach allows for
 				// - lower trusted entities to not be able to surpass high trusted entities with many votes
 				// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
-				ruleConfidence := math.Max(project.Trustscore, organization.Trustscore) * diminishingFactor
+				ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
