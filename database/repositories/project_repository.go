@@ -28,6 +28,13 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 	}
 }
 
+func (g *projectRepository) All(ctx context.Context, tx *gorm.DB) ([]models.Project, error) {
+	var result []models.Project
+
+	err := g.GetDB(ctx, tx).Model(models.Project{}).Find(&result).Error
+	return result, err
+}
+
 func (g *projectRepository) GetByOrgID(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	err := g.GetDB(ctx, tx).Where("organization_id = ?", organizationID).Find(&projects).Error
