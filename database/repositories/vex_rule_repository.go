@@ -48,6 +48,19 @@ func (r *vexRuleRepository) Begin(ctx context.Context) shared.DB {
 	return r.GetDB(ctx, nil).Begin()
 }
 
+func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXRule, error) {
+	var result []models.VEXRule
+
+	err := r.GetDB(ctx, tx).Model(models.VEXRule{}).Find(&result).Error
+	return result, err
+}
+
+func (r *vexRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.VEXRule, error) {
+	var rules []models.VEXRule
+	err := r.GetDB(ctx, tx).Where("cve_id = ?", cveID).Find(&rules).Error
+	return rules, err
+}
+
 func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
 	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Order("created_at DESC").Find(&rules).Error

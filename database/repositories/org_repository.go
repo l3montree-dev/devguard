@@ -95,6 +95,12 @@ func (g *orgRepository) GetOrgByID(ctx context.Context, tx *gorm.DB, id uuid.UUI
 	return org, err
 }
 
+func (g *orgRepository) GetOrgByIDs(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Org, error) {
+	var orgs []models.Org
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id IN ?", ids).Find(&orgs).Error
+	return orgs, err
+}
+
 func (g *orgRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, organizationSlug string) (string, error) {
 	var slugs []string
 	err := g.GetDB(ctx, tx).Model(&models.Org{}).

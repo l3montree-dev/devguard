@@ -142,6 +142,7 @@ func main() {
 		fx.Invoke(func(ociRegistryRouter router.OCIRegistryRouter) {}),
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
+		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

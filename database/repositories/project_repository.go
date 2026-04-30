@@ -28,6 +28,13 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 	}
 }
 
+func (g *projectRepository) All(ctx context.Context, tx *gorm.DB) ([]models.Project, error) {
+	var result []models.Project
+
+	err := g.GetDB(ctx, tx).Model(models.Project{}).Find(&result).Error
+	return result, err
+}
+
 func (g *projectRepository) GetByOrgID(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	err := g.GetDB(ctx, tx).Where("organization_id = ?", organizationID).Find(&projects).Error
@@ -44,6 +51,12 @@ func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB
 	var project models.Project
 	err := g.GetDB(ctx, tx).Model(&models.Asset{}).Select("projects.*").Joins("JOIN projects ON projects.id = assets.project_id").Where("assets.id = ?", assetID).First(&project).Error
 	return project, err
+}
+
+func (g *projectRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID IN ?", projectIDs).Find(&projects).Error
+	return projects, err
 }
 
 func (g *projectRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, slug string) (models.Project, error) {

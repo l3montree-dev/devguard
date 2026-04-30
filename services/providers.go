@@ -36,4 +36,5 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewOpenSourceInsightService, fx.As(new(shared.OpenSourceInsightService)))),
 	fx.Provide(fx.Annotate(NewVEXRuleService, fx.As(new(shared.VEXRuleService)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyService, fx.As(new(shared.DependencyProxySecretService)))),
+	fx.Provide(fx.Annotate(NewCrowdsourcedVexingService, fx.As(new(shared.CrowdSourcedVexingService)))),
 )

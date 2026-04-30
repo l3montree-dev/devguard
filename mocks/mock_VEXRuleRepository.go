@@ -93,6 +93,74 @@ func (_c *VEXRuleRepository_Begin_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// All provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) All(ctx context.Context, tx shared.DB) ([]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.VEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type VEXRuleRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *VEXRuleRepository_Expecter) All(ctx interface{}, tx interface{}) *VEXRuleRepository_All_Call {
+	return &VEXRuleRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
+}
+
+func (_c *VEXRuleRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *VEXRuleRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleRepository_All_Call) Return(rules []models.VEXRule, err error) *VEXRuleRepository_All_Call {
+	_c.Call.Return(rules, err)
+	return _c
+}
+
+func (_c *VEXRuleRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.VEXRule, error)) *VEXRuleRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type VEXRuleRepository
 func (_mock *VEXRuleRepository) Create(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
 	ret := _mock.Called(ctx, tx, rule)
@@ -347,6 +415,80 @@ func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) Return(err error) *VEXRul
 }
 
 func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error) *VEXRuleRepository_DeleteByAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindByCVE provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) FindByCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByCVE")
+	}
+
+	var r0 []models.VEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, cveID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleRepository_FindByCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCVE'
+type VEXRuleRepository_FindByCVE_Call struct {
+	*mock.Call
+}
+
+// FindByCVE is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - cveID string
+func (_e *VEXRuleRepository_Expecter) FindByCVE(ctx interface{}, tx interface{}, cveID interface{}) *VEXRuleRepository_FindByCVE_Call {
+	return &VEXRuleRepository_FindByCVE_Call{Call: _e.mock.On("FindByCVE", ctx, tx, cveID)}
+}
+
+func (_c *VEXRuleRepository_FindByCVE_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string)) *VEXRuleRepository_FindByCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleRepository_FindByCVE_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindByCVE_Call {
+	_c.Call.Return(vEXRules, err)
+	return _c
+}
+
+func (_c *VEXRuleRepository_FindByCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string) ([]models.VEXRule, error)) *VEXRuleRepository_FindByCVE_Call {
 	_c.Call.Return(run)
 	return _c
 }

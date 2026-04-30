@@ -236,6 +236,12 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetID(ctx context.
 	return assets, err
 }
 
+func (repository *assetVersionRepository) GetAssetVersionsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error) {
+	var assets []models.AssetVersion
+	err := repository.GetDB(ctx, tx).Preload("Asset").Where("asset_id IN ?", assetIDs).Find(&assets).Error
+	return assets, err
+}
+
 func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assetVersion []models.AssetVersion
 	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
