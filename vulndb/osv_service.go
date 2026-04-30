@@ -226,7 +226,6 @@ func (s osvService) ImportRC(ctx context.Context) error {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
 		filteredVulns := make([]*dtos.OSV, 0, 10_000)
-
 		// filter only the vulns since the last import
 		for i := range OSVVulns {
 			if !OSVVulns[i].Modified.Before(lastUpdateTimestamp) {
@@ -365,7 +364,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 
 	importStart := time.Now()
-	idsPerEcosystem, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(importStart)
+	idsPerEcosystem, modifiedPerID, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(importStart)
 	if err != nil {
 		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
 	}
@@ -443,7 +442,16 @@ func (s osvService) ExportRC(ctx context.Context) error {
 
 	// collect all OSV objects first
 	allOSVVulns := make([]*dtos.OSV, 0, totalCount)
+	amountDifferent := 0
 	for osvObject := range vulnData {
+		modifiedTime, ok := modifiedPerID[osvObject.ID]
+		if !ok {
+			slog.Error("could not determine timestamp for id")
+		} else {
+			if !modifiedTime.Equal(osvObject.Modified) {
+				amountDifferent++
+			}
+		}
 		allOSVVulns = append(allOSVVulns, osvObject)
 	}
 
@@ -641,7 +649,6 @@ func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool)
 
 					coalesce(to_char(date_published, 'YYYY-MM-DD HH24:MI:SS.US'), '\0') || '|' ||
 					coalesce(to_char(date_last_modified, 'YYYY-MM-DD HH24:MI:SS.US'), '\0') || '|' ||
-					coalesce(to_char(updated_at, 'YYYY-MM-DD HH24:MI:SS.US'), '\0') || '|' 
 				) AS row_hash
 				FROM cves
 			) sub;`,
@@ -755,7 +762,7 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time
 		return nil, importStart, errors.Wrap(err, "could not read csv")
 	}
 
-	idsPerEcosystem, err := extractRecentlyChangedIDs(records, nil, lastUpdate)
+	idsPerEcosystem, _, err := extractRecentlyChangedIDs(records, nil, lastUpdate)
 	if err != nil {
 		return nil, importStart, err
 	}
@@ -763,18 +770,18 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time
 }
 
 // fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(importStart time.Time) (map[string][]string, error) {
+func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(importStart time.Time) (map[string][]string, map[string]time.Time, error) {
 	closed := false
 
 	// first get all the recent changes from the osv API
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/modified_id.csv", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
+		return nil, nil, errors.Wrap(err, "could not create request")
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
+		return nil, nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
 	}
 
 	defer func() {
@@ -784,28 +791,29 @@ func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(importStart time.Ti
 	}()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
+		return nil, nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
 	}
 
 	var reader io.Reader = resp.Body
 
 	records, err := csv.NewReader(reader).ReadAll()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read csv")
+		return nil, nil, errors.Wrap(err, "could not read csv")
 	}
 
 	resp.Body.Close()
 	closed = true
-	idsPerEcosystem, err := extractRecentlyChangedIDs(records, &importStart, nil)
+	idsPerEcosystem, modifiedPerID, err := extractRecentlyChangedIDs(records, &importStart, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return idsPerEcosystem, nil
+	return idsPerEcosystem, modifiedPerID, nil
 }
 
-func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastUpdate *time.Time) (map[string][]string, error) {
+func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastUpdate *time.Time) (map[string][]string, map[string]time.Time, error) {
 	//  map the changed OSV IDs to their ecosystems
 	idsPerEcosystem := make(map[string][]string, len(importEcosystems))
+	modifiedPerID := make(map[string]time.Time, len(importEcosystems))
 
 	// use a map to process each vuln only once
 	alreadyProcessed := make(map[string]struct{}, 1<<18)
@@ -817,7 +825,7 @@ func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastU
 
 		ecosystem, id, found := strings.Cut(record[1], "/")
 		if !found {
-			return nil, fmt.Errorf("invalid format for vuln id: %s", record[1])
+			return nil, modifiedPerID, fmt.Errorf("invalid format for vuln id: %s", record[1])
 		}
 
 		if !slices.Contains(importEcosystems, ecosystem) || shouldIgnoreVulnerabilityID(id) {
@@ -830,12 +838,14 @@ func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastU
 			continue
 		}
 
+		entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
+		if err != nil {
+			return nil, modifiedPerID, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
+		}
+
 		if lastUpdate != nil || importStart != nil {
 			// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
-			entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
-			if err != nil {
-				return nil, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
-			}
+
 			// entries are sorted descending by timestamp; only process changes which happened after our latest update
 			if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
 				break
@@ -849,8 +859,11 @@ func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastU
 
 		alreadyProcessed[id] = struct{}{}
 		idsPerEcosystem[ecosystem] = append(idsPerEcosystem[ecosystem], id)
+		if _, ok := modifiedPerID[id]; !ok {
+			modifiedPerID[id] = entryTimestamp
+		}
 	}
-	return idsPerEcosystem, nil
+	return idsPerEcosystem, modifiedPerID, nil
 }
 
 // controls in what order and what method to use for each ecosystem

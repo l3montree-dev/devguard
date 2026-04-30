@@ -118,7 +118,7 @@
             ]
         },
          {
-            "name": "VulnDB ImportRC",
+            "name": "VulnDB ExportRC",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",
@@ -126,7 +126,7 @@
             "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
             "args": [
                 "vulndb",
-                "importRC"
+                "export"
             ]
         },
         {
