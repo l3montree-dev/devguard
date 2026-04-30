@@ -59,5 +59,6 @@ func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
 		ArbitraryJSONData:       event.GetArbitraryJSONData(),
 		CreatedAt:               event.CreatedAt,
 		CreatedByVexRule:        event.CreatedByVexRule,
+		UserAgent:               *event.UserAgent,
 	}
 }

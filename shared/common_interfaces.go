@@ -391,7 +391,7 @@ type DependencyVulnService interface {
 	UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
-	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
+	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
@@ -430,7 +430,7 @@ type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(ctx context.Context, tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(ctx context.Context, tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx context.Context, tx DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error
-	UpdateFirstPartyVulnState(ctx context.Context, tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
+	UpdateFirstPartyVulnState(ctx context.Context, tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error)
 	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
 	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }
@@ -625,7 +625,7 @@ type CVERelationshipRepository interface {
 
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(ctx context.Context, tx DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error
-	UpdateLicenseRiskState(ctx context.Context, tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)
+	UpdateLicenseRiskState(ctx context.Context, tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error)
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 

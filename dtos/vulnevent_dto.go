@@ -63,4 +63,5 @@ type VulnEventDTO struct {
 	PackageName              string    `json:"packageName"`
 	URI                      string    `json:"uri"`
 	CreatedByVexRule         bool      `json:"createdByVexRule"`
+	UserAgent                string    `json:"userAgent"`
 }

@@ -176,7 +176,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			if vuln.GetState() != dtos.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), false)
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), false, "")
 
 			err = i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
@@ -187,7 +187,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			if vuln.GetState() == dtos.VulnStateOpen {
 				return nil
 			}
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), false)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), false, "")
 
 			err := i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
@@ -200,7 +200,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		if vuln.GetState() == dtos.VulnStateFalsePositive {
 			return nil
 		}
-		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, "")
 
 		err := i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 		if err != nil {
