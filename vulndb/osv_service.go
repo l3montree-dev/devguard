@@ -476,6 +476,23 @@ func (s osvService) ExportRC(ctx context.Context) error {
 		return err
 	}
 
+	gobFile, err := os.Open("allOSVVulns.gob.zst")
+	if err != nil {
+		return fmt.Errorf("could not open vulndb gob file: %w", err)
+	}
+	defer gobFile.Close()
+
+	zstWriter, err := zstd.NewReader(gobFile)
+	if err != nil {
+		return fmt.Errorf("could not create zstd reader: %w", err)
+	}
+	defer zstWriter.Close()
+
+	OSVVulns := make([]*dtos.OSV, 0, 1<<18)
+	if err := gob.NewDecoder(zstWriter).Decode(&OSVVulns); err != nil {
+		return fmt.Errorf("could not decode vulndb gob file: %w", err)
+	}
+
 	// then save only the vulns since the last export
 	vulnsSinceLastImport := calculateOSVOBjectsSinceLastImport(allOSVVulns)
 	if err := writeGobFile(vulnsSinceLastImport, "diffOSVVulns.gob.zst"); err != nil {
@@ -648,7 +665,7 @@ func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool)
 					coalesce(vector, '\0') || '|' ||
 
 					coalesce(to_char(date_published, 'YYYY-MM-DD HH24:MI:SS.US'), '\0') || '|' ||
-					coalesce(to_char(date_last_modified, 'YYYY-MM-DD HH24:MI:SS.US'), '\0') || '|' ||
+					coalesce(to_char(date_last_modified, 'YYYY-MM-DD HH24:MI:SS.US'), '\0')
 				) AS row_hash
 				FROM cves
 			) sub;`,
