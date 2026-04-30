@@ -62,7 +62,7 @@ type Vote struct {
 
 const (
 	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 0
+	minOrganizationAgeInDays = 30
 )
 
 // [Mitigation 8] userVoteTracker tracks how many times each user has voted
