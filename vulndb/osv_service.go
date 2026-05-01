@@ -216,6 +216,16 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	slog.Info("decoded gob file", "amount", len(OSVVulns))
 
+	for i, vuln := range OSVVulns {
+		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(vuln)
+		for _, component := range affectedComponentsForCVE {
+			hash := component.CalculateHashFast()
+			if hash == 6311785268061072327 {
+				slog.Info("found it", "i", i)
+			}
+		}
+	}
+
 	var lastUpdate string
 
 	rows := vulndbRows{}
@@ -227,13 +237,17 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		}
 		filteredVulns := make([]*dtos.OSV, 0, 10_000)
 		// filter only the vulns since the last import
-		for i := range OSVVulns {
-			if !OSVVulns[i].Modified.Before(lastUpdateTimestamp) {
-				filteredVulns = append(filteredVulns, OSVVulns[i])
+		for _, vuln := range OSVVulns {
+			modifiedTimestamp := vuln.Modified
+			if vuln.ID == "OSV-2026-650" || vuln.ID == "OSV-2026-623" {
+				slog.Info("get me out")
+			}
+			if !modifiedTimestamp.Before(lastUpdateTimestamp) {
+				filteredVulns = append(filteredVulns, vuln)
 			} else {
 				// sorted by modified date
 				break
-			}
+			} //"2026-04-29T14:09:41.271886261Z"
 		}
 		OSVVulns = filteredVulns
 	} else {
@@ -255,7 +269,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	defer conn.Release()
 
-	if err := s.writeToDatabase(ctx, conn, rows); err != nil {
+	if err := s.writeToDatabase(ctx, conn, rows, false); err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 
@@ -263,7 +277,6 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not calculate integrity information; %w", err)
 	}
-
 	valid, databaseStateTime, err := validateIntegrityInformation(workingDir, integrityInformation)
 	if err != nil {
 		return fmt.Errorf("could not validate information: %w", err)
@@ -471,6 +484,16 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	})
 	slog.Info("finished sorting slice", "amount", len(allOSVVulns), "time", time.Since(sortStart), "latest entry", allOSVVulns[0].Modified.Format(time.DateTime))
 
+	for i, vuln := range allOSVVulns {
+		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(vuln)
+		for _, component := range affectedComponentsForCVE {
+			hash := component.CalculateHashFast()
+			if hash == 6311785268061072327 {
+				slog.Info("found it", "i", i)
+			}
+		}
+	}
+
 	// save all vulns for a fresh import
 	if err := writeGobFile(allOSVVulns, "allOSVVulns.gob.zst"); err != nil {
 		return err
@@ -515,7 +538,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 	defer conn.Release()
 
-	err = s.writeToDatabase(ctx, conn, rows)
+	err = s.writeToDatabase(ctx, conn, rows, true)
 	if err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
@@ -1078,7 +1101,7 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 	// build a map of the current state for faster lookups of the existing state
 	// used for deduplicating rows in memory rather than on insert
 	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
-	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{})
+	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{}, len(currentCVEAffectedComponents)*7)
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
 		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
 		isCVEAffectedComponentPresent[cveAffectedComponent] = struct{}{}
@@ -1093,10 +1116,18 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 	slog.Info("start building rows", "amount", len(allEntries))
 	buildingTime := time.Now()
 
+	hashes := []int64{1565413778188027620, 47117644989025461, 6311785268061072327}
+	relations := []models.CVERelationship{{TargetCVE: "CVE-2026-6526", SourceCVE: "DEBIAN-CVE-2026-6526", RelationshipType: dtos.RelationshipTypeUpstream}}
 	// then build the structs for each OSV object
-	for i := range allEntries {
+	for i, vuln := range allEntries {
 		// first calculate the components necessary for the skip condition
 		relationships := transformer.OSVToCVERelationships(allEntries[i])
+		for _, rs := range relationships {
+			if rs == relations[0] {
+				slog.Info("found")
+			}
+		}
+
 		affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(allEntries[i])
 		if len(affectedComponentsForCVE) == 0 && len(relationships) == 0 {
 			continue // we do not need to process this entry since it will never be found
@@ -1113,6 +1144,12 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 		// for each affected component check if its already present and create the respective pivot table entries
 		for _, affectedComponent := range affectedComponentsForCVE {
 			hash := affectedComponent.CalculateHashFast()
+			if slices.Contains(hashes, hash) {
+				slog.Info("found a hash")
+				if hash == 6311785268061072327 {
+					slog.Info("found lost child", "vuln", vuln.ID)
+				}
+			}
 			affectedComponent.ID = hash // assign hash for later use
 			row := cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash}
 
@@ -1134,7 +1171,7 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 }
 
 // write all rows to the database using the appropriate insert method
-func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, rows vulndbRows) error {
+func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, rows vulndbRows, createTemp bool) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1166,21 +1203,21 @@ func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, row
 	}
 
 	// then we can just stream all our data with the COPY clause straight into the tables
-	err = insertCVEsBulk(ctx, tx, rows.CVEs)
+	err = insertCVEsBulk(ctx, tx, rows.CVEs, createTemp)
 	if err != nil {
 		return fmt.Errorf("could not insert cves: %w", err)
 	}
 
-	err = insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships)
+	err = insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, createTemp)
 	if err != nil {
 		return fmt.Errorf("could not insert cve relationships: %w", err)
 	}
 
-	err = insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents)
+	err = insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents, createTemp)
 	if err != nil {
 		return fmt.Errorf("could not insert affected_components: %w", err)
 	}
-	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
+	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents, createTemp); err != nil {
 		return fmt.Errorf("could not insert cve_affected_component: %w", err)
 	}
 
@@ -1202,7 +1239,7 @@ func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, row
 
 // insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
 // this lets us handle on conflicts and updates gracefully, while still having the speed of copy
-func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
+func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTemp bool) error {
 	if len(cves) == 0 {
 		return nil
 	}
@@ -1257,13 +1294,24 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 		return fmt.Errorf("could not upsert from staging into cves: %w", err)
 	}
 
+	if createTemp {
+		if _, err := tx.Exec(ctx, `
+		CREATE TABLE cves_temp (LIKE cves INCLUDING ALL);`); err != nil {
+			return fmt.Errorf("could not create temp table 1: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO cves_temp SELECT * FROM cves;`); err != nil {
+			return fmt.Errorf("could not copy to temp table 1: %w", err)
+		}
+	}
+
 	slog.Info("finished inserting into cves", "time", time.Since(start))
 	return nil
 }
 
 // insert into cve relationships using copy in combination with a staging table
 // the staging table step is used to able to handle on conflict, effectively resulting in the deduplication of rows before applying the primary key
-func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
+func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship, createTemp bool) error {
 	if len(cveRelationships) == 0 {
 		return nil
 	}
@@ -1299,13 +1347,24 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 		return fmt.Errorf("could not insert from staging into cve_relationships: %w", err)
 	}
 
+	if createTemp {
+		if _, err := tx.Exec(ctx, `
+		CREATE TABLE cve_relationships_temp (LIKE cve_relationships INCLUDING ALL);`); err != nil {
+			return fmt.Errorf("could not create temp table 2: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_relationships_temp SELECT * FROM cve_relationships;`); err != nil {
+			return fmt.Errorf("could not copy to temp table 2: %w", err)
+		}
+	}
+
 	slog.Info("finished inserting into cve_relationships", "time", time.Since(start))
 	return nil
 }
 
 // inserts into affected components using copy + staging table approach
 // the staging table is needed in this case to be able to transform semver values to the semver datatype since COPY lacks this functionality
-func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
+func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent, createTemp bool) error {
 	slog.Info("inserting into affected_components using bulk insert", "amount", len(components))
 	start := time.Now()
 
@@ -1351,12 +1410,23 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 		FROM affected_components_stage`); err != nil {
 		return fmt.Errorf("could not insert from staging into affected_components: %w", err)
 	}
+
+	if createTemp {
+		if _, err := tx.Exec(ctx, `
+		CREATE TABLE affected_components_temp (LIKE affected_components INCLUDING ALL);`); err != nil {
+			return fmt.Errorf("could not create temp table 3: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO affected_components_temp SELECT * FROM affected_components;`); err != nil {
+			return fmt.Errorf("could not copy to temp table 3: %w", err)
+		}
+	}
 	slog.Info("finished inserting into affected_components", "time", time.Since(start))
 	return nil
 }
 
 // insert into the cve affected components pivot table using COPY
-func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
+func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow, createTemp bool) error {
 	slog.Info("inserting into cve_affected_component using bulk insert", "amount", len(pivotRows))
 	start := time.Now()
 
@@ -1369,6 +1439,16 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
+	}
+	if createTemp {
+		if _, err := tx.Exec(ctx, `
+		CREATE TABLE cve_affected_component_temp (LIKE cve_affected_component INCLUDING ALL);`); err != nil {
+			return fmt.Errorf("could not create temp table 4: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_affected_component_temp SELECT * FROM cve_affected_component;`); err != nil {
+			return fmt.Errorf("could not copy to temp table 4: %w", err)
+		}
 	}
 	slog.Info("finished inserting into cve_affected_component", "time", time.Since(start))
 	return nil
