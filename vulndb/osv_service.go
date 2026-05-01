@@ -2187,7 +2187,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 	defer conn.Release()
 
-	err = s.writeToDatabase(ctx, conn, rows, true)
+	err = s.writeToDatabase(ctx, conn, rows, false)
 	if err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
@@ -2742,10 +2742,10 @@ func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs cha
 func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedComponentRepository, allEntries []OSVWithTimestamp) (vulndbRows, error) {
 	// get the current state of the affected components to avoid creating duplicate entries
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
-	// err := affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
-	// if err != nil {
-	// 	return vulndbRows{}, fmt.Errorf("could not get current state of affected components: %w", err)
-	// }
+	err := affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
+	if err != nil {
+		return vulndbRows{}, fmt.Errorf("could not get current state of affected components: %w", err)
+	}
 
 	// build a map of the current state for faster lookups of the existing state
 	// used for deduplicating rows in memory rather than on insert

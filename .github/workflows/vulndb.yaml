@@ -69,7 +69,6 @@ jobs:
           COSIGN_PASSWORD: ""
         run: |
           cosign import-key-pair --key cosign.key
-          cosign sign-blob --yes --key import-cosign.key diffOSVVulns.gob.zst > diffOSVVulns.gob.zst.sig
           cosign sign-blob --yes --key import-cosign.key allOSVVulns.gob.zst > allOSVVulns.gob.zst.sig
           cosign sign-blob --yes --key import-cosign.key integrity_checks.json > integrity_checks.json.sig
       - name: Login to GitHub Container Registry
@@ -88,13 +87,11 @@ jobs:
         run: |
           oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date \
             allOSVVulns.gob.zst \
-            diffOSVVulns.gob.zst \
             integrity_checks.json
           oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date latest
       - name: Push the signatures to the GitHub Container Registry (snapshot)
         run: |
           oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig \
             allOSVVulns.gob.zst.sig \
-            diffOSVVulns.gob.zst.sig \
             integrity_checks.json.sig
           oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig latest.sig
