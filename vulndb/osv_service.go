@@ -241,10 +241,10 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		slog.Info("could not determine last import, loading full database")
 	}
 
-	if len(OSVVulns) == 0 {
-		slog.Info("vulnerability database is already up to date")
-		return nil
-	}
+	// if len(OSVVulns) == 0 {
+	// 	slog.Info("vulnerability database is already up to date")
+	// 	return nil
+	// }
 	// rows, err = buildVulnDBRows(ctx, s.affectedCmpRepository, OSVVulns)
 	// if err != nil {
 	// 	return fmt.Errorf("could not build rows from osv objects: %w", err)
@@ -294,8 +294,8 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 	if err != nil {
 		return false, time.Time{}, fmt.Errorf("could not decode remote integrity information")
 	}
-	groundTruthParsed, _ := time.Parse(time.RFC3339Nano, groundTruth.ImportTimestamp)
-
+	groundTruthFormated := groundTruth.ImportTimestamp.Format(time.RFC3339Nano)
+	slog.Info(groundTruthFormated)
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
@@ -313,7 +313,7 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 			return false, time.Time{}, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
 		}
 	}
-	return true, groundTruthParsed, nil
+	return true, groundTruth.ImportTimestamp, nil
 }
 
 func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, jobs chan zipJobWithID, errors *atomic.Int64) error {
@@ -366,7 +366,7 @@ func writeGobFile(object any, fileName string) error {
 func (s osvService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 
-	importStart := time.Now() //10:35 bonn
+	importStart := time.Now() //10:57 bonn
 	idsPerEcosystem, modifiedPerID, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(importStart)
 	if err != nil {
 		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
@@ -551,7 +551,7 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}
 	defer integrityFD.Close()
 
-	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: importStart.Format(time.RFC3339Nano)})
+	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: importStart})
 	if err != nil {
 		return fmt.Errorf("could not parse integrity information to json format: %w", err)
 	}
@@ -661,7 +661,7 @@ func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Po
 
 type integrityInformation struct {
 	TableIntegrity  []tableIntegrityInformation `json:"table_integrity"`
-	ImportTimestamp string                      `json:"import_timestamp"`
+	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
 func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool) ([]tableIntegrityInformation, error) {
