@@ -14,7 +14,6 @@ env:
   POSTGRES_USER: devguard
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
-  DATE: $(date +%s)
 
 jobs:
   build:
@@ -79,16 +78,11 @@ jobs:
       - name: Setup oras cli
         uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
 
-      - name: set the date
-        run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
-
-      - name: Push the database archive to GitHub Container Registry (snapshot)
+      - name: Push the database archive to GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:$date \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:latest \
             vulndb.tar.zst
-          oras tag ghcr.io/l3montree-dev/devguard/vulndb/v2:$date latest
-      - name: Push the archive signature to the GitHub Container Registry (snapshot)
+      - name: Push the archive signature to the GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:$date.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:latest.sig \
             vulndb.tar.zst.sig
-          oras tag ghcr.io/l3montree-dev/devguard/vulndb/v2:$date.sig latest.sig
