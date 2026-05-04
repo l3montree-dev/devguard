@@ -29,8 +29,6 @@ import (
 func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 	return dtos.CVEDTO{
 		CVE:                   cve.CVE,
-		CreatedAt:             cve.CreatedAt,
-		UpdatedAt:             cve.UpdatedAt,
 		DatePublished:         cve.DatePublished,
 		DateLastModified:      cve.DateLastModified,
 		Description:           cve.Description,

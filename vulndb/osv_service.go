@@ -19,7 +19,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -115,53 +114,11 @@ type cveAffectedComponentRow struct {
 	AffectedComponentID int64 `gorm:"column:affected_component_id"`
 }
 
-// lean structs for gob export/import — only the fields written to the DB,
-// with time.Time replaced by int64 (Unix seconds) to avoid gob's verbose wall/ext/loc encoding
-type cveRow struct {
-	ID                    int64
-	CVE                   string
-	CreatedAt             int64
-	UpdatedAt             int64
-	DatePublished         int64
-	DateLastModified      int64
-	Description           string
-	CVSS                  float32
-	References            string
-	CISAExploitAdd        int64 // 0 = NULL
-	CISAActionDue         int64 // 0 = NULL
-	CISARequiredAction    string
-	CISAVulnerabilityName string
-	EPSS                  float64 // 0 = NULL
-	Percentile            float32 // 0 = NULL
-	Vector                string
-}
-
-type affectedComponentRow struct {
-	ID                 int64
-	PurlWithoutVersion string
-	Ecosystem          string
-	Version            string
-	SemverIntroduced   string
-	SemverFixed        string
-	VersionIntroduced  string
-	VersionFixed       string
-}
-
-type cveRelationshipRow struct {
-	SourceCVE        string
-	TargetCVE        string
-	RelationshipType string
-}
-
 type vulndbRows struct {
 	CVEs                  []models.CVE
 	CVERelationships      []models.CVERelationship
 	AffectedComponents    []models.AffectedComponent
 	CVEAffectedComponents []cveAffectedComponentRow
-}
-type fetchingJob struct {
-	Ecosystem string
-	ID        string
 }
 
 type OSVWithEcosystem struct {
@@ -171,16 +128,13 @@ type OSVWithEcosystem struct {
 
 const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
-const zipThreshold = 4000
 
+const debugLocalZips = true
+
+var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 type zipJob struct {
 	File      *zip.File
 	Ecosystem string
-}
-
-type zipJobWithID struct {
-	File          *zip.File
-	Ecosystem, ID string
 }
 
 func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
@@ -210,15 +164,14 @@ func (s osvService) ImportRC(ctx context.Context) error {
 	}
 	defer zstWriter.Close()
 
-	OSVVulns := make([]OSVWithTimestamp, 0, 1<<18)
-	if err := gob.NewDecoder(zstWriter).Decode(&OSVVulns); err != nil {
+	osvVulns := make([]OSVWithTimestamp, 0, 1<<18)
+	if err := gob.NewDecoder(zstWriter).Decode(&osvVulns); err != nil {
 		return fmt.Errorf("could not decode vulndb gob file: %w", err)
 	}
-	slog.Info("decoded gob file", "amount", len(OSVVulns))
+	slog.Info("decoded gob file", "amount", len(osvVulns))
 
 	var lastUpdate string
 
-	rows := vulndbRows{}
 	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate); err == nil {
 		slog.Info("found last import timestamp, only loading diff since last import")
 		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
@@ -228,7 +181,7 @@ func (s osvService) ImportRC(ctx context.Context) error {
 		filteredVulns := make([]OSVWithTimestamp, 0, 10_000)
 
 		// filter only the vulns since the last import
-		for _, vuln := range OSVVulns {
+		for _, vuln := range osvVulns {
 			modifiedTimestamp := vuln.ModifiedTimestamp
 			if modifiedTimestamp.After(lastUpdateTimestamp) {
 				filteredVulns = append(filteredVulns, vuln)
@@ -236,461 +189,19 @@ func (s osvService) ImportRC(ctx context.Context) error {
 				continue
 			}
 		}
-		OSVVulns = filteredVulns
+		osvVulns = filteredVulns
 
 	} else {
 		slog.Info("could not determine last import, loading full database")
 	}
 
-	if len(OSVVulns) == 0 {
+	if len(osvVulns) == 0 {
 		slog.Info("vulnerability database is already up to date")
 		return nil
 	}
-	rows, err = buildVulnDBRows(ctx, s.affectedCmpRepository, OSVVulns)
+	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, osvVulns)
 	if err != nil {
 		return fmt.Errorf("could not build rows from osv objects: %w", err)
-	}
-
-	idsToFind := []string{}
-	if true {
-		idsToFind = []string{
-			"DEBIAN-CVE-2026-31702",
-			"OSV-2024-117",
-			"OSV-2021-448",
-			"DEBIAN-CVE-2026-31724",
-			"DEBIAN-CVE-2026-31726",
-			"DEBIAN-CVE-2026-43017",
-			"DEBIAN-CVE-2026-43027",
-			"DEBIAN-CVE-2026-31755",
-			"OSV-2022-653",
-			"OSV-2024-434",
-			"OSV-2024-1203",
-			"OSV-2025-280",
-			"DEBIAN-CVE-2026-31769",
-			"OSV-2020-876",
-			"DEBIAN-CVE-2026-43036",
-			"OSV-2023-1328",
-			"OSV-2022-1201",
-			"OSV-2021-1343",
-			"DEBIAN-CVE-2026-31739",
-			"OSV-2024-714",
-			"OSV-2023-984",
-			"OSV-2022-330",
-			"DEBIAN-CVE-2026-31742",
-			"OSV-2022-126",
-			"DEBIAN-CVE-2026-31759",
-			"DEBIAN-CVE-2026-43007",
-			"OSV-2022-714",
-			"OSV-2021-1524",
-			"OSV-2023-234",
-			"OSV-2025-266",
-			"DEBIAN-CVE-2026-31763",
-			"DEBIAN-CVE-2026-43030",
-			"OSV-2023-359",
-			"OSV-2020-2308",
-			"OSV-2023-35",
-			"DEBIAN-CVE-2026-43032",
-			"OSV-2021-426",
-			"DEBIAN-CVE-2026-31734",
-			"DEBIAN-CVE-2026-31777",
-			"DEBIAN-CVE-2026-40385",
-			"DEBIAN-CVE-2026-41684",
-			"OSV-2022-795",
-			"OSV-2024-171",
-			"OSV-2021-510",
-			"OSV-2018-6",
-			"OSV-2023-307",
-			"OSV-2023-335",
-			"OSV-2022-1109",
-			"OSV-2024-204",
-			"RUSTSEC-2026-0116",
-			"OSV-2023-239",
-			"DEBIAN-CVE-2026-31735",
-			"OSV-2023-1307",
-			"DEBIAN-CVE-2026-40243",
-			"DEBIAN-CVE-2026-31714",
-			"OSV-2024-856",
-			"OSV-2022-1198",
-			"DEBIAN-CVE-2026-43023",
-			"OSV-2025-547",
-			"OSV-2026-649",
-			"DEBIAN-CVE-2026-31719",
-			"OSV-2022-1277",
-			"DEBIAN-CVE-2026-31768",
-			"OSV-2020-1661",
-			"RUSTSEC-2026-0117",
-			"DEBIAN-CVE-2026-43010",
-			"DEBIAN-CVE-2026-31750",
-			"OSV-2024-207",
-			"OSV-2020-824",
-			"OSV-2023-96",
-			"OSV-2024-396",
-			"DEBIAN-CVE-2026-31783",
-			"OSV-2021-365",
-			"DEBIAN-CVE-2026-43040",
-			"DEBIAN-CVE-2026-31774",
-			"DEBIAN-CVE-2026-33905",
-			"DEBIAN-CVE-2026-31715",
-			"OSV-2022-1263",
-			"DEBIAN-CVE-2026-41685",
-			"DEBIAN-CVE-2026-31731",
-			"DEBIAN-CVE-2026-43048",
-			"OSV-2024-248",
-			"DEBIAN-CVE-2026-31778",
-			"OSV-2022-799",
-			"DEBIAN-CVE-2026-43055",
-			"OSV-2026-610",
-			"RUSTSEC-2026-0119",
-			"DEBIAN-CVE-2025-69227",
-			"OSV-2022-1288",
-			"DEBIAN-CVE-2026-31698",
-			"OSV-2022-84",
-			"DEBIAN-CVE-2026-43016",
-			"DEBIAN-CVE-2026-43004",
-			"DEBIAN-CVE-2026-43019",
-			"OSV-2024-1220",
-			"OSV-2024-668",
-			"DEBIAN-CVE-2026-31745",
-			"DEBIAN-CVE-2026-31700",
-			"OSV-2022-599",
-			"OSV-2021-219",
-			"OSV-2021-1086",
-			"OSV-2022-245",
-			"DEBIAN-CVE-2026-43053",
-			"DEBIAN-CVE-2026-31741",
-			"DEBIAN-CVE-2026-40310",
-			"OSV-2023-197",
-			"DEBIAN-CVE-2026-31708",
-			"OSV-2023-34",
-			"OSV-2024-698",
-			"OSV-2023-392",
-			"DEBIAN-CVE-2026-31727",
-			"OSV-2021-363",
-			"OSV-2022-1165",
-			"DEBIAN-CVE-2026-43009",
-			"DEBIAN-CVE-2026-31717",
-			"DEBIAN-CVE-2026-31772",
-			"OSV-2022-1259",
-			"OSV-2024-120",
-			"OSV-2023-1256",
-			"OSV-2021-689",
-			"DEBIAN-CVE-2026-43029",
-			"OSV-2020-862",
-			"OSV-2022-295",
-			"DEBIAN-CVE-2026-40386",
-			"DEBIAN-CVE-2026-34238",
-			"OSV-2025-454",
-			"DEBIAN-CVE-2026-43005",
-			"DEBIAN-CVE-2026-40197",
-			"DEBIAN-CVE-2026-31785",
-			"OSV-2024-719",
-			"OSV-2024-195",
-			"OSV-2024-996",
-			"DEBIAN-CVE-2026-32775",
-			"DEBIAN-CVE-2026-43013",
-			"DEBIAN-CVE-2026-43049",
-			"OSV-2024-245",
-			"DEBIAN-CVE-2026-31712",
-			"OSV-2024-395",
-			"OSV-2023-819",
-			"OSV-2021-677",
-			"DEBIAN-CVE-2026-31701",
-			"OSV-2026-659",
-			"DEBIAN-CVE-2026-43015",
-			"OSV-2022-73",
-			"OSV-2022-1235",
-			"DEBIAN-CVE-2026-43052",
-			"OSV-2022-94",
-			"OSV-2024-664",
-			"OSV-2024-28",
-			"DEBIAN-CVE-2026-31740",
-			"OSV-2024-184",
-			"OSV-2024-340",
-			"OSV-2023-346",
-			"DEBIAN-CVE-2026-43056",
-			"OSV-2022-1068",
-			"OSV-2023-606",
-			"DEBIAN-CVE-2026-43018",
-			"OSV-2024-659",
-			"DEBIAN-CVE-2026-31737",
-			"OSV-2024-914",
-			"OSV-2022-993",
-			"DEBIAN-CVE-2026-33902",
-			"OSV-2022-675",
-			"DEBIAN-CVE-2026-43046",
-			"OSV-2020-868",
-			"OSV-2021-508",
-			"OSV-2024-678",
-			"DEBIAN-CVE-2026-31694",
-			"DEBIAN-CVE-2026-40169",
-			"DEBIAN-CVE-2025-69225",
-			"DEBIAN-CVE-2026-31758",
-			"OSV-2020-800",
-			"DEBIAN-CVE-2026-31705",
-			"OSV-2021-525",
-			"DEBIAN-CVE-2026-31729",
-			"DEBIAN-CVE-2026-43039",
-			"OSV-2022-679",
-			"DEBIAN-CVE-2025-69228",
-			"OSV-2022-705",
-			"DEBIAN-CVE-2026-43057",
-			"DEBIAN-CVE-2026-43021",
-			"OSV-2024-764",
-			"DEBIAN-CVE-2026-31756",
-			"OSV-2022-388",
-			"OSV-2021-732",
-			"DEBIAN-CVE-2026-31709",
-			"OSV-2022-573",
-			"DEBIAN-CVE-2026-31771",
-			"OSV-2022-379",
-			"OSV-2023-370",
-			"OSV-2021-948",
-			"OSV-2024-641",
-			"DEBIAN-CVE-2026-43034",
-			"OSV-2021-735",
-			"DEBIAN-CVE-2026-43035",
-			"RUSTSEC-2026-0115",
-			"OSV-2022-372",
-			"OSV-2023-1350",
-			"OSV-2023-869",
-			"DEBIAN-CVE-2026-35527",
-			"DEBIAN-CVE-2026-43047",
-			"OSV-2026-344",
-			"DEBIAN-CVE-2026-31721",
-			"DEBIAN-CVE-2026-43011",
-			"OSV-2024-440",
-			"DEBIAN-CVE-2026-31748",
-			"DEBIAN-CVE-2026-43041",
-			"DEBIAN-CVE-2026-40251",
-			"OSV-2024-677",
-			"DEBIAN-CVE-2026-40195",
-			"DEBIAN-CVE-2025-69223",
-			"OSV-2023-28",
-			"DEBIAN-CVE-2026-31713",
-			"OSV-2022-400",
-			"OSV-2022-937",
-			"OSV-2020-843",
-			"OSV-2020-880",
-			"RUSTSEC-2026-0120",
-			"CVE-2024-8508",
-			"DEBIAN-CVE-2026-31780",
-			"OSV-2022-252",
-			"DEBIAN-CVE-2026-43026",
-			"OSV-2022-1134",
-			"DEBIAN-CVE-2026-43031",
-			"OSV-2022-763",
-			"DEBIAN-CVE-2026-43025",
-			"OSV-2024-696",
-			"OSV-2020-1611",
-			"DEBIAN-CVE-2026-43024",
-			"OSV-2023-844",
-			"DEBIAN-CVE-2026-31747",
-			"OSV-2024-662",
-			"DEBIAN-CVE-2026-43051",
-			"DEBIAN-CVE-2026-43028",
-			"DEBIAN-CVE-2026-31779",
-			"OSV-2023-1073",
-			"DEBIAN-CVE-2026-31696",
-			"DEBIAN-CVE-2026-43012",
-			"OSV-2025-542",
-			"DEBIAN-CVE-2026-33535",
-			"OSV-2022-916",
-			"DEBIAN-CVE-2026-43014",
-			"DEBIAN-CVE-2026-40312",
-			"DEBIAN-CVE-2026-7323",
-			"OSV-2021-1076",
-			"OSV-2021-383",
-			"DEBIAN-CVE-2026-31697",
-			"DEBIAN-CVE-2026-31732",
-			"DEBIAN-CVE-2026-40311",
-			"OSV-2024-1254",
-			"OSV-2023-107",
-			"OSV-2024-400",
-			"OSV-2022-842",
-			"OSV-2023-955",
-			"OSV-2024-372",
-			"DEBIAN-CVE-2026-43042",
-			"OSV-2022-882",
-			"DEBIAN-CVE-2026-31743",
-			"OSV-2023-55",
-			"OSV-2021-972",
-			"OSV-2024-382",
-			"DEBIAN-CVE-2026-31764",
-			"OSV-2024-278",
-			"DEBIAN-CVE-2026-31716",
-			"OSV-2023-800",
-			"OSV-2025-456",
-			"DEBIAN-CVE-2026-31728",
-			"DEBIAN-CVE-2026-31752",
-			"OSV-2020-1420",
-			"OSV-2023-430",
-			"OSV-2021-820",
-			"OSV-2023-133",
-			"OSV-2021-1070",
-			"DEBIAN-CVE-2026-31725",
-			"DEBIAN-CVE-2026-43020",
-			"OSV-2021-1082",
-			"OSV-2024-695",
-			"OSV-2023-467",
-			"DEBIAN-CVE-2026-43045",
-			"OSV-2021-586",
-			"DEBIAN-CVE-2026-31693",
-			"DEBIAN-CVE-2025-69229",
-			"OSV-2022-608",
-			"DEBIAN-CVE-2026-31722",
-			"DEBIAN-CVE-2025-69224",
-			"OSV-2024-661",
-			"RHSA-2021:2865",
-			"DEBIAN-CVE-2026-31784",
-			"OSV-2024-398",
-			"OSV-2025-253",
-			"DEBIAN-CVE-2026-41648",
-			"OSV-2020-828",
-			"OSV-2022-834",
-			"OSV-2024-85",
-			"DEBIAN-CVE-2026-31753",
-			"OSV-2022-594",
-			"DEBIAN-CVE-2026-33536",
-			"OSV-2024-679",
-			"DEBIAN-CVE-2026-32636",
-			"OSV-2021-1373",
-			"DEBIAN-CVE-2026-7320",
-			"OSV-2024-387",
-			"DEBIAN-CVE-2026-31746",
-			"DEBIAN-CVE-2026-33901",
-			"OSV-2026-505",
-			"OSV-2022-336",
-			"OSV-2023-319",
-			"OSV-2024-86",
-			"OSV-2023-444",
-			"OSV-2024-269",
-			"OSV-2025-491",
-			"DEBIAN-CVE-2026-33899",
-			"OSV-2022-652",
-			"DEBIAN-CVE-2026-31695",
-			"DEBIAN-CVE-2026-31767",
-			"OSV-2023-78",
-			"OSV-2022-636",
-			"OSV-2023-1177",
-			"OSV-2022-193",
-			"DEBIAN-CVE-2026-41647",
-			"DEBIAN-CVE-2026-30922",
-			"OSV-2024-675",
-			"OSV-2020-786",
-			"OSV-2024-777",
-			"OSV-2024-223",
-			"OSV-2021-1672",
-			"DEBIAN-CVE-2026-43043",
-			"OSV-2023-390",
-			"OSV-2021-1041",
-			"OSV-2023-235",
-			"DEBIAN-CVE-2026-31736",
-			"OSV-2022-595",
-			"DEBIAN-CVE-2026-33908",
-			"OSV-2021-1261",
-			"DEBIAN-CVE-2026-43038",
-			"DEBIAN-CVE-2026-43054",
-			"OSV-2026-605",
-			"OSV-2022-725",
-			"OSV-2024-728",
-			"OSV-2020-827",
-			"DEBIAN-CVE-2026-43008",
-			"OSV-2022-1188",
-			"DEBIAN-CVE-2026-31765",
-			"DEBIAN-CVE-2026-31751",
-			"DEBIAN-CVE-2026-31754",
-			"OSV-2020-853",
-			"OSV-2020-778",
-			"DEBIAN-CVE-2025-69226",
-			"DEBIAN-CVE-2026-31760",
-			"DEBIAN-CVE-2026-43044",
-			"DEBIAN-CVE-2026-31761",
-			"OSV-2023-1129",
-			"OSV-2023-381",
-			"DEBIAN-CVE-2026-31766",
-			"DEBIAN-CVE-2026-31781",
-			"OSV-2020-2285",
-			"OSV-2022-1018",
-			"DEBIAN-CVE-2026-31733",
-			"DEBIAN-CVE-2026-31718",
-			"OSV-2020-1807",
-			"OSV-2023-506",
-			"OSV-2023-76",
-			"OSV-2022-1137",
-			"OSV-2022-896",
-			"DEBIAN-CVE-2026-31775",
-			"DEBIAN-CVE-2026-31730",
-			"DEBIAN-CVE-2026-31773",
-			"OSV-2024-680",
-			"DEBIAN-CVE-2026-7321",
-			"OSV-2023-1259",
-			"DEBIAN-CVE-2026-7322",
-			"DEBIAN-CVE-2026-43037",
-			"OSV-2020-1540",
-			"DEBIAN-CVE-2026-43050",
-			"DEBIAN-CVE-2026-31738",
-			"DEBIAN-CVE-2026-31699",
-			"OSV-2021-1085",
-			"OSV-2023-216",
-			"DEBIAN-CVE-2026-31703",
-			"DEBIAN-CVE-2026-31770",
-			"OSV-2021-777",
-			"OSV-2023-395",
-			"DEBIAN-CVE-2026-31762",
-			"RUSTSEC-2026-0118",
-			"OSV-2021-1344",
-			"OSV-2022-524",
-			"OSV-2022-581",
-			"OSV-2021-184",
-			"OSV-2022-150",
-			"OSV-2025-202",
-			"DEBIAN-CVE-2026-31782",
-			"DEBIAN-CVE-2026-31720",
-			"DEBIAN-CVE-2026-43033",
-			"OSV-2021-1024",
-			"OSV-2023-89",
-			"DEBIAN-CVE-2026-43022",
-			"DEBIAN-CVE-2026-31757",
-			"OSV-2022-312",
-			"OSV-2024-451",
-			"DEBIAN-CVE-2026-31749",
-			"OSV-2024-341",
-			"OSV-2022-867",
-			"DEBIAN-CVE-2026-40183",
-			"DEBIAN-CVE-2026-31723",
-			"DEBIAN-CVE-2026-31776",
-			"OSV-2022-1176",
-			"OSV-2021-456",
-			"DEBIAN-CVE-2026-43006",
-			"DEBIAN-CVE-2026-31706",
-			"DEBIAN-CVE-2026-31711",
-			"DEBIAN-CVE-2026-33900",
-			"OSV-2018-204",
-			"DEBIAN-CVE-2026-31744",
-			"OSV-2024-112",
-			"DEBIAN-CVE-2026-31707",
-			"OSV-2024-239",
-			"DEBIAN-CVE-2026-31704"}
-	}
-	wasIDFound := make(map[string]struct{}, len(idsToFind))
-
-	notFound := []string{}
-	found := []string{}
-	for i, cve := range rows.CVEs {
-		_, ok := wasIDFound[cve.CVE]
-		if !ok {
-			wasIDFound[cve.CVE] = struct{}{}
-		} else {
-			slog.Error("ran into duplicate", "i", i, "cve", cve.CVE)
-		}
-	}
-
-	for _, id := range idsToFind {
-		if _, ok := wasIDFound[id]; !ok {
-			notFound = append(notFound, id)
-		} else {
-			found = append(found, id)
-		}
 	}
 
 	conn, err := s.pool.Acquire(ctx)
@@ -756,35 +267,6 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 	return true, groundTruth.ImportTimestamp, nil
 }
 
-func extractAndDistributeOSVJobs(waitGroup *sync.WaitGroup, workingDir string, jobs chan zipJobWithID, errors *atomic.Int64) error {
-	defer waitGroup.Done()
-	fd, err := os.Open(workingDir + "/ecosystem.zip")
-	if err != nil {
-		errors.Add(1)
-		return fmt.Errorf("could not open ecosystem zip: %w", err)
-	}
-	stat, err := fd.Stat()
-	if err != nil {
-		errors.Add(1)
-		return fmt.Errorf("could not get stats for file: %w", err)
-	}
-	reader, err := zip.NewReader(fd, stat.Size())
-	if err != nil {
-		errors.Add(1)
-		return fmt.Errorf("could not create zip reader")
-	}
-	for _, file := range reader.File {
-		ecosystem, id, ok := strings.Cut(strings.TrimSuffix(file.Name, ".json"), "/")
-		if !ok {
-			errors.Add(1)
-			slog.Error("unexpected name format for zip file", "error", err)
-			continue
-		}
-		jobs <- zipJobWithID{Ecosystem: ecosystem, ID: id, File: file}
-	}
-	return nil
-}
-
 func writeGobFile(object any, fileName string) error {
 	gobFile, err := os.Create(fileName)
 	if err != nil {
@@ -812,69 +294,24 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 
 	importStart := time.Now() //10:57 bonn
-	idsPerEcosystem, modifiedPerID, err := s.getRecentlyChangedIDsPerEcosystemFromOSV(importStart)
-	if err != nil {
-		return fmt.Errorf("could not get ids from modified_id.csv: %w", err)
-	}
 
-	slog.Info("calculated recently changed ids", "time", time.Since(importStart), "amount of ecosystem", len(idsPerEcosystem))
-
-	// calculate the total work load
-	totalCount := 0
-	for _, ids := range idsPerEcosystem {
-		totalCount += len(ids)
-	}
-
-	if totalCount == 0 {
-		return fmt.Errorf("could not get any vulnerability information from osv")
-	}
-
-	httpWaitGroup := &sync.WaitGroup{}
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
 	var fetchFailures atomic.Int64
 
-	fetchingJobs := make(chan fetchingJob, 10_000)
 	zipJobs := make(chan zipJob, 10_000)
 	vulnData := make(chan *dtos.OSV, 5000)
 
 	fetchingStart := time.Now()
 
-	// check if we need to fetch any zips
-	anyZip := false
-	for _, ids := range idsPerEcosystem {
-		if len(ids) >= zipThreshold {
-			anyZip = true
-			break
-		}
-	}
-
-	for range numberOfSingleFetchers {
-		httpWaitGroup.Add(1)
-		go fetchOSVDataWorker(httpWaitGroup, s.httpClient, fetchingJobs, vulnData, &fetchFailures)
-	}
-
-	if anyZip {
-		shouldProcessIDInEcosystem := make(map[string]map[string]struct{}, len(idsPerEcosystem))
-		for ecosystem, ids := range idsPerEcosystem {
-			if len(ids) >= zipThreshold {
-				if shouldProcessIDInEcosystem[ecosystem] == nil {
-					shouldProcessIDInEcosystem[ecosystem] = make(map[string]struct{}, len(ids))
-				}
-				for _, id := range ids {
-					shouldProcessIDInEcosystem[ecosystem][id] = struct{}{}
-				}
-			}
-		}
-		for range numberOfZipWorkers {
-			zipWorkWaitGroup.Add(1)
-			go s.zipWorkerFunction(zipWorkWaitGroup, shouldProcessIDInEcosystem, zipJobs, vulnData, importStart, &fetchFailures)
-		}
+	for range numberOfZipWorkers {
+		zipWorkWaitGroup.Add(1)
+		go s.zipWorkerFunction(zipWorkWaitGroup, zipJobs, vulnData, importStart, &fetchFailures)
 	}
 
 	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, idsPerEcosystem, fetchingJobs, zipJobs, &fetchFailures)
+	go s.fetchingController(zipPushWaitGroup, zipJobs, &fetchFailures)
 
 	// handle sync via independent go routines
 	go func() {
@@ -883,25 +320,14 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	}()
 
 	go func() {
-		httpWaitGroup.Wait()
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
 
 	// collect all OSV objects first
-	allOSVVulns := make([]OSVWithTimestamp, 0, totalCount)
+	allOSVVulns := make([]OSVWithTimestamp, 0, 200_000)
 	for osvObject := range vulnData {
-		modififed, ok := modifiedPerID[osvObject.ID]
-		if !ok {
-			slog.Error("could not find timestamp for vuln", "id", osvObject.ID)
-			allOSVVulns = append(allOSVVulns, OSVWithTimestamp{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
-		} else {
-			if modififed.After(osvObject.Modified) {
-				allOSVVulns = append(allOSVVulns, OSVWithTimestamp{OSV: osvObject, ModifiedTimestamp: modififed})
-			} else {
-				allOSVVulns = append(allOSVVulns, OSVWithTimestamp{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
-			}
-		}
+		allOSVVulns = append(allOSVVulns, OSVWithTimestamp{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
 	}
 
 	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
@@ -974,19 +400,6 @@ func (s osvService) ExportRC(ctx context.Context) error {
 
 	slog.Info("finished vulndb export", "time", time.Since(importStart))
 	return nil
-}
-
-func calculateOSVOBjectsSinceLastImport(allOSVVulns []*dtos.OSV) []*dtos.OSV {
-	timestamp := time.Now().Add(-time.Hour * 6)
-	filteredVulns := make([]*dtos.OSV, 0, len(allOSVVulns)/10)
-	for _, vuln := range allOSVVulns {
-		if vuln.Modified.After(timestamp) {
-			filteredVulns = append(filteredVulns, vuln)
-		} else {
-			break
-		}
-	}
-	return filteredVulns
 }
 
 // vulnDBArtifactFiles enumerates the per-file blobs that the workflow pushes
@@ -1150,222 +563,31 @@ func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool)
 	return results, nil
 }
 
-func (s osvService) getEcosystems() ([]string, error) {
-	// download the whole database
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, osvBaseURL+"/ecosystems.txt", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create request")
-	}
-
-	res, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not download ecosystems")
-	}
-	defer res.Body.Close()
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read body")
-	}
-
-	ecosystems := strings.Split(string(bodyBytes), "\n")
-
-	// trim spaces for all entries
-	for i, e := range ecosystems {
-		ecosystems[i] = strings.TrimSpace(e)
-	}
-
-	// lastly filter out the ecosystems we are not using
-	ecosystems = utils.Filter(ecosystems, func(ecosystem string) bool {
-		return slices.Contains(importEcosystems, ecosystem)
-	})
-
-	return ecosystems, nil
-}
-
-// fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystemFromMirror(lastUpdate *time.Time, workingDir string) (map[string][]string, time.Time, error) {
-	importStart := time.Now() // track the current status of the import to only include a explicit timeframe
-
-	modifiedIDsFD, err := os.Open(workingDir + "/modified_id.csv")
-	if err != nil {
-		return nil, importStart, fmt.Errorf("could not read modified_id file:%w", err)
-	}
-
-	records, err := csv.NewReader(modifiedIDsFD).ReadAll()
-	if err != nil {
-		return nil, importStart, errors.Wrap(err, "could not read csv")
-	}
-
-	idsPerEcosystem, _, err := extractRecentlyChangedIDs(records, nil, lastUpdate)
-	if err != nil {
-		return nil, importStart, err
-	}
-	return idsPerEcosystem, importStart, nil
-}
-
-// fetches the list of all recent changes and returns a map of recent changes for each ecosystem
-func (s osvService) getRecentlyChangedIDsPerEcosystemFromOSV(importStart time.Time) (map[string][]string, map[string]time.Time, error) {
-	closed := false
-
-	// first get all the recent changes from the osv API
-	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/modified_id.csv", nil)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not create request")
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, nil, fmt.Errorf("csv fetch http request ran into error: %w", err)
-	}
-
-	defer func() {
-		if !closed {
-			resp.Body.Close()
-		}
-	}()
-
-	if resp.StatusCode != 200 {
-		return nil, nil, fmt.Errorf("csv fetch was unsuccessful: status=%d", resp.StatusCode)
-	}
-
-	var reader io.Reader = resp.Body
-
-	records, err := csv.NewReader(reader).ReadAll()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not read csv")
-	}
-
-	resp.Body.Close()
-	closed = true
-	idsPerEcosystem, modifiedPerID, err := extractRecentlyChangedIDs(records, &importStart, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	return idsPerEcosystem, modifiedPerID, nil
-}
-
-func extractRecentlyChangedIDs(records [][]string, importStart *time.Time, lastUpdate *time.Time) (map[string][]string, map[string]time.Time, error) {
-	//  map the changed OSV IDs to their ecosystems
-	idsPerEcosystem := make(map[string][]string, len(importEcosystems))
-	modifiedPerID := make(map[string]time.Time, len(importEcosystems))
-
-	// use a map to process each vuln only once
-	alreadyProcessed := make(map[string]struct{}, 1<<18)
-	for _, record := range records {
-		if len(record) != 2 {
-			slog.Warn("invalid cvs row format skipping entry")
-			continue
-		}
-
-		ecosystem, id, found := strings.Cut(record[1], "/")
-		if !found {
-			return nil, modifiedPerID, fmt.Errorf("invalid format for vuln id: %s", record[1])
-		}
-
-		if !slices.Contains(importEcosystems, ecosystem) || shouldIgnoreVulnerabilityID(id) {
-			// we do not support this ecosystem -> skip to next one
-			continue
-		}
-
-		// check if we have already seen this vuln
-		if _, ok := alreadyProcessed[id]; ok {
-			continue
-		}
-
-		entryTimestamp, err := time.Parse(time.RFC3339Nano, record[0])
-		if err != nil {
-			return nil, modifiedPerID, fmt.Errorf("could not parse timestamp from csv first row: %w", err)
-		}
-
-		if lastUpdate != nil || importStart != nil {
-			// each row in the csv file consists of the entryTimestamp in the first column and the id in the second column (record[0] and record[1] respectively)
-
-			// entries are sorted descending by timestamp; only process changes which happened after our latest update
-			if lastUpdate != nil && entryTimestamp.Before(*lastUpdate) {
-				break
-			}
-
-			// skip newer vulns
-			if importStart != nil && entryTimestamp.After(*importStart) {
-				continue
-			}
-		}
-
-		idsPerEcosystem[ecosystem] = append(idsPerEcosystem[ecosystem], id)
-		if _, ok := modifiedPerID[id]; !ok {
-			modifiedPerID[id] = entryTimestamp
-		}
-		alreadyProcessed[id] = struct{}{}
-	}
-	return idsPerEcosystem, modifiedPerID, nil
-}
-
 // controls in what order and what method to use for each ecosystem
-func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, jobs chan fetchingJob, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
-	defer close(jobs)
+func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
+	for _, ecosystem := range importEcosystems {
 
-	// sort the ecosystems by the amount of changes for better concurrency performance (heavy zip downloads get called first)
-	ecosystems := make([]string, 0, len(idsPerEcosystem))
-	for ecosystem := range idsPerEcosystem {
-		ecosystems = append(ecosystems, ecosystem)
-	}
-
-	slices.SortFunc(ecosystems, func(a, b string) int {
-		return len(idsPerEcosystem[b]) - len(idsPerEcosystem[a])
-	})
-
-	for _, ecosystem := range ecosystems {
-		ids := idsPerEcosystem[ecosystem]
 		// when fetching too many entries in an ecosystem, switch to downloading the full zip and filtering instead
-		if len(ids) >= zipThreshold {
-			slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
-			zipPushWaitGroup.Add(1)
-			go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs, fetchFailures)
-		} else {
-			// otherwise stick to getting each vuln separately
-			slog.Info("start creating jobs for ecosystem", "ecosystem", ecosystem, "amount", len(ids))
-			for _, id := range ids {
-				if !shouldIgnoreVulnerabilityID(id) {
-					jobs <- fetchingJob{Ecosystem: ecosystem, ID: id}
-				}
-			}
-		}
-
-	}
-	slog.Info("finished pushing all jobs")
-}
-
-// controls in what order and what method to use for each ecosystem
-func (s osvService) importFetchingController(zipPushWaitGroup *sync.WaitGroup, idsPerEcosystem map[string][]string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
-	defer zipPushWaitGroup.Done()
-
-	for ecosystem, ids := range idsPerEcosystem {
-		slog.Info("start fetching via zip", "ecosystem", ecosystem, "amount", len(ids))
+		slog.Info("start fetching via zip", "ecosystem", ecosystem)
 		zipPushWaitGroup.Add(1)
-		go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, ids, zipJobs, fetchFailures)
+		go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, zipJobs, fetchFailures)
 	}
 	slog.Info("finished pushing all jobs")
 }
 
-func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, idsToFetch []string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
+func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 	start := time.Now()
 
 	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
 	if err != nil {
 		// whole ecosystem worth of ids lost; count each so the abort log reflects the real blast radius
-		fetchFailures.Add(int64(len(idsToFetch)))
-		slog.Error("could not read zip", "err", err, "ecosystem", ecosystem, "lost ids", len(idsToFetch))
+		fetchFailures.Add(1)
 		return
 	}
 	if len(zipReader.File) == 0 {
-		fetchFailures.Add(int64(len(idsToFetch)))
-		slog.Error("no files found in zip", "ecosystem", ecosystem, "lost ids", len(idsToFetch))
+		fetchFailures.Add(1)
 		return
 	}
 
@@ -1376,6 +598,19 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
+	if debugLocalZips {
+		// check if file does already exist
+		f, err := os.Open(fmt.Sprintf("%s.zip", ecosystem))
+		if err == nil {
+			// we already have that file on disk
+			stat, err := f.Stat()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get file stats for local zip file")
+			}
+			return zip.NewReader(f, stat.Size())
+		}
+	}
+
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/"+ecosystem+"/all.zip", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
@@ -1386,14 +621,25 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 		return nil, errors.Wrap(err, "could not download zip")
 	}
 
+	if debugLocalZips {
+		// save the file on disk
+		outFile, err := os.Create(fmt.Sprintf("%s.zip", ecosystem))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create file for local zip")
+		}
+		// create a TEE Reader do read the body twice
+		tee := io.TeeReader(res.Body, outFile)
+		// set the response body to the TEE reader so it can be read by the zip reader and saved to disk at the same time
+		res.Body = io.NopCloser(tee)
+	}
+
 	return utils.ZipReaderFromResponse(res)
 }
 
-func (s osvService) importZipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJobWithID, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
+func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs chan zipJob, output chan *dtos.OSV, importStart time.Time, fetchFailures *atomic.Int64) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
-		// first check if we should even process this id, using the filename
-		if _, ok := shouldProcessID[zipJob.Ecosystem][zipJob.ID]; !ok {
+		if _, loaded := deduplicateCveMap.LoadOrStore(zipJob.File.Name, struct{}{}); loaded {
 			continue
 		}
 		readCloser, err := zipJob.File.Open()
@@ -1411,36 +657,10 @@ func (s osvService) importZipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, sh
 			continue
 		}
 		readCloser.Close()
-		output <- &osvEntry
-	}
-}
 
-func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldProcessID map[string]map[string]struct{}, zipJobs chan zipJob, output chan *dtos.OSV, importStart time.Time, fetchFailures *atomic.Int64) {
-	defer zipWorkWaitGroup.Done()
-	for zipJob := range zipJobs {
-		id, _, ok := strings.Cut(zipJob.File.Name, ".")
-		if !ok {
+		if shouldIgnoreVulnerabilityID(osvEntry.ID) {
 			continue
 		}
-		// first check if we should even process this id, using the filename
-		if _, ok := shouldProcessID[zipJob.Ecosystem][id]; !ok {
-			continue
-		}
-		readCloser, err := zipJob.File.Open()
-		if err != nil {
-			fetchFailures.Add(1)
-			slog.Error("could not open osv file", "file", zipJob.File.Name, "err", err)
-			continue
-		}
-
-		osvEntry := dtos.OSV{}
-		if err = json.NewDecoder(readCloser).Decode(&osvEntry); err != nil {
-			readCloser.Close()
-			fetchFailures.Add(1)
-			slog.Error("could not parse osv file to OSV dto", "file", zipJob.File.Name, "err", err)
-			continue
-		}
-		readCloser.Close()
 
 		if osvEntry.Modified.After(importStart) {
 			slog.Warn("ran into race condition on import, skipping vuln with newer information")
@@ -1448,43 +668,6 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, shouldPr
 		}
 		output <- &osvEntry
 	}
-}
-
-func fetchOSVDataWorker(waitGroup *sync.WaitGroup, client *http.Client, jobs chan fetchingJob, output chan *dtos.OSV, fetchFailures *atomic.Int64) {
-	for job := range jobs {
-		url := fmt.Sprintf("%s/%s/%s.json", osvBaseURL, job.Ecosystem, job.ID)
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		if err != nil {
-			fetchFailures.Add(1)
-			slog.Error("could not build http request to fetch osv data", "err", err, "url", url)
-			continue
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			fetchFailures.Add(1)
-			slog.Error("could not fetch osv data via http request", "err", err, "url", url)
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			fetchFailures.Add(1)
-			slog.Error("fetching vuln data was unsuccessful", "url", url)
-			continue
-		}
-
-		osvVuln := dtos.OSV{}
-		if err = json.NewDecoder(resp.Body).Decode(&osvVuln); err != nil {
-			resp.Body.Close()
-			fetchFailures.Add(1)
-			slog.Error("could not parse osv file to OSV dto", "OSV ID", job.ID, "url", url)
-			continue
-		}
-		resp.Body.Close()
-		output <- &osvVuln
-	}
-	waitGroup.Done()
 }
 
 // build all the vuln database rows from the OSV objects
@@ -1629,6 +812,7 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTem
 	if len(cves) == 0 {
 		return nil
 	}
+
 	slog.Info("inserting into cves using staging table", "amount", len(cves))
 	start := time.Now()
 
@@ -1637,8 +821,6 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTem
 		CREATE TEMP TABLE cves_stage (
 			id                      bigint,
 			cve                     text,
-			created_at              timestamptz,
-			updated_at              timestamptz,
 			date_published          timestamptz,
 			date_last_modified      timestamptz,
 			description             text,
@@ -1656,10 +838,10 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTem
 	}
 
 	// copy data straight into the staging table
-	columnNames := []string{"id", "cve", "created_at", "updated_at", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]interface{}, error) {
+	columnNames := []string{"id", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
-		return []interface{}{row.ID, row.CVE, row.CreatedAt, row.UpdatedAt, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+		return []any{row.ID, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
@@ -1668,11 +850,10 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTem
 	// then insert from the staging table and update entries on conflicts (newest first)
 	if !createTemp {
 		if _, err := tx.Exec(ctx, `
-		INSERT INTO cves (id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
-		SELECT id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		INSERT INTO cves (id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+		SELECT id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
 		FROM cves_stage
 		ON CONFLICT (id) DO UPDATE SET
-			updated_at         = EXCLUDED.updated_at,
 			date_published     = EXCLUDED.date_published,
 			date_last_modified = EXCLUDED.date_last_modified,
 			description        = EXCLUDED.description,
@@ -1687,11 +868,10 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, createTem
 		}
 
 		if _, err := tx.Exec(ctx, `
-		INSERT INTO cves_temp (id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
-		SELECT id, cve, created_at, updated_at, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		INSERT INTO cves_temp (id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+		SELECT id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
 		FROM cves_stage
 		ON CONFLICT (id) DO UPDATE SET
-			updated_at         = EXCLUDED.updated_at,
 			date_published     = EXCLUDED.date_published,
 			date_last_modified = EXCLUDED.date_last_modified,
 			description        = EXCLUDED.description,
@@ -1725,9 +905,9 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 
 	// stream data straight into staging table
 	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]any, error) {
 		row := cveRelationships[i]
-		return []interface{}{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
+		return []any{row.TargetCVE, row.SourceCVE, row.RelationshipType}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve relationship rows into staging table: %w", err)
@@ -1787,9 +967,9 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 
 	// stream the values into the staging table; all affected components attributes are already default postgresql types
 	columnNames := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]interface{}, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]any, error) {
 		c := components[i]
-		return []interface{}{c.ID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
+		return []any{c.ID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
@@ -1845,9 +1025,9 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	// no ON CONFLICT needed since we deduplicated in memory
 	columnNames := []string{"affected_component_id", "cve_id"}
 	if !createTemp {
-		_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
+		_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 			row := pivotRows[i]
-			return []interface{}{row.AffectedComponentID, row.CveID}, nil
+			return []any{row.AffectedComponentID, row.CveID}, nil
 		}))
 		if err != nil {
 			return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
@@ -1857,9 +1037,9 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 		CREATE TABLE cve_affected_component_temp (LIKE cve_affected_component INCLUDING ALL);`); err != nil {
 			return fmt.Errorf("could not create temp table 4: %w", err)
 		}
-		_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component_temp"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]interface{}, error) {
+		_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component_temp"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 			row := pivotRows[i]
-			return []interface{}{row.AffectedComponentID, row.CveID}, nil
+			return []any{row.AffectedComponentID, row.CveID}, nil
 		}))
 		if err != nil {
 			return fmt.Errorf("could not copy cve affected component rows into table: %w", err)

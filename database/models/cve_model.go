@@ -29,8 +29,6 @@ type cveReference struct {
 type CVE struct {
 	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
 	CVE                   string              `json:"cve" gorm:"type:text;"`
-	CreatedAt             time.Time           `json:"createdAt" cve:"createdAt"`
-	UpdatedAt             time.Time           `json:"updatedAt" cve:"updatedAt"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
 	DateLastModified      time.Time           `json:"dateLastModified" cve:"dateLastModified"`
 	Weaknesses            []Weakness          `json:"weaknesses" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
