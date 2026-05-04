@@ -38,7 +38,7 @@ func (a *AttestationController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	attestationList, err := a.attestationRepository.GetByAssetVersionAndAssetID(asset.GetID(), assetVersion.Name)
+	attestationList, err := a.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, asset.GetID(), assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		artifactName = "default"
 	}
 	// check if the artifact exists
-	_, err := a.artifactRepository.ReadArtifact(artifactName, assetVersionName, asset.ID)
+	_, err := a.artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersionName, asset.ID)
 	if err != nil {
 		return echo.NewHTTPError(400, "artifact does not exist").WithInternal(err)
 	}
@@ -100,7 +100,7 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	attestation.Content = jsonContent
-	err = a.attestationRepository.Create(nil, &attestation)
+	err = a.attestationRepository.Create(ctx.Request().Context(), nil, &attestation)
 	if err != nil {
 		return err
 	}

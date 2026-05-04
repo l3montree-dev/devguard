@@ -16,83 +16,82 @@
 package commands
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	cosignoptions "github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	cosignsign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/spf13/cobra"
 )
 
+func signImage(ko cosignoptions.KeyOpts, regOpts cosignoptions.RegistryOptions, imageRef string) error {
+	return cosignsign.SignCmd(
+		&cosignoptions.RootOptions{Timeout: 3 * time.Minute},
+		ko,
+		cosignoptions.SignOptions{TlogUpload: false, Upload: true, Registry: regOpts},
+		[]string{imageRef},
+	)
+}
+
 func signCmd(cmd *cobra.Command, args []string) error {
-	// check if the argument is a file, which does exist
 	fileOrImageName := args[0]
 
 	if err := scanner.MaybeLoginIntoOciRegistry(cmd.Context()); err != nil {
 		return err
 	}
 
-	// transform the hex private key to an ecdsa private key
 	keyPath, publicKeyPath, err := scanner.TokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
 	}
-
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-
 	defer os.RemoveAll(path.Dir(keyPath))
+
 	if !config.RuntimeBaseConfig.Offline {
 		slog.Info("uploading public key to devguard")
-		// upload the public key to the backend
 		err = scanner.UploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
 		if err != nil {
 			slog.Error("could not upload public key", "err", err)
 			return err
 		}
 	}
-	// forward the current process envs as well
-	envs := os.Environ()
-	envs = append(envs, "COSIGN_PASSWORD=")
+
+	ko := cosignoptions.KeyOpts{
+		KeyRef:   keyPath,
+		PassFunc: func(_ bool) ([]byte, error) { return []byte{}, nil },
+	}
 
 	if _, err := os.Stat(fileOrImageName); os.IsNotExist(err) {
-		// it is an image
-		signImageCmd := exec.Command("cosign", "sign", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
-		signImageCmd.Stdout = &out
-		signImageCmd.Stderr = &errOut
-		signImageCmd.Env = envs
-
-		err = signImageCmd.Run()
-		if err != nil {
-			slog.Error("could not sign image", "err", err, "out", out.String(), "errOut", errOut.String())
+		// it is an image — use cosign library directly (no CLI binary needed)
+		if err := signImage(ko, cosignoptions.RegistryOptions{}, fileOrImageName); err != nil {
+			slog.Error("could not sign image", "err", err)
 			return err
 		}
-
 		slog.Info("signed image", "image", fileOrImageName)
 		return nil
 	}
 
-	// use the cosign cli to sign the file
-	signBlobCmd := exec.Command("cosign", "sign-blob", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
-
-	signBlobCmd.Stdout = &out
-	signBlobCmd.Stderr = &errOut
-
-	signBlobCmd.Env = envs
-
-	err = signBlobCmd.Run()
+	// sign a local blob
+	sig, err := cosignsign.SignBlobCmd(
+		&cosignoptions.RootOptions{},
+		ko,
+		fileOrImageName,
+		false, // b64
+		"", "", // outputSignature, outputCertificate
+		false, // tlogUpload
+	)
 	if err != nil {
-		slog.Error("could not sign blob", "err", err, "out", out.String(), "errOut", errOut.String())
+		slog.Error("could not sign blob", "err", err)
 		return err
 	}
 
-	fmt.Print(strings.TrimSpace(out.String()))
+	fmt.Print(strings.TrimSpace(string(sig)))
 	return nil
 }
 
@@ -105,7 +104,7 @@ func NewSignCommand() *cobra.Command {
 
 When not run with --offline the command will upload the public key to DevGuard
 before creating the signature. The public key upload is signed using the
-configured token. The actual signing is performed by the cosign CLI.`,
+configured token.`,
 		Example: `  # Sign a local file
   devguard-scanner sign ./artifact.bin
 

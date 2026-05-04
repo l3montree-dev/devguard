@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -157,6 +158,668 @@ func TestMultipleOrigins(t *testing.T) {
 
 		})
 
+	})
+}
+
+func TestKeepExistingVulnsClosed(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+
+		// scan the vulnerable sbom
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+		t.Run("should close the vulnerability if it's not detected anymore for the same artifact and origin and stay closed when the asset daemon is run", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "test-origin")        // set the origin header
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+			var response dtos.ScanResponse
+
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 1, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 1)
+			assert.Equal(t, "CVE-2025-46569", response.DependencyVulns[0].CVEID)
+
+			// Scan again with other SBOM without the vulnerability, but with the same artifact and origin - should close the vulnerability
+
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+			req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
+			req.Header.Set("X-Origin", "test-origin")        // set the same origin header
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 200, recorder.Code)
+
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+
+			assert.Equal(t, 0, response.AmountOpened)
+			assert.Equal(t, 1, response.AmountClosed)
+			assert.Len(t, response.DependencyVulns, 0)
+
+			//start the asset daemon and make sure the vulnerability is still closed
+
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+
+			// Reload the vulnerability from the database to check its state
+			var vulns []models.DependencyVuln
+			err = f.DB.Where("asset_id = ?", asset.ID).Find(&vulns).Error
+			assert.Nil(t, err)
+			assert.Len(t, vulns, 1)
+			assert.Equal(t, dtos.VulnStateFixed, vulns[0].State)
+			assert.Equal(t, "CVE-2025-46569", vulns[0].CVEID)
+		})
+
+		t.Run("scanning empty sbom on a different branch should not change the vuln state on the original branch", func(t *testing.T) {
+			// First scan with vulnerability on main branch
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var response dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+			assert.Equal(t, 1, response.AmountOpened)
+
+			// Now scan an empty SBOM on a different branch — should NOT close the main branch vuln
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "feature-branch") // different branch
+			req.Header.Set("X-Origin", "test-origin")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			err = json.Unmarshal(recorder.Body.Bytes(), &response)
+			assert.Nil(t, err)
+			assert.Equal(t, 0, response.AmountOpened)
+			assert.Equal(t, 0, response.AmountClosed)
+
+			// Verify the main branch vuln is still open
+			var vulns []models.DependencyVuln
+			err = f.DB.Where("asset_id = ? AND asset_version_name = ?", asset.ID, "main").Find(&vulns).Error
+			assert.Nil(t, err)
+			assert.Len(t, vulns, 1)
+			assert.Equal(t, dtos.VulnStateOpen, vulns[0].State)
+			assert.Equal(t, "CVE-2025-46569", vulns[0].CVEID)
+		})
+
+		t.Run("scanning empty sbom on a different artifact should not change the vuln state on the original artifact", func(t *testing.T) {
+			// First scan with vulnerability on artifact-multi-1
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-multi-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Confirm the vuln is open (may have been opened by a previous sub-test already)
+			var vulnsAfterFirst []models.DependencyVuln
+			err = f.DB.Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, "main", "CVE-2025-46569").Find(&vulnsAfterFirst).Error
+			assert.Nil(t, err)
+			assert.Len(t, vulnsAfterFirst, 1)
+			assert.Equal(t, dtos.VulnStateOpen, vulnsAfterFirst[0].State)
+
+			// Now scan an empty SBOM on a different artifact — should NOT close the vuln from artifact-multi-1
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-multi-2") // different artifact
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Verify the vuln is still open (artifact-multi-1 still has it)
+			var vulns []models.DependencyVuln
+			err = f.DB.Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, "main", "CVE-2025-46569").Find(&vulns).Error
+			assert.Nil(t, err)
+			assert.Len(t, vulns, 1)
+			assert.Equal(t, dtos.VulnStateOpen, vulns[0].State)
+		})
+
+		t.Run("a fixed event should NOT reopen a vulnerability marked as false positive", func(t *testing.T) {
+			// Step 1: scan with vulnerability on main / artifact-fp-1
+			recorder := httptest.NewRecorder()
+			sbomFile := sbomWithVulnerability()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-fp-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Step 2: mark the vulnerability as false positive
+			var vulns []models.DependencyVuln
+			err = f.DB.Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, "main", "CVE-2025-46569").Find(&vulns).Error
+			assert.Nil(t, err)
+
+			var fpVuln *models.DependencyVuln
+			for i := range vulns {
+				if vulns[i].CVEID == "CVE-2025-46569" {
+					fpVuln = &vulns[i]
+					break
+				}
+			}
+			assert.NotNil(t, fpVuln, "should have found the vuln to mark as false positive")
+
+			dependencyVulnRepository := f.App.DependencyVulnRepository
+			fpEvent := models.NewFalsePositiveEvent(fpVuln.ID, fpVuln.GetType(), "abc", "this is a false positive", "", "artifact-fp-1", false)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, fpVuln, &fpEvent)
+			assert.Nil(t, err)
+
+			// Confirm it's now marked as false positive
+			err = f.DB.First(fpVuln, "id = ?", fpVuln.ID).Error
+			assert.Nil(t, err)
+			assert.Equal(t, dtos.VulnStateFalsePositive, fpVuln.State)
+
+			// Step 3: scan empty SBOM on same artifact and branch — this would trigger a "fixed" event
+			recorder = httptest.NewRecorder()
+			emptySbomFile := emptySbom()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", emptySbomFile)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-fp-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			// Step 4: verify the false positive state is preserved — NOT reopened
+			err = f.DB.First(fpVuln, "id = ?", fpVuln.ID).Error
+			assert.Nil(t, err)
+			assert.Equal(t, dtos.VulnStateFalsePositive, fpVuln.State, "false positive should not be overridden by a fixed event")
+		})
+	})
+}
+
+// TestUserAssessmentLifecycle covers every realistic combination of user assessments
+// (falsePositive, accepted) interleaved with scan events (component present / absent)
+// across single and multiple artifacts.  Each sub-test is self-contained via a fresh
+// WithTestApp so there is no shared state between scenarios.
+func TestUserAssessmentLifecycle(t *testing.T) {
+	// ── helpers ──────────────────────────────────────────────────────────────────
+	scan := func(t *testing.T, controller interface{ ScanDependencyVulnFromProject(shared.Context) error }, app *echo.Echo, setupCtx func(shared.Context), artifactName, ref, defaultBranch string, sbomBody func() io.Reader) {
+		t.Helper()
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomBody())
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", artifactName)
+		req.Header.Set("X-Asset-Default-Branch", defaultBranch)
+		req.Header.Set("X-Asset-Ref", ref)
+		req.Header.Set("X-Origin", "test-origin")
+		ctx := app.NewContext(req, recorder)
+		setupCtx(ctx)
+		assert.Nil(t, controller.ScanDependencyVulnFromProject(ctx))
+		assert.Equal(t, 200, recorder.Code)
+	}
+
+	loadVuln := func(t *testing.T, db shared.DB, assetID interface{}, branch string) *models.DependencyVuln {
+		t.Helper()
+		var vulns []models.DependencyVuln
+		assert.Nil(t, db.Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, branch, "CVE-2025-46569").Find(&vulns).Error)
+		if len(vulns) == 0 {
+			return nil
+		}
+		return &vulns[0]
+	}
+
+	markFP := func(t *testing.T, repo shared.DependencyVulnRepository, vuln *models.DependencyVuln, artifact string) {
+		t.Helper()
+		ev := models.NewFalsePositiveEvent(vuln.ID, vuln.GetType(), "user-abc", "false positive", "", artifact, false)
+		assert.Nil(t, repo.ApplyAndSave(context.Background(), nil, vuln, &ev))
+	}
+
+	markAccepted := func(t *testing.T, repo shared.DependencyVulnRepository, vuln *models.DependencyVuln) {
+		t.Helper()
+		ev := models.NewAcceptedEvent(vuln.ID, vuln.GetType(), "user-abc", "accepted", false)
+		assert.Nil(t, repo.ApplyAndSave(context.Background(), nil, vuln, &ev))
+	}
+
+	reload := func(t *testing.T, db shared.DB, vuln *models.DependencyVuln) {
+		t.Helper()
+		assert.Nil(t, db.First(vuln, "id = ?", vuln.ID).Error)
+	}
+
+	// ── scenario 1 ───────────────────────────────────────────────────────────────
+	// open → falsePositive → component gone (fixed) → component back → must reopen with a reopened event
+	t.Run("falsePositive: component gone then back must reopen with event", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
+
+			markFP(t, repo, vuln, "art")
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+
+			// component disappears
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFixed, vuln.State, "component gone: falsePositive→fixed is expected")
+
+			// component comes back — must fire a reopened event and be open (not silently reset via detected)
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State, "component returned: expected reopened event → open")
+		})
+	})
+
+	// ── scenario 2 ───────────────────────────────────────────────────────────────
+	// open → accepted → component gone (fixed) → component back → must reopen with a reopened event
+	t.Run("accepted: component gone then back must reopen with event", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markAccepted(t, repo, vuln)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFixed, vuln.State, "component gone: accepted→fixed is expected")
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State, "component returned: expected reopened event → open")
+		})
+	})
+
+	// ── scenario 3 ───────────────────────────────────────────────────────────────
+	// open → falsePositive → component gone → component back → multiple repeated cycles
+	t.Run("falsePositive: multiple fix/reappear cycles must reopen with event", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markFP(t, repo, vuln, "art")
+
+			for i := 0; i < 3; i++ {
+				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom)           // gone
+				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+				scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability) // back
+				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+				reload(t, f.DB, vuln)
+				assert.Equal(t, dtos.VulnStateOpen, vuln.State, "cycle %d: component returned, expected reopened event → open", i+1)
+			}
+		})
+	})
+
+	// ── scenario 4 ───────────────────────────────────────────────────────────────
+	// open → falsePositive, then a DIFFERENT artifact scans empty — must not affect this vuln
+	t.Run("falsePositive: empty scan on different artifact must not affect state", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art-a", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markFP(t, repo, vuln, "art-a")
+
+			// different artifact scans empty
+			scan(t, ctrl, app, setupCtx, "art-b", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State, "BUG: empty scan on art-b changed state of art-a's vuln")
+		})
+	})
+
+	// ── scenario 5 ───────────────────────────────────────────────────────────────
+	// open → falsePositive, then a DIFFERENT branch scans empty — must not affect this vuln
+	t.Run("falsePositive: empty scan on different branch must not affect state", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markFP(t, repo, vuln, "art")
+
+			// different branch scans empty
+			scan(t, ctrl, app, setupCtx, "art", "feature-branch", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State, "BUG: empty scan on feature-branch changed state of main's vuln")
+		})
+	})
+
+	// ── scenario 6 ───────────────────────────────────────────────────────────────
+	// two artifacts both have the vuln → user marks FP → one artifact goes empty → other still present
+	// vuln must stay falsePositive (not fixed, not open)
+	t.Run("falsePositive: one of two artifacts goes empty must not close vuln", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art-a", "main", "main", sbomWithVulnerability)
+			scan(t, ctrl, app, setupCtx, "art-b", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
+
+			markFP(t, repo, vuln, "art-a")
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+
+			// art-a goes empty; art-b still has the vuln
+			scan(t, ctrl, app, setupCtx, "art-a", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State, "BUG: vuln changed state when only one of two artifacts went empty")
+
+			// now art-b also goes empty — now it should be fixed
+			scan(t, ctrl, app, setupCtx, "art-b", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFixed, vuln.State, "both artifacts empty: vuln should be fixed")
+		})
+	})
+
+	// ── scenario 7 ───────────────────────────────────────────────────────────────
+	// open → falsePositive → daemon re-scan (component still present in stored SBOM) → must not reopen
+	t.Run("falsePositive: daemon rescan with component present must not reopen", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markFP(t, repo, vuln, "art")
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+
+			// daemon rescans with the same (vulnerable) SBOM
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.NotEqual(t, dtos.VulnStateOpen, vuln.State, "BUG: falsePositive vuln reopened by daemon rescan")
+		})
+	})
+
+	// ── scenario 8 ───────────────────────────────────────────────────────────────
+	// accepted → daemon rescan (component still present) → must not reopen
+	t.Run("accepted: daemon rescan with component present must not reopen", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			markAccepted(t, repo, vuln)
+
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.NotEqual(t, dtos.VulnStateOpen, vuln.State, "BUG: accepted vuln reopened by daemon rescan")
+		})
+	})
+
+	// ── scenario 9 ───────────────────────────────────────────────────────────────
+	// Production event stream pattern:
+	// open → FP (VEX/user) → fixed (component gone) → open (component back, BUG) → FP again → ...
+	// Simulates the repeating cycle seen in production.
+	t.Run("production cycle: open→FP→fixed→reopened when component returns", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			// initial detection
+			scan(t, ctrl, app, setupCtx, "source", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			vuln := loadVuln(t, f.DB, asset.ID, "main")
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
+
+			// user marks FP (because they know it's not exploitable)
+			markFP(t, repo, vuln, "source")
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+
+			// upstream SBOM momentarily doesn't have the component (network glitch, partial SBOM)
+			scan(t, ctrl, app, setupCtx, "source", "main", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			stateAfterEmpty := vuln.State
+			// falsePositive→fixed is allowed per user preference
+			assert.NotEqual(t, dtos.VulnStateOpen, stateAfterEmpty)
+
+			// upstream SBOM comes back with the component — must fire reopened event → open
+			scan(t, ctrl, app, setupCtx, "source", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, vuln)
+			assert.Equal(t, dtos.VulnStateOpen, vuln.State,
+				"component returned: expected explicit reopened event → open")
+		})
+	})
+
+	// ── scenario 10 ──────────────────────────────────────────────────────────────
+	// open → falsePositive → scan with component present on a different branch inherits FP
+	// then that branch's empty scan must not affect the main branch state
+	t.Run("falsePositive: cross-branch inheritance then empty scan isolation", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			app := echo.New()
+			createCVE2025_46569(f.DB)
+			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+			setupCtx := func(ctx shared.Context) {
+				s := mocks.NewAuthSession(t)
+				s.On("GetUserID").Return("abc")
+				shared.SetAsset(ctx, asset)
+				shared.SetProject(ctx, project)
+				shared.SetOrg(ctx, org)
+				shared.SetSession(ctx, s)
+			}
+			ctrl := f.App.ScanController
+			repo := f.App.DependencyVulnRepository
+
+			// establish FP on main
+			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			mainVuln := loadVuln(t, f.DB, asset.ID, "main")
+			markFP(t, repo, mainVuln, "art")
+
+			// feature branch detects same vuln (inherits FP from main)
+			scan(t, ctrl, app, setupCtx, "art", "feature", "main", sbomWithVulnerability)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+
+			// feature branch scans empty — must NOT affect main branch vuln
+			scan(t, ctrl, app, setupCtx, "art", "feature", "main", emptySbom)
+			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
+			reload(t, f.DB, mainVuln)
+			assert.Equal(t, dtos.VulnStateFalsePositive, mainVuln.State,
+				"BUG: empty scan on feature branch changed main branch vuln state")
+		})
 	})
 }
 
@@ -325,7 +988,7 @@ func TestScanning(t *testing.T) {
 			assert.Nil(t, err)
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			// Find the vuln on main to accept it
@@ -339,7 +1002,7 @@ func TestScanning(t *testing.T) {
 			assert.NotNil(t, mainVuln, "should have a vuln on main branch")
 
 			acceptedEvent := models.NewAcceptedEvent(mainVuln.ID, mainVuln.GetType(), "abc", "accepting the vulnerability", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, mainVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, mainVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			// Now scan on a different branch
@@ -357,7 +1020,7 @@ func TestScanning(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			var newVuln models.DependencyVuln
@@ -417,8 +1080,9 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -436,7 +1100,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -444,10 +1108,10 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing state management", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			branchAVuln = vulns[0]
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
@@ -466,7 +1130,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -499,8 +1163,9 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -518,7 +1183,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -539,7 +1204,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -561,7 +1226,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 			var branchAFinalVuln, branchBVuln models.DependencyVuln
@@ -605,8 +1270,9 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		t.Run("should copy all events when vulnerability is found on different branches - complete lifecycle test", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -624,7 +1290,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -632,14 +1298,14 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "This is a test comment for lifecycle verification", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
@@ -660,7 +1326,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -701,19 +1367,19 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 			assert.NotEmpty(t, copiedDetectedEvent)
 			assert.Equal(t, dtos.EventTypeDetected, copiedDetectedEvent.Type)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedDetectedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedDetectedEvent.DependencyVulnID)
 
 			assert.NotEmpty(t, copiedAcceptedEvent)
 			assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 			assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 			assert.Equal(t, "Accepting this vulnerability for testing lifecycle management", *copiedAcceptedEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedAcceptedEvent.DependencyVulnID)
 
 			assert.NotEmpty(t, copiedCommentEvent)
 			assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 			assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 			assert.Equal(t, "This is a test comment for lifecycle verification", *copiedCommentEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedCommentEvent.DependencyVulnID)
 
 			recorder = httptest.NewRecorder()
 			sbomFile = sbomWithVulnerability()
@@ -729,7 +1395,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 3)
 
@@ -748,8 +1414,9 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		t.Run("should handle false positive events in lifecycle management", func(t *testing.T) {
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
+				f.DB.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ?", vuln.ID)
 				f.DB.Delete(&vuln)
 			}
 
@@ -766,13 +1433,13 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			err := controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchDVuln := vulns[0]
 
 			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", false)
-			err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
+			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchDVuln, &fpEvent)
 			assert.Nil(t, err)
 
 			recorder = httptest.NewRecorder()
@@ -788,7 +1455,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			err = controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
 
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -835,7 +1502,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 
 		t.Run("should copy all events when first party vulnerability is found on different branches", func(t *testing.T) {
 
-			vulns, _ := firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, _ := firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			for _, vuln := range vulns {
 				f.DB.Delete(&vuln)
 			}
@@ -854,7 +1521,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 1)
 			branchAVuln := vulns[0]
@@ -862,14 +1529,14 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
 
 			acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing", false)
-			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+			err = firstPartyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &acceptedEvent)
 			assert.Nil(t, err)
 
 			commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Test comment for lifecycle verification", false)
-			err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+			err = firstPartyVulnRepository.ApplyAndSave(context.Background(), nil, &branchAVuln, &commentEvent)
 			assert.Nil(t, err)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			branchAVuln = vulns[0]
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
@@ -889,7 +1556,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
-			vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -919,13 +1586,13 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Equal(t, dtos.EventTypeAccepted, copiedAcceptedEvent.Type)
 			assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
 			assert.Equal(t, "Accepted for lifecycle testing", *copiedAcceptedEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedAcceptedEvent.FirstPartyVulnID)
 
 			assert.NotEmpty(t, copiedCommentEvent.ID)
 			assert.Equal(t, dtos.EventTypeComment, copiedCommentEvent.Type)
 			assert.Equal(t, "test-user", copiedCommentEvent.UserID)
 			assert.Equal(t, "Test comment for lifecycle verification", *copiedCommentEvent.Justification)
-			assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
+			assert.Equal(t, branchBVuln.CalculateHash(), *copiedCommentEvent.FirstPartyVulnID)
 		})
 	})
 }
@@ -1025,7 +1692,7 @@ func TestTicketHandling(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			gitlabClientFacade.On("EditIssue", mock.Anything, 123, 789, mock.Anything).Return(nil, nil, nil).Once()
+			gitlabClientFacade.On("EditIssue", mock.Anything, 123, 789, mock.Anything).Return(nil, nil, nil)
 
 			err = controller.ScanDependencyVulnFromProject(ctx)
 			assert.Nil(t, err)
@@ -1072,7 +1739,9 @@ func TestTicketHandling(t *testing.T) {
 			}
 			err = f.DB.Save(&cve).Error
 			assert.Nil(t, err)
-
+			if err := f.DB.Exec("DELETE FROM artifact_dependency_vulns adv USING dependency_vulns dv WHERE adv.dependency_vuln_id = dv.id AND dv.cve_id = ?;", "CVE-2025-46569").Error; err != nil {
+				panic(err)
+			}
 			if err := f.DB.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
 				panic(err)
 			}
@@ -1166,7 +1835,7 @@ func TestTicketHandling(t *testing.T) {
 			assert.Contains(t, desc, "artifact-4")
 			assert.Contains(t, desc, "artifact-component")
 			assert.Contains(t, desc, "### Recommended fix")
-			assert.Contains(t, desc, vuln.ID)
+			assert.Contains(t, desc, vuln.ID.String())
 		})
 	})
 }
@@ -1593,7 +2262,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 			assert.Equal(t, 2, response.AmountOpened, "should have created 2 vulnerabilities with different paths")
 
 			// Get the vulnerabilities from DB
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, vulns, 2)
 
@@ -1617,7 +2286,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 			assert.Equal(t, 201, recorder.Code)
 
 			// Re-fetch the vulnerabilities to check their state after VEX rule is applied
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			falsePositiveCount := 0
@@ -1670,7 +2339,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Get the vulnerability
-			vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 			assert.GreaterOrEqual(t, len(vulns), 1)
 
@@ -1718,7 +2387,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 			assert.Equal(t, 200, recorder.Code)
 
 			// Get all vulns again
-			vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
 			assert.Nil(t, err)
 
 			// Find the new vulns (those with path-a or path-b in their path)
@@ -2040,6 +2709,66 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 			assert.NotNil(t, bom.Metadata.Component)
 			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header is invalid (falls back to asset default=false)")
 		})
+	})
+}
+
+// TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
+// When a component is missing from the components table (e.g. deleted externally,
+// or evicted by a concurrent transaction), a rescan must still succeed by
+// re-inserting the missing component before creating the dependency edge.
+func TestTrivyDebianSBOMRescan(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+		assert.NoError(t, err)
+
+		doScan := func(label string) error {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/scan", bytes.NewReader(sbomBytes))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "trivy-debian-image")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "trivy")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			if err := controller.ScanDependencyVulnFromProject(ctx); err != nil {
+				return fmt.Errorf("%s: controller error: %w", label, err)
+			}
+			if recorder.Code != 200 {
+				return fmt.Errorf("%s: expected 200, got %d, body: %s", label, recorder.Code, recorder.Body.String())
+			}
+			return nil
+		}
+
+		// First scan: populates the components table.
+		assert.NoError(t, doScan("scan 1"))
+
+		// Delete one of the components with a %2B-encoded PURL from the DB to
+		// simulate the state that causes the FK violation on the next scan.
+		// The libc6 component has PURL pkg:deb/debian/libc6@2.36-9+deb12u10?...
+		// (stored decoded with '+'); removing it means the next scan must
+		// re-insert it before creating the edge.
+		libc6Purl := "pkg:deb/debian/libc6@2.36-9+deb12u10?arch=amd64&distro=debian-12.11"
+		result := f.DB.Exec("DELETE FROM components WHERE id = ?", libc6Purl)
+		assert.NoError(t, result.Error)
+		assert.Equal(t, int64(1), result.RowsAffected, "libc6 component should have been deleted")
+
+		// Second scan: must succeed even though libc6 is missing from components.
+		assert.NoError(t, doScan("scan 2 (after component deleted)"))
 	})
 }
 

@@ -392,6 +392,7 @@ func TestBuildVEX(t *testing.T) {
 			err := f.App.ArtifactController.VEXJSON(ctx)
 			assert.Nil(t, err)
 		})
+		creationTime := time.Now()
 		vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(f.DB, asset.ID, assetVersion.Name, artifactName)
 		t.Run("build Vex with everything set as intended", func(t *testing.T) {
 			//setup function call
@@ -440,8 +441,9 @@ func TestBuildVEX(t *testing.T) {
 			responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 			assert.Nil(t, err)
 			//test if the first responded timestamp is calculated about right
-			assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
-			assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
+			const tolerance = 5 * time.Second
+			assert.True(t, responseTime1.Before(creationTime.Add(-7*time.Minute+tolerance)) && responseTime1.After(creationTime.Add(-7*time.Minute-tolerance)))
+			assert.True(t, responseTime2.Before(creationTime.Add(-1*time.Minute+tolerance)) && responseTime2.After(creationTime.Add(-1*time.Minute-tolerance)))
 			//last updated should be the same as first responded when only 1 updateEvent happens
 			assert.Equal(t, axiosVuln.Analysis.LastUpdated, (*axiosVuln.Properties)[0].Value)
 		})
@@ -452,7 +454,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			if err := f.DB.Delete(&models.VulnEvent{}, "vuln_id = ? AND type = ?", vuln2.ID, "fixed").Error; err != nil {
+			if err := f.DB.Delete(&models.VulnEvent{}, "dependency_vuln_id = ? AND type = ?", vuln2.ID, "fixed").Error; err != nil {
 				panic(err)
 			}
 
@@ -594,53 +596,48 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		VulnID:   vuln1.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
-		Type:     "detected",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln1.ID),
+		CreatedAt:        time.Now().Add(-10 * time.Minute),
+		Type:             "detected",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln1DetectedEvent).Error; err != nil {
 		panic(err)
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		VulnID:   vuln1.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-7 * time.Minute), UpdatedAt: time.Now().Add(-7 * time.Minute)},
-		Type:     "comment",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln1.ID),
+		CreatedAt:        time.Now().Add(-7 * time.Minute),
+		Type:             "comment",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln1CommentEvent).Error; err != nil {
 		panic(err)
 	}
 	vuln1FixedEvent := models.VulnEvent{
-		VulnID:   vuln1.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-3 * time.Minute)},
-		Type:     "fixed",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln1.ID),
+		CreatedAt:        time.Now().Add(-3 * time.Minute),
+		Type:             "fixed",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln1FixedEvent).Error; err != nil {
 		panic(err)
 	}
 	vuln2DetectedEvent := models.VulnEvent{
-		VulnID:   vuln2.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-2 * time.Minute)},
-		Type:     "detected",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln2.ID),
+		CreatedAt:        time.Now().Add(-3 * time.Minute),
+		Type:             "detected",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln2DetectedEvent).Error; err != nil {
 		panic(err)
 	}
 
 	vuln2FixedEvent := models.VulnEvent{
-		VulnID:   vuln2.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-1 * time.Minute), UpdatedAt: time.Now().Add(-1 * time.Minute)},
-		Type:     "fixed",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln2.ID),
+		CreatedAt:        time.Now().Add(-1 * time.Minute),
+		Type:             "fixed",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln2FixedEvent).Error; err != nil {
 		panic(err)

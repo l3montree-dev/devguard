@@ -4,6 +4,7 @@
 package jiraint
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -51,7 +52,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	issueID = event.Issue.ID
 	projectID = event.Issue.Fields.Project.ID
 
-	vuln, err = i.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("jira:%s:%s", projectID, issueID))
+	vuln, err = i.aggregatedVulnRepository.FindByTicketID(context.Background(), nil, fmt.Sprintf("jira:%s:%s", projectID, issueID))
 	if err != nil {
 		slog.Error("failed to find vulnerability by ticket ID", "err", err, "ticketID", fmt.Sprintf("jira:%s:%s", projectID, issueID))
 		return nil
@@ -82,7 +83,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	// make sure to save the user - it might be a new user or it might have new values defined.
 	// we do not care about any error - and we want speed, thus do it on a goroutine
 	i.FireAndForget(func() {
-		org, err := i.aggregatedVulnRepository.GetOrgFromVuln(vuln)
+		org, err := i.aggregatedVulnRepository.GetOrgFromVuln(context.Background(), nil, vuln)
 		if err != nil {
 			slog.Error("could not get org from dependencyVuln id", "err", err)
 			return
@@ -94,13 +95,13 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			AvatarURL: userAvatarURL,
 		}
 
-		err = i.externalUserRepository.Save(nil, &user)
+		err = i.externalUserRepository.Save(context.Background(), nil, &user)
 		if err != nil {
 			slog.Error("could not save github user", "err", err)
 			return
 		}
 
-		if err = i.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+		if err = i.externalUserRepository.GetDB(context.Background(), nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 			slog.Error("could not append user to organization", "err", err)
 		}
 	})
@@ -117,13 +118,13 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := i.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := i.assetVersionRepository.Read(context.Background(), nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
 		}
 
-		asset, err := i.assetRepository.Read(assetVersion.AssetID)
+		asset, err := i.assetRepository.Read(context.Background(), nil, assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err
@@ -140,12 +141,12 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		statemachine.Apply(vuln, vulnEvent)
 
 		// save the vuln and the event in a transaction
-		err = i.aggregatedVulnRepository.Transaction(func(tx shared.DB) error {
-			err := i.aggregatedVulnRepository.Save(tx, &vuln)
+		err = i.aggregatedVulnRepository.Transaction(context.Background(), func(tx shared.DB) error {
+			err := i.aggregatedVulnRepository.Save(ctx.Request().Context(), tx, &vuln)
 			if err != nil {
 				return err
 			}
-			err = i.vulnEventRepository.Save(tx, &vulnEvent)
+			err = i.vulnEventRepository.Save(ctx.Request().Context(), tx, &vulnEvent)
 			if err != nil {
 				return err
 			}
@@ -177,7 +178,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			}
 			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username), false)
 
-			err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err = i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -188,7 +189,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			}
 			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username), false)
 
-			err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err := i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -201,7 +202,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
 
-		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+		err := i.aggregatedVulnRepository.ApplyAndSave(context.Background(), nil, vuln, &vulnEvent)
 		if err != nil {
 			slog.Error("could not save vuln and event", "err", err)
 		}
@@ -210,7 +211,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 
 	if doUpdateArtifactRiskHistory {
 		for _, artifact := range vuln.GetArtifacts() {
-			if err := i.statisticsService.UpdateArtifactRiskAggregation(&artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+			if err := i.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}

@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -169,8 +171,8 @@ func (_c *GitlabClientFactory_FromIntegration_Call) RunAndReturn(run func(integr
 }
 
 // FromIntegrationUUID provides a mock function for the type GitlabClientFactory
-func (_mock *GitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.GitlabClientFacade, error) {
-	ret := _mock.Called(id)
+func (_mock *GitlabClientFactory) FromIntegrationUUID(ctx context.Context, id uuid.UUID) (shared.GitlabClientFacade, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FromIntegrationUUID")
@@ -178,18 +180,18 @@ func (_mock *GitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (shared.Gitl
 
 	var r0 shared.GitlabClientFacade
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (shared.GitlabClientFacade, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (shared.GitlabClientFacade, error)); ok {
+		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) shared.GitlabClientFacade); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) shared.GitlabClientFacade); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.GitlabClientFacade)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -202,19 +204,25 @@ type GitlabClientFactory_FromIntegrationUUID_Call struct {
 }
 
 // FromIntegrationUUID is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id uuid.UUID
-func (_e *GitlabClientFactory_Expecter) FromIntegrationUUID(id interface{}) *GitlabClientFactory_FromIntegrationUUID_Call {
-	return &GitlabClientFactory_FromIntegrationUUID_Call{Call: _e.mock.On("FromIntegrationUUID", id)}
+func (_e *GitlabClientFactory_Expecter) FromIntegrationUUID(ctx interface{}, id interface{}) *GitlabClientFactory_FromIntegrationUUID_Call {
+	return &GitlabClientFactory_FromIntegrationUUID_Call{Call: _e.mock.On("FromIntegrationUUID", ctx, id)}
 }
 
-func (_c *GitlabClientFactory_FromIntegrationUUID_Call) Run(run func(id uuid.UUID)) *GitlabClientFactory_FromIntegrationUUID_Call {
+func (_c *GitlabClientFactory_FromIntegrationUUID_Call) Run(run func(ctx context.Context, id uuid.UUID)) *GitlabClientFactory_FromIntegrationUUID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -225,14 +233,14 @@ func (_c *GitlabClientFactory_FromIntegrationUUID_Call) Return(gitlabClientFacad
 	return _c
 }
 
-func (_c *GitlabClientFactory_FromIntegrationUUID_Call) RunAndReturn(run func(id uuid.UUID) (shared.GitlabClientFacade, error)) *GitlabClientFactory_FromIntegrationUUID_Call {
+func (_c *GitlabClientFactory_FromIntegrationUUID_Call) RunAndReturn(run func(ctx context.Context, id uuid.UUID) (shared.GitlabClientFacade, error)) *GitlabClientFactory_FromIntegrationUUID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FromOauth2Token provides a mock function for the type GitlabClientFactory
-func (_mock *GitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
-	ret := _mock.Called(token, enableClientCache)
+func (_mock *GitlabClientFactory) FromOauth2Token(ctx context.Context, token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error) {
+	ret := _mock.Called(ctx, token, enableClientCache)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FromOauth2Token")
@@ -240,18 +248,18 @@ func (_mock *GitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token
 
 	var r0 shared.GitlabClientFacade
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.GitLabOauth2Token, bool) (shared.GitlabClientFacade, error)); ok {
-		return returnFunc(token, enableClientCache)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.GitLabOauth2Token, bool) (shared.GitlabClientFacade, error)); ok {
+		return returnFunc(ctx, token, enableClientCache)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.GitLabOauth2Token, bool) shared.GitlabClientFacade); ok {
-		r0 = returnFunc(token, enableClientCache)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.GitLabOauth2Token, bool) shared.GitlabClientFacade); ok {
+		r0 = returnFunc(ctx, token, enableClientCache)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.GitlabClientFacade)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.GitLabOauth2Token, bool) error); ok {
-		r1 = returnFunc(token, enableClientCache)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.GitLabOauth2Token, bool) error); ok {
+		r1 = returnFunc(ctx, token, enableClientCache)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -264,25 +272,31 @@ type GitlabClientFactory_FromOauth2Token_Call struct {
 }
 
 // FromOauth2Token is a helper method to define mock.On call
+//   - ctx context.Context
 //   - token models.GitLabOauth2Token
 //   - enableClientCache bool
-func (_e *GitlabClientFactory_Expecter) FromOauth2Token(token interface{}, enableClientCache interface{}) *GitlabClientFactory_FromOauth2Token_Call {
-	return &GitlabClientFactory_FromOauth2Token_Call{Call: _e.mock.On("FromOauth2Token", token, enableClientCache)}
+func (_e *GitlabClientFactory_Expecter) FromOauth2Token(ctx interface{}, token interface{}, enableClientCache interface{}) *GitlabClientFactory_FromOauth2Token_Call {
+	return &GitlabClientFactory_FromOauth2Token_Call{Call: _e.mock.On("FromOauth2Token", ctx, token, enableClientCache)}
 }
 
-func (_c *GitlabClientFactory_FromOauth2Token_Call) Run(run func(token models.GitLabOauth2Token, enableClientCache bool)) *GitlabClientFactory_FromOauth2Token_Call {
+func (_c *GitlabClientFactory_FromOauth2Token_Call) Run(run func(ctx context.Context, token models.GitLabOauth2Token, enableClientCache bool)) *GitlabClientFactory_FromOauth2Token_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.GitLabOauth2Token
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.GitLabOauth2Token)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 bool
+		var arg1 models.GitLabOauth2Token
 		if args[1] != nil {
-			arg1 = args[1].(bool)
+			arg1 = args[1].(models.GitLabOauth2Token)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -293,7 +307,7 @@ func (_c *GitlabClientFactory_FromOauth2Token_Call) Return(gitlabClientFacade sh
 	return _c
 }
 
-func (_c *GitlabClientFactory_FromOauth2Token_Call) RunAndReturn(run func(token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error)) *GitlabClientFactory_FromOauth2Token_Call {
+func (_c *GitlabClientFactory_FromOauth2Token_Call) RunAndReturn(run func(ctx context.Context, token models.GitLabOauth2Token, enableClientCache bool) (shared.GitlabClientFacade, error)) *GitlabClientFactory_FromOauth2Token_Call {
 	_c.Call.Return(run)
 	return _c
 }

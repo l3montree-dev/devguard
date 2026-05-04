@@ -16,6 +16,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -63,11 +64,11 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		Published: testEntry.Published,
 		Modified:  testEntry.Modified,
 	}
-	err := maliciousPackageRepository.UpsertPackages([]models.MaliciousPackage{pkg})
+	err := maliciousPackageRepository.UpsertPackages(context.Background(), nil, []models.MaliciousPackage{pkg})
 	assert.Nil(t, err)
 
 	components := transformer.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
-	err = maliciousPackageRepository.UpsertAffectedComponents(components)
+	err = maliciousPackageRepository.UpsertAffectedComponents(context.Background(), nil, components)
 	assert.Nil(t, err)
 
 	// Create the checker
@@ -82,6 +83,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		pkgName   string
 		version   string
 		expected  bool
+		error     bool
 	}{
 		{
 			name:      "Malicious package with specific version",
@@ -103,6 +105,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
 			expected:  false,
+			error:     true,
 		},
 		{
 			name:      "Safe package",
@@ -122,7 +125,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isMalicious, entry := checker.IsMalicious(tt.ecosystem, tt.pkgName, tt.version)
+			isMalicious, entry, err := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
 			if isMalicious != tt.expected {
 				t.Errorf("IsMalicious(%s, %s, %s) = %v, want %v",
 					tt.ecosystem, tt.pkgName, tt.version, isMalicious, tt.expected)
@@ -132,6 +135,11 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			}
 			if !isMalicious && entry != nil {
 				t.Error("Expected entry to be nil for safe package")
+			}
+			if tt.error {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
 			}
 		})
 	}

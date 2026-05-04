@@ -32,17 +32,18 @@ func newImportCommand() *cobra.Command {
 				fx.Invoke(func(
 					importService shared.VulnDBImportService,
 				) error {
-					return importService.ImportFromDiff(nil)
+					return importService.ImportFromDiff(context.Background(), nil)
 				}),
 			)
 
-			startCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+			ctx := context.Background()
+			startCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 			defer cancel()
 			if err := app.Start(startCtx); err != nil {
 				return err
 			}
 
-			stopCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 			return app.Stop(stopCtx)
 		},

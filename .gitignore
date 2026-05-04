@@ -31,3 +31,6 @@ cert.pem
 key.pem
 cache
 instance_admin_pub_key.pem
+CLAUDE.md
+.claudeignore
+result

@@ -31,9 +31,9 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -85,9 +85,15 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	} else {
 		workDir = utils.GetDirFromPath(pathOrImage)
 	}
-	sbomFile := filepath.Join(workDir, filename)
+	sbomFile := filepath.Join(os.TempDir(), filename)
 
 	var trivyCmd *exec.Cmd
+
+	var configFileArgs []string
+	if config.RuntimeBaseConfig.ConfigFilePath != "" {
+		configFileArgs = []string{"--config", config.RuntimeBaseConfig.ConfigFilePath}
+	}
+
 	if isImage {
 		image := pathOrImage
 		// login in to docker registry first before we try to run trivy
@@ -97,19 +103,26 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		}
 
 		slog.Info("scanning oci image", "image", image)
-		trivyCmd = exec.Command("trivy", "image", image, "--format", "cyclonedx", "--output", sbomFile)
+		args := []string{"image", image, "--format", "cyclonedx", "--output", sbomFile}
+		args = append(args, configFileArgs...)
+
+		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	} else if isDir {
 		slog.Info("scanning directory", "dir", workDir)
 		prepareTrivyCommand(workDir)
-		// scanning a dir
-		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", sbomFile)
-		// set working directory because the trivy command scans the local directory
+		args := []string{"fs", ".", "--format", "cyclonedx", "--output", sbomFile}
+		args = append(args, configFileArgs...)
+		// scanning a directory - we need to switch to the directory first because trivy needs to run in the context of the project to be able to find the dependencies
+		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 		trivyCmd.Dir = workDir
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
+		args := []string{"image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile}
+		args = append(args, configFileArgs...)
+
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
 
 	stderr := &bytes.Buffer{}
@@ -277,7 +290,7 @@ func scanExternalImage(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse dtos.ScanResponse
+	var scanResponse compat.ScanResponse
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
 		return errors.Wrap(err, "could not parse response")
@@ -327,7 +340,7 @@ func scanLocalFilePath(ctx context.Context) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse dtos.ScanResponse
+	var scanResponse compat.ScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
@@ -343,6 +356,17 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		config.RuntimeBaseConfig.Image = args[0]
 	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
 		config.RuntimeBaseConfig.Path = args[0]
+	}
+
+	if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+		// download any config file if exists
+		configFilePath, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
+		if err != nil {
+			slog.Warn("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
+		} else {
+			// set the config file path in the runtime config so that it can be used by the scanner commands
+			config.RuntimeBaseConfig.ConfigFilePath = configFilePath
+		}
 	}
 
 	// in case it's a docker image we need to scan the image and try to download attestations

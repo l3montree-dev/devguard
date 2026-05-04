@@ -2,6 +2,8 @@ package dtos
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type SnippetContents struct {
@@ -17,7 +19,7 @@ type SnippetContent struct {
 }
 
 type FirstPartyVulnDTO struct {
-	ID                   string           `json:"id"`
+	ID                   uuid.UUID        `json:"id"`
 	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
 	AssetVersionName     string           `json:"assetVersionName"`

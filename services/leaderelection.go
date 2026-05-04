@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"log/slog"
 	"math/rand"
 	"sync/atomic"
@@ -39,7 +40,7 @@ func randomNumberBetween(min, max int) int {
 	return rand.Intn(max-min) + min // #nosec
 }
 
-func (e *databaseLeaderElector) daemon() {
+func (e *databaseLeaderElector) daemon() { // nosemgrep: service-method-missing-ctx,service-method-missing-ctx-empty-params
 	for {
 		isLeader, err := e.checkIfLeader()
 		if err != nil {
@@ -56,27 +57,27 @@ func (e *databaseLeaderElector) daemon() {
 	}
 }
 
-func (e *databaseLeaderElector) startDaemon() {
+func (e *databaseLeaderElector) startDaemon() { // nosemgrep: service-method-missing-ctx,service-method-missing-ctx-empty-params
 	e.daemonIsRunning = true
 	go e.daemon()
 }
 
-func (e *databaseLeaderElector) IsLeader() bool {
+func (e *databaseLeaderElector) IsLeader() bool { // nosemgrep: service-method-missing-ctx,service-method-missing-ctx-empty-params
 	return e.isLeader.Load()
 }
 
-func (e *databaseLeaderElector) makeLeader() error {
+func (e *databaseLeaderElector) makeLeader() error { // nosemgrep: service-method-missing-ctx,service-method-missing-ctx-empty-params
 	// there is no leader yet - overwrite it.
-	return e.configService.SetJSONConfig("leaderElection", leaderElectionConfig{
+	return e.configService.SetJSONConfig(context.TODO(), "leaderElection", leaderElectionConfig{
 		LeaderID: e.leaderElectorID,
 		LastPing: time.Now().Unix(),
 	})
 }
 
-func (e *databaseLeaderElector) checkIfLeader() (bool, error) {
+func (e *databaseLeaderElector) checkIfLeader() (bool, error) { // nosemgrep: service-method-missing-ctx,service-method-missing-ctx-empty-params
 	var config leaderElectionConfig
 
-	err := e.configService.GetJSONConfig("leaderElection", &config)
+	err := e.configService.GetJSONConfig(context.TODO(), "leaderElection", &config)
 	if err != nil {
 		slog.Info("could not get leader election config", "err", err)
 		// there is no leader yet - overwrite it.

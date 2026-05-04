@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
@@ -25,7 +26,9 @@ import (
 )
 
 type CSAFController struct {
+	csafService              shared.CSAFService
 	dependencyVulnRepository shared.DependencyVulnRepository
+	dependencyVulnService    shared.DependencyVulnService
 	vulnEventRepository      shared.VulnEventRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	assetRepository          shared.AssetRepository
@@ -34,9 +37,11 @@ type CSAFController struct {
 	artifactRepository       shared.ArtifactRepository
 }
 
-func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
 	return &CSAFController{
+		csafService:              csafService,
 		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
 		vulnEventRepository:      vulnEventRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetRepository:          assetRepository,
@@ -57,20 +62,16 @@ func NewCSAFController(dependencyVulnRepository shared.DependencyVulnRepository,
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/index.txt [get]
 func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	vulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
 
 	// then write each revision entry version to the index string
 	index := ""
-	for _, v := range vulns {
-		// get the created at of the first event
-		if len(v.Events) == 0 {
-			continue
-		}
-		year := v.Events[0].CreatedAt.Year()
-		fileName := fmt.Sprintf("csaf_report_%s_%s.json", strings.ToLower(asset.Slug), strings.ToLower(v.CVEID))
+	for _, vuln := range vulns {
+		year := vuln.CreatedAt.Year()
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		index += fmt.Sprintf("%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index)
@@ -87,22 +88,21 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv [get]
 func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	vulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	vulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
 
 	// then write each revision entry version to the index string
 	csvContents := ""
-	for _, v := range vulns {
-		// get the created at of the first event
-		if len(v.Events) == 0 {
+	for _, vuln := range vulns {
+		if len(vuln.Events) == 0 {
 			continue
 		}
-		year := v.Events[0].CreatedAt.Year()
+		year := vuln.CreatedAt.Year()
 		// get the last event
-		entry := v.Events[len(v.Events)-1]
-		fileName := fmt.Sprintf("%s.json", strings.ToLower(v.CVEID))
+		entry := vuln.Events[len(vuln.Events)-1]
+		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		// then write each entry to the csv string and return the result
 		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
@@ -165,8 +165,8 @@ func (controller *CSAFController) GetOpenPGPHTML(ctx shared.Context) error {
 }
 
 // returns the set of all years where new csaf versions where published
-func getAllYears(asset models.Asset, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository) ([]int, error) {
-	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+func getAllYears(ctx context.Context, asset models.Asset, dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository) ([]int, error) {
+	vulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, asset.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (controller *CSAFController) GetTLPWhiteEntriesHTML(ctx shared.Context) err
 	asset := shared.GetAsset(ctx)
 
 	// get all years where csaf version were published and make a directory for each of these
-	allYears, err := getAllYears(asset, controller.dependencyVulnRepository, controller.vulnEventRepository)
+	allYears, err := getAllYears(ctx.Request().Context(), asset, controller.dependencyVulnRepository, controller.vulnEventRepository)
 	if err != nil {
 		return err
 	}
@@ -249,18 +249,13 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return fmt.Errorf("invalid year format")
 	}
 
-	allVulns, err := controller.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+	allVulns, err := controller.csafService.GetOldestVulnPerUniqueCVE(ctx.Request().Context(), asset.ID)
 	if err != nil {
 		return err
 	}
 
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
-		return len(vuln.Events) > 0 && vuln.Events[0].CreatedAt.Year() == yearNumber
-	})
-
-	// deduplicate Slice to avoid listing the same CVEs
-	vulnsOfThatYear = utils.DeduplicateSlice(vulnsOfThatYear, func(vuln models.DependencyVuln) string {
-		return vuln.CVEID
+		return vuln.CreatedAt.Year() == yearNumber
 	})
 
 	// sort reports alphabetically by CVEID for better usability
@@ -268,14 +263,23 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return strings.Compare(vuln1.CVEID, vuln2.CVEID)
 	})
 
+	type entryData struct {
+		Title string
+		Href  string
+	}
+
 	type pageData struct {
 		Year           int
-		Filenames      []string
+		Filenames      []entryData
 		HasOpenPGPKeys bool
 	}
-	data := pageData{Year: yearNumber, Filenames: make([]string, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
+
+	data := pageData{Year: yearNumber, Filenames: make([]entryData, 0, len(vulnsOfThatYear)), HasOpenPGPKeys: getPublicKeyFingerprint() != ""}
 	for _, entry := range vulnsOfThatYear {
-		data.Filenames = append(data.Filenames, fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)))
+		data.Filenames = append(data.Filenames, entryData{
+			Href:  fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)),
+			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, entry.CVEID)),
+		})
 	}
 
 	// generate the htmlTemplate for each version as well as the signature and hash
@@ -288,12 +292,12 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 <pre>
 <a href="../">../</a>
 {{ range .Filenames }}
-<a href="{{ . }}" >{{ . }}</a>
+<a href="{{ .Href }}">{{ .Title }}.json</a>
 {{ if $.HasOpenPGPKeys }}
-<a href="{{ . }}.asc" >{{ . }}.asc</a>
+<a href="{{ .Href }}.asc">{{ .Title }}.asc</a>
 {{ end -}}
-<a href="{{ . }}.sha256" >{{ . }}.sha256</a>
-<a href="{{ . }}.sha512">{{ . }}.sha512</a>
+<a href="{{ .Href }}.sha256">{{ .Title }}.sha256</a>
+<a href="{{ .Href }}.sha512">{{ .Title }}.sha512</a>
 {{ end }}
 </pre>
 <hr>
@@ -386,7 +390,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
 	}
 
-	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets()
+	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}
@@ -452,7 +456,7 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 	if fingerprint != "" {
 		metadata.PGPKeys = []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}}
 	}
-	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(org.ID)
+	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(ctx.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(404, "organization not found")
 	}
@@ -492,8 +496,19 @@ func getPublicKeyFingerprint() string {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version} [get]
 func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) error {
+	// extract context information
+	cveID := ctx.Param("version")
+	if cveID == "" {
+		return fmt.Errorf("version parameter is required")
+	}
+	org := shared.GetOrg(ctx)
+	asset := shared.GetAsset(ctx)
+
+	// remove everything <asset-slug>_ from the beginning of the document id
+	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
+
 	// generate the report first
-	report, err := services.GenerateCSAFReport(ctx, controller.dependencyVulnRepository, controller.vulnEventRepository, controller.assetVersionRepository, controller.cveRepository, controller.artifactRepository)
+	report, err := controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
 	if err != nil {
 		return err
 	}
@@ -520,7 +535,7 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		// generate and return the signature
 		signature, err := services.SignCSAFReport(cjsonData)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not generate signature for report, make sure that your OpenPGP key pair is properly set up: %w", err)
 		}
 		return ctx.String(200, string(signature))
 	case "sha256":

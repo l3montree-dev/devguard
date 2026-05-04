@@ -1,11 +1,16 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -15,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 )
 
 type dependencyVulnsByPackage struct {
@@ -45,7 +51,7 @@ type DependencyVulnStatus struct {
 }
 
 type BatchDependencyVulnStatus struct {
-	VulnIDs                 []string                         `json:"vulnIds"`
+	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
@@ -70,13 +76,13 @@ func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 	}
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByOrgIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
 			return p.GetID().String()
 		}),
 		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
+		strings.TrimSpace(ctx.QueryParam("search")),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
@@ -93,11 +99,11 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIDPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		project.ID,
 
 		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
+		strings.TrimSpace(ctx.QueryParam("search")),
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
@@ -124,11 +130,12 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns [get]
 func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
+	formattedSearch := strings.TrimSpace(ctx.QueryParam("search"))
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
+		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID, shared.GetPageInfo(ctx), formattedSearch, shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
@@ -139,11 +146,11 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	}
 
 	pagedResp, packageNameIndexMap, err := controller.dependencyVulnRepository.GetByAssetVersionPaged(
-		nil,
+		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		shared.GetPageInfo(ctx),
-		ctx.QueryParam("search"),
+		formattedSearch,
 		shared.GetFilterQuery(ctx),
 		shared.GetSortQuery(ctx),
 	)
@@ -227,7 +234,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 
 	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
 
-	if err = thirdPartyIntegrations.HandleEvent(shared.ManualMitigateEvent{
+	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: j.Comment,
 	}); err != nil {
@@ -235,7 +242,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	}
 
 	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependency_vuln.
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -262,7 +269,7 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 	}
 	asset := shared.GetAsset(ctx)
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -283,12 +290,12 @@ func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, dependencyVuln.ComponentPurl, dependencyVuln.CVEID)
+	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(ctx.Request().Context(), nil, org.ID, dependencyVuln.ComponentPurl, dependencyVuln.CVEID)
 	if err != nil {
 		return err
 	}
@@ -302,7 +309,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	project := shared.GetProject(ctx)
 
 	type vulnReq struct {
-		VulnID string            `json:"vulnId"`
+		VulnID uuid.UUID         `json:"vulnId"`
 		Event  dtos.VulnEventDTO `json:"event"`
 	}
 
@@ -320,7 +327,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	vulns := make([]models.DependencyVuln, 0, len(requestData.VulnsReq))
 
 	for _, r := range requestData.VulnsReq {
-		dependencyVuln, err := controller.dependencyVulnRepository.Read(r.VulnID)
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, r.VulnID)
 		if err != nil {
 			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
 			continue
@@ -332,20 +339,21 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 		statemachine.Apply(&dependencyVuln, events[len(events)-1])
 
 		//update the dependencyVuln and its events
-		err = controller.dependencyVulnRepository.Save(nil, &dependencyVuln)
+		err = controller.dependencyVulnRepository.Save(ctx.Request().Context(), nil, &dependencyVuln)
 		if err != nil {
 			return err
 		}
 
 		for _, event := range events {
-			if err := controller.vulnEventRepository.Save(nil, &event); err != nil {
+			if err := controller.vulnEventRepository.Save(ctx.Request().Context(), nil, &event); err != nil {
 				return err
 			}
 		}
 	}
 
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 	controller.FireAndForget(func() {
-		err := controller.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, vulns)
+		err := controller.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -375,7 +383,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -395,7 +403,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -405,13 +413,13 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 
 	for _, artifact := range dependencyVuln.Artifacts {
 		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-			if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
 	}
 
-	err = thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
 	})
@@ -453,13 +461,13 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	updatedVulns := make([]dtos.DetailedDependencyVulnDTO, 0, len(status.VulnIDs))
 
 	for _, vulnID := range status.VulnIDs {
-		dependencyVuln, err := controller.dependencyVulnRepository.Read(vulnID)
+		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
 		if err != nil {
 			slog.Error("could not find dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
@@ -467,13 +475,13 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 
 		for _, artifact := range dependencyVuln.Artifacts {
 			if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-				if err := controller.statisticsService.UpdateArtifactRiskAggregation(&artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 					slog.Error("could not recalculate risk history", "err", err)
 				}
 			}
 		}
 
-		if err := thirdPartyIntegration.HandleEvent(shared.VulnEvent{
+		if err := thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 			Ctx:   ctx,
 			Event: ev,
 		}); err != nil {
@@ -484,4 +492,43 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	}
 
 	return ctx.JSON(200, updatedVulns)
+}
+
+func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) error {
+	packageName := ctx.QueryParam("packageName")
+
+	if packageName == "" {
+		return echo.NewHTTPError(400, "missing packageName or depName")
+	}
+
+	currentValue := ctx.QueryParam("currentValue")
+
+	if currentValue == "" {
+		return echo.NewHTTPError(400, "missing packageValue or currentValue")
+	}
+
+	recommendedVersion, err := controller.dependencyVulnRepository.GetDirectDependencyFixedVersionByPackageName(ctx.Request().Context(), nil, packageName)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get recommendation").WithInternal(err)
+	}
+	if recommendedVersion == nil || *recommendedVersion == "" {
+		return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: ""})
+	}
+
+	version, err := extractVersionFromPURL(*recommendedVersion)
+	if err != nil {
+		slog.Error("could not extract version from purl", "err", err, "recommendedVersion", *recommendedVersion)
+		return echo.NewHTTPError(500, "could not get recommendation").WithInternal(err)
+	}
+
+	return ctx.JSON(200, dtos.Recommendation{RecommendedVersion: version})
+}
+
+func extractVersionFromPURL(input string) (string, error) {
+	parsed, err := packageurl.FromString(input)
+	if err != nil {
+		return "", err
+	}
+
+	return parsed.Version, nil
 }

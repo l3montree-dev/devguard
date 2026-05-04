@@ -132,6 +132,17 @@ func TestGenerateTag(t *testing.T) {
 			expectedArtifactName: "pkg:oci/image?repository_url=example.com/image&arch=amd64&tag=2.3.4-amd64",
 			wantErr:              false,
 		},
+		{
+			name:                 "development tag with correct version prefix",
+			upstreamVersion:      "10.11.14",
+			architecture:         "amd64",
+			imagePath:            "registry.opencode.de/open-code/oci/mariadb",
+			imageVariant:         "minimal",
+			refFlag:              "renovate/busybox-static-1.x",
+			expectedImageTagName: "registry.opencode.de/open-code/oci/mariadb:10.11.14-renovate-busybox-static-1.x-minimal-amd64",
+			expectedArtifactName: "pkg:oci/mariadb?repository_url=registry.opencode.de/open-code/oci/mariadb&arch=amd64&tag=10.11.14-renovate-busybox-static-1.x-minimal-amd64",
+			wantErr:              false,
+		},
 	}
 
 	for _, tt := range tests {

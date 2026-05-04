@@ -8,12 +8,12 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/licenses"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type ComponentService struct {
@@ -24,6 +24,8 @@ type ComponentService struct {
 	artifactRepository         shared.ArtifactRepository
 	utils.FireAndForgetSynchronizer
 }
+
+var _ shared.ComponentService = (*ComponentService)(nil) // Ensure ComponentService implements shared.ComponentService interface
 
 func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
 
@@ -45,10 +47,9 @@ func combineNamespaceAndName(namespace, name string) string {
 	return namespace + "/" + name
 }
 
-func (s *ComponentService) RefreshComponentProjectInformation(project models.ComponentProject) {
+func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject) {
 	projectKey := project.ProjectKey
-	projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
-
+	projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
 	if err != nil {
 		slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 		return
@@ -73,15 +74,14 @@ func (s *ComponentService) RefreshComponentProjectInformation(project models.Com
 	project.ScoreCard = jsonbScorecard
 
 	// save the project
-	if err := s.componentProjectRepository.Save(nil, &project); err != nil {
+	if err := s.componentProjectRepository.Save(ctx, nil, &project); err != nil {
 		slog.Warn("could not save project", "err", err)
 	} else {
 		slog.Info("updated project", "projectKey", projectKey)
-		monitoring.OpenSourceInsightProjectUpdatedAmount.Inc()
 	}
 }
 
-func (s *ComponentService) GetLicense(component models.Component) (models.Component, error) {
+func (s *ComponentService) GetLicense(ctx context.Context, component models.Component) (models.Component, error) {
 	pURL := component.ID
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
@@ -110,7 +110,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 		}
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
-			context.Background(),
+			ctx,
 			parsedPurl.Type,
 			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
 			parsedPurl.Version,
@@ -132,7 +132,7 @@ func (s *ComponentService) GetLicense(component models.Component) (models.Compon
 	return component, nil
 }
 
-func (s *ComponentService) FetchComponentProject(component models.Component) (models.Component, error) {
+func (s *ComponentService) FetchComponentProject(ctx context.Context, component models.Component) (models.Component, error) {
 	pURL := component.ID
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *ComponentService) FetchComponentProject(component models.Component) (mo
 	}
 
 	resp, err := s.openSourceInsightsService.GetVersion(
-		context.Background(),
+		ctx,
 		parsedPurl.Type,
 		combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
 		parsedPurl.Version,
@@ -154,7 +154,7 @@ func (s *ComponentService) FetchComponentProject(component models.Component) (mo
 		if project.RelationType == "SOURCE_REPO" {
 			projectKey := project.ProjectKey.ID
 
-			projectResp, err := s.openSourceInsightsService.GetProject(context.Background(), projectKey)
+			projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
 			if err != nil {
 				slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 				return component, nil
@@ -189,8 +189,8 @@ func (s *ComponentService) FetchComponentProject(component models.Component) (mo
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(tx, assetVersion.Name, assetVersion.AssetID)
+func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(ctx, tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, err
 	}
@@ -229,11 +229,11 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
 		errGroup.Go(func() (models.Component, error) {
-			comp, err := s.GetLicense(component)
+			comp, err := s.GetLicense(ctx, component)
 			if err != nil {
 				return comp, err
 			}
-			return s.FetchComponentProject(comp)
+			return s.FetchComponentProject(ctx, comp)
 		})
 	}
 
@@ -245,7 +245,7 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	}
 
 	// save the components
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+	if err := s.componentRepository.SaveBatch(ctx, nil, components); err != nil {
 		return nil, err
 	}
 
@@ -258,8 +258,10 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 		}
 	}
 
-	s.FireAndForget(func() {
+	// Detach cancellation but KEEP the trace context
+	bgCtx := context.WithoutCancel(ctx)
 
+	s.FireAndForget(func() {
 		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
 			//check if the purl is valid and has a version
 			_, err = packageurl.FromString(component.ID)
@@ -268,19 +270,19 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 		// find potential license risks
 		if artifactName == nil {
 			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts
-			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetVersion.AssetID, assetVersion.Name)
+			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(bgCtx, nil, assetVersion.AssetID, assetVersion.Name)
 			if err != nil {
 				slog.Error("could not fetch artifacts for asset version", "err", err, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifact.ArtifactName)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(bgCtx, nil, assetVersion, allComponents, artifact.ArtifactName)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, *artifactName)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(ctx, nil, assetVersion, allComponents, *artifactName)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}
@@ -290,10 +292,10 @@ func (s *ComponentService) GetAndSaveLicenseInformation(tx shared.DB, assetVersi
 	return allComponents, nil
 }
 
-func (s *ComponentService) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
-	return s.componentRepository.FetchInformationSources(artifact)
+func (s *ComponentService) FetchInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
+	return s.componentRepository.FetchInformationSources(ctx, tx, artifact)
 }
 
-func (s *ComponentService) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
-	return s.componentRepository.RemoveInformationSources(artifact, rootNodePurls)
+func (s *ComponentService) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
+	return s.componentRepository.RemoveInformationSources(ctx, tx, artifact, rootNodePurls)
 }

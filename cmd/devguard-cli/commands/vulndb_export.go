@@ -36,23 +36,25 @@ func newExportIncrementalCommand() *cobra.Command {
 					db shared.DB,
 					importService shared.VulnDBImportService,
 				) error {
-					if err := importService.CreateTablesWithSuffix("_diff"); err != nil {
+					ctx := context.Background()
+					if err := importService.CreateTablesWithSuffix(ctx, "_diff"); err != nil {
 						return err
 					}
-					if err := importService.ImportFromDiff(utils.Ptr("_diff")); err != nil {
+					if err := importService.ImportFromDiff(ctx, utils.Ptr("_diff")); err != nil {
 						return err
 					}
-					return importService.ExportDiffs("_diff")
+					return importService.ExportDiffs(ctx, "_diff")
 				}),
 			)
 
-			startCtx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
+			ctx := context.Background()
+			startCtx, cancel := context.WithTimeout(ctx, 60*time.Minute)
 			defer cancel()
 			if err := app.Start(startCtx); err != nil {
 				return err
 			}
 
-			stopCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 			return app.Stop(stopCtx)
 		},

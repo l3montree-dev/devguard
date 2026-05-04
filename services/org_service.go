@@ -3,6 +3,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,8 @@ type OrgService struct {
 	organizationRepository shared.OrganizationRepository
 	rbacProvider           shared.RBACProvider
 }
+
+var _ shared.OrgService = (*OrgService)(nil) // Ensure OrgService implements shared.OrgService interface
 
 func NewOrgService(organizationRepository shared.OrganizationRepository, rbacProvider shared.RBACProvider) *OrgService {
 	return &OrgService{
@@ -32,7 +35,7 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 		return echo.NewHTTPError(409, "organizations named opencode, github or gitlab are not allowed").WithInternal(fmt.Errorf("organizations named opencode, github or gitlab are not allowed"))
 	}
 
-	err := o.organizationRepository.Create(nil, organization)
+	err := o.organizationRepository.Create(ctx.Request().Context(), nil, organization)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
 			return echo.NewHTTPError(409, "organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
@@ -42,7 +45,7 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := shared.GetSession(ctx).GetUserID()
-	if err = shared.BootstrapOrg(rbac, userID, shared.RoleOwner); err != nil {
+	if err = shared.BootstrapOrg(ctx.Request().Context(), rbac, userID, shared.RoleOwner); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization roles").WithInternal(err)
 	}
 	ctx.Set("rbac", rbac)
@@ -50,11 +53,11 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 	return nil
 }
 
-func (o *OrgService) ReadBySlug(slug string) (*models.Org, error) {
+func (o *OrgService) ReadBySlug(ctx context.Context, slug string) (*models.Org, error) {
 	if slug == "" {
 		return nil, echo.NewHTTPError(400, "slug is required")
 	}
 
-	org, err := o.organizationRepository.ReadBySlug(slug)
+	org, err := o.organizationRepository.ReadBySlug(ctx, nil, slug)
 	return &org, err
 }

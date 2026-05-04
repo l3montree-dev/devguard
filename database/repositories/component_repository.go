@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -43,18 +44,18 @@ func NewComponentRepository(db *gorm.DB) *componentRepository {
 	}
 }
 
-func (c *componentRepository) FindAllWithoutLicense() ([]models.Component, error) {
+func (c *componentRepository) FindAllWithoutLicense(ctx context.Context, tx *gorm.DB) ([]models.Component, error) {
 	var components []models.Component
-	err := c.db.Where("license IS NULL OR license = ''").Find(&components).Error
+	err := c.GetDB(ctx, tx).Where("license IS NULL OR license = ''").Find(&components).Error
 	return components, err
 }
 
-func (c *componentRepository) CreateComponents(tx *gorm.DB, components []models.ComponentDependency) error {
+func (c *componentRepository) CreateComponents(ctx context.Context, tx *gorm.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil
 	}
 
-	return c.GetDB(tx).Create(&components).Error
+	return c.GetDB(ctx, tx).Create(&components).Error
 }
 
 // LoadComponents loads all component dependencies for an asset version.
@@ -62,8 +63,8 @@ func (c *componentRepository) CreateComponents(tx *gorm.DB, components []models.
 //
 //	tree := normalize.BuildDependencyTree(root, models.ToNodes(deps), models.BuildDepMap(deps))
 //	subtreeIDs := tree.ExtractSubtree("artifact:" + artifactName)
-func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
-	db := c.GetDB(tx)
+func (c *componentRepository) LoadComponents(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+	db := c.GetDB(ctx, tx)
 
 	// Pre-count to allocate slice with correct capacity (reduces slice growing allocations)
 	var count int64
@@ -90,11 +91,11 @@ func (c *componentRepository) LoadComponents(tx *gorm.DB, assetVersionName strin
 	return components, err
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
 
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Joins("LEFT JOIN components as dependency ON dependency.id = dependency_id").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(ctx, tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Joins("LEFT JOIN components as dependency ON dependency.id = dependency_id").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -157,16 +158,16 @@ func (c *componentRepository) LoadComponentsWithProject(tx *gorm.DB, overwritten
 
 }
 
-func (c *componentRepository) FindByPurl(tx *gorm.DB, purl string) (models.Component, error) {
+func (c *componentRepository) FindByPurl(ctx context.Context, tx *gorm.DB, purl string) (models.Component, error) {
 	var component models.Component
-	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
+	err := c.GetDB(ctx, tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
+func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
 	// Create new components in the database
 	if len(diff.AddedNodes) > 0 {
-		if err := c.CreateBatch(tx, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
+		if err := c.CreateBatch(ctx, tx, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
 			return models.Component{
 				ID: node.Component.PackageURL,
 			}
@@ -178,7 +179,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 	// delete removed components from the database
 	removedNodeIDs := diff.RemovedNodeIDs()
 	if len(removedNodeIDs) > 0 {
-		if err := c.DeleteBatch(tx, utils.Map(removedNodeIDs, func(componentID string) models.Component {
+		if err := c.DeleteBatch(ctx, tx, utils.Map(removedNodeIDs, func(componentID string) models.Component {
 			node := wholeAssetGraph.Node(componentID)
 			return models.Component{
 				ID: node.Component.PackageURL,
@@ -219,7 +220,7 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 			AND asset_version_name = '%s'
 		`, values, assetVersion.AssetID.String(), escapedVersionName)
 		// execute the query without any GORM bind parameters
-		err := c.GetDB(tx).Exec(query).Error
+		err := c.GetDB(ctx, tx).Exec(query).Error
 
 		if err != nil {
 			return err
@@ -249,18 +250,18 @@ func (c *componentRepository) HandleStateDiff(tx *gorm.DB, assetVersion models.A
 		deps = append(deps, componentDependency)
 	}
 
-	if err := c.CreateComponents(tx, deps); err != nil {
+	if err := c.CreateComponents(ctx, tx, deps); err != nil {
 		return errors.Wrap(err, "could not create component dependencies")
 	}
 	return nil
 }
 
-func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+func (c *componentRepository) GetDependencyCountPerScannerID(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`
 	}
-	err := c.db.Model(&models.Component{}).
+	err := c.GetDB(ctx, tx).Model(&models.Component{}).
 		Select("scanner_ids , COUNT(*) as count").
 		Group("scanner_ids").
 		Where("asset_version_name = ?", assetVersionName).
@@ -279,26 +280,26 @@ func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName st
 	return counts, nil
 }
 
-func (c *componentRepository) FetchInformationSources(artifact *models.Artifact) ([]models.ComponentDependency, error) {
+func (c *componentRepository) FetchInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
 	var result []models.ComponentDependency
 	// Information sources are dependencies directly under the artifact root node
 	artifactRoot := "artifact:" + artifact.ArtifactName
-	if err := c.GetDB(nil).Model(&models.ComponentDependency{}).Where("component_id = ? AND asset_version_name = ? AND asset_id = ?", artifactRoot, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
+	if err := c.GetDB(ctx, tx).Model(&models.ComponentDependency{}).Where("component_id = ? AND asset_version_name = ? AND asset_id = ?", artifactRoot, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (c *componentRepository) RemoveInformationSources(artifact *models.Artifact, rootNodePurls []string) error {
+func (c *componentRepository) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
 	artifactRoot := "artifact:" + artifact.ArtifactName
-	return c.GetDB(nil).Where("component_id = ? AND dependency_id IN (?) AND asset_version_name = ? AND asset_id = ?", artifactRoot, rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
+	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id IN (?) AND asset_version_name = ? AND asset_id = ?", artifactRoot, rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }
 
-func (c *componentRepository) SearchComponentOccurrencesByProject(tx shared.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
+func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
 	occurrences := []models.ComponentOccurrence{}
 	search = strings.TrimSpace(search)
 
-	db := c.GetDB(tx)
+	db := c.GetDB(ctx, tx)
 
 	base := db.Table("component_dependencies").
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").

@@ -15,10 +15,12 @@
 package services
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -26,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestFirstPartyVulnHash(t *testing.T) {
@@ -159,13 +162,14 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		// the ID should be set to the fingerprint when it exists
 		expectedVuln := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				ID: "test-fingerprint", // this should match the fingerprint
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"), // this should match the fingerprint
 			},
 			Fingerprint: "test-fingerprint",
 		}
 
 		// set up the mock expectation
 		scanService.On("HandleFirstPartyVulnResult",
+			mock.Anything,
 			models.Org{},
 			models.Project{},
 			models.Asset{},
@@ -175,6 +179,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			"userID").Return([]models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{expectedVuln}, nil)
 
 		_, _, r, err := scanService.HandleFirstPartyVulnResult(
+			context.Background(),
 			models.Org{},
 			models.Project{},
 			models.Asset{},
@@ -186,7 +191,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			"userID")
 		assert.NoError(t, err)
 		assert.Len(t, r, 1)
-		assert.Equal(t, "test-fingerprint", r[0].ID)
+		assert.Equal(t, "ffffffff-ffff-ffff-ffff-ffffffffffff", r[0].ID.String())
 	})
 
 }
@@ -227,7 +232,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL}, false)
 
 		// Verify the SBOM was processed successfully with the correct URL
 		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
@@ -253,7 +258,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(artifactName, ref, invalidURLs, false)
+		boms, validURLs, invalidURLsList := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, invalidURLs, false)
 
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
@@ -275,7 +280,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(artifactName, ref, []string{sbomURL}, false)
+		boms, validURLs, invalidURLs := service.FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL}, false)
 
 		// HTTP errors should result in invalid URLs
 		assert.Equal(t, 0, len(boms))

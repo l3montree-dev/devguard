@@ -494,9 +494,9 @@ func TestSchemaBreakers(t *testing.T) {
 			Dependencies: &deps,
 		}
 
-		// SBOMGraphFromCycloneDX should handle this gracefully by skipping undefined references
+		// SBOMGraphFromCycloneDX should handle this gracefully by eliminating undefined references
 		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
-		assert.Error(t, err, "Graph should return error for dependency referencing nonexistent component")
+		assert.NoError(t, err, "Graph should be created and undefined dependency references should be dropped")
 	})
 
 	t.Run("missing required metadata component - schema lenient on optional metadata will return an error during sbom graph construction", func(t *testing.T) {

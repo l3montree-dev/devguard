@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"strings"
@@ -61,31 +62,31 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 	})
 }
 
-func BootstrapOrg(rbac AccessControl, userID string, userRole Role) error {
-	if err := rbac.GrantRole(userID, userRole); err != nil {
+func BootstrapOrg(ctx context.Context, rbac AccessControl, userID string, userRole Role) error {
+	if err := rbac.GrantRole(ctx, userID, userRole); err != nil {
 		return err
 	}
 
-	if err := rbac.InheritRole(RoleOwner, RoleAdmin); err != nil { // an owner is an admin
+	if err := rbac.InheritRole(ctx, RoleOwner, RoleAdmin); err != nil { // an owner is an admin
 		return err
 	}
-	if err := rbac.InheritRole(RoleAdmin, RoleMember); err != nil { // an admin is a member
+	if err := rbac.InheritRole(ctx, RoleAdmin, RoleMember); err != nil { // an admin is a member
 		return err
 	}
 
-	if err := rbac.AllowRole(RoleOwner, ObjectOrganization, []Action{
+	if err := rbac.AllowRole(ctx, RoleOwner, ObjectOrganization, []Action{
 		ActionDelete,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole(RoleAdmin, ObjectOrganization, []Action{
+	if err := rbac.AllowRole(ctx, RoleAdmin, ObjectOrganization, []Action{
 		ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole(RoleAdmin, ObjectProject, []Action{
+	if err := rbac.AllowRole(ctx, RoleAdmin, ObjectProject, []Action{
 		ActionCreate,
 		ActionRead, // listing all projects
 		ActionUpdate,
@@ -94,7 +95,7 @@ func BootstrapOrg(rbac AccessControl, userID string, userRole Role) error {
 		return err
 	}
 
-	if err := rbac.AllowRole(RoleMember, ObjectOrganization, []Action{
+	if err := rbac.AllowRole(ctx, RoleMember, ObjectOrganization, []Action{
 		ActionRead,
 	}); err != nil {
 		return err

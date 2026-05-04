@@ -23,7 +23,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return(accesscontrol.NewSession("user1", []string{"read", "write"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user1", []string{"read", "write"}, false), nil)
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -49,7 +49,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return(nil, errors.New("could not verify request"))
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(nil, errors.New("could not verify request"))
 
 		mw := SessionMiddleware(nil, verifier)
 
@@ -73,7 +73,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Verifier)
-		verifier.On("VerifyRequestSignature", mock.Anything).Return(nil, errors.New("failed"))
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(nil, errors.New("failed"))
 
 		mw := SessionMiddleware(nil, verifier)
 

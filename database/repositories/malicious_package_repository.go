@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -36,35 +37,38 @@ func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
 	}
 }
 
-func (r *MaliciousPackageRepository) GetDB() *gorm.DB {
-	return r.db
+func (r *MaliciousPackageRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
+	}
+	return r.db.WithContext(ctx)
 }
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)
-func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(purl packageurl.PackageURL) ([]models.MaliciousAffectedComponent, error) {
-	ctx := normalize.ParsePurlForMatching(purl)
+func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.Context, tx *gorm.DB, purl packageurl.PackageURL) ([]models.MaliciousAffectedComponent, error) {
+	matchCtx := normalize.ParsePurlForMatching(purl)
 
 	var components []models.MaliciousAffectedComponent
 
 	// Build query using shared helper functions
-	query := r.db.Model(&models.MaliciousAffectedComponent{}).Where("purl = ?", ctx.SearchPurl)
-	query = BuildQualifierQuery(query, ctx.Qualifiers, ctx.Namespace)
+	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ?", matchCtx.SearchPurl)
+	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
 
 	// Align version matching behavior with PurlComparer:
 	// - If VersionIsValid is not nil, perform an exact version match.
 	// - Otherwise, fall back to semver range matching.
 
-	err := BuildQueryBasedOnMatchContext(query, ctx).Preload("MaliciousPackage").Find(&components).Error
+	err := BuildQueryBasedOnMatchContext(query, matchCtx).Preload("MaliciousPackage").Find(&components).Error
 	return components, err
 }
 
-func (r *MaliciousPackageRepository) UpsertPackages(packages []models.MaliciousPackage) error {
+func (r *MaliciousPackageRepository) UpsertPackages(ctx context.Context, tx *gorm.DB, packages []models.MaliciousPackage) error {
 	if len(packages) == 0 {
 		return nil
 	}
 
 	// Use ON CONFLICT to update if exists, insert if not
-	err := r.db.Session(
+	err := r.GetDB(ctx, tx).Session(
 		&gorm.Session{
 			Logger: logger.Discard,
 		},
@@ -82,23 +86,23 @@ func (r *MaliciousPackageRepository) UpsertPackages(packages []models.MaliciousP
 			// Can't split further, skip this problematic entry
 			return nil
 		}
-		err = r.UpsertPackages(packages[:half])
+		err = r.UpsertPackages(ctx, tx, packages[:half])
 		if err != nil {
 			return err
 		}
-		err = r.UpsertPackages(packages[half:])
+		err = r.UpsertPackages(ctx, tx, packages[half:])
 	}
 
 	return err
 }
 
-func (r *MaliciousPackageRepository) UpsertAffectedComponents(components []models.MaliciousAffectedComponent) error {
+func (r *MaliciousPackageRepository) UpsertAffectedComponents(ctx context.Context, tx *gorm.DB, components []models.MaliciousAffectedComponent) error {
 	if len(components) == 0 {
 		return nil
 	}
 
 	// Use ON CONFLICT to update if exists, insert if not
-	err := r.db.Session(
+	err := r.GetDB(ctx, tx).Session(
 		&gorm.Session{
 			Logger: logger.Discard,
 		},
@@ -116,38 +120,38 @@ func (r *MaliciousPackageRepository) UpsertAffectedComponents(components []model
 			// Can't split further, skip this problematic entry
 			return nil
 		}
-		err = r.UpsertAffectedComponents(components[:half])
+		err = r.UpsertAffectedComponents(ctx, tx, components[:half])
 		if err != nil {
 			return err
 		}
-		err = r.UpsertAffectedComponents(components[half:])
+		err = r.UpsertAffectedComponents(ctx, tx, components[half:])
 	}
 
 	return err
 }
 
-func (r *MaliciousPackageRepository) DeleteAll() error {
+func (r *MaliciousPackageRepository) DeleteAll(ctx context.Context, tx *gorm.DB) error {
 	// Delete affected components first (foreign key constraint)
-	if err := r.db.Exec("TRUNCATE TABLE malicious_affected_components CASCADE").Error; err != nil {
+	if err := r.GetDB(ctx, tx).Exec("TRUNCATE TABLE malicious_affected_components CASCADE").Error; err != nil {
 		return err
 	}
-	return r.db.Exec("TRUNCATE TABLE malicious_packages CASCADE").Error
+	return r.GetDB(ctx, tx).Exec("TRUNCATE TABLE malicious_packages CASCADE").Error
 }
 
-func (r *MaliciousPackageRepository) Count() (int64, error) {
+func (r *MaliciousPackageRepository) Count(ctx context.Context, tx *gorm.DB) (int64, error) {
 	var count int64
-	err := r.db.Model(&models.MaliciousPackage{}).Count(&count).Error
+	err := r.GetDB(ctx, tx).Model(&models.MaliciousPackage{}).Count(&count).Error
 	return count, err
 }
 
-func (r *MaliciousPackageRepository) CountByEcosystem() (map[string]int64, error) {
+func (r *MaliciousPackageRepository) CountByEcosystem(ctx context.Context, tx *gorm.DB) (map[string]int64, error) {
 	type Result struct {
 		Ecosystem string
 		Count     int64
 	}
 
 	var results []Result
-	err := r.db.Model(&models.MaliciousAffectedComponent{}).
+	err := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).
 		Select("ecosystem, COUNT(DISTINCT malicious_package_id) as count").
 		Group("ecosystem").
 		Scan(&results).Error
@@ -165,7 +169,7 @@ func (r *MaliciousPackageRepository) CountByEcosystem() (map[string]int64, error
 }
 
 // BatchUpsert handles large batches by splitting them into chunks
-func (r *MaliciousPackageRepository) BatchUpsertPackages(packages []models.MaliciousPackage, batchSize int) error {
+func (r *MaliciousPackageRepository) BatchUpsertPackages(ctx context.Context, tx *gorm.DB, packages []models.MaliciousPackage, batchSize int) error {
 	if len(packages) == 0 {
 		return nil
 	}
@@ -177,7 +181,7 @@ func (r *MaliciousPackageRepository) BatchUpsertPackages(packages []models.Malic
 		}
 
 		batch := packages[i:end]
-		if err := r.UpsertPackages(batch); err != nil {
+		if err := r.UpsertPackages(ctx, tx, batch); err != nil {
 			return err
 		}
 	}
@@ -185,7 +189,7 @@ func (r *MaliciousPackageRepository) BatchUpsertPackages(packages []models.Malic
 	return nil
 }
 
-func (r *MaliciousPackageRepository) BatchUpsertAffectedComponents(components []models.MaliciousAffectedComponent, batchSize int) error {
+func (r *MaliciousPackageRepository) BatchUpsertAffectedComponents(ctx context.Context, tx *gorm.DB, components []models.MaliciousAffectedComponent, batchSize int) error {
 	if len(components) == 0 {
 		return nil
 	}
@@ -194,7 +198,7 @@ func (r *MaliciousPackageRepository) BatchUpsertAffectedComponents(components []
 		end := min(i+batchSize, len(components))
 
 		batch := components[i:end]
-		if err := r.UpsertAffectedComponents(batch); err != nil {
+		if err := r.UpsertAffectedComponents(ctx, tx, batch); err != nil {
 			return err
 		}
 	}

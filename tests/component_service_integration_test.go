@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -132,7 +133,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			}
 
 			// Call the function under test using FX-injected component service
-			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultComponents)
 
@@ -171,13 +172,13 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Verify that corresponding vuln events were created
 			var vulnEvents []models.VulnEvent
-			err = f.DB.Where("vuln_type = ?", dtos.VulnTypeLicenseRisk).Find(&vulnEvents).Error
+			err = f.DB.Where("license_risk_id IS NOT NULL").Find(&vulnEvents).Error
 			assert.NoError(t, err)
 			assert.Equal(t, expectedRiskCount, len(vulnEvents))
 
 			// Verify vuln events are of correct type
 			for _, event := range vulnEvents {
-				assert.Equal(t, dtos.VulnTypeLicenseRisk, event.VulnType)
+				assert.NotNil(t, event.LicenseRiskID)
 				assert.Equal(t, dtos.EventTypeDetected, event.Type)
 				assert.Equal(t, "system", event.UserID)
 			}
@@ -249,7 +250,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Call the function under test using FX-injected component service
-			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 
 			// Verify that no duplicate license risk was created

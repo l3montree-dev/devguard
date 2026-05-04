@@ -24,6 +24,7 @@ import (
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -162,6 +163,7 @@ func NewInTotoRecordStopCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("output", "", "The output file name. Default is the <step>.link.json name")
+	scanner.AddAssetRefFlags(cmd)
 
 	return cmd
 }

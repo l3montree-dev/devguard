@@ -1,12 +1,14 @@
 package middlewares
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel"
 )
 
 // ExternalEntityProviderOrgSyncMiddleware returns a middleware that triggers a background org sync
@@ -21,10 +23,13 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter.Store(key, now.Add(15*time.Minute))
-				// Create a goroutine-safe context to avoid using the request context
 				safeCtx := GoroutineSafeContext(ctx)
 				go func() {
+					tracedCtx, span := otel.Tracer("devguard").Start(context.Background(), "sync-orgs")
+					defer span.End()
+					safeCtx.SetRequest(safeCtx.Request().WithContext(tracedCtx))
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
+						span.RecordError(err)
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
 					}
 				}()
@@ -50,17 +55,20 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 				if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 					limiter.Store(key, now.Add(15*time.Minute))
 
-					// Create a goroutine-safe context and capture the values we need
 					safeCtx := GoroutineSafeContext(ctx)
 					userID := shared.GetSession(ctx).GetUserID()
 					orgID := org.GetID()
 
 					go func() {
+						tracedCtx, span := otel.Tracer("devguard").Start(context.Background(), "refresh-external-entity-provider")
+						defer span.End()
+						safeCtx.SetRequest(safeCtx.Request().WithContext(tracedCtx))
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
 						if err != nil {
-							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID)
+							span.RecordError(err)
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID, "traceID", span.SpanContext().TraceID())
 						} else {
-							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", userID)
+							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", userID, "traceID", span.SpanContext().TraceID())
 						}
 					}()
 				}

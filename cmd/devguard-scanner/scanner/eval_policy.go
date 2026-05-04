@@ -25,15 +25,15 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func EvaluatePolicyAgainstAttestations(image string, policyPath string, attestations []map[string]any) (*sarif.SarifSchema210Json, error) {
+func EvaluatePolicyAgainstAttestations(image string, policyPath string, attestations []map[string]any) (*sarif.SarifSchema210Json, []compliance.PolicyEvaluation, error) {
 	policyContent, err := os.ReadFile(policyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read policy file: %w", err)
+		return nil, nil, fmt.Errorf("could not read policy file: %w", err)
 	}
 
 	policy, err := compliance.NewPolicy(filepath.Base(policyPath), string(policyContent))
 	if err != nil {
-		return nil, fmt.Errorf("could not parse policy: %w", err)
+		return nil, nil, fmt.Errorf("could not parse policy: %w", err)
 	}
 
 	model := compliance.ConvertPolicyFsToModel(*policy)
@@ -47,7 +47,7 @@ func EvaluatePolicyAgainstAttestations(image string, policyPath string, attestat
 			}
 		}
 		if len(filtered) == 0 {
-			return nil, fmt.Errorf("no attestations found for predicate type %s", policy.PredicateType)
+			return nil, nil, fmt.Errorf("no attestations found for predicate type %s", policy.PredicateType)
 		}
 	}
 
@@ -55,19 +55,19 @@ func EvaluatePolicyAgainstAttestations(image string, policyPath string, attestat
 	for _, attestation := range filtered {
 		raw, err := json.Marshal(attestation)
 		if err != nil {
-			return nil, fmt.Errorf("could not marshal attestation: %w", err)
+			return nil, nil, fmt.Errorf("could not marshal attestation: %w", err)
 		}
 
 		input, err := utils.ExtractAttestationPayload(string(raw))
 		if err != nil {
-			return nil, fmt.Errorf("could not extract attestation payload: %w", err)
+			return nil, nil, fmt.Errorf("could not extract attestation payload: %w", err)
 		}
 
 		evaluations = append(evaluations, compliance.Eval(model, input))
 	}
 
 	sarif := buildSarifFromPolicy(image, *policy, evaluations)
-	return &sarif, nil
+	return &sarif, evaluations, nil
 }
 
 func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations []compliance.PolicyEvaluation) sarif.SarifSchema210Json {
@@ -119,10 +119,17 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 	}
 
 	var results []sarif.Result
+	seen := make(map[string]bool)
+	addResult := func(r sarif.Result) {
+		key := string(r.Kind) + "|" + r.Message.Text
+		if !seen[key] {
+			seen[key] = true
+			results = append(results, r)
+		}
+	}
 	for _, evaluation := range evaluations {
 		if evaluation.Compliant != nil && *evaluation.Compliant {
-			// create a pass result
-			results = append(results, sarif.Result{
+			addResult(sarif.Result{
 				Kind:   sarif.ResultKindPass,
 				RuleID: &ruleID,
 				Message: sarif.Message{
@@ -141,7 +148,7 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 			continue
 		}
 		for _, violation := range evaluation.Violations {
-			results = append(results, sarif.Result{
+			addResult(sarif.Result{
 				Kind:   sarif.ResultKindFail,
 				RuleID: &ruleID,
 				Message: sarif.Message{

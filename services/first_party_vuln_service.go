@@ -8,7 +8,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -21,6 +20,8 @@ type firstPartyVulnService struct {
 	thirdPartyIntegration shared.IntegrationAggregate
 }
 
+var _ shared.FirstPartyVulnService = (*firstPartyVulnService)(nil) // Ensure firstPartyVulnService implements shared.FirstPartyVulnService interface
+
 func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
@@ -31,7 +32,7 @@ func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepo
 
 var _ shared.FirstPartyVulnService = (*firstPartyVulnService)(nil)
 
-func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
 
 	if len(firstPartyVulns) == 0 {
 		return nil
@@ -45,15 +46,15 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx shared.DB, userID st
 		events[i] = ev
 	}
 
-	err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
+	err := s.firstPartyVulnRepository.SaveBatch(ctx, tx, firstPartyVulns)
 	if err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
@@ -66,14 +67,14 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx shared.DB, userID
 		events[i] = ev
 	}
 
-	err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
+	err := s.firstPartyVulnRepository.SaveBatch(ctx, tx, firstPartyVulns)
 	if err != nil {
 		return err
 	}
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
-func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
@@ -86,29 +87,29 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 		return el.EventsToCopy
 	})
 
-	err := s.firstPartyVulnRepository.SaveBatchBestEffort(tx, vulns)
+	err := s.firstPartyVulnRepository.SaveBatchBestEffort(ctx, tx, vulns)
 	if err != nil {
 		return err
 	}
 
-	return s.vulnEventRepository.SaveBatchBestEffort(tx, utils.Flat(events))
+	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
-func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
-		err = s.firstPartyVulnRepository.Transaction(func(d shared.DB) error {
-			ev, err = s.updateFirstPartyVulnState(d, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+		err = s.firstPartyVulnRepository.Transaction(ctx, func(d shared.DB) error {
+			ev, err = s.updateFirstPartyVulnState(ctx, d, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateFirstPartyVulnState(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+	return s.updateFirstPartyVulnState(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 }
 
-func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch dtos.VulnEventType(statusType) {
 	case dtos.EventTypeAccepted:
@@ -121,41 +122,41 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx shared.DB, userID s
 		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
 	}
 
-	return s.applyAndSave(tx, firstPartyVuln, &ev)
+	return s.applyAndSave(ctx, tx, firstPartyVuln, &ev)
 }
 
-func (s *firstPartyVulnService) ApplyAndSave(tx shared.DB, firstPartyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error {
+func (s *firstPartyVulnService) ApplyAndSave(ctx context.Context, tx shared.DB, firstPartyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return s.firstPartyVulnRepository.Transaction(func(d shared.DB) error {
-			_, err := s.applyAndSave(d, firstPartyVuln, vulnEvent)
+		return s.firstPartyVulnRepository.Transaction(ctx, func(d shared.DB) error {
+			_, err := s.applyAndSave(ctx, d, firstPartyVuln, vulnEvent)
 			return err
 		})
 	}
 
-	_, err := s.applyAndSave(tx, firstPartyVuln, vulnEvent)
+	_, err := s.applyAndSave(ctx, tx, firstPartyVuln, vulnEvent)
 	return err
 }
 
-func (s *firstPartyVulnService) applyAndSave(tx shared.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) applyAndSave(ctx context.Context, tx shared.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the first-party vuln
 	statemachine.Apply(firstPartyVuln, *ev)
 
 	// run the updates in the transaction to keep a valid state
-	err := s.firstPartyVulnRepository.Save(tx, firstPartyVuln)
+	err := s.firstPartyVulnRepository.Save(ctx, tx, firstPartyVuln)
 	if err != nil {
 		return models.VulnEvent{}, err
 	}
-	if err := s.vulnEventRepository.Save(tx, ev); err != nil {
+	if err := s.vulnEventRepository.Save(ctx, tx, ev); err != nil {
 		return models.VulnEvent{}, err
 	}
 	firstPartyVuln.Events = append(firstPartyVuln.Events, *ev)
 	return *ev, nil
 }
 
-func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all first-party for the assetVersion
-	vulnList, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, asset.ID, "")
+	vulnList, err := s.firstPartyVulnRepository.ListByScanner(ctx, nil, assetVersion.Name, asset.ID, "")
 	if err != nil {
 		return fmt.Errorf("could not get first-party vulnerability by asset version: %w", err)
 	}
@@ -165,10 +166,10 @@ func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Pro
 		return nil
 	}
 
-	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
+	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList)
 }
 
-func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
 	if len(vulnList) == 0 {
 		return nil
 	}
@@ -176,7 +177,7 @@ func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Projec
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(asset, assetVersion.Slug, vulnerability), nil
+				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability), nil
 			})
 		}
 	}
@@ -185,14 +186,13 @@ func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Projec
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
 	if err != nil {
 		return err
 	}
-	monitoring.TicketUpdatedAmount.Inc()
 	return nil
 }

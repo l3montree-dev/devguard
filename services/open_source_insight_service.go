@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/time/rate"
 )
 
@@ -18,9 +20,11 @@ type openSourceInsightService struct {
 	rateLimiter rate.Limiter
 }
 
+var _ shared.OpenSourceInsightService = (*openSourceInsightService)(nil) // Ensure openSourceInsightService implements shared.OpenSourceInsightService interface
+
 func NewOpenSourceInsightService() *openSourceInsightService {
 	return &openSourceInsightService{
-		httpClient:  &http.Client{},
+		httpClient:  &http.Client{Transport: utils.EgressTransport},
 		rateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
 	}
 }

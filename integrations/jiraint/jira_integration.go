@@ -97,12 +97,12 @@ func (i *JiraIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
-func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	return nil
 }
 
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
-	asset, err := i.assetRepository.Read(assetID)
+	asset, err := i.assetRepository.Read(context.Background(), nil, assetID)
 	if err != nil {
 		slog.Error("could not read asset", "err", err)
 		return err
@@ -149,7 +149,7 @@ func (i *JiraIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	err = i.jiraIntegrationRepository.Delete(nil, parsedID)
+	err = i.jiraIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func extractProjectIDFromRepoID(repoID string) (int, error) {
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
 }
 
-func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*Client, int, error) {
+func (i *JiraIntegration) getClientBasedOnAsset(ctx context.Context, asset models.Asset) (*Client, int, error) {
 	if asset.RepositoryID == nil || !strings.HasPrefix(*asset.RepositoryID, "jira:") {
 		return nil, 0, fmt.Errorf("asset %s is not a Jira repository", asset.ID)
 	}
@@ -303,7 +303,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*Client, in
 		return nil, 0, fmt.Errorf("failed to extract integration id from repo id: %w", err)
 	}
 
-	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(integrationUUID)
+	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, integrationUUID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get Jira client for integration %s: %w", integrationUUID, err)
 	}
@@ -336,16 +336,16 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	assetSlug := asset.Slug
 
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, assetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, assetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
 
-	jiraClient, _, err := i.getClientBasedOnAsset(asset)
+	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
-	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(jiraClient.JiraIntegrationID)
+	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, jiraClient.JiraIntegrationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
@@ -403,11 +403,11 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 
 	labels := commonint.GetLabels(firstPartyVuln)
 
-	jiraClient, _, err := i.getClientBasedOnAsset(asset)
+	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
-	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(jiraClient.JiraIntegrationID)
+	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, jiraClient.JiraIntegrationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
@@ -453,7 +453,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 		return nil
 	}
 
-	client, projectID, err := i.getClientBasedOnAsset(asset)
+	client, projectID, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 	}
@@ -487,7 +487,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 			"ticketUrl": vuln.GetTicketURL(),
 		})
 
-	err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+	err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	if err != nil {
 		slog.Error("failed to save vulnerability with ticket information", "err", err, "vuln", vuln)
 		//TODO: if error did happen, we should remove the issue from Jira
@@ -569,18 +569,18 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 		return nil
 	}
 
-	client, _, err := i.getClientBasedOnAsset(asset)
+	client, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 	}
 
-	project, err := i.projectRepository.GetProjectByAssetID(asset.ID)
+	project, err := i.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
 
-	org, err := i.orgRepository.Read(project.OrganizationID)
+	org, err := i.orgRepository.Read(ctx, nil, project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
@@ -599,7 +599,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
 			// save the event
-			err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -675,7 +675,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -686,11 +686,11 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		return fmt.Errorf("failed to parse Jira ticket ID: %w", err)
 	}
 
-	jiraClient, _, err := i.getClientBasedOnAsset(asset)
+	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
-	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(jiraClient.JiraIntegrationID)
+	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, jiraClient.JiraIntegrationID)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
@@ -748,11 +748,11 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 		slog.Error("failed to parse Jira ticket ID", "err", err, "ticketID", utils.SafeDereference(firstPartyVuln.GetTicketID()))
 		return fmt.Errorf("failed to parse Jira ticket ID: %w", err)
 	}
-	jiraClient, _, err := i.getClientBasedOnAsset(asset)
+	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
-	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(jiraClient.JiraIntegrationID)
+	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, jiraClient.JiraIntegrationID)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
@@ -837,7 +837,7 @@ func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 
 	jiraIntegration.AccountID = accountID
 
-	if err := i.jiraIntegrationRepository.Save(nil, jiraIntegration); err != nil {
+	if err := i.jiraIntegrationRepository.Save(context.Background(), nil, jiraIntegration); err != nil {
 		return err
 	}
 	return ctx.JSON(200, dtos.JiraIntegrationDTO{

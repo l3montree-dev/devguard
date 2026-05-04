@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *PersonalAccessTokenRepository) EXPECT() *PersonalAccessTokenRepository
 }
 
 // Activate provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Activate(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *PersonalAccessTokenRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type PersonalAccessTokenRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Activate(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Activate_Call {
-	return &PersonalAccessTokenRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *PersonalAccessTokenRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Activate_Call {
+	return &PersonalAccessTokenRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *PersonalAccessTokenRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Activate_Call {
+func (_c *PersonalAccessTokenRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *PersonalAccessTokenRepository_Activate_Call) Return(err error) *Person
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Activate_Call {
+func (_c *PersonalAccessTokenRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) All() ([]models.PAT, error) {
-	ret := _mock.Called()
+func (_mock *PersonalAccessTokenRepository) All(ctx context.Context, tx shared.DB) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *PersonalAccessTokenRepository) All() ([]models.PAT, error) {
 
 	var r0 []models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.PAT, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.PAT); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.PAT)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type PersonalAccessTokenRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *PersonalAccessTokenRepository_Expecter) All() *PersonalAccessTokenRepository_All_Call {
-	return &PersonalAccessTokenRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *PersonalAccessTokenRepository_Expecter) All(ctx interface{}, tx interface{}) *PersonalAccessTokenRepository_All_Call {
+	return &PersonalAccessTokenRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *PersonalAccessTokenRepository_All_Call) Run(run func()) *PersonalAccessTokenRepository_All_Call {
+func (_c *PersonalAccessTokenRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *PersonalAccessTokenRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *PersonalAccessTokenRepository_All_Call) Return(pATs []models.PAT, err 
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_All_Call) RunAndReturn(run func() ([]models.PAT, error)) *PersonalAccessTokenRepository_All_Call {
+func (_c *PersonalAccessTokenRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.PAT, error)) *PersonalAccessTokenRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *PersonalAccessTokenRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type PersonalAccessTokenRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *PersonalAccessTokenRepository_Expecter) Begin() *PersonalAccessTokenRepository_Begin_Call {
-	return &PersonalAccessTokenRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *PersonalAccessTokenRepository_Expecter) Begin(ctx interface{}) *PersonalAccessTokenRepository_Begin_Call {
+	return &PersonalAccessTokenRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *PersonalAccessTokenRepository_Begin_Call) Run(run func()) *PersonalAccessTokenRepository_Begin_Call {
+func (_c *PersonalAccessTokenRepository_Begin_Call) Run(run func(ctx context.Context)) *PersonalAccessTokenRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,73 @@ func (_c *PersonalAccessTokenRepository_Begin_Call) Return(v shared.DB) *Persona
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Begin_Call) RunAndReturn(run func() shared.DB) *PersonalAccessTokenRepository_Begin_Call {
+func (_c *PersonalAccessTokenRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *PersonalAccessTokenRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// PersonalAccessTokenRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type PersonalAccessTokenRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *PersonalAccessTokenRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
+	return &PersonalAccessTokenRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call) Return(err error) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Create(tx shared.DB, t *models.PAT) error {
-	ret := _mock.Called(tx, t)
+func (_mock *PersonalAccessTokenRepository) Create(ctx context.Context, tx shared.DB, t *models.PAT) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.PAT) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -220,25 +299,31 @@ type PersonalAccessTokenRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) Create(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Create_Call {
-	return &PersonalAccessTokenRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *PersonalAccessTokenRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *PersonalAccessTokenRepository_Create_Call {
+	return &PersonalAccessTokenRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *PersonalAccessTokenRepository_Create_Call) Run(run func(tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Create_Call {
+func (_c *PersonalAccessTokenRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.PAT
+		if args[2] != nil {
+			arg2 = args[2].(*models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -249,22 +334,22 @@ func (_c *PersonalAccessTokenRepository_Create_Call) Return(err error) *Personal
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Create_Call {
+func (_c *PersonalAccessTokenRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) CreateBatch(tx shared.DB, ts []models.PAT) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PersonalAccessTokenRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.PAT) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -277,25 +362,31 @@ type PersonalAccessTokenRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_CreateBatch_Call {
-	return &PersonalAccessTokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_CreateBatch_Call {
+	return &PersonalAccessTokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_CreateBatch_Call {
+func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.PAT
+		if args[2] != nil {
+			arg2 = args[2].([]models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -306,22 +397,22 @@ func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_CreateBatch_Call {
+func (_c *PersonalAccessTokenRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *PersonalAccessTokenRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -334,25 +425,31 @@ type PersonalAccessTokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Delete(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Delete_Call {
-	return &PersonalAccessTokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *PersonalAccessTokenRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Delete_Call {
+	return &PersonalAccessTokenRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *PersonalAccessTokenRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Delete_Call {
+func (_c *PersonalAccessTokenRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -363,22 +460,22 @@ func (_c *PersonalAccessTokenRepository_Delete_Call) Return(err error) *Personal
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Delete_Call {
+func (_c *PersonalAccessTokenRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) DeleteBatch(tx shared.DB, ids []models.PAT) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *PersonalAccessTokenRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.PAT) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -391,25 +488,31 @@ type PersonalAccessTokenRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PersonalAccessTokenRepository_DeleteBatch_Call {
-	return &PersonalAccessTokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *PersonalAccessTokenRepository_DeleteBatch_Call {
+	return &PersonalAccessTokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.PAT)) *PersonalAccessTokenRepository_DeleteBatch_Call {
+func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.PAT)) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.PAT
+		if args[2] != nil {
+			arg2 = args[2].([]models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -420,22 +523,22 @@ func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.PAT) error) *PersonalAccessTokenRepository_DeleteBatch_Call {
+func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.PAT) error) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteByFingerprint provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) DeleteByFingerprint(fingerprint string) error {
-	ret := _mock.Called(fingerprint)
+func (_mock *PersonalAccessTokenRepository) DeleteByFingerprint(ctx context.Context, tx shared.DB, fingerprint string) error {
+	ret := _mock.Called(ctx, tx, fingerprint)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByFingerprint")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(fingerprint)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, fingerprint)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -448,19 +551,31 @@ type PersonalAccessTokenRepository_DeleteByFingerprint_Call struct {
 }
 
 // DeleteByFingerprint is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - fingerprint string
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteByFingerprint(fingerprint interface{}) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
-	return &PersonalAccessTokenRepository_DeleteByFingerprint_Call{Call: _e.mock.On("DeleteByFingerprint", fingerprint)}
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteByFingerprint(ctx interface{}, tx interface{}, fingerprint interface{}) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
+	return &PersonalAccessTokenRepository_DeleteByFingerprint_Call{Call: _e.mock.On("DeleteByFingerprint", ctx, tx, fingerprint)}
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
+func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) Run(run func(ctx context.Context, tx shared.DB, fingerprint string)) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -471,14 +586,14 @@ func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) Return(err err
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) RunAndReturn(run func(fingerprint string) error) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
+func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, fingerprint string) error) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByUserIDs provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) FindByUserIDs(userID []uuid.UUID) ([]models.PAT, error) {
-	ret := _mock.Called(userID)
+func (_mock *PersonalAccessTokenRepository) FindByUserIDs(ctx context.Context, tx shared.DB, userID []uuid.UUID) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByUserIDs")
@@ -486,18 +601,18 @@ func (_mock *PersonalAccessTokenRepository) FindByUserIDs(userID []uuid.UUID) ([
 
 	var r0 []models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.PAT, error)); ok {
-		return returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.PAT); ok {
-		r0 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.PAT)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -510,19 +625,31 @@ type PersonalAccessTokenRepository_FindByUserIDs_Call struct {
 }
 
 // FindByUserIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - userID []uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) FindByUserIDs(userID interface{}) *PersonalAccessTokenRepository_FindByUserIDs_Call {
-	return &PersonalAccessTokenRepository_FindByUserIDs_Call{Call: _e.mock.On("FindByUserIDs", userID)}
+func (_e *PersonalAccessTokenRepository_Expecter) FindByUserIDs(ctx interface{}, tx interface{}, userID interface{}) *PersonalAccessTokenRepository_FindByUserIDs_Call {
+	return &PersonalAccessTokenRepository_FindByUserIDs_Call{Call: _e.mock.On("FindByUserIDs", ctx, tx, userID)}
 }
 
-func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) Run(run func(userID []uuid.UUID)) *PersonalAccessTokenRepository_FindByUserIDs_Call {
+func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) Run(run func(ctx context.Context, tx shared.DB, userID []uuid.UUID)) *PersonalAccessTokenRepository_FindByUserIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -533,14 +660,14 @@ func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) Return(pATs []models
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) RunAndReturn(run func(userID []uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_FindByUserIDs_Call {
+func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID []uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_FindByUserIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByFingerprint provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) GetByFingerprint(fingerprint string) (models.PAT, error) {
-	ret := _mock.Called(fingerprint)
+func (_mock *PersonalAccessTokenRepository) GetByFingerprint(ctx context.Context, tx shared.DB, fingerprint string) (models.PAT, error) {
+	ret := _mock.Called(ctx, tx, fingerprint)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByFingerprint")
@@ -548,16 +675,16 @@ func (_mock *PersonalAccessTokenRepository) GetByFingerprint(fingerprint string)
 
 	var r0 models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.PAT, error)); ok {
-		return returnFunc(fingerprint)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.PAT, error)); ok {
+		return returnFunc(ctx, tx, fingerprint)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.PAT); ok {
-		r0 = returnFunc(fingerprint)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.PAT); ok {
+		r0 = returnFunc(ctx, tx, fingerprint)
 	} else {
 		r0 = ret.Get(0).(models.PAT)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(fingerprint)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, fingerprint)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -570,19 +697,31 @@ type PersonalAccessTokenRepository_GetByFingerprint_Call struct {
 }
 
 // GetByFingerprint is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - fingerprint string
-func (_e *PersonalAccessTokenRepository_Expecter) GetByFingerprint(fingerprint interface{}) *PersonalAccessTokenRepository_GetByFingerprint_Call {
-	return &PersonalAccessTokenRepository_GetByFingerprint_Call{Call: _e.mock.On("GetByFingerprint", fingerprint)}
+func (_e *PersonalAccessTokenRepository_Expecter) GetByFingerprint(ctx interface{}, tx interface{}, fingerprint interface{}) *PersonalAccessTokenRepository_GetByFingerprint_Call {
+	return &PersonalAccessTokenRepository_GetByFingerprint_Call{Call: _e.mock.On("GetByFingerprint", ctx, tx, fingerprint)}
 }
 
-func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_GetByFingerprint_Call {
+func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) Run(run func(ctx context.Context, tx shared.DB, fingerprint string)) *PersonalAccessTokenRepository_GetByFingerprint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -593,22 +732,22 @@ func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) Return(pAT models
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) RunAndReturn(run func(fingerprint string) (models.PAT, error)) *PersonalAccessTokenRepository_GetByFingerprint_Call {
+func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, fingerprint string) (models.PAT, error)) *PersonalAccessTokenRepository_GetByFingerprint_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *PersonalAccessTokenRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -623,19 +762,25 @@ type PersonalAccessTokenRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *PersonalAccessTokenRepository_Expecter) GetDB(tx interface{}) *PersonalAccessTokenRepository_GetDB_Call {
-	return &PersonalAccessTokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *PersonalAccessTokenRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *PersonalAccessTokenRepository_GetDB_Call {
+	return &PersonalAccessTokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(tx shared.DB)) *PersonalAccessTokenRepository_GetDB_Call {
+func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -646,14 +791,14 @@ func (_c *PersonalAccessTokenRepository_GetDB_Call) Return(v shared.DB) *Persona
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *PersonalAccessTokenRepository_GetDB_Call {
+func (_c *PersonalAccessTokenRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) List(ids []uuid.UUID) ([]models.PAT, error) {
-	ret := _mock.Called(ids)
+func (_mock *PersonalAccessTokenRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -661,18 +806,18 @@ func (_mock *PersonalAccessTokenRepository) List(ids []uuid.UUID) ([]models.PAT,
 
 	var r0 []models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.PAT, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.PAT); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.PAT)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -685,19 +830,31 @@ type PersonalAccessTokenRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) List(ids interface{}) *PersonalAccessTokenRepository_List_Call {
-	return &PersonalAccessTokenRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *PersonalAccessTokenRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *PersonalAccessTokenRepository_List_Call {
+	return &PersonalAccessTokenRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *PersonalAccessTokenRepository_List_Call) Run(run func(ids []uuid.UUID)) *PersonalAccessTokenRepository_List_Call {
+func (_c *PersonalAccessTokenRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *PersonalAccessTokenRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -708,14 +865,14 @@ func (_c *PersonalAccessTokenRepository_List_Call) Return(pATs []models.PAT, err
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_List_Call) RunAndReturn(run func(ids []uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_List_Call {
+func (_c *PersonalAccessTokenRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListByUserID provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) ListByUserID(userID string) ([]models.PAT, error) {
-	ret := _mock.Called(userID)
+func (_mock *PersonalAccessTokenRepository) ListByUserID(ctx context.Context, tx shared.DB, userID string) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByUserID")
@@ -723,18 +880,18 @@ func (_mock *PersonalAccessTokenRepository) ListByUserID(userID string) ([]model
 
 	var r0 []models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]models.PAT, error)); ok {
-		return returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []models.PAT); ok {
-		r0 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.PAT)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(userID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -747,19 +904,31 @@ type PersonalAccessTokenRepository_ListByUserID_Call struct {
 }
 
 // ListByUserID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - userID string
-func (_e *PersonalAccessTokenRepository_Expecter) ListByUserID(userID interface{}) *PersonalAccessTokenRepository_ListByUserID_Call {
-	return &PersonalAccessTokenRepository_ListByUserID_Call{Call: _e.mock.On("ListByUserID", userID)}
+func (_e *PersonalAccessTokenRepository_Expecter) ListByUserID(ctx interface{}, tx interface{}, userID interface{}) *PersonalAccessTokenRepository_ListByUserID_Call {
+	return &PersonalAccessTokenRepository_ListByUserID_Call{Call: _e.mock.On("ListByUserID", ctx, tx, userID)}
 }
 
-func (_c *PersonalAccessTokenRepository_ListByUserID_Call) Run(run func(userID string)) *PersonalAccessTokenRepository_ListByUserID_Call {
+func (_c *PersonalAccessTokenRepository_ListByUserID_Call) Run(run func(ctx context.Context, tx shared.DB, userID string)) *PersonalAccessTokenRepository_ListByUserID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -770,22 +939,22 @@ func (_c *PersonalAccessTokenRepository_ListByUserID_Call) Return(pATs []models.
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_ListByUserID_Call) RunAndReturn(run func(userID string) ([]models.PAT, error)) *PersonalAccessTokenRepository_ListByUserID_Call {
+func (_c *PersonalAccessTokenRepository_ListByUserID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string) ([]models.PAT, error)) *PersonalAccessTokenRepository_ListByUserID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // MarkAsLastUsedNow provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) MarkAsLastUsedNow(fingerprint string) error {
-	ret := _mock.Called(fingerprint)
+func (_mock *PersonalAccessTokenRepository) MarkAsLastUsedNow(ctx context.Context, tx shared.DB, fingerprint string) error {
+	ret := _mock.Called(ctx, tx, fingerprint)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MarkAsLastUsedNow")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(fingerprint)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, fingerprint)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -798,19 +967,31 @@ type PersonalAccessTokenRepository_MarkAsLastUsedNow_Call struct {
 }
 
 // MarkAsLastUsedNow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - fingerprint string
-func (_e *PersonalAccessTokenRepository_Expecter) MarkAsLastUsedNow(fingerprint interface{}) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
-	return &PersonalAccessTokenRepository_MarkAsLastUsedNow_Call{Call: _e.mock.On("MarkAsLastUsedNow", fingerprint)}
+func (_e *PersonalAccessTokenRepository_Expecter) MarkAsLastUsedNow(ctx interface{}, tx interface{}, fingerprint interface{}) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
+	return &PersonalAccessTokenRepository_MarkAsLastUsedNow_Call{Call: _e.mock.On("MarkAsLastUsedNow", ctx, tx, fingerprint)}
 }
 
-func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
+func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) Run(run func(ctx context.Context, tx shared.DB, fingerprint string)) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -821,14 +1002,14 @@ func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) Return(err error
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) RunAndReturn(run func(fingerprint string) error) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
+func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, fingerprint string) error) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Read(id uuid.UUID) (models.PAT, error) {
-	ret := _mock.Called(id)
+func (_mock *PersonalAccessTokenRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.PAT, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -836,16 +1017,16 @@ func (_mock *PersonalAccessTokenRepository) Read(id uuid.UUID) (models.PAT, erro
 
 	var r0 models.PAT
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.PAT, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.PAT, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.PAT); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.PAT); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.PAT)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -858,19 +1039,31 @@ type PersonalAccessTokenRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Read(id interface{}) *PersonalAccessTokenRepository_Read_Call {
-	return &PersonalAccessTokenRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *PersonalAccessTokenRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Read_Call {
+	return &PersonalAccessTokenRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *PersonalAccessTokenRepository_Read_Call) Run(run func(id uuid.UUID)) *PersonalAccessTokenRepository_Read_Call {
+func (_c *PersonalAccessTokenRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -881,22 +1074,22 @@ func (_c *PersonalAccessTokenRepository_Read_Call) Return(pAT models.PAT, err er
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.PAT, error)) *PersonalAccessTokenRepository_Read_Call {
+func (_c *PersonalAccessTokenRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.PAT, error)) *PersonalAccessTokenRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Save(tx shared.DB, t *models.PAT) error {
-	ret := _mock.Called(tx, t)
+func (_mock *PersonalAccessTokenRepository) Save(ctx context.Context, tx shared.DB, t *models.PAT) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.PAT) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -909,25 +1102,31 @@ type PersonalAccessTokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) Save(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Save_Call {
-	return &PersonalAccessTokenRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+func (_e *PersonalAccessTokenRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *PersonalAccessTokenRepository_Save_Call {
+	return &PersonalAccessTokenRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *PersonalAccessTokenRepository_Save_Call) Run(run func(tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Save_Call {
+func (_c *PersonalAccessTokenRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.PAT)) *PersonalAccessTokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.PAT
+		if args[2] != nil {
+			arg2 = args[2].(*models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -938,22 +1137,22 @@ func (_c *PersonalAccessTokenRepository_Save_Call) Return(err error) *PersonalAc
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Save_Call {
+func (_c *PersonalAccessTokenRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.PAT) error) *PersonalAccessTokenRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) SaveBatch(tx shared.DB, ts []models.PAT) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PersonalAccessTokenRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.PAT) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -966,25 +1165,31 @@ type PersonalAccessTokenRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatch_Call {
-	return &PersonalAccessTokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatch_Call {
+	return &PersonalAccessTokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatch_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.PAT
+		if args[2] != nil {
+			arg2 = args[2].([]models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -995,22 +1200,22 @@ func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Return(err error) *Perso
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatch_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) SaveBatchBestEffort(tx shared.DB, ts []models.PAT) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *PersonalAccessTokenRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.PAT) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.PAT) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.PAT) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1023,25 +1228,31 @@ type PersonalAccessTokenRepository_SaveBatchBestEffort_Call struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
-	return &PersonalAccessTokenRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *PersonalAccessTokenRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
+	return &PersonalAccessTokenRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.PAT
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.PAT)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.PAT
+		if args[2] != nil {
+			arg2 = args[2].([]models.PAT)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1052,22 +1263,22 @@ func (_c *PersonalAccessTokenRepository_SaveBatchBestEffort_Call) Return(err err
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
+func (_c *PersonalAccessTokenRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.PAT) error) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *PersonalAccessTokenRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1080,19 +1291,25 @@ type PersonalAccessTokenRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *PersonalAccessTokenRepository_Expecter) Transaction(fn interface{}) *PersonalAccessTokenRepository_Transaction_Call {
-	return &PersonalAccessTokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *PersonalAccessTokenRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *PersonalAccessTokenRepository_Transaction_Call {
+	return &PersonalAccessTokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *PersonalAccessTokenRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *PersonalAccessTokenRepository_Transaction_Call {
+func (_c *PersonalAccessTokenRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *PersonalAccessTokenRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1103,22 +1320,22 @@ func (_c *PersonalAccessTokenRepository_Transaction_Call) Return(err error) *Per
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *PersonalAccessTokenRepository_Transaction_Call {
+func (_c *PersonalAccessTokenRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *PersonalAccessTokenRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type PersonalAccessTokenRepository
-func (_mock *PersonalAccessTokenRepository) Upsert(t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *PersonalAccessTokenRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.PAT, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.PAT, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1131,31 +1348,43 @@ type PersonalAccessTokenRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - t *[]*models.PAT
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *PersonalAccessTokenRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PersonalAccessTokenRepository_Upsert_Call {
-	return &PersonalAccessTokenRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *PersonalAccessTokenRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PersonalAccessTokenRepository_Upsert_Call {
+	return &PersonalAccessTokenRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *PersonalAccessTokenRepository_Upsert_Call) Run(run func(t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string)) *PersonalAccessTokenRepository_Upsert_Call {
+func (_c *PersonalAccessTokenRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string)) *PersonalAccessTokenRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.PAT
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*models.PAT)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 *[]*models.PAT
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*models.PAT)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1166,7 +1395,7 @@ func (_c *PersonalAccessTokenRepository_Upsert_Call) Return(err error) *Personal
 	return _c
 }
 
-func (_c *PersonalAccessTokenRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string) error) *PersonalAccessTokenRepository_Upsert_Call {
+func (_c *PersonalAccessTokenRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.PAT, conflictingColumns []clause.Column, updateOnly []string) error) *PersonalAccessTokenRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

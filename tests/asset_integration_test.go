@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -46,7 +47,7 @@ func TestHandleLookup(t *testing.T) {
 			asset1.ExternalEntityID = utils.Ptr("123")
 
 			// save the updated asset using FX-injected repository
-			assert.Nil(t, f.App.AssetRepository.Save(nil, &asset1))
+			assert.Nil(t, f.App.AssetRepository.Save(context.Background(), nil, &asset1))
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/lookup", nil)
@@ -116,7 +117,7 @@ func TestAssetUpdate(t *testing.T) {
 			assert.Nil(t, err)
 
 			// Use FX-injected repository to verify
-			updatedAsset, err := f.App.AssetRepository.Read(asset1.ID)
+			updatedAsset, err := f.App.AssetRepository.Read(context.Background(), nil, asset1.ID)
 			assert.Nil(t, err)
 
 			assert.Equal(t, 7.0, *updatedAsset.CVSSAutomaticTicketThreshold)

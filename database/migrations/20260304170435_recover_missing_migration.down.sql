@@ -1,0 +1,2 @@
+-- Recovery migration placeholder for missing historical version.
+-- Intentionally left empty.

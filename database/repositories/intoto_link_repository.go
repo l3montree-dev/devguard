@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -34,25 +36,25 @@ func NewInTotoLinkRepository(db *gorm.DB) *inTotoLinkRepository {
 	}
 }
 
-func (g *inTotoLinkRepository) FindByAssetAndSupplyChainID(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error) {
+func (g *inTotoLinkRepository) FindByAssetAndSupplyChainID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error) {
 	var t []models.InTotoLink
 	// only require it to start with the supply chain id
-	err := g.db.Model(models.InTotoLink{}).Where("asset_id = ? AND supply_chain_id LIKE ?", assetID, supplyChainID+"%").Find(&t).Error
+	err := g.GetDB(ctx, tx).Model(models.InTotoLink{}).Where("asset_id = ? AND supply_chain_id LIKE ?", assetID, supplyChainID+"%").Find(&t).Error
 	return t, err
 }
 
-func (g *inTotoLinkRepository) FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error) {
+func (g *inTotoLinkRepository) FindBySupplyChainID(ctx context.Context, tx *gorm.DB, supplyChainID string) ([]models.InTotoLink, error) {
 	var t []models.InTotoLink
 
-	err := g.db.Model(&models.InTotoLink{}).
+	err := g.GetDB(ctx, tx).Model(&models.InTotoLink{}).
 		Where("LEFT(supply_chain_id, 8) = ?", supplyChainID).
 		Find(&t).Error
 
 	return t, err
 }
 
-func (g *inTotoLinkRepository) Save(tx *gorm.DB, model *models.InTotoLink) error {
-	return g.db.Session(&gorm.Session{
+func (g *inTotoLinkRepository) Save(ctx context.Context, tx *gorm.DB, model *models.InTotoLink) error {
+	return g.GetDB(ctx, tx).Session(&gorm.Session{
 		FullSaveAssociations: false,
 	}).Save(model).Error
 }

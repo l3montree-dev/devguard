@@ -4,11 +4,14 @@
 package tests
 
 import (
+	"bytes"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -215,6 +218,69 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Len(t, artifacts, 1)
 			assert.Equal(t, anotherAssetVersion.Name, artifacts[0].AssetVersionName)
+		})
+
+		t.Run("should clear component_dependencies and license_risks after deleting all artifacts (bug #1810)", func(t *testing.T) {
+			artifactName := "trivy-debian-image-bug1810"
+
+			// Scan a real SBOM to populate component_dependencies and license_risks.
+			sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+			assert.NoError(t, err)
+
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/scan", bytes.NewReader(sbomBytes))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", artifactName)
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "trivy")
+			scanCtx := app.NewContext(req, recorder)
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("test-user")
+			shared.SetAsset(scanCtx, asset)
+			shared.SetProject(scanCtx, project)
+			shared.SetOrg(scanCtx, org)
+			shared.SetSession(scanCtx, authSession)
+
+			err = f.App.ScanController.ScanDependencyVulnFromProject(scanCtx)
+			assert.NoError(t, err)
+			assert.Equal(t, 200, recorder.Code, "scan should succeed")
+
+			// Verify component_dependencies were created.
+			var depCount int64
+			f.DB.Table("component_dependencies").
+				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Count(&depCount)
+			assert.Greater(t, depCount, int64(0), "component_dependencies should be populated after scan")
+
+			// Delete the artifact.
+			artifact := models.Artifact{
+				ArtifactName:     artifactName,
+				AssetVersionName: assetVersion.Name,
+				AssetID:          asset.ID,
+			}
+			recorder2 := httptest.NewRecorder()
+			req2 := httptest.NewRequest("DELETE", "/artifacts/"+artifactName, nil)
+			ctx2 := app.NewContext(req2, recorder2)
+			setupContext(ctx2, artifact)
+
+			err = f.App.ArtifactController.DeleteArtifact(ctx2)
+			assert.NoError(t, err)
+			assert.Equal(t, 200, recorder2.Code, "delete should succeed")
+
+			// After deleting the only artifact, component_dependencies must be empty.
+			var depCountAfter int64
+			f.DB.Table("component_dependencies").
+				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Count(&depCountAfter)
+			assert.Equal(t, int64(0), depCountAfter, "component_dependencies should be empty after deleting all artifacts")
+
+			// license_risks must also be empty.
+			var licenseCountAfter int64
+			f.DB.Table("license_risks").
+				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Count(&licenseCountAfter)
+			assert.Equal(t, int64(0), licenseCountAfter, "license_risks should be empty after deleting all artifacts")
 		})
 	})
 }

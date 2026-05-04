@@ -1,16 +1,17 @@
 package accesscontrol
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestIsAllowed(t *testing.T) {
-
 	type testCase struct {
 		name           string
 		userID         string
@@ -48,9 +49,8 @@ func TestIsAllowed(t *testing.T) {
 			thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
 
 			// Only mock rootAccessControl if we expect it to be called
-			// (ObjectOrganization read is short-circuited and never reaches the root AC).
 			if tc.object != shared.ObjectOrganization {
-				rootAccessControl.On("IsAllowed", NewSession(tc.userID, nil, false), tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
+				rootAccessControl.On("IsAllowed", mock.Anything, NewSession(tc.userID, nil, false), tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
 			}
 
 			rbac := NewExternalEntityProviderRBAC(
@@ -60,7 +60,7 @@ func TestIsAllowed(t *testing.T) {
 				"external-entity-provider-id",
 			)
 
-			result, err := rbac.IsAllowed(NewSession(tc.userID, nil, false), tc.object, tc.action)
+			result, err := rbac.IsAllowed(context.Background(), NewSession(tc.userID, nil, false), tc.object, tc.action)
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -69,43 +69,4 @@ func TestIsAllowed(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestHasAccess(t *testing.T) {
-
-	t.Run("the third party integration should be called", func(t *testing.T) {
-		ctx := mocks.NewContext(t)
-		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
-		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", ctx, "external-entity-provider-id").Return(true, nil)
-
-		rbac := NewExternalEntityProviderRBAC(
-			ctx,
-			rootAccessControl,
-			thirdpartyIntegrationMock,
-			"external-entity-provider-id",
-		)
-
-		hasAccess, err := rbac.HasAccess(NewSession("userID", nil, false))
-		assert.NoError(t, err)
-		assert.True(t, hasAccess)
-	})
-
-	t.Run("if no admin token is provided, the third party integration should be called (false)", func(t *testing.T) {
-		ctx := mocks.NewContext(t)
-		rootAccessControl := mocks.NewAccessControl(t)
-		thirdpartyIntegrationMock := mocks.NewIntegrationAggregate(t)
-		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", ctx, "external-entity-provider-id").Return(false, nil)
-
-		rbac := NewExternalEntityProviderRBAC(
-			ctx,
-			rootAccessControl,
-			thirdpartyIntegrationMock,
-			"external-entity-provider-id",
-		)
-
-		hasAccess, err := rbac.HasAccess(NewSession("userID", nil, false))
-		assert.NoError(t, err)
-		assert.False(t, hasAccess)
-	})
 }

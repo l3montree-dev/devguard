@@ -1,43 +1,53 @@
 package services
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ArtifactService struct {
-	csafService            shared.CSAFService
-	artifactRepository     shared.ArtifactRepository
-	cveRepository          shared.CveRepository
-	componentRepository    shared.ComponentRepository
-	assetVersionRepository shared.AssetVersionRepository
-	assetVersionService    shared.AssetVersionService
-	dependencyVulnService  shared.DependencyVulnService
-	scanService            shared.ScanService
+	csafService              shared.CSAFService
+	artifactRepository       shared.ArtifactRepository
+	cveRepository            shared.CveRepository
+	componentRepository      shared.ComponentRepository
+	assetVersionRepository   shared.AssetVersionRepository
+	assetVersionService      shared.AssetVersionService
+	dependencyVulnService    shared.DependencyVulnService
+	dependencyVulnRepository shared.DependencyVulnRepository
+	scanService              shared.ScanService
+	synchronizer             utils.FireAndForgetSynchronizer
 }
+
+var _ shared.ArtifactService = (*ArtifactService)(nil) // Ensure ArtifactService implements shared.ArtifactService interface
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, scanService shared.ScanService) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, dependencyVulnRepository shared.DependencyVulnRepository, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
 	return &ArtifactService{
-		csafService:            csafService,
-		artifactRepository:     artifactRepository,
-		cveRepository:          cveRepository,
-		componentRepository:    componentRepository,
-		assetVersionRepository: assetVersionRepository,
-		assetVersionService:    assetVersionService,
-		dependencyVulnService:  dependencyVulnService,
-		scanService:            scanService,
+		csafService:              csafService,
+		artifactRepository:       artifactRepository,
+		cveRepository:            cveRepository,
+		componentRepository:      componentRepository,
+		assetVersionRepository:   assetVersionRepository,
+		assetVersionService:      assetVersionService,
+		dependencyVulnService:    dependencyVulnService,
+		dependencyVulnRepository: dependencyVulnRepository,
+		scanService:              scanService,
+		synchronizer:             synchronizer,
 	}
 }
 
-func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
-	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
+func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(ctx, tx, assetID, assetVersionName)
 	if err != nil {
 		return nil, err
 	}
@@ -45,20 +55,20 @@ func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(assetID uuid.
 	return artifacts, nil
 }
 
-func (s *ArtifactService) SaveArtifact(artifact *models.Artifact) error {
-	return s.artifactRepository.Save(nil, artifact)
+func (s *ArtifactService) SaveArtifact(ctx context.Context, artifact *models.Artifact) error {
+	return s.artifactRepository.Save(ctx, nil, artifact)
 }
 
-func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName string, artifactName string) error {
+func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {
 	assetVersion := models.AssetVersion{
 		AssetID: assetID,
 		Name:    assetVersionName,
 	}
 
 	// Execute deletion in a transaction
-	return s.componentRepository.GetDB(nil).Transaction(func(tx *gorm.DB) error {
+	if err := s.componentRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
 		// Load the full SBOM graph before deletion
-		wholeAssetGraph, err := s.assetVersionService.LoadFullSBOMGraph(assetVersion)
+		wholeAssetGraph, err := s.assetVersionService.LoadFullSBOMGraph(ctx, tx, assetVersion)
 		if err != nil {
 			slog.Error("failed to load full SBOM for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "error", err)
 			return err
@@ -68,13 +78,13 @@ func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName str
 		diff := wholeAssetGraph.DeleteArtifactFromGraph(artifactName)
 
 		// Use HandleStateDiff to properly delete component dependencies
-		if err := s.componentRepository.HandleStateDiff(tx, assetVersion, wholeAssetGraph, diff); err != nil {
+		if err := s.componentRepository.HandleStateDiff(ctx, tx, assetVersion, wholeAssetGraph, diff); err != nil {
 			slog.Error("failed to handle state diff for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
 			return err
 		}
 
 		// Delete the artifact record itself
-		err = s.artifactRepository.DeleteArtifact(tx, assetID, assetVersionName, artifactName)
+		err = s.artifactRepository.DeleteArtifact(ctx, tx, assetID, assetVersionName, artifactName)
 		if err != nil {
 			slog.Error("failed to delete artifact record", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
 			return err
@@ -82,9 +92,57 @@ func (s *ArtifactService) DeleteArtifact(assetID uuid.UUID, assetVersionName str
 
 		slog.Info("artifact deleted successfully", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName)
 		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Run orphan cleanup after the transaction commits so it sees the committed state.
+	// Uses FireAndForget: goroutine in production, synchronous in tests.
+	s.synchronizer.FireAndForget(func() {
+		if err := s.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
+			slog.Error("failed to clean up orphaned records", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+		}
 	})
+
+	return nil
 }
 
-func (s *ArtifactService) ReadArtifact(name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
-	return s.artifactRepository.ReadArtifact(name, assetVersionName, assetID)
+func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
+	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionName, assetID)
+}
+
+func (s *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+	// get all associated dependencyVulns
+	dependencyVulns, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var defaultVulns []models.DependencyVuln
+	if assetVersion.DefaultBranch {
+		return dependencyVulns, nil
+	}
+
+	// get the dependency vulns for the default asset version to check if any are resolved already
+	defaultVulns, err = s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
+	m := make(map[string]bool)
+	for _, v := range defaultVulns {
+		if v.State == dtos.VulnStateFixed {
+			m[fmt.Sprintf("%s/%s", v.CVEID, v.ComponentPurl)] = true
+		}
+	}
+
+	// mark all vulns as fixed if they are in the map
+	for i := range dependencyVulns {
+		if m[fmt.Sprintf("%s/%s", dependencyVulns[i].CVEID, dependencyVulns[i].ComponentPurl)] {
+			dependencyVulns[i].State = dtos.VulnStateFixed
+		}
+	}
+	return dependencyVulns, nil
 }

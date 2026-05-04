@@ -36,7 +36,7 @@ import (
 // NewPURLInspectCommand creates the inspect command for PURL inspection
 func NewPURLInspectCommand() *cobra.Command {
 	inspectCmd := &cobra.Command{
-		Use:   "inspect <purl>",
+		Use:   "purl-inspect <purl>",
 		Short: "Inspect PURL for matching CVEs and vulnerabilities",
 		Long: `Inspects a Package URL (PURL) against the vulnerability database and displays
 detailed information about matching CVEs, affected components, and relationships.

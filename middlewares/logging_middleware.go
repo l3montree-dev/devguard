@@ -5,7 +5,22 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// traceID injects the current OpenTelemetry trace ID into the X-Trace-ID response header
+// so clients can correlate their request with backend traces in Jaeger / GlitchTip.
+func traceID() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			span := trace.SpanFromContext(ctx.Request().Context())
+			if span.SpanContext().IsValid() {
+				ctx.Response().Header().Set("X-Trace-ID", span.SpanContext().TraceID().String())
+			}
+			return next(ctx)
+		}
+	}
+}
 
 // custom echo middleware used for request logging
 func logger() echo.MiddlewareFunc {

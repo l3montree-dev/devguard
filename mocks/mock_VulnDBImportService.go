@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,16 +38,16 @@ func (_m *VulnDBImportService) EXPECT() *VulnDBImportService_Expecter {
 }
 
 // CleanupOrphanedTables provides a mock function for the type VulnDBImportService
-func (_mock *VulnDBImportService) CleanupOrphanedTables() error {
-	ret := _mock.Called()
+func (_mock *VulnDBImportService) CleanupOrphanedTables(ctx context.Context) error {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CleanupOrphanedTables")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,13 +60,20 @@ type VulnDBImportService_CleanupOrphanedTables_Call struct {
 }
 
 // CleanupOrphanedTables is a helper method to define mock.On call
-func (_e *VulnDBImportService_Expecter) CleanupOrphanedTables() *VulnDBImportService_CleanupOrphanedTables_Call {
-	return &VulnDBImportService_CleanupOrphanedTables_Call{Call: _e.mock.On("CleanupOrphanedTables")}
+//   - ctx context.Context
+func (_e *VulnDBImportService_Expecter) CleanupOrphanedTables(ctx interface{}) *VulnDBImportService_CleanupOrphanedTables_Call {
+	return &VulnDBImportService_CleanupOrphanedTables_Call{Call: _e.mock.On("CleanupOrphanedTables", ctx)}
 }
 
-func (_c *VulnDBImportService_CleanupOrphanedTables_Call) Run(run func()) *VulnDBImportService_CleanupOrphanedTables_Call {
+func (_c *VulnDBImportService_CleanupOrphanedTables_Call) Run(run func(ctx context.Context)) *VulnDBImportService_CleanupOrphanedTables_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -74,22 +83,22 @@ func (_c *VulnDBImportService_CleanupOrphanedTables_Call) Return(err error) *Vul
 	return _c
 }
 
-func (_c *VulnDBImportService_CleanupOrphanedTables_Call) RunAndReturn(run func() error) *VulnDBImportService_CleanupOrphanedTables_Call {
+func (_c *VulnDBImportService_CleanupOrphanedTables_Call) RunAndReturn(run func(ctx context.Context) error) *VulnDBImportService_CleanupOrphanedTables_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateTablesWithSuffix provides a mock function for the type VulnDBImportService
-func (_mock *VulnDBImportService) CreateTablesWithSuffix(suffix string) error {
-	ret := _mock.Called(suffix)
+func (_mock *VulnDBImportService) CreateTablesWithSuffix(ctx context.Context, suffix string) error {
+	ret := _mock.Called(ctx, suffix)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateTablesWithSuffix")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(suffix)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, suffix)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -102,19 +111,25 @@ type VulnDBImportService_CreateTablesWithSuffix_Call struct {
 }
 
 // CreateTablesWithSuffix is a helper method to define mock.On call
+//   - ctx context.Context
 //   - suffix string
-func (_e *VulnDBImportService_Expecter) CreateTablesWithSuffix(suffix interface{}) *VulnDBImportService_CreateTablesWithSuffix_Call {
-	return &VulnDBImportService_CreateTablesWithSuffix_Call{Call: _e.mock.On("CreateTablesWithSuffix", suffix)}
+func (_e *VulnDBImportService_Expecter) CreateTablesWithSuffix(ctx interface{}, suffix interface{}) *VulnDBImportService_CreateTablesWithSuffix_Call {
+	return &VulnDBImportService_CreateTablesWithSuffix_Call{Call: _e.mock.On("CreateTablesWithSuffix", ctx, suffix)}
 }
 
-func (_c *VulnDBImportService_CreateTablesWithSuffix_Call) Run(run func(suffix string)) *VulnDBImportService_CreateTablesWithSuffix_Call {
+func (_c *VulnDBImportService_CreateTablesWithSuffix_Call) Run(run func(ctx context.Context, suffix string)) *VulnDBImportService_CreateTablesWithSuffix_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -125,22 +140,22 @@ func (_c *VulnDBImportService_CreateTablesWithSuffix_Call) Return(err error) *Vu
 	return _c
 }
 
-func (_c *VulnDBImportService_CreateTablesWithSuffix_Call) RunAndReturn(run func(suffix string) error) *VulnDBImportService_CreateTablesWithSuffix_Call {
+func (_c *VulnDBImportService_CreateTablesWithSuffix_Call) RunAndReturn(run func(ctx context.Context, suffix string) error) *VulnDBImportService_CreateTablesWithSuffix_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ExportDiffs provides a mock function for the type VulnDBImportService
-func (_mock *VulnDBImportService) ExportDiffs(extraTableNameSuffix string) error {
-	ret := _mock.Called(extraTableNameSuffix)
+func (_mock *VulnDBImportService) ExportDiffs(ctx context.Context, extraTableNameSuffix string) error {
+	ret := _mock.Called(ctx, extraTableNameSuffix)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ExportDiffs")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
-		r0 = returnFunc(extraTableNameSuffix)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, extraTableNameSuffix)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -153,19 +168,25 @@ type VulnDBImportService_ExportDiffs_Call struct {
 }
 
 // ExportDiffs is a helper method to define mock.On call
+//   - ctx context.Context
 //   - extraTableNameSuffix string
-func (_e *VulnDBImportService_Expecter) ExportDiffs(extraTableNameSuffix interface{}) *VulnDBImportService_ExportDiffs_Call {
-	return &VulnDBImportService_ExportDiffs_Call{Call: _e.mock.On("ExportDiffs", extraTableNameSuffix)}
+func (_e *VulnDBImportService_Expecter) ExportDiffs(ctx interface{}, extraTableNameSuffix interface{}) *VulnDBImportService_ExportDiffs_Call {
+	return &VulnDBImportService_ExportDiffs_Call{Call: _e.mock.On("ExportDiffs", ctx, extraTableNameSuffix)}
 }
 
-func (_c *VulnDBImportService_ExportDiffs_Call) Run(run func(extraTableNameSuffix string)) *VulnDBImportService_ExportDiffs_Call {
+func (_c *VulnDBImportService_ExportDiffs_Call) Run(run func(ctx context.Context, extraTableNameSuffix string)) *VulnDBImportService_ExportDiffs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -176,22 +197,22 @@ func (_c *VulnDBImportService_ExportDiffs_Call) Return(err error) *VulnDBImportS
 	return _c
 }
 
-func (_c *VulnDBImportService_ExportDiffs_Call) RunAndReturn(run func(extraTableNameSuffix string) error) *VulnDBImportService_ExportDiffs_Call {
+func (_c *VulnDBImportService_ExportDiffs_Call) RunAndReturn(run func(ctx context.Context, extraTableNameSuffix string) error) *VulnDBImportService_ExportDiffs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ImportFromDiff provides a mock function for the type VulnDBImportService
-func (_mock *VulnDBImportService) ImportFromDiff(extraTableNameSuffix *string) error {
-	ret := _mock.Called(extraTableNameSuffix)
+func (_mock *VulnDBImportService) ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error {
+	ret := _mock.Called(ctx, extraTableNameSuffix)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ImportFromDiff")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*string) error); ok {
-		r0 = returnFunc(extraTableNameSuffix)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *string) error); ok {
+		r0 = returnFunc(ctx, extraTableNameSuffix)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -204,19 +225,25 @@ type VulnDBImportService_ImportFromDiff_Call struct {
 }
 
 // ImportFromDiff is a helper method to define mock.On call
+//   - ctx context.Context
 //   - extraTableNameSuffix *string
-func (_e *VulnDBImportService_Expecter) ImportFromDiff(extraTableNameSuffix interface{}) *VulnDBImportService_ImportFromDiff_Call {
-	return &VulnDBImportService_ImportFromDiff_Call{Call: _e.mock.On("ImportFromDiff", extraTableNameSuffix)}
+func (_e *VulnDBImportService_Expecter) ImportFromDiff(ctx interface{}, extraTableNameSuffix interface{}) *VulnDBImportService_ImportFromDiff_Call {
+	return &VulnDBImportService_ImportFromDiff_Call{Call: _e.mock.On("ImportFromDiff", ctx, extraTableNameSuffix)}
 }
 
-func (_c *VulnDBImportService_ImportFromDiff_Call) Run(run func(extraTableNameSuffix *string)) *VulnDBImportService_ImportFromDiff_Call {
+func (_c *VulnDBImportService_ImportFromDiff_Call) Run(run func(ctx context.Context, extraTableNameSuffix *string)) *VulnDBImportService_ImportFromDiff_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *string
+		if args[1] != nil {
+			arg1 = args[1].(*string)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -227,7 +254,7 @@ func (_c *VulnDBImportService_ImportFromDiff_Call) Return(err error) *VulnDBImpo
 	return _c
 }
 
-func (_c *VulnDBImportService_ImportFromDiff_Call) RunAndReturn(run func(extraTableNameSuffix *string) error) *VulnDBImportService_ImportFromDiff_Call {
+func (_c *VulnDBImportService_ImportFromDiff_Call) RunAndReturn(run func(ctx context.Context, extraTableNameSuffix *string) error) *VulnDBImportService_ImportFromDiff_Call {
 	_c.Call.Return(run)
 	return _c
 }

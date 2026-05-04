@@ -7,7 +7,6 @@ package mocks
 import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/labstack/echo/v4"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -215,7 +214,7 @@ func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) RunAndReturn(run fu
 }
 
 // TriggerSync provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) TriggerSync(c echo.Context) error {
+func (_mock *ExternalEntityProviderService) TriggerSync(c shared.Context) error {
 	ret := _mock.Called(c)
 
 	if len(ret) == 0 {
@@ -223,7 +222,7 @@ func (_mock *ExternalEntityProviderService) TriggerSync(c echo.Context) error {
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(echo.Context) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) error); ok {
 		r0 = returnFunc(c)
 	} else {
 		r0 = ret.Error(0)
@@ -237,16 +236,16 @@ type ExternalEntityProviderService_TriggerSync_Call struct {
 }
 
 // TriggerSync is a helper method to define mock.On call
-//   - c echo.Context
+//   - c shared.Context
 func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c interface{}) *ExternalEntityProviderService_TriggerSync_Call {
 	return &ExternalEntityProviderService_TriggerSync_Call{Call: _e.mock.On("TriggerSync", c)}
 }
 
-func (_c *ExternalEntityProviderService_TriggerSync_Call) Run(run func(c echo.Context)) *ExternalEntityProviderService_TriggerSync_Call {
+func (_c *ExternalEntityProviderService_TriggerSync_Call) Run(run func(c shared.Context)) *ExternalEntityProviderService_TriggerSync_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 echo.Context
+		var arg0 shared.Context
 		if args[0] != nil {
-			arg0 = args[0].(echo.Context)
+			arg0 = args[0].(shared.Context)
 		}
 		run(
 			arg0,
@@ -260,7 +259,7 @@ func (_c *ExternalEntityProviderService_TriggerSync_Call) Return(err error) *Ext
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_TriggerSync_Call) RunAndReturn(run func(c echo.Context) error) *ExternalEntityProviderService_TriggerSync_Call {
+func (_c *ExternalEntityProviderService_TriggerSync_Call) RunAndReturn(run func(c shared.Context) error) *ExternalEntityProviderService_TriggerSync_Call {
 	_c.Call.Return(run)
 	return _c
 }

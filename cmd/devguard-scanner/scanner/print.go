@@ -24,6 +24,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
@@ -32,14 +33,14 @@ import (
 // Set to gitlab output size limit
 var rowLengthLimit = 80
 
-func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
+func PrintFirstPartyScanResults(scanResponse compat.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
 	}
 
 	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) bool {
+	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v compat.FirstPartyVulnDTO) bool {
 		return v.State == dtos.VulnStateOpen
 	})
 
@@ -66,7 +67,7 @@ func PrintFirstPartyScanResults(scanResponse dtos.FirstPartyScanResponse, assetN
 	return nil
 }
 
-func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
+func PrintSecretScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
 	for _, vuln := range firstPartyVulns {
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
@@ -88,7 +89,7 @@ func PrintSecretScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI stri
 	}
 }
 
-func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
+func PrintSastScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
 
 	for _, vuln := range firstPartyVulns {
 		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
@@ -106,14 +107,14 @@ func PrintSastScanResults(firstPartyVulns []dtos.FirstPartyVulnDTO, webUI, asset
 }
 
 // can be reused for container scanning as well.
-func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
+func PrintScaResults(scanResponse compat.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
 		return nil
 	}
 	// group the dependencyVulns by their purl
-	dependencyVulnsByPurl := map[string][]dtos.DependencyVulnDTO{}
+	dependencyVulnsByPurl := map[string][]compat.DependencyVulnDTO{}
 	for _, v := range scanResponse.DependencyVulns {
 		purlKey := strings.TrimSpace(v.ComponentPurl)
 		if purlKey == "" {
@@ -121,14 +122,14 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 		}
 		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
-			dependencyVulnsByPurl[purlKey] = []dtos.DependencyVulnDTO{}
+			dependencyVulnsByPurl[purlKey] = []compat.DependencyVulnDTO{}
 		}
 		dependencyVulnsByPurl[purlKey] = append(dependencyVulnsByPurl[purlKey], v)
 	}
 
 	// delete the duplicates in each group
 	for purl, vulns := range dependencyVulnsByPurl {
-		uniqueVulns := map[string]dtos.DependencyVulnDTO{}
+		uniqueVulns := map[string]compat.DependencyVulnDTO{}
 		for _, v := range vulns {
 			uniqueVulns[fmt.Sprintf("%s:%.2f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
 		}
@@ -139,10 +140,14 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 
 	tw := table.NewWriter()
 	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status", "Path"})
+	tw.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, AutoMerge: true},
+		{Number: 8, AutoMerge: true},
+	})
 	for _, v := range dependencyVulnsByPurl {
 		//order the vulnerabilities in each group by their risk
-		slices.SortFunc(v, func(a, b dtos.DependencyVulnDTO) int {
+		slices.SortFunc(v, func(a, b compat.DependencyVulnDTO) int {
 			return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 		})
 
@@ -171,7 +176,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 			}
 		}
 
-		for i, vuln := range v {
+		for _, vuln := range v {
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(vuln.ComponentPurl)
@@ -183,10 +188,7 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 				}
 			}
 
-			// Show purl only for the first vulnerability in the group
-			// Color purl red if any vulnerability in the group has failed
-			showPurl := i == 0
-			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, showPurl, vulnFailed[vuln.CVEID], groupHasFailed))
+			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, vulnFailed[vuln.CVEID], groupHasFailed))
 		}
 		tw.AppendSeparator()
 	}
@@ -228,35 +230,43 @@ func PrintScaResults(scanResponse dtos.ScanResponse, failOnRisk, failOnCVSS, ass
 	return nil
 }
 
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dtos.DependencyVulnDTO, showPurl bool, failed bool, groupHasFailed bool) table.Row {
-	cvss := v.CVE.CVSS
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
+	var cvss string
+	if v.CVE.CVSS == -1 {
+		cvss = "N/A"
+	} else {
+		cvss = fmt.Sprintf("%.1f", v.CVE.CVSS)
+	}
+
+	var risk string
+	if v.RawRiskAssessment == nil {
+		risk = "N/A"
+	} else {
+		risk = fmt.Sprintf("%.1f", *v.RawRiskAssessment)
+	}
+
+	// Keep vulnPath plain so AutoMerge can collapse identical paths across rows in the same group.
+	vulnPath := strings.Join(v.VulnerabilityPath, "\n v \n")
 
 	var libraryName string
-	if showPurl {
-		if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-			libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
-		} else {
-			libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
-		}
-		// Color purl red if any vulnerability in the group has failed
-		if groupHasFailed {
-			libraryName = text.FgRed.Sprint(libraryName)
-		}
+	if pURL.Namespace == "" {
+		libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
 	} else {
-		libraryName = ""
+		libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
 	}
 
 	if failed {
 		return table.Row{
-			libraryName,
+			text.FgRed.Sprint(libraryName),
 			text.FgRed.Sprint(v.CVEID),
-			text.FgRed.Sprintf("%.2f", utils.OrDefault(v.RawRiskAssessment, 0)),
-			text.FgRed.Sprintf("%.1f", cvss),
+			text.FgRed.Sprint(risk),
+			text.FgRed.Sprint(cvss),
 			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
 			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
 			text.FgRed.Sprint(v.State),
+			vulnPath,
 		}
 	}
 
-	return table.Row{libraryName, v.CVEID, utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+	return table.Row{libraryName, v.CVEID, risk, cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, vulnPath}
 }

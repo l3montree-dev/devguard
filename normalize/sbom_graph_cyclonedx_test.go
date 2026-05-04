@@ -1,12 +1,155 @@
 package normalize
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestStackOverflowSBOMGraphToCycloneDX(t *testing.T) {
+	// read the testdata/stack-overflow-sbom.json to reproduce the issue
+	b, _ := os.ReadFile("testdata/stack-overflow-sbom.json")
+	var bom cdx.BOM
+	err := json.Unmarshal(b, &bom)
+	assert.NoError(t, err, "Should unmarshal the test SBOM without error")
+
+	// Create a graph from the BOM and then export it back to CycloneDX
+	_, err = SBOMGraphFromCycloneDX(&bom, "", "", false)
+	assert.NoError(t, err, "Should create graph from CycloneDX BOM without error")
+}
+
+func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T) {
+	deps := []cdx.Dependency{
+		{Ref: "root", Dependencies: &[]string{"pkg:npm/a@1.0.0"}},
+		{Ref: "pkg:npm/a@1.0.0", Dependencies: &[]string{"invalid-node"}},
+		{Ref: "invalid-node", Dependencies: &[]string{"pkg:npm/c@3.0.0"}},
+	}
+
+	bom := &cdx.BOM{
+		SpecVersion: cdx.SpecVersion1_6,
+		BOMFormat:   "CycloneDX",
+		Version:     1,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "root",
+				Name:   "root",
+				Type:   cdx.ComponentTypeApplication,
+			},
+		},
+		Components: &[]cdx.Component{
+			{
+				BOMRef:     "pkg:npm/a@1.0.0",
+				Name:       "a",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/a@1.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			},
+			{
+				BOMRef:     "pkg:npm/c@3.0.0",
+				Name:       "c",
+				Version:    "3.0.0",
+				PackageURL: "pkg:npm/c@3.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			},
+		},
+		Dependencies: &deps,
+	}
+
+	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	assert.NoError(t, err)
+
+	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
+	assert.NotNil(t, exported.Dependencies)
+
+	var rootDeps, aDeps *cdx.Dependency
+	for i := range *exported.Dependencies {
+		switch (*exported.Dependencies)[i].Ref {
+		case "root":
+			rootDeps = &(*exported.Dependencies)[i]
+		case "pkg:npm/a@1.0.0":
+			aDeps = &(*exported.Dependencies)[i]
+		}
+	}
+
+	assert.NotNil(t, rootDeps)
+	assert.NotNil(t, rootDeps.Dependencies)
+	assert.Contains(t, *rootDeps.Dependencies, "pkg:npm/a@1.0.0")
+	assert.NotContains(t, *rootDeps.Dependencies, "pkg:npm/c@3.0.0")
+
+	assert.NotNil(t, aDeps)
+	assert.NotNil(t, aDeps.Dependencies)
+	assert.Contains(t, *aDeps.Dependencies, "pkg:npm/c@3.0.0", "A should be short-circuited to C through invalid intermediary")
+	assert.NotContains(t, *aDeps.Dependencies, "invalid-node")
+}
+
+func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *testing.T) {
+	deps := []cdx.Dependency{
+		{Ref: "root", Dependencies: &[]string{"pkg:npm/a@1.0.0"}},
+		{Ref: "pkg:npm/a@1.0.0", Dependencies: &[]string{"invalid-node-1"}},
+		{Ref: "invalid-node-1", Dependencies: &[]string{"invalid-node-2"}},
+		{Ref: "invalid-node-2", Dependencies: &[]string{"pkg:npm/c@3.0.0"}},
+	}
+
+	bom := &cdx.BOM{
+		SpecVersion: cdx.SpecVersion1_6,
+		BOMFormat:   "CycloneDX",
+		Version:     1,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef: "root",
+				Name:   "root",
+				Type:   cdx.ComponentTypeApplication,
+			},
+		},
+		Components: &[]cdx.Component{
+			{
+				BOMRef:     "pkg:npm/a@1.0.0",
+				Name:       "a",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/a@1.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			},
+			{
+				BOMRef:     "pkg:npm/c@3.0.0",
+				Name:       "c",
+				Version:    "3.0.0",
+				PackageURL: "pkg:npm/c@3.0.0",
+				Type:       cdx.ComponentTypeLibrary,
+			},
+		},
+		Dependencies: &deps,
+	}
+
+	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	assert.NoError(t, err)
+
+	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
+	assert.NotNil(t, exported.Dependencies)
+
+	var rootDeps, aDeps *cdx.Dependency
+	for i := range *exported.Dependencies {
+		switch (*exported.Dependencies)[i].Ref {
+		case "root":
+			rootDeps = &(*exported.Dependencies)[i]
+		case "pkg:npm/a@1.0.0":
+			aDeps = &(*exported.Dependencies)[i]
+		}
+	}
+
+	assert.NotNil(t, rootDeps)
+	assert.NotNil(t, rootDeps.Dependencies)
+	assert.Contains(t, *rootDeps.Dependencies, "pkg:npm/a@1.0.0")
+
+	assert.NotNil(t, aDeps)
+	assert.NotNil(t, aDeps.Dependencies)
+	assert.Contains(t, *aDeps.Dependencies, "pkg:npm/c@3.0.0", "A should be short-circuited through multiple invalid intermediaries")
+	assert.NotContains(t, *aDeps.Dependencies, "invalid-node-1")
+	assert.NotContains(t, *aDeps.Dependencies, "invalid-node-2")
+}
 
 func TestToCycloneDX(t *testing.T) {
 	t.Run("transitive dependencies should not be direct children of root", func(t *testing.T) {

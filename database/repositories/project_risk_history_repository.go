@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,10 +22,10 @@ func NewProjectRiskHistoryRepository(db *gorm.DB) *projectRiskHistoryRepository 
 	}
 }
 
-func (r *projectRiskHistoryRepository) GetRiskHistory(projectID uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error) {
+func (r *projectRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error) {
 	var projectRisk = []models.ProjectRiskHistory{}
 	// get all projectRisk of the project
-	if err := r.Repository.GetDB(r.db).Where("project_id = ?", projectID).Where(
+	if err := r.Repository.GetDB(ctx, tx).Where("project_id = ?", projectID).Where(
 		"day >= ? AND day <= ?", start, end,
 	).Order("day ASC").Find(&projectRisk).Error; err != nil {
 		return nil, err
@@ -33,6 +34,6 @@ func (r *projectRiskHistoryRepository) GetRiskHistory(projectID uuid.UUID, start
 	return projectRisk, nil
 }
 
-func (r *projectRiskHistoryRepository) UpdateRiskAggregation(projectRisk *models.ProjectRiskHistory) error {
-	return r.Repository.GetDB(r.db).Save(projectRisk).Error
+func (r *projectRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx *gorm.DB, projectRisk *models.ProjectRiskHistory) error {
+	return r.Repository.GetDB(ctx, tx).Save(projectRisk).Error
 }

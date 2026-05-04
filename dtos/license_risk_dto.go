@@ -3,6 +3,7 @@ package dtos
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/licenses"
 )
 
@@ -13,7 +14,7 @@ type LicenseRiskArtifactDTO struct {
 }
 
 type LicenseRiskDTO struct {
-	ID                   string    `json:"id"`
+	ID                   uuid.UUID `json:"id"`
 	Message              *string   `json:"message"`
 	AssetVersionName     string    `json:"assetVersionName"`
 	AssetID              string    `json:"assetId"`

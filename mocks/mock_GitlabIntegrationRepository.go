@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *GitlabIntegrationRepository) EXPECT() *GitlabIntegrationRepository_Exp
 }
 
 // Delete provides a mock function for the type GitlabIntegrationRepository
-func (_mock *GitlabIntegrationRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *GitlabIntegrationRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type GitlabIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *GitlabIntegrationRepository_Delete_Call {
-	return &GitlabIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *GitlabIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *GitlabIntegrationRepository_Delete_Call {
+	return &GitlabIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *GitlabIntegrationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *GitlabIntegrationRepository_Delete_Call {
+func (_c *GitlabIntegrationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *GitlabIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *GitlabIntegrationRepository_Delete_Call) Return(err error) *GitlabInte
 	return _c
 }
 
-func (_c *GitlabIntegrationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *GitlabIntegrationRepository_Delete_Call {
+func (_c *GitlabIntegrationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *GitlabIntegrationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByOrganizationID provides a mock function for the type GitlabIntegrationRepository
-func (_mock *GitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GitLabIntegration, error) {
-	ret := _mock.Called(orgID)
+func (_mock *GitlabIntegrationRepository) FindByOrganizationID(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.GitLabIntegration, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByOrganizationID")
@@ -105,18 +113,18 @@ func (_mock *GitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) 
 
 	var r0 []models.GitLabIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.GitLabIntegration, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.GitLabIntegration, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.GitLabIntegration); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.GitLabIntegration); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.GitLabIntegration)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,19 +137,31 @@ type GitlabIntegrationRepository_FindByOrganizationID_Call struct {
 }
 
 // FindByOrganizationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) FindByOrganizationID(orgID interface{}) *GitlabIntegrationRepository_FindByOrganizationID_Call {
-	return &GitlabIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", orgID)}
+func (_e *GitlabIntegrationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *GitlabIntegrationRepository_FindByOrganizationID_Call {
+	return &GitlabIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
-func (_c *GitlabIntegrationRepository_FindByOrganizationID_Call) Run(run func(orgID uuid.UUID)) *GitlabIntegrationRepository_FindByOrganizationID_Call {
+func (_c *GitlabIntegrationRepository_FindByOrganizationID_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *GitlabIntegrationRepository_FindByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -152,14 +172,14 @@ func (_c *GitlabIntegrationRepository_FindByOrganizationID_Call) Return(gitLabIn
 	return _c
 }
 
-func (_c *GitlabIntegrationRepository_FindByOrganizationID_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.GitLabIntegration, error)) *GitlabIntegrationRepository_FindByOrganizationID_Call {
+func (_c *GitlabIntegrationRepository_FindByOrganizationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.GitLabIntegration, error)) *GitlabIntegrationRepository_FindByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type GitlabIntegrationRepository
-func (_mock *GitlabIntegrationRepository) Read(id uuid.UUID) (models.GitLabIntegration, error) {
-	ret := _mock.Called(id)
+func (_mock *GitlabIntegrationRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.GitLabIntegration, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -167,16 +187,16 @@ func (_mock *GitlabIntegrationRepository) Read(id uuid.UUID) (models.GitLabInteg
 
 	var r0 models.GitLabIntegration
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.GitLabIntegration, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.GitLabIntegration, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.GitLabIntegration); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.GitLabIntegration); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.GitLabIntegration)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -189,19 +209,31 @@ type GitlabIntegrationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) Read(id interface{}) *GitlabIntegrationRepository_Read_Call {
-	return &GitlabIntegrationRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *GitlabIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *GitlabIntegrationRepository_Read_Call {
+	return &GitlabIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *GitlabIntegrationRepository_Read_Call) Run(run func(id uuid.UUID)) *GitlabIntegrationRepository_Read_Call {
+func (_c *GitlabIntegrationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *GitlabIntegrationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -212,22 +244,22 @@ func (_c *GitlabIntegrationRepository_Read_Call) Return(gitLabIntegration models
 	return _c
 }
 
-func (_c *GitlabIntegrationRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.GitLabIntegration, error)) *GitlabIntegrationRepository_Read_Call {
+func (_c *GitlabIntegrationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.GitLabIntegration, error)) *GitlabIntegrationRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type GitlabIntegrationRepository
-func (_mock *GitlabIntegrationRepository) Save(tx shared.DB, model *models.GitLabIntegration) error {
-	ret := _mock.Called(tx, model)
+func (_mock *GitlabIntegrationRepository) Save(ctx context.Context, tx shared.DB, model *models.GitLabIntegration) error {
+	ret := _mock.Called(ctx, tx, model)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.GitLabIntegration) error); ok {
-		r0 = returnFunc(tx, model)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.GitLabIntegration) error); ok {
+		r0 = returnFunc(ctx, tx, model)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -240,25 +272,31 @@ type GitlabIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.GitLabIntegration
-func (_e *GitlabIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *GitlabIntegrationRepository_Save_Call {
-	return &GitlabIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
+func (_e *GitlabIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *GitlabIntegrationRepository_Save_Call {
+	return &GitlabIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 
-func (_c *GitlabIntegrationRepository_Save_Call) Run(run func(tx shared.DB, model *models.GitLabIntegration)) *GitlabIntegrationRepository_Save_Call {
+func (_c *GitlabIntegrationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model *models.GitLabIntegration)) *GitlabIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.GitLabIntegration
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.GitLabIntegration)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.GitLabIntegration
+		if args[2] != nil {
+			arg2 = args[2].(*models.GitLabIntegration)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -269,7 +307,7 @@ func (_c *GitlabIntegrationRepository_Save_Call) Return(err error) *GitlabIntegr
 	return _c
 }
 
-func (_c *GitlabIntegrationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model *models.GitLabIntegration) error) *GitlabIntegrationRepository_Save_Call {
+func (_c *GitlabIntegrationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, model *models.GitLabIntegration) error) *GitlabIntegrationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

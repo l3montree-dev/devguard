@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -20,9 +22,9 @@ func NewReleaseRepository(db *gorm.DB) *releaseRepository {
 	}
 }
 
-func (r *releaseRepository) GetByProjectID(projectID uuid.UUID) ([]models.Release, error) {
+func (r *releaseRepository) GetByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.Release, error) {
 	var rels []models.Release
-	err := r.db.Where("project_id = ?", projectID).Find(&rels).Error
+	err := r.GetDB(ctx, tx).Where("project_id = ?", projectID).Find(&rels).Error
 	if err != nil {
 		return nil, err
 	}
@@ -31,17 +33,17 @@ func (r *releaseRepository) GetByProjectID(projectID uuid.UUID) ([]models.Releas
 }
 
 // ReadWithItems reads a release and preloads its direct items and related artifact/child pointers.
-func (r *releaseRepository) ReadWithItems(id uuid.UUID) (models.Release, error) {
+func (r *releaseRepository) ReadWithItems(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Release, error) {
 	var rel models.Release
-	err := r.db.Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel, "id = ?", id).Error
+	err := r.GetDB(ctx, tx).Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel, "id = ?", id).Error
 	return rel, err
 }
 
 // ReadRecursive loads the given release and all nested child releases using a recursive CTE on the DB
 // and assembles the tree in memory.
-func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) {
+func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Release, error) {
 	// Collect all release ids in the tree using a recursive CTE
-	rows, err := r.db.Raw(`WITH RECURSIVE tree AS (
+	rows, err := r.GetDB(ctx, tx).Raw(`WITH RECURSIVE tree AS (
 		SELECT id FROM releases WHERE id = ?
 		UNION ALL
 		SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
@@ -61,18 +63,18 @@ func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) 
 	}
 
 	if len(ids) == 0 {
-		return models.Release{}, r.db.First(&models.Release{}, "id = ?", id).Error
+		return models.Release{}, r.GetDB(ctx, tx).First(&models.Release{}, "id = ?", id).Error
 	}
 
 	// fetch all releases (preload Project so Project.Avatar is available)
 	var releases []models.Release
-	if err := r.db.Where("id IN ?", ids).Find(&releases).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("id IN ?", ids).Find(&releases).Error; err != nil {
 		return models.Release{}, err
 	}
 
 	// fetch all items belonging to these releases
 	var items []models.ReleaseItem
-	if err := r.db.Where("release_id IN ?", ids).Find(&items).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("release_id IN ?", ids).Find(&items).Error; err != nil {
 		return models.Release{}, err
 	}
 
@@ -103,15 +105,15 @@ func (r *releaseRepository) ReadRecursive(id uuid.UUID) (models.Release, error) 
 
 	root, ok := relMap[id]
 	if !ok {
-		return models.Release{}, r.db.First(&models.Release{}, "id = ?", id).Error
+		return models.Release{}, r.GetDB(ctx, tx).First(&models.Release{}, "id = ?", id).Error
 	}
 
 	return *root, nil
 }
 
 // CreateReleaseItem inserts a new ReleaseItem row.
-func (r *releaseRepository) CreateReleaseItem(tx *gorm.DB, item *models.ReleaseItem) error {
-	db := r.db
+func (r *releaseRepository) CreateReleaseItem(ctx context.Context, tx *gorm.DB, item *models.ReleaseItem) error {
+	db := r.GetDB(ctx, tx)
 	if tx != nil {
 		db = tx
 	}
@@ -119,8 +121,8 @@ func (r *releaseRepository) CreateReleaseItem(tx *gorm.DB, item *models.ReleaseI
 }
 
 // DeleteReleaseItem deletes a release item by id.
-func (r *releaseRepository) DeleteReleaseItem(tx *gorm.DB, id uuid.UUID) error {
-	db := r.db
+func (r *releaseRepository) DeleteReleaseItem(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	db := r.GetDB(ctx, tx)
 	if tx != nil {
 		db = tx
 	}
@@ -128,8 +130,8 @@ func (r *releaseRepository) DeleteReleaseItem(tx *gorm.DB, id uuid.UUID) error {
 }
 
 // GetByProjectIDPaged returns a paged list of releases for a project with optional search, filter and sort
-func (r *releaseRepository) GetByProjectIDPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
-	db := r.db
+func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.Release], error) {
+	db := r.GetDB(ctx, tx)
 	if tx != nil {
 		db = tx
 	}
@@ -170,10 +172,10 @@ func (r *releaseRepository) GetByProjectIDPaged(tx *gorm.DB, projectID uuid.UUID
 	return shared.NewPaged(pageInfo, count, releases), nil
 }
 
-func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
+func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error) {
 	// gather artifacts for default asset versions of the project and its child projects in a single joined query
 	// first collect project ids (project + children) using a recursive CTE
-	rows, err := r.db.Raw(`WITH RECURSIVE proj_tree AS (
+	rows, err := r.GetDB(ctx, tx).Raw(`WITH RECURSIVE proj_tree AS (
 		SELECT id FROM projects WHERE id = ?
 		UNION ALL
 		SELECT p.id FROM projects p JOIN proj_tree pt ON p.parent_id = pt.id
@@ -198,7 +200,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 
 	// preload AssetVersion.Asset so callers can access the asset name without additional queries
 	var artifacts []models.Artifact
-	if err := r.db.
+	if err := r.GetDB(ctx, tx).
 		Model(&models.Artifact{}).
 		Joins("JOIN asset_versions av ON av.asset_id = artifacts.asset_id AND av.name = artifacts.asset_version_name").
 		Joins("JOIN assets ON assets.id = artifacts.asset_id").
@@ -211,7 +213,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 	excluded := map[uuid.UUID]struct{}{}
 
 	if releaseID != nil {
-		rows, err := r.db.Raw(`WITH RECURSIVE tree AS (
+		rows, err := r.GetDB(ctx, tx).Raw(`WITH RECURSIVE tree AS (
 		SELECT id FROM releases WHERE id = ?
 		UNION ALL
 		SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
@@ -240,7 +242,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(projectID uuid.UUID, rel
 		}
 	}
 
-	q := r.db.Where("project_id IN ?", projectIDs)
+	q := r.GetDB(ctx, tx).Where("project_id IN ?", projectIDs)
 	if len(excludedIDs) > 0 {
 		q = q.Where("id NOT IN ?", excludedIDs)
 	}

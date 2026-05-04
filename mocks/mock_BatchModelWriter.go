@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/utils"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -37,16 +39,16 @@ func (_m *BatchModelWriter[T, Tx]) EXPECT() *BatchModelWriter_Expecter[T, Tx] {
 }
 
 // CreateBatch provides a mock function for the type BatchModelWriter
-func (_mock *BatchModelWriter[T, Tx]) CreateBatch(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *BatchModelWriter[T, Tx]) CreateBatch(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -59,25 +61,31 @@ type BatchModelWriter_CreateBatch_Call[T utils.Tabler, Tx any] struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) CreateBatch(tx interface{}, ts interface{}) *BatchModelWriter_CreateBatch_Call[T, Tx] {
-	return &BatchModelWriter_CreateBatch_Call[T, Tx]{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *BatchModelWriter_Expecter[T, Tx]) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *BatchModelWriter_CreateBatch_Call[T, Tx] {
+	return &BatchModelWriter_CreateBatch_Call[T, Tx]{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *BatchModelWriter_CreateBatch_Call[T, Tx]) Run(run func(tx Tx, ts []T)) *BatchModelWriter_CreateBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_CreateBatch_Call[T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *BatchModelWriter_CreateBatch_Call[T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -88,22 +96,22 @@ func (_c *BatchModelWriter_CreateBatch_Call[T, Tx]) Return(err error) *BatchMode
 	return _c
 }
 
-func (_c *BatchModelWriter_CreateBatch_Call[T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *BatchModelWriter_CreateBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_CreateBatch_Call[T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *BatchModelWriter_CreateBatch_Call[T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type BatchModelWriter
-func (_mock *BatchModelWriter[T, Tx]) DeleteBatch(tx Tx, ids []T) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *BatchModelWriter[T, Tx]) DeleteBatch(ctx context.Context, tx Tx, ids []T) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -116,25 +124,31 @@ type BatchModelWriter_DeleteBatch_Call[T utils.Tabler, Tx any] struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ids []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) DeleteBatch(tx interface{}, ids interface{}) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
-	return &BatchModelWriter_DeleteBatch_Call[T, Tx]{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *BatchModelWriter_Expecter[T, Tx]) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
+	return &BatchModelWriter_DeleteBatch_Call[T, Tx]{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *BatchModelWriter_DeleteBatch_Call[T, Tx]) Run(run func(tx Tx, ids []T)) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_DeleteBatch_Call[T, Tx]) Run(run func(ctx context.Context, tx Tx, ids []T)) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -145,22 +159,22 @@ func (_c *BatchModelWriter_DeleteBatch_Call[T, Tx]) Return(err error) *BatchMode
 	return _c
 }
 
-func (_c *BatchModelWriter_DeleteBatch_Call[T, Tx]) RunAndReturn(run func(tx Tx, ids []T) error) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_DeleteBatch_Call[T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ids []T) error) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type BatchModelWriter
-func (_mock *BatchModelWriter[T, Tx]) SaveBatch(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *BatchModelWriter[T, Tx]) SaveBatch(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -173,25 +187,31 @@ type BatchModelWriter_SaveBatch_Call[T utils.Tabler, Tx any] struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatch(tx interface{}, ts interface{}) *BatchModelWriter_SaveBatch_Call[T, Tx] {
-	return &BatchModelWriter_SaveBatch_Call[T, Tx]{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *BatchModelWriter_SaveBatch_Call[T, Tx] {
+	return &BatchModelWriter_SaveBatch_Call[T, Tx]{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) Run(run func(tx Tx, ts []T)) *BatchModelWriter_SaveBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *BatchModelWriter_SaveBatch_Call[T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -202,22 +222,22 @@ func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) Return(err error) *BatchModelW
 	return _c
 }
 
-func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *BatchModelWriter_SaveBatch_Call[T, Tx] {
+func (_c *BatchModelWriter_SaveBatch_Call[T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *BatchModelWriter_SaveBatch_Call[T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type BatchModelWriter
-func (_mock *BatchModelWriter[T, Tx]) SaveBatchBestEffort(tx Tx, ts []T) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *BatchModelWriter[T, Tx]) SaveBatchBestEffort(ctx context.Context, tx Tx, ts []T) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(Tx, []T) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -230,25 +250,31 @@ type BatchModelWriter_SaveBatchBestEffort_Call[T utils.Tabler, Tx any] struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatchBestEffort(tx interface{}, ts interface{}) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
-	return &BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+	return &BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) Run(run func(tx Tx, ts []T)) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []T
+		var arg1 Tx
 		if args[1] != nil {
-			arg1 = args[1].([]T)
+			arg1 = args[1].(Tx)
+		}
+		var arg2 []T
+		if args[2] != nil {
+			arg2 = args[2].([]T)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -259,7 +285,7 @@ func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) Return(err error) *B
 	return _c
 }
 
-func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) RunAndReturn(run func(tx Tx, ts []T) error) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
+func (_c *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *BatchModelWriter_SaveBatchBestEffort_Call[T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }

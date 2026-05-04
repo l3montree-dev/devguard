@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/pkg/errors"
@@ -36,8 +37,14 @@ func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 	var scannerCmd *exec.Cmd
 	slog.Info("Starting iac scanning", "path", p)
+	var configFileArgs []string
+	if config.RuntimeBaseConfig.ConfigFilePath != "" {
+		configFileArgs = []string{"--config-file", config.RuntimeBaseConfig.ConfigFilePath}
+	}
+	args := []string{"-s", "-d", p, "--output", "sarif", "--output-file-path", outputDir}
+	args = append(args, configFileArgs...)
 
-	scannerCmd = exec.Command("checkov", "-s", "-d", p, "--output", "sarif", "--output-file-path", outputDir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
+	scannerCmd = exec.Command("checkov", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 	scannerCmd.Run() // nolint:errcheck

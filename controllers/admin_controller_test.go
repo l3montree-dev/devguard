@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"bufio"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -61,10 +62,10 @@ func setupMocks(t *testing.T) (*mocks.DaemonRunner, *mocks.VulnDBImportService, 
 	configService := mocks.NewConfigService(t)
 
 	// By default: no previous trigger → cooldown passes
-	configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything).
+	configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything, mock.Anything).
 		Return(gorm.ErrRecordNotFound).Maybe()
 	// By default: marking triggered succeeds
-	configService.EXPECT().SetJSONConfig(mock.Anything, mock.Anything).
+	configService.EXPECT().SetJSONConfig(mock.Anything, mock.Anything, mock.Anything).
 		Return(nil).Maybe()
 
 	return daemonRunner, vulnDBService, configService
@@ -121,7 +122,7 @@ func TestAdminController_TriggerAssetPipelineSingle(t *testing.T) {
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
 		assetID := uuid.New()
-		daemonRunner.EXPECT().RunDaemonPipelineForAsset(assetID).Return(nil)
+		daemonRunner.EXPECT().RunDaemonPipelineForAsset(mock.Anything, assetID).Return(nil)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/asset-pipeline-single/trigger",
 			`{"assetId": "`+assetID.String()+`"}`)
@@ -142,7 +143,7 @@ func TestAdminController_TriggerAssetPipelineAll(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		daemonRunner.EXPECT().RunAssetPipeline(true).Return()
+		daemonRunner.EXPECT().RunAssetPipeline(mock.Anything, true).Return()
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/asset-pipeline-all/trigger", "")
 
@@ -160,7 +161,7 @@ func TestAdminController_TriggerOpenSourceInsights(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		daemonRunner.EXPECT().UpdateOpenSourceInsightInformation().Return(nil)
+		daemonRunner.EXPECT().UpdateOpenSourceInsightInformation(mock.Anything).Return(nil)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/open-source-insights/trigger", "")
 
@@ -178,7 +179,7 @@ func TestAdminController_TriggerVulnDB(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		daemonRunner.EXPECT().UpdateVulnDB().Return(nil)
+		daemonRunner.EXPECT().UpdateVulnDB(mock.Anything).Return(nil)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/vulndb/trigger", "")
 
@@ -196,7 +197,7 @@ func TestAdminController_TriggerVulnDBCleanup(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		vulnDBService.EXPECT().CleanupOrphanedTables().Return(nil)
+		vulnDBService.EXPECT().CleanupOrphanedTables(mock.Anything).Return(nil)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/vulndb-cleanup/trigger", "")
 
@@ -214,7 +215,7 @@ func TestAdminController_TriggerFixedVersions(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		daemonRunner.EXPECT().UpdateFixedVersions().Return(nil)
+		daemonRunner.EXPECT().UpdateFixedVersions(mock.Anything).Return(nil)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/fixed-versions/trigger", "")
 
@@ -235,8 +236,8 @@ func TestAdminController_Cooldown(t *testing.T) {
 
 		// Simulate a recent trigger: GetJSONConfig sets the time to 1 minute ago
 		recentTime := time.Now().Add(-1 * time.Minute)
-		configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything).
-			Run(func(_ string, v any) {
+		configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything, mock.Anything).
+			Run(func(_ context.Context, _ string, v any) {
 				if ts, ok := v.(*daemonTriggerTimestamp); ok {
 					ts.Time = recentTime
 				}
@@ -262,16 +263,16 @@ func TestAdminController_Cooldown(t *testing.T) {
 
 		// Simulate an old trigger: 10 minutes ago
 		oldTime := time.Now().Add(-10 * time.Minute)
-		configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything).
-			Run(func(_ string, v any) {
+		configService.EXPECT().GetJSONConfig(mock.Anything, mock.Anything, mock.Anything).
+			Run(func(_ context.Context, _ string, v any) {
 				if ts, ok := v.(*daemonTriggerTimestamp); ok {
 					ts.Time = oldTime
 				}
 			}).
 			Return(nil)
-		configService.EXPECT().SetJSONConfig(mock.Anything, mock.Anything).Return(nil).Maybe()
+		configService.EXPECT().SetJSONConfig(mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 
-		daemonRunner.EXPECT().UpdateFixedVersions().Return(nil)
+		daemonRunner.EXPECT().UpdateFixedVersions(mock.Anything).Return(nil)
 
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
@@ -288,7 +289,7 @@ func TestAdminController_SSEErrorEvent(t *testing.T) {
 		daemonRunner, vulnDBService, configService := setupMocks(t)
 		controller := NewAdminController(daemonRunner, vulnDBService, configService)
 
-		daemonRunner.EXPECT().UpdateFixedVersions().Return(assert.AnError)
+		daemonRunner.EXPECT().UpdateFixedVersions(mock.Anything).Return(assert.AnError)
 
 		ctx, rec := newAdminTestContext(http.MethodPost, "/admin/daemons/fixed-versions/trigger", "")
 

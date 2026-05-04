@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -38,16 +40,16 @@ func (_m *VulnRepository) EXPECT() *VulnRepository_Expecter {
 }
 
 // ApplyAndSave provides a mock function for the type VulnRepository
-func (_mock *VulnRepository) ApplyAndSave(tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error {
-	ret := _mock.Called(tx, dependencyVuln, vulnEvent)
+func (_mock *VulnRepository) ApplyAndSave(ctx context.Context, tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error {
+	ret := _mock.Called(ctx, tx, dependencyVuln, vulnEvent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ApplyAndSave")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, models.Vuln, *models.VulnEvent) error); ok {
-		r0 = returnFunc(tx, dependencyVuln, vulnEvent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Vuln, *models.VulnEvent) error); ok {
+		r0 = returnFunc(ctx, tx, dependencyVuln, vulnEvent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -60,31 +62,37 @@ type VulnRepository_ApplyAndSave_Call struct {
 }
 
 // ApplyAndSave is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - dependencyVuln models.Vuln
 //   - vulnEvent *models.VulnEvent
-func (_e *VulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *VulnRepository_ApplyAndSave_Call {
-	return &VulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
+func (_e *VulnRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *VulnRepository_ApplyAndSave_Call {
+	return &VulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, dependencyVuln, vulnEvent)}
 }
 
-func (_c *VulnRepository_ApplyAndSave_Call) Run(run func(tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent)) *VulnRepository_ApplyAndSave_Call {
+func (_c *VulnRepository_ApplyAndSave_Call) Run(run func(ctx context.Context, tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent)) *VulnRepository_ApplyAndSave_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 models.Vuln
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(models.Vuln)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *models.VulnEvent
+		var arg2 models.Vuln
 		if args[2] != nil {
-			arg2 = args[2].(*models.VulnEvent)
+			arg2 = args[2].(models.Vuln)
+		}
+		var arg3 *models.VulnEvent
+		if args[3] != nil {
+			arg3 = args[3].(*models.VulnEvent)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -95,14 +103,14 @@ func (_c *VulnRepository_ApplyAndSave_Call) Return(err error) *VulnRepository_Ap
 	return _c
 }
 
-func (_c *VulnRepository_ApplyAndSave_Call) RunAndReturn(run func(tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error) *VulnRepository_ApplyAndSave_Call {
+func (_c *VulnRepository_ApplyAndSave_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error) *VulnRepository_ApplyAndSave_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByTicketID provides a mock function for the type VulnRepository
-func (_mock *VulnRepository) FindByTicketID(tx shared.DB, ticketID string) (models.Vuln, error) {
-	ret := _mock.Called(tx, ticketID)
+func (_mock *VulnRepository) FindByTicketID(ctx context.Context, tx shared.DB, ticketID string) (models.Vuln, error) {
+	ret := _mock.Called(ctx, tx, ticketID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByTicketID")
@@ -110,18 +118,18 @@ func (_mock *VulnRepository) FindByTicketID(tx shared.DB, ticketID string) (mode
 
 	var r0 models.Vuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) (models.Vuln, error)); ok {
-		return returnFunc(tx, ticketID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.Vuln, error)); ok {
+		return returnFunc(ctx, tx, ticketID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) models.Vuln); ok {
-		r0 = returnFunc(tx, ticketID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.Vuln); ok {
+		r0 = returnFunc(ctx, tx, ticketID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(models.Vuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string) error); ok {
-		r1 = returnFunc(tx, ticketID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, ticketID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -134,25 +142,31 @@ type VulnRepository_FindByTicketID_Call struct {
 }
 
 // FindByTicketID is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ticketID string
-func (_e *VulnRepository_Expecter) FindByTicketID(tx interface{}, ticketID interface{}) *VulnRepository_FindByTicketID_Call {
-	return &VulnRepository_FindByTicketID_Call{Call: _e.mock.On("FindByTicketID", tx, ticketID)}
+func (_e *VulnRepository_Expecter) FindByTicketID(ctx interface{}, tx interface{}, ticketID interface{}) *VulnRepository_FindByTicketID_Call {
+	return &VulnRepository_FindByTicketID_Call{Call: _e.mock.On("FindByTicketID", ctx, tx, ticketID)}
 }
 
-func (_c *VulnRepository_FindByTicketID_Call) Run(run func(tx shared.DB, ticketID string)) *VulnRepository_FindByTicketID_Call {
+func (_c *VulnRepository_FindByTicketID_Call) Run(run func(ctx context.Context, tx shared.DB, ticketID string)) *VulnRepository_FindByTicketID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -163,14 +177,14 @@ func (_c *VulnRepository_FindByTicketID_Call) Return(vuln models.Vuln, err error
 	return _c
 }
 
-func (_c *VulnRepository_FindByTicketID_Call) RunAndReturn(run func(tx shared.DB, ticketID string) (models.Vuln, error)) *VulnRepository_FindByTicketID_Call {
+func (_c *VulnRepository_FindByTicketID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ticketID string) (models.Vuln, error)) *VulnRepository_FindByTicketID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetOrgFromVuln provides a mock function for the type VulnRepository
-func (_mock *VulnRepository) GetOrgFromVuln(vuln models.Vuln) (models.Org, error) {
-	ret := _mock.Called(vuln)
+func (_mock *VulnRepository) GetOrgFromVuln(ctx context.Context, tx shared.DB, vuln models.Vuln) (models.Org, error) {
+	ret := _mock.Called(ctx, tx, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetOrgFromVuln")
@@ -178,16 +192,16 @@ func (_mock *VulnRepository) GetOrgFromVuln(vuln models.Vuln) (models.Org, error
 
 	var r0 models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.Vuln) (models.Org, error)); ok {
-		return returnFunc(vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Vuln) (models.Org, error)); ok {
+		return returnFunc(ctx, tx, vuln)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.Vuln) models.Org); ok {
-		r0 = returnFunc(vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Vuln) models.Org); ok {
+		r0 = returnFunc(ctx, tx, vuln)
 	} else {
 		r0 = ret.Get(0).(models.Org)
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.Vuln) error); ok {
-		r1 = returnFunc(vuln)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Vuln) error); ok {
+		r1 = returnFunc(ctx, tx, vuln)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -200,19 +214,31 @@ type VulnRepository_GetOrgFromVuln_Call struct {
 }
 
 // GetOrgFromVuln is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - vuln models.Vuln
-func (_e *VulnRepository_Expecter) GetOrgFromVuln(vuln interface{}) *VulnRepository_GetOrgFromVuln_Call {
-	return &VulnRepository_GetOrgFromVuln_Call{Call: _e.mock.On("GetOrgFromVuln", vuln)}
+func (_e *VulnRepository_Expecter) GetOrgFromVuln(ctx interface{}, tx interface{}, vuln interface{}) *VulnRepository_GetOrgFromVuln_Call {
+	return &VulnRepository_GetOrgFromVuln_Call{Call: _e.mock.On("GetOrgFromVuln", ctx, tx, vuln)}
 }
 
-func (_c *VulnRepository_GetOrgFromVuln_Call) Run(run func(vuln models.Vuln)) *VulnRepository_GetOrgFromVuln_Call {
+func (_c *VulnRepository_GetOrgFromVuln_Call) Run(run func(ctx context.Context, tx shared.DB, vuln models.Vuln)) *VulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Vuln
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.Vuln)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.Vuln
+		if args[2] != nil {
+			arg2 = args[2].(models.Vuln)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -223,22 +249,22 @@ func (_c *VulnRepository_GetOrgFromVuln_Call) Return(org models.Org, err error) 
 	return _c
 }
 
-func (_c *VulnRepository_GetOrgFromVuln_Call) RunAndReturn(run func(vuln models.Vuln) (models.Org, error)) *VulnRepository_GetOrgFromVuln_Call {
+func (_c *VulnRepository_GetOrgFromVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vuln models.Vuln) (models.Org, error)) *VulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type VulnRepository
-func (_mock *VulnRepository) Save(db shared.DB, vuln *models.Vuln) error {
-	ret := _mock.Called(db, vuln)
+func (_mock *VulnRepository) Save(ctx context.Context, tx shared.DB, vuln *models.Vuln) error {
+	ret := _mock.Called(ctx, tx, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Vuln) error); ok {
-		r0 = returnFunc(db, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Vuln) error); ok {
+		r0 = returnFunc(ctx, tx, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -251,25 +277,31 @@ type VulnRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db shared.DB
+//   - ctx context.Context
+//   - tx shared.DB
 //   - vuln *models.Vuln
-func (_e *VulnRepository_Expecter) Save(db interface{}, vuln interface{}) *VulnRepository_Save_Call {
-	return &VulnRepository_Save_Call{Call: _e.mock.On("Save", db, vuln)}
+func (_e *VulnRepository_Expecter) Save(ctx interface{}, tx interface{}, vuln interface{}) *VulnRepository_Save_Call {
+	return &VulnRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, vuln)}
 }
 
-func (_c *VulnRepository_Save_Call) Run(run func(db shared.DB, vuln *models.Vuln)) *VulnRepository_Save_Call {
+func (_c *VulnRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, vuln *models.Vuln)) *VulnRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Vuln
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Vuln)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Vuln
+		if args[2] != nil {
+			arg2 = args[2].(*models.Vuln)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -280,22 +312,22 @@ func (_c *VulnRepository_Save_Call) Return(err error) *VulnRepository_Save_Call 
 	return _c
 }
 
-func (_c *VulnRepository_Save_Call) RunAndReturn(run func(db shared.DB, vuln *models.Vuln) error) *VulnRepository_Save_Call {
+func (_c *VulnRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vuln *models.Vuln) error) *VulnRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type VulnRepository
-func (_mock *VulnRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *VulnRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -308,19 +340,25 @@ type VulnRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *VulnRepository_Expecter) Transaction(fn interface{}) *VulnRepository_Transaction_Call {
-	return &VulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *VulnRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *VulnRepository_Transaction_Call {
+	return &VulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *VulnRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *VulnRepository_Transaction_Call {
+func (_c *VulnRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *VulnRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -331,7 +369,7 @@ func (_c *VulnRepository_Transaction_Call) Return(err error) *VulnRepository_Tra
 	return _c
 }
 
-func (_c *VulnRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *VulnRepository_Transaction_Call {
+func (_c *VulnRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *VulnRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

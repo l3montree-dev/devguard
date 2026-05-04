@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -39,16 +41,16 @@ func (_m *GithubAppInstallationRepository) EXPECT() *GithubAppInstallationReposi
 }
 
 // Delete provides a mock function for the type GithubAppInstallationRepository
-func (_mock *GithubAppInstallationRepository) Delete(tx shared.DB, installationID int) error {
-	ret := _mock.Called(tx, installationID)
+func (_mock *GithubAppInstallationRepository) Delete(ctx context.Context, tx shared.DB, installationID int) error {
+	ret := _mock.Called(ctx, tx, installationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, int) error); ok {
-		r0 = returnFunc(tx, installationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) error); ok {
+		r0 = returnFunc(ctx, tx, installationID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type GithubAppInstallationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - installationID int
-func (_e *GithubAppInstallationRepository_Expecter) Delete(tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Delete_Call {
-	return &GithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, installationID)}
+func (_e *GithubAppInstallationRepository_Expecter) Delete(ctx interface{}, tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Delete_Call {
+	return &GithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, installationID)}
 }
 
-func (_c *GithubAppInstallationRepository_Delete_Call) Run(run func(tx shared.DB, installationID int)) *GithubAppInstallationRepository_Delete_Call {
+func (_c *GithubAppInstallationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, installationID int)) *GithubAppInstallationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *GithubAppInstallationRepository_Delete_Call) Return(err error) *Github
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, installationID int) error) *GithubAppInstallationRepository_Delete_Call {
+func (_c *GithubAppInstallationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, installationID int) error) *GithubAppInstallationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByOrganizationID provides a mock function for the type GithubAppInstallationRepository
-func (_mock *GithubAppInstallationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
-	ret := _mock.Called(orgID)
+func (_mock *GithubAppInstallationRepository) FindByOrganizationID(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
+	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByOrganizationID")
@@ -105,18 +113,18 @@ func (_mock *GithubAppInstallationRepository) FindByOrganizationID(orgID uuid.UU
 
 	var r0 []models.GithubAppInstallation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]models.GithubAppInstallation, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.GithubAppInstallation, error)); ok {
+		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []models.GithubAppInstallation); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.GithubAppInstallation); ok {
+		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.GithubAppInstallation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,19 +137,31 @@ type GithubAppInstallationRepository_FindByOrganizationID_Call struct {
 }
 
 // FindByOrganizationID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationID(orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationID_Call {
-	return &GithubAppInstallationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", orgID)}
+func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationID_Call {
+	return &GithubAppInstallationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
-func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) Run(run func(orgID uuid.UUID)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
+func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -152,14 +172,14 @@ func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) Return(gith
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.GithubAppInstallation, error)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
+func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.GithubAppInstallation, error)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type GithubAppInstallationRepository
-func (_mock *GithubAppInstallationRepository) Read(installationID int) (models.GithubAppInstallation, error) {
-	ret := _mock.Called(installationID)
+func (_mock *GithubAppInstallationRepository) Read(ctx context.Context, tx shared.DB, installationID int) (models.GithubAppInstallation, error) {
+	ret := _mock.Called(ctx, tx, installationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -167,16 +187,16 @@ func (_mock *GithubAppInstallationRepository) Read(installationID int) (models.G
 
 	var r0 models.GithubAppInstallation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int) (models.GithubAppInstallation, error)); ok {
-		return returnFunc(installationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) (models.GithubAppInstallation, error)); ok {
+		return returnFunc(ctx, tx, installationID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int) models.GithubAppInstallation); ok {
-		r0 = returnFunc(installationID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) models.GithubAppInstallation); ok {
+		r0 = returnFunc(ctx, tx, installationID)
 	} else {
 		r0 = ret.Get(0).(models.GithubAppInstallation)
 	}
-	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
-		r1 = returnFunc(installationID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, int) error); ok {
+		r1 = returnFunc(ctx, tx, installationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -189,19 +209,31 @@ type GithubAppInstallationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - installationID int
-func (_e *GithubAppInstallationRepository_Expecter) Read(installationID interface{}) *GithubAppInstallationRepository_Read_Call {
-	return &GithubAppInstallationRepository_Read_Call{Call: _e.mock.On("Read", installationID)}
+func (_e *GithubAppInstallationRepository_Expecter) Read(ctx interface{}, tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Read_Call {
+	return &GithubAppInstallationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, installationID)}
 }
 
-func (_c *GithubAppInstallationRepository_Read_Call) Run(run func(installationID int)) *GithubAppInstallationRepository_Read_Call {
+func (_c *GithubAppInstallationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, installationID int)) *GithubAppInstallationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(int)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -212,22 +244,22 @@ func (_c *GithubAppInstallationRepository_Read_Call) Return(githubAppInstallatio
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_Read_Call) RunAndReturn(run func(installationID int) (models.GithubAppInstallation, error)) *GithubAppInstallationRepository_Read_Call {
+func (_c *GithubAppInstallationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, installationID int) (models.GithubAppInstallation, error)) *GithubAppInstallationRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type GithubAppInstallationRepository
-func (_mock *GithubAppInstallationRepository) Save(tx shared.DB, model *models.GithubAppInstallation) error {
-	ret := _mock.Called(tx, model)
+func (_mock *GithubAppInstallationRepository) Save(ctx context.Context, tx shared.DB, model *models.GithubAppInstallation) error {
+	ret := _mock.Called(ctx, tx, model)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.GithubAppInstallation) error); ok {
-		r0 = returnFunc(tx, model)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.GithubAppInstallation) error); ok {
+		r0 = returnFunc(ctx, tx, model)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -240,25 +272,31 @@ type GithubAppInstallationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.GithubAppInstallation
-func (_e *GithubAppInstallationRepository_Expecter) Save(tx interface{}, model interface{}) *GithubAppInstallationRepository_Save_Call {
-	return &GithubAppInstallationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
+func (_e *GithubAppInstallationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *GithubAppInstallationRepository_Save_Call {
+	return &GithubAppInstallationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 
-func (_c *GithubAppInstallationRepository_Save_Call) Run(run func(tx shared.DB, model *models.GithubAppInstallation)) *GithubAppInstallationRepository_Save_Call {
+func (_c *GithubAppInstallationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model *models.GithubAppInstallation)) *GithubAppInstallationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.GithubAppInstallation
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.GithubAppInstallation)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.GithubAppInstallation
+		if args[2] != nil {
+			arg2 = args[2].(*models.GithubAppInstallation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -269,7 +307,7 @@ func (_c *GithubAppInstallationRepository_Save_Call) Return(err error) *GithubAp
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, model *models.GithubAppInstallation) error) *GithubAppInstallationRepository_Save_Call {
+func (_c *GithubAppInstallationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, model *models.GithubAppInstallation) error) *GithubAppInstallationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

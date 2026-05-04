@@ -4,6 +4,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -22,17 +24,17 @@ func NewJiraIntegrationRepository(db *gorm.DB) *jiraIntegrationRepository {
 	}
 }
 
-func (r *jiraIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error) {
+func (r *jiraIntegrationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.JiraIntegration, error) {
 	var integrations []models.JiraIntegration
-	if err := r.db.Find(&integrations, "org_id = ?", orgID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Find(&integrations, "org_id = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return integrations, nil
 }
 
-func (r *jiraIntegrationRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error) {
+func (r *jiraIntegrationRepository) GetClientByIntegrationID(ctx context.Context, tx *gorm.DB, integrationID uuid.UUID) (models.JiraIntegration, error) {
 	var integration models.JiraIntegration
-	if err := r.db.First(&integration, "id = ?", integrationID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).First(&integration, "id = ?", integrationID).Error; err != nil {
 		return models.JiraIntegration{}, err
 	}
 	return integration, nil

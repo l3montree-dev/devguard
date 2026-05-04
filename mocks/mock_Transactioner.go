@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,16 +38,16 @@ func (_m *Transactioner[Tx]) EXPECT() *Transactioner_Expecter[Tx] {
 }
 
 // Begin provides a mock function for the type Transactioner
-func (_mock *Transactioner[Tx]) Begin() Tx {
-	ret := _mock.Called()
+func (_mock *Transactioner[Tx]) Begin(ctx context.Context) Tx {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 Tx
-	if returnFunc, ok := ret.Get(0).(func() Tx); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) Tx); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Tx)
@@ -60,13 +62,20 @@ type Transactioner_Begin_Call[Tx any] struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *Transactioner_Expecter[Tx]) Begin() *Transactioner_Begin_Call[Tx] {
-	return &Transactioner_Begin_Call[Tx]{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *Transactioner_Expecter[Tx]) Begin(ctx interface{}) *Transactioner_Begin_Call[Tx] {
+	return &Transactioner_Begin_Call[Tx]{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *Transactioner_Begin_Call[Tx]) Run(run func()) *Transactioner_Begin_Call[Tx] {
+func (_c *Transactioner_Begin_Call[Tx]) Run(run func(ctx context.Context)) *Transactioner_Begin_Call[Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -76,22 +85,22 @@ func (_c *Transactioner_Begin_Call[Tx]) Return(v Tx) *Transactioner_Begin_Call[T
 	return _c
 }
 
-func (_c *Transactioner_Begin_Call[Tx]) RunAndReturn(run func() Tx) *Transactioner_Begin_Call[Tx] {
+func (_c *Transactioner_Begin_Call[Tx]) RunAndReturn(run func(ctx context.Context) Tx) *Transactioner_Begin_Call[Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type Transactioner
-func (_mock *Transactioner[Tx]) GetDB(tx Tx) Tx {
-	ret := _mock.Called(tx)
+func (_mock *Transactioner[Tx]) GetDB(ctx context.Context, tx Tx) Tx {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 Tx
-	if returnFunc, ok := ret.Get(0).(func(Tx) Tx); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx) Tx); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Tx)
@@ -106,19 +115,25 @@ type Transactioner_GetDB_Call[Tx any] struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx Tx
-func (_e *Transactioner_Expecter[Tx]) GetDB(tx interface{}) *Transactioner_GetDB_Call[Tx] {
-	return &Transactioner_GetDB_Call[Tx]{Call: _e.mock.On("GetDB", tx)}
+func (_e *Transactioner_Expecter[Tx]) GetDB(ctx interface{}, tx interface{}) *Transactioner_GetDB_Call[Tx] {
+	return &Transactioner_GetDB_Call[Tx]{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *Transactioner_GetDB_Call[Tx]) Run(run func(tx Tx)) *Transactioner_GetDB_Call[Tx] {
+func (_c *Transactioner_GetDB_Call[Tx]) Run(run func(ctx context.Context, tx Tx)) *Transactioner_GetDB_Call[Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 Tx
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(Tx)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -129,22 +144,22 @@ func (_c *Transactioner_GetDB_Call[Tx]) Return(v Tx) *Transactioner_GetDB_Call[T
 	return _c
 }
 
-func (_c *Transactioner_GetDB_Call[Tx]) RunAndReturn(run func(tx Tx) Tx) *Transactioner_GetDB_Call[Tx] {
+func (_c *Transactioner_GetDB_Call[Tx]) RunAndReturn(run func(ctx context.Context, tx Tx) Tx) *Transactioner_GetDB_Call[Tx] {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type Transactioner
-func (_mock *Transactioner[Tx]) Transaction(fn func(tx Tx) error) error {
-	ret := _mock.Called(fn)
+func (_mock *Transactioner[Tx]) Transaction(ctx context.Context, fn func(tx Tx) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx Tx) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx Tx) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -157,19 +172,25 @@ type Transactioner_Transaction_Call[Tx any] struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx Tx) error
-func (_e *Transactioner_Expecter[Tx]) Transaction(fn interface{}) *Transactioner_Transaction_Call[Tx] {
-	return &Transactioner_Transaction_Call[Tx]{Call: _e.mock.On("Transaction", fn)}
+func (_e *Transactioner_Expecter[Tx]) Transaction(ctx interface{}, fn interface{}) *Transactioner_Transaction_Call[Tx] {
+	return &Transactioner_Transaction_Call[Tx]{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *Transactioner_Transaction_Call[Tx]) Run(run func(fn func(tx Tx) error)) *Transactioner_Transaction_Call[Tx] {
+func (_c *Transactioner_Transaction_Call[Tx]) Run(run func(ctx context.Context, fn func(tx Tx) error)) *Transactioner_Transaction_Call[Tx] {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx Tx) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx Tx) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx Tx) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx Tx) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -180,7 +201,7 @@ func (_c *Transactioner_Transaction_Call[Tx]) Return(err error) *Transactioner_T
 	return _c
 }
 
-func (_c *Transactioner_Transaction_Call[Tx]) RunAndReturn(run func(fn func(tx Tx) error) error) *Transactioner_Transaction_Call[Tx] {
+func (_c *Transactioner_Transaction_Call[Tx]) RunAndReturn(run func(ctx context.Context, fn func(tx Tx) error) error) *Transactioner_Transaction_Call[Tx] {
 	_c.Call.Return(run)
 	return _c
 }

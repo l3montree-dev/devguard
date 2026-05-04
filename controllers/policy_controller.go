@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 
@@ -30,6 +31,7 @@ func NewPolicyController(policyRepository shared.PolicyRepository, projectReposi
 }
 
 func (c *PolicyController) migratePolicies() error {
+	ctx := context.Background()
 	// we need to migrate the policies from the old format to the new format
 	// this is only needed for the first time we run the application
 	// after that we can remove this function
@@ -40,7 +42,7 @@ func (c *PolicyController) migratePolicies() error {
 	}
 
 	// get all community managed policies from the database
-	dbPolicies, err := c.policyRepository.FindCommunityManagedPolicies()
+	dbPolicies, err := c.policyRepository.FindCommunityManagedPolicies(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -66,14 +68,14 @@ func (c *PolicyController) migratePolicies() error {
 
 	// create the policies
 	if len(toCreate) > 0 {
-		if err := c.policyRepository.CreateBatch(nil, toCreate); err != nil {
+		if err := c.policyRepository.CreateBatch(ctx, nil, toCreate); err != nil {
 			return err
 		}
 	}
 
 	// update the policies
 	if len(toUpdate) > 0 {
-		if err := c.policyRepository.SaveBatch(nil, toUpdate); err != nil {
+		if err := c.policyRepository.SaveBatch(ctx, nil, toUpdate); err != nil {
 			return err
 		}
 	}
@@ -85,7 +87,7 @@ func (c *PolicyController) migratePolicies() error {
 			wg.Add(1)
 			go func(p models.Policy) {
 				defer wg.Done()
-				err := c.policyRepository.GetDB(nil).Model(&p).Association("Projects").Clear()
+				err := c.policyRepository.GetDB(ctx, nil).Model(&p).Association("Projects").Clear()
 				if err != nil {
 					slog.Warn("failed to clear projects association for policy", "policyID", p.ID, "error", err)
 					return
@@ -93,7 +95,7 @@ func (c *PolicyController) migratePolicies() error {
 			}(policy)
 		}
 		wg.Wait()
-		if err := c.policyRepository.DeleteBatch(nil, toDelete); err != nil {
+		if err := c.policyRepository.DeleteBatch(ctx, nil, toDelete); err != nil {
 			return err
 		}
 	}
@@ -104,14 +106,14 @@ func (c *PolicyController) migratePolicies() error {
 func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 
 	org := shared.GetOrg(ctx)
-	policies, err := c.policyRepository.FindByOrganizationID(org.ID)
+	policies, err := c.policyRepository.FindByOrganizationID(ctx.Request().Context(), nil, org.ID)
 
 	if err != nil {
 		return err
 	}
 
 	// include the community managed policies
-	communityPolicies, err := c.policyRepository.FindCommunityManagedPolicies()
+	communityPolicies, err := c.policyRepository.FindCommunityManagedPolicies(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 
 func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
-	policies, err := c.policyRepository.FindByProjectID(project.ID)
+	policies, err := c.policyRepository.FindByProjectID(ctx.Request().Context(), nil, project.ID)
 
 	if err != nil {
 		return err
@@ -139,7 +141,7 @@ func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 		return err
 	}
 
-	policy, err := c.policyRepository.Read(policyUUID)
+	policy, err := c.policyRepository.Read(ctx.Request().Context(), nil, policyUUID)
 
 	if err != nil {
 		return err
@@ -167,7 +169,7 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	}
 
 	// create the policy
-	if err := c.policyRepository.Create(nil, &policyModel); err != nil {
+	if err := c.policyRepository.Create(ctx.Request().Context(), nil, &policyModel); err != nil {
 		return err
 	}
 
@@ -200,7 +202,7 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 		OrganizationID: utils.Ptr(org.ID),
 	}
 
-	if err := c.policyRepository.Save(nil, &policyModel); err != nil {
+	if err := c.policyRepository.Save(ctx.Request().Context(), nil, &policyModel); err != nil {
 		return err
 	}
 
@@ -217,7 +219,7 @@ func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 	}
 
 	// delete the policy
-	if err := c.policyRepository.Delete(nil, policyUUID); err != nil {
+	if err := c.policyRepository.Delete(ctx.Request().Context(), nil, policyUUID); err != nil {
 		return err
 	}
 
@@ -236,7 +238,7 @@ func (c *PolicyController) EnablePolicyForProject(ctx shared.Context) error {
 	}
 
 	// enable the policy for the project
-	if err := c.projectRepository.EnablePolicyForProject(nil, project.ID, policyUUID); err != nil {
+	if err := c.projectRepository.EnablePolicyForProject(ctx.Request().Context(), nil, project.ID, policyUUID); err != nil {
 		return err
 	}
 
@@ -255,7 +257,7 @@ func (c *PolicyController) DisablePolicyForProject(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	// disable the policy for the project
-	if err := c.projectRepository.DisablePolicyForProject(nil, project.ID, policyUUID); err != nil {
+	if err := c.projectRepository.DisablePolicyForProject(ctx.Request().Context(), nil, project.ID, policyUUID); err != nil {
 		return err
 	}
 

@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -58,9 +59,9 @@ func NewAdminController(
 // error message if the cooldown has not elapsed yet.
 // Because the timestamp lives in the shared config DB table, this correctly
 // prevents duplicate triggers across multiple API instances.
-func (c *AdminController) checkCooldown(configKey string) (ok bool, retryAfter time.Duration) {
+func (c *AdminController) checkCooldown(ctx context.Context, configKey string) (ok bool, retryAfter time.Duration) {
 	var ts daemonTriggerTimestamp
-	err := c.configService.GetJSONConfig(configKey, &ts)
+	err := c.configService.GetJSONConfig(ctx, configKey, &ts)
 	if err != nil {
 		// No record yet → ok to proceed
 		return true, 0
@@ -77,8 +78,8 @@ func (c *AdminController) checkCooldown(configKey string) (ok bool, retryAfter t
 // It reuses the same key that the automatic daemon scheduler checks via
 // shouldMirror / markMirrored, so a manual trigger also resets the automatic
 // 12-hour timer.
-func (c *AdminController) markTriggered(configKey string) {
-	if err := c.configService.SetJSONConfig(configKey, daemonTriggerTimestamp{Time: time.Now()}); err != nil {
+func (c *AdminController) markTriggered(ctx context.Context, configKey string) {
+	if err := c.configService.SetJSONConfig(ctx, configKey, daemonTriggerTimestamp{Time: time.Now()}); err != nil {
 		slog.Error("admin: failed to mark daemon triggered in config DB",
 			"key", configKey, "err", err)
 	}
@@ -145,7 +146,7 @@ func (s *sseWriter) sendError(msg string) {
 // @Router /admin/daemons/open-source-insights/trigger [post]
 func (c *AdminController) TriggerOpenSourceInsights(ctx shared.Context) error {
 	return c.runDaemonSSE(ctx, "vulndb.opensourceinsights", "Open Source Insights", func(sse *sseWriter) error {
-		return c.daemonRunner.UpdateOpenSourceInsightInformation()
+		return c.daemonRunner.UpdateOpenSourceInsightInformation(ctx.Request().Context())
 	})
 }
 
@@ -164,7 +165,7 @@ func (c *AdminController) TriggerVulnDB(ctx shared.Context) error {
 	// runDaemonSSE (before the handler runs), so no extra write needed here.
 	return c.runDaemonSSE(ctx, "vulndb.vulndb", "VulnDB Import", func(sse *sseWriter) error {
 		sse.sendLog("Running VulnDB import…")
-		return c.daemonRunner.UpdateVulnDB()
+		return c.daemonRunner.UpdateVulnDB(ctx.Request().Context())
 	})
 }
 
@@ -180,7 +181,7 @@ func (c *AdminController) TriggerVulnDB(ctx shared.Context) error {
 // @Router /admin/daemons/vulndb-cleanup/trigger [post]
 func (c *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
 	return c.runDaemonSSE(ctx, "daemon.vulndbCleanup", "VulnDB Cleanup", func(sse *sseWriter) error {
-		return c.vulnDBImportService.CleanupOrphanedTables()
+		return c.vulnDBImportService.CleanupOrphanedTables(ctx.Request().Context())
 	})
 }
 
@@ -196,7 +197,7 @@ func (c *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
 // @Router /admin/daemons/fixed-versions/trigger [post]
 func (c *AdminController) TriggerFixedVersions(ctx shared.Context) error {
 	return c.runDaemonSSE(ctx, "vulndb.fixedVersions", "Fixed Versions", func(sse *sseWriter) error {
-		return c.daemonRunner.UpdateFixedVersions()
+		return c.daemonRunner.UpdateFixedVersions(ctx.Request().Context())
 	})
 }
 
@@ -212,7 +213,7 @@ func (c *AdminController) TriggerFixedVersions(ctx shared.Context) error {
 // @Router /admin/daemons/asset-pipeline-all/trigger [post]
 func (c *AdminController) TriggerAssetPipelineAll(ctx shared.Context) error {
 	return c.runDaemonSSE(ctx, "daemon.assetPipelineAll", "Asset Pipeline (all)", func(sse *sseWriter) error {
-		c.daemonRunner.RunAssetPipeline(true)
+		c.daemonRunner.RunAssetPipeline(ctx.Request().Context(), true)
 		return nil
 	})
 }
@@ -249,7 +250,7 @@ func (c *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
 	// convention (a ":" would be an anomalous character in the DB key).
 	configKey := "daemon.assetPipelineSingle." + assetID.String()
 	return c.runDaemonSSE(ctx, configKey, "Asset Pipeline ("+assetID.String()+")", func(sse *sseWriter) error {
-		return c.daemonRunner.RunDaemonPipelineForAsset(assetID)
+		return c.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), assetID)
 	})
 }
 
@@ -277,7 +278,7 @@ func (c *AdminController) runDaemonSSE(
 	userID := session.GetUserID()
 
 	// ---- cooldown check (multi-instance safe via config DB) ----
-	ok, retryAfter := c.checkCooldown(configKey)
+	ok, retryAfter := c.checkCooldown(ctx.Request().Context(), configKey)
 	if !ok {
 		secs := int(retryAfter.Seconds()) + 1
 		return echo.NewHTTPError(429, fmt.Sprintf(
@@ -287,7 +288,7 @@ func (c *AdminController) runDaemonSSE(
 
 	// Mark triggered NOW (before processing) so parallel requests / other
 	// instances see the cooldown immediately.
-	c.markTriggered(configKey)
+	c.markTriggered(ctx.Request().Context(), configKey)
 
 	slog.Info("admin: triggering daemon via SSE", "key", configKey, "user", userID)
 

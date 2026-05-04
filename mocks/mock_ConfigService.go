@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,16 +38,16 @@ func (_m *ConfigService) EXPECT() *ConfigService_Expecter {
 }
 
 // GetJSONConfig provides a mock function for the type ConfigService
-func (_mock *ConfigService) GetJSONConfig(key string, v any) error {
-	ret := _mock.Called(key, v)
+func (_mock *ConfigService) GetJSONConfig(ctx context.Context, key string, v any) error {
+	ret := _mock.Called(ctx, key, v)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetJSONConfig")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, any) error); ok {
-		r0 = returnFunc(key, v)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, any) error); ok {
+		r0 = returnFunc(ctx, key, v)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,25 +60,31 @@ type ConfigService_GetJSONConfig_Call struct {
 }
 
 // GetJSONConfig is a helper method to define mock.On call
+//   - ctx context.Context
 //   - key string
 //   - v any
-func (_e *ConfigService_Expecter) GetJSONConfig(key interface{}, v interface{}) *ConfigService_GetJSONConfig_Call {
-	return &ConfigService_GetJSONConfig_Call{Call: _e.mock.On("GetJSONConfig", key, v)}
+func (_e *ConfigService_Expecter) GetJSONConfig(ctx interface{}, key interface{}, v interface{}) *ConfigService_GetJSONConfig_Call {
+	return &ConfigService_GetJSONConfig_Call{Call: _e.mock.On("GetJSONConfig", ctx, key, v)}
 }
 
-func (_c *ConfigService_GetJSONConfig_Call) Run(run func(key string, v any)) *ConfigService_GetJSONConfig_Call {
+func (_c *ConfigService_GetJSONConfig_Call) Run(run func(ctx context.Context, key string, v any)) *ConfigService_GetJSONConfig_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 any
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(any)
+			arg1 = args[1].(string)
+		}
+		var arg2 any
+		if args[2] != nil {
+			arg2 = args[2].(any)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -87,22 +95,22 @@ func (_c *ConfigService_GetJSONConfig_Call) Return(err error) *ConfigService_Get
 	return _c
 }
 
-func (_c *ConfigService_GetJSONConfig_Call) RunAndReturn(run func(key string, v any) error) *ConfigService_GetJSONConfig_Call {
+func (_c *ConfigService_GetJSONConfig_Call) RunAndReturn(run func(ctx context.Context, key string, v any) error) *ConfigService_GetJSONConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SetJSONConfig provides a mock function for the type ConfigService
-func (_mock *ConfigService) SetJSONConfig(key string, v any) error {
-	ret := _mock.Called(key, v)
+func (_mock *ConfigService) SetJSONConfig(ctx context.Context, key string, v any) error {
+	ret := _mock.Called(ctx, key, v)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetJSONConfig")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, any) error); ok {
-		r0 = returnFunc(key, v)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, any) error); ok {
+		r0 = returnFunc(ctx, key, v)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -115,25 +123,31 @@ type ConfigService_SetJSONConfig_Call struct {
 }
 
 // SetJSONConfig is a helper method to define mock.On call
+//   - ctx context.Context
 //   - key string
 //   - v any
-func (_e *ConfigService_Expecter) SetJSONConfig(key interface{}, v interface{}) *ConfigService_SetJSONConfig_Call {
-	return &ConfigService_SetJSONConfig_Call{Call: _e.mock.On("SetJSONConfig", key, v)}
+func (_e *ConfigService_Expecter) SetJSONConfig(ctx interface{}, key interface{}, v interface{}) *ConfigService_SetJSONConfig_Call {
+	return &ConfigService_SetJSONConfig_Call{Call: _e.mock.On("SetJSONConfig", ctx, key, v)}
 }
 
-func (_c *ConfigService_SetJSONConfig_Call) Run(run func(key string, v any)) *ConfigService_SetJSONConfig_Call {
+func (_c *ConfigService_SetJSONConfig_Call) Run(run func(ctx context.Context, key string, v any)) *ConfigService_SetJSONConfig_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 any
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(any)
+			arg1 = args[1].(string)
+		}
+		var arg2 any
+		if args[2] != nil {
+			arg2 = args[2].(any)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -144,7 +158,7 @@ func (_c *ConfigService_SetJSONConfig_Call) Return(err error) *ConfigService_Set
 	return _c
 }
 
-func (_c *ConfigService_SetJSONConfig_Call) RunAndReturn(run func(key string, v any) error) *ConfigService_SetJSONConfig_Call {
+func (_c *ConfigService_SetJSONConfig_Call) RunAndReturn(run func(ctx context.Context, key string, v any) error) *ConfigService_SetJSONConfig_Call {
 	_c.Call.Return(run)
 	return _c
 }

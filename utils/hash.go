@@ -18,8 +18,21 @@ package utils
 import (
 	"crypto/sha256"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 func HashString(s string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
+}
+
+// HashToUUID hashes the input string with SHA-256 and returns the first 128 bits as a UUID.
+func HashToUUID(s string) uuid.UUID {
+	hash := sha256.Sum256([]byte(s))
+	// Take first 16 bytes (128 bits) of SHA-256 hash
+	id, err := uuid.FromBytes(hash[:16])
+	if err != nil {
+		panic(fmt.Sprintf("failed to create UUID from hash bytes: %v", err))
+	}
+	return id
 }

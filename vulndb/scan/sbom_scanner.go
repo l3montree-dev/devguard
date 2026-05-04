@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 
@@ -34,7 +35,7 @@ type sbomScanner struct {
 // like the affected package version and fixed version
 
 type comparer interface {
-	GetVulns(purl packageurl.PackageURL) ([]models.VulnInPackage, error)
+	GetVulns(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *sbomScanner {
@@ -43,7 +44,7 @@ func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *
 	}
 }
 
-func (s *sbomScanner) Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
 	// Collect all PURLs first
 	var purls []packageurl.PackageURL
 	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
@@ -76,7 +77,7 @@ func (s *sbomScanner) Scan(bom *normalize.SBOMGraph) ([]models.VulnInPackage, er
 				sem <- struct{}{}        // Acquire
 				defer func() { <-sem }() // Release
 
-				vulns, err := s.purlComparer.GetVulns(p)
+				vulns, err := s.purlComparer.GetVulns(ctx, p)
 				if err != nil {
 					select {
 					case errChan <- err:

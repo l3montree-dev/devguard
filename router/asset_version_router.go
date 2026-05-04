@@ -47,6 +47,8 @@ func NewAssetVersionRouter(
 	assetVersionRouter := assetGroup.Group.Group("/refs/:assetVersionSlug", middlewares.AssetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
+	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetVersionRouter.GET("/compliance/:policy/", complianceController.Details)
@@ -55,7 +57,7 @@ func NewAssetVersionRouter(
 	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
 	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
-	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTime)
+	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTimes)
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/attestations/", attestationController.List)

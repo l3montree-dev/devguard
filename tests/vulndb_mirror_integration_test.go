@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -47,11 +48,11 @@ func TestEPSSMirrorUpdatesCVE(t *testing.T) {
 
 		// Use a mock relationship repo that returns empty (no relationships to propagate)
 		relRepo := mocks.NewCVERelationshipRepository(t)
-		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything).
+		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything, mock.Anything).
 			Return([]models.CVERelationship{}, nil)
 
 		epssService := vulndb.NewEPSSService(f.App.CveRepository, relRepo)
-		require.NoError(t, epssService.Mirror())
+		require.NoError(t, epssService.Mirror(context.Background()))
 
 		// Verify the CVE was updated
 		var updated models.CVE
@@ -111,11 +112,11 @@ func TestCISAKEVMirrorUpdatesCVE(t *testing.T) {
 
 		// Use a mock relationship repo that returns empty
 		relRepo := mocks.NewCVERelationshipRepository(t)
-		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything).
+		relRepo.On("GetRelationshipsByTargetCVEBatch", mock.Anything, mock.Anything, mock.Anything).
 			Return([]models.CVERelationship{}, nil)
 
 		kevService := vulndb.NewCISAKEVService(f.App.CveRepository, relRepo)
-		require.NoError(t, kevService.Mirror())
+		require.NoError(t, kevService.Mirror(context.Background()))
 
 		// Verify the CVE was updated
 		var updated models.CVE

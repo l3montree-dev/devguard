@@ -1,0 +1,3 @@
+-- Recovery migration placeholder for missing historical version.
+-- Intentionally left empty to unblock environments that already reference
+-- migration version 20260304170435 in schema_migrations.

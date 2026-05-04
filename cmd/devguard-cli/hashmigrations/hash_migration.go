@@ -112,7 +112,7 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 	configService := services.NewConfigService(db)
 	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService, pool)
 
-	err = configService.RemoveConfig("vulndb.lastIncrementalImport")
+	err = configService.RemoveConfig(context.Background(), "vulndb.lastIncrementalImport")
 	if err != nil {
 		slog.Error("could not remove last incremental import config", "err", err)
 		return err
@@ -120,7 +120,7 @@ func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
 	// the import will create foreign keys we need to disable temporarily
 	vulndb.DisableForeignKeyFix = true
 	// slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(nil)
+	err = v.ImportFromDiff(context.Background(), nil)
 	vulndb.DisableForeignKeyFix = false
 	return err
 }
@@ -229,7 +229,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 					continue
 				}
 
-				vulnsInPackage, err := pc.GetVulns(parsedPurl)
+				vulnsInPackage, err := pc.GetVulns(context.Background(), parsedPurl)
 
 				cacheMu.Lock()
 				purlCache[purl] = cacheEntry{vulns: vulnsInPackage, err: err}
@@ -294,7 +294,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 	slog.Info("Grouped vulnerabilities", "totalGroups", len(purlGroups), "totalOldVulns", len(allResults))
 
 	// Phase 2: Prepare all data for bulk operations
-	createdVulnIDs := make(map[string]bool)
+	createdVulnIDs := make(map[uuid.UUID]bool)
 	copiedTicketIDs := make(map[string]bool) // Track which ticket IDs have already been assigned
 	var vulnsToCreate []models.DependencyVuln
 	var eventsToCreate []models.VulnEvent
@@ -341,7 +341,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			// copyStateFrom is guaranteed to be non-nil now (we filter above)
 			for _, event := range create.copyStateFrom.Events {
 				event.ID = uuid.New() // Generate new ID to avoid duplicates
-				event.VulnID = vulnHash
+				event.DependencyVulnID = utils.Ptr(vulnHash)
 				eventsToCreate = append(eventsToCreate, event)
 			}
 		}
@@ -356,7 +356,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 		// Step 1: Delete ALL dependency vuln related data (we're recreating everything)
 		slog.Info("Deleting all dependency vuln events...")
-		if err := tx.Exec("DELETE FROM vuln_events WHERE vuln_type = 'dependencyVuln'").Error; err != nil {
+		if err := tx.Exec("DELETE FROM vuln_events WHERE dependency_vuln_id IS NOT NULL").Error; err != nil {
 			slog.Error("failed to delete all dependency vuln events", "err", err)
 			return err
 		}
@@ -604,7 +604,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 
 		// Delete all old dependency vuln related data
 		slog.Info("Deleting all dependency vuln events...")
-		if err := tx.Exec("DELETE FROM vuln_events WHERE vuln_type = 'dependencyVuln'").Error; err != nil {
+		if err := tx.Exec("DELETE FROM vuln_events WHERE dependency_vuln_id IS NOT NULL").Error; err != nil {
 			return fmt.Errorf("failed to delete dependency vuln events: %w", err)
 		}
 		slog.Info("Deleting all artifact_dependency_vulns...")
@@ -616,7 +616,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			return fmt.Errorf("failed to delete dependency_vulns: %w", err)
 		}
 
-		createdVulnIDs := make(map[string]bool)
+		createdVulnIDs := make(map[uuid.UUID]bool)
 		copiedTicketIDs := make(map[string]bool)
 
 		// Process each asset version independently, flushing to DB each iteration
@@ -641,7 +641,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			var eventsToCreate []models.VulnEvent
 
 			// Load SBOM components for this asset version
-			componentDeps, err := componentRepository.LoadComponents(tx, key.AssetVersionName, key.AssetID)
+			componentDeps, err := componentRepository.LoadComponents(context.Background(), tx, key.AssetVersionName, key.AssetID)
 			if err != nil {
 				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {
@@ -671,7 +671,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 							vulnsToCreate = append(vulnsToCreate, newVuln)
 							for _, event := range oldVuln.Events {
 								event.ID = uuid.New()
-								event.VulnID = newVuln.ID
+								event.DependencyVulnID = utils.Ptr(newVuln.ID)
 								eventsToCreate = append(eventsToCreate, event)
 							}
 						}
@@ -692,7 +692,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 								vulnsToCreate = append(vulnsToCreate, newVuln)
 								for _, event := range oldVuln.Events {
 									event.ID = uuid.New()
-									event.VulnID = newVuln.ID
+									event.DependencyVulnID = utils.Ptr(newVuln.ID)
 									eventsToCreate = append(eventsToCreate, event)
 								}
 							}

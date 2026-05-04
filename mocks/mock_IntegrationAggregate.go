@@ -41,16 +41,16 @@ func (_m *IntegrationAggregate) EXPECT() *IntegrationAggregate_Expecter {
 }
 
 // CompareIssueStatesAndResolveDifferences provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) CompareIssueStatesAndResolveDifferences(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	ret := _mock.Called(asset, vulnsWithTickets)
+func (_mock *IntegrationAggregate) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	ret := _mock.Called(ctx, asset, vulnsWithTickets)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CompareIssueStatesAndResolveDifferences")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, []models.DependencyVuln) error); ok {
-		r0 = returnFunc(asset, vulnsWithTickets)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, []models.DependencyVuln) error); ok {
+		r0 = returnFunc(ctx, asset, vulnsWithTickets)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -63,25 +63,31 @@ type IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call struct {
 }
 
 // CompareIssueStatesAndResolveDifferences is a helper method to define mock.On call
+//   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) CompareIssueStatesAndResolveDifferences(asset interface{}, vulnsWithTickets interface{}) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
-	return &IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", asset, vulnsWithTickets)}
+func (_e *IntegrationAggregate_Expecter) CompareIssueStatesAndResolveDifferences(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
+	return &IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", ctx, asset, vulnsWithTickets)}
 }
 
-func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) Run(run func(asset models.Asset, vulnsWithTickets []models.DependencyVuln)) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
+func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) Run(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln)) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.DependencyVuln
+		var arg1 models.Asset
 		if args[1] != nil {
-			arg1 = args[1].([]models.DependencyVuln)
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -92,7 +98,7 @@ func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) Ret
 	return _c
 }
 
-func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) RunAndReturn(run func(asset models.Asset, vulnsWithTickets []models.DependencyVuln) error) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
+func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -398,16 +404,16 @@ func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.O
 }
 
 // HandleEvent provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HandleEvent(event any) error {
-	ret := _mock.Called(event)
+func (_mock *IntegrationAggregate) HandleEvent(ctx context.Context, event any) error {
+	ret := _mock.Called(ctx, event)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleEvent")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(any) error); ok {
-		r0 = returnFunc(event)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, any) error); ok {
+		r0 = returnFunc(ctx, event)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -420,19 +426,25 @@ type IntegrationAggregate_HandleEvent_Call struct {
 }
 
 // HandleEvent is a helper method to define mock.On call
+//   - ctx context.Context
 //   - event any
-func (_e *IntegrationAggregate_Expecter) HandleEvent(event interface{}) *IntegrationAggregate_HandleEvent_Call {
-	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", event)}
+func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx interface{}, event interface{}) *IntegrationAggregate_HandleEvent_Call {
+	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event)}
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(event any)) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(ctx context.Context, event any)) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 any
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(any)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 any
+		if args[1] != nil {
+			arg1 = args[1].(any)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -443,7 +455,7 @@ func (_c *IntegrationAggregate_HandleEvent_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(event any) error) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(ctx context.Context, event any) error) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Return(run)
 	return _c
 }

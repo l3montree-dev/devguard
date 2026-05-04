@@ -12,6 +12,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/utils"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -48,190 +51,89 @@ const (
 )
 
 type webhookClient struct {
-	URL    string
-	Secret *string
+	URL         string
+	Secret      *string
+	httpClient  *http.Client
+	retryDelays []time.Duration
 }
 
 func NewWebhookService(url string, secret *string) *webhookClient {
 	return &webhookClient{
-		URL:    url,
-		Secret: secret,
+		URL:         url,
+		Secret:      secret,
+		httpClient:  &http.Client{Transport: utils.EgressTransport},
+		retryDelays: []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second},
 	}
 }
 
-func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http.Response, error) {
+func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, body io.Reader) (*http.Response, error) {
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
-	// Retry logic with delays: 1s, 5s, 10s
-	retryDelays := []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}
+	var (
+		resp    *http.Response
+		lastErr error
+	)
 
-	var resp *http.Response
+	for i, delay := range c.retryDelays {
+		// Drain and close the previous iteration's body so the connection can be reused.
+		if resp != nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			resp = nil
+		}
 
-	for i, delay := range retryDelays {
 		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(bodyBytes))
 		if err != nil {
 			return nil, err
 		}
-
 		if c.Secret != nil {
 			req.Header.Set("X-Webhook-Secret", *c.Secret)
 		}
-
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err = http.DefaultClient.Do(req)
+		resp, lastErr = c.httpClient.Do(req)
 
-		if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// Don't retry on 2xx or permanent 4xx — only 408/429 are retryable in the 4xx range.
+		if lastErr == nil && resp.StatusCode < 500 &&
+			resp.StatusCode != http.StatusRequestTimeout &&
+			resp.StatusCode != http.StatusTooManyRequests {
 			return resp, nil
 		}
 
-		if i == len(retryDelays)-1 {
-			return nil, fmt.Errorf("webhook request failed with no response")
+		if i == len(c.retryDelays)-1 {
+			break
 		}
 
-		time.Sleep(delay)
-	}
-
-	// This should never be reached due to the break condition above
-	return nil, fmt.Errorf("unexpected end of retry loop")
-
-}
-
-func (c *webhookClient) SendSBOM(SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
-
-	body := WebhookStruct{
-		Organization: org,
-		Project:      project,
-		Asset:        asset,
-		AssetVersion: assetVersion,
-		Payload:      SBOM,
-		Type:         WebhookTypeSBOM,
-		Artifact:     artifact,
-	}
-
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
-	if err != nil {
-		return err
-	}
-	if resp == nil {
-		return fmt.Errorf("received nil response when sending SBOM")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to send SBOM, status: %s", resp.Status)
-	}
-
-	return nil
-}
-
-func (c *webhookClient) SendFirstPartyVulnerabilities(vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
-	return nil
-
-	/*body := WebhookStruct{
-		Organization: org,
-		Project:      project,
-		Asset:        asset,
-		AssetVersion: assetVersion,
-		Payload:      vuln,
-		Type:         WebhookTypeFirstPartyVulnerabilities,
-	}
-
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to send vulnerability, status: %s,", resp.Status)
-	}
-
-	return nil*/
-}
-
-func (c *webhookClient) SendDependencyVulnerabilities(vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
-
-	body := WebhookStruct{
-		Organization: org,
-		Project:      project,
-		Asset:        asset,
-		AssetVersion: assetVersion,
-		Payload:      vuln,
-		Artifact:     artifact,
-		Type:         WebhookTypeDependencyVulnerabilities,
-	}
-
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
-	if err != nil {
-		return err
-	}
-	if resp == nil {
-		return fmt.Errorf("received nil response when sending dependency vulnerabilities")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to send vulnerability, status: %s", resp.Status)
-	}
-
-	return nil
-}
-
-func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
-
-	var payload any
-	var webhookType WebhookType
-
-	switch payloadType {
-	case TestPayloadTypeEmpty:
-		payload = map[string]any{
-			"message":   "This is a test webhook from DevGuard",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		select {
+		case <-ctx.Done():
+			if resp != nil {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+			return nil, ctx.Err()
+		case <-time.After(delay):
 		}
-		webhookType = WebhookTypeTest
-
-	case TestPayloadTypeSampleSBOM:
-		payload = createSampleSBOM()
-		webhookType = WebhookTypeSBOM
-
-	case TestPayloadTypeSampleDependencyVulns:
-		payload = createSampleDependencyVulns()
-		webhookType = WebhookTypeDependencyVulnerabilities
-
-	case TestPayloadTypeSampleFirstPartyVulns:
-		payload = createSampleFirstPartyVulns()
-		webhookType = WebhookTypeFirstPartyVulnerabilities
-
-	default:
-		payload = map[string]any{
-			"message":   "This is a test webhook from DevGuard",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		}
-		webhookType = WebhookTypeTest
 	}
 
+	if lastErr != nil {
+		// http.Client.Do can return a non-nil response together with an error
+		// (e.g. CheckRedirect failures). Drain and close so the connection isn't leaked.
+		if resp != nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+		}
+		return nil, lastErr
+	}
+	return resp, nil
+}
+
+func (c *webhookClient) send(ctx context.Context, webhookType WebhookType, payload any, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 	body := WebhookStruct{
 		Organization: org,
 		Project:      project,
@@ -239,27 +141,57 @@ func (c *webhookClient) SendTest(org shared.OrgObject, project shared.ProjectObj
 		AssetVersion: assetVersion,
 		Payload:      payload,
 		Type:         webhookType,
+		Artifact:     artifact,
 	}
 
 	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(body)
-	if err != nil {
+	if err := json.NewEncoder(&buf).Encode(body); err != nil {
 		return err
 	}
 
-	resp, err := c.CreateRequest("POST", c.URL, &buf)
+	resp, err := c.CreateRequest(ctx, "POST", c.URL, &buf)
 	if err != nil {
 		return err
-	}
-	if resp == nil {
-		return fmt.Errorf("received nil response when sending test webhook")
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil // Success
-	}
 
-	return fmt.Errorf("failed to send test webhook, status: %s", resp.Status)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("webhook %s failed, status: %s", webhookType, resp.Status)
+	}
+	return nil
+}
+
+func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+	return c.send(ctx, WebhookTypeSBOM, SBOM, org, project, asset, assetVersion, artifact)
+}
+
+func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
+	return c.send(ctx, WebhookTypeFirstPartyVulnerabilities, vuln, org, project, asset, assetVersion, shared.ArtifactObject{})
+}
+
+func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+	return c.send(ctx, WebhookTypeDependencyVulnerabilities, vuln, org, project, asset, assetVersion, artifact)
+}
+
+func (c *webhookClient) SendTest(ctx context.Context, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, payloadType TestPayloadType) error {
+	payload, webhookType := testPayload(payloadType)
+	return c.send(ctx, webhookType, payload, org, project, asset, assetVersion, shared.ArtifactObject{})
+}
+
+func testPayload(payloadType TestPayloadType) (any, WebhookType) {
+	switch payloadType {
+	case TestPayloadTypeSampleSBOM:
+		return createSampleSBOM(), WebhookTypeSBOM
+	case TestPayloadTypeSampleDependencyVulns:
+		return createSampleDependencyVulns(), WebhookTypeDependencyVulnerabilities
+	case TestPayloadTypeSampleFirstPartyVulns:
+		return createSampleFirstPartyVulns(), WebhookTypeFirstPartyVulnerabilities
+	default:
+		return map[string]any{
+			"message":   "This is a test webhook from DevGuard",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		}, WebhookTypeTest
+	}
 }
 
 func createSampleSBOM() cdx.BOM {
@@ -318,7 +250,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 
 	return []dtos.DependencyVulnDTO{
 		{
-			ID: "dep-vuln-001",
+			ID: uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abc"),
 			//	ScannerIDs:            "trivy",
 			AssetVersionName:      "v1.2.3",
 			AssetID:               "asset-12345",
@@ -343,7 +275,7 @@ func createSampleFirstPartyVulns() []dtos.FirstPartyVulnDTO {
 
 	return []dtos.FirstPartyVulnDTO{
 		{
-			ID:               "fpv-001",
+			ID:               uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abd"),
 			ScannerIDs:       "semgrep",
 			Message:          &message,
 			AssetVersionName: "v1.2.3",

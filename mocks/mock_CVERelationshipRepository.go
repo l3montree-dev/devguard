@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -39,16 +41,16 @@ func (_m *CVERelationshipRepository) EXPECT() *CVERelationshipRepository_Expecte
 }
 
 // Activate provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Activate(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *CVERelationshipRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +63,31 @@ type CVERelationshipRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CVERelationshipRepository_Expecter) Activate(tx interface{}, id interface{}) *CVERelationshipRepository_Activate_Call {
-	return &CVERelationshipRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *CVERelationshipRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Activate_Call {
+	return &CVERelationshipRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *CVERelationshipRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *CVERelationshipRepository_Activate_Call {
+func (_c *CVERelationshipRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *CVERelationshipRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -90,14 +98,14 @@ func (_c *CVERelationshipRepository_Activate_Call) Return(err error) *CVERelatio
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *CVERelationshipRepository_Activate_Call {
+func (_c *CVERelationshipRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *CVERelationshipRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) All() ([]models.CVERelationship, error) {
-	ret := _mock.Called()
+func (_mock *CVERelationshipRepository) All(ctx context.Context, tx shared.DB) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -105,18 +113,18 @@ func (_mock *CVERelationshipRepository) All() ([]models.CVERelationship, error) 
 
 	var r0 []models.CVERelationship
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.CVERelationship, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.CVERelationship); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.CVERelationship)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -129,13 +137,26 @@ type CVERelationshipRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *CVERelationshipRepository_Expecter) All() *CVERelationshipRepository_All_Call {
-	return &CVERelationshipRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *CVERelationshipRepository_Expecter) All(ctx interface{}, tx interface{}) *CVERelationshipRepository_All_Call {
+	return &CVERelationshipRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *CVERelationshipRepository_All_Call) Run(run func()) *CVERelationshipRepository_All_Call {
+func (_c *CVERelationshipRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *CVERelationshipRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -145,22 +166,22 @@ func (_c *CVERelationshipRepository_All_Call) Return(cVERelationships []models.C
 	return _c
 }
 
-func (_c *CVERelationshipRepository_All_Call) RunAndReturn(run func() ([]models.CVERelationship, error)) *CVERelationshipRepository_All_Call {
+func (_c *CVERelationshipRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.CVERelationship, error)) *CVERelationshipRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *CVERelationshipRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -175,13 +196,20 @@ type CVERelationshipRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *CVERelationshipRepository_Expecter) Begin() *CVERelationshipRepository_Begin_Call {
-	return &CVERelationshipRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *CVERelationshipRepository_Expecter) Begin(ctx interface{}) *CVERelationshipRepository_Begin_Call {
+	return &CVERelationshipRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *CVERelationshipRepository_Begin_Call) Run(run func()) *CVERelationshipRepository_Begin_Call {
+func (_c *CVERelationshipRepository_Begin_Call) Run(run func(ctx context.Context)) *CVERelationshipRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -191,22 +219,73 @@ func (_c *CVERelationshipRepository_Begin_Call) Return(v shared.DB) *CVERelation
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Begin_Call) RunAndReturn(run func() shared.DB) *CVERelationshipRepository_Begin_Call {
+func (_c *CVERelationshipRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *CVERelationshipRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type CVERelationshipRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *CVERelationshipRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
+	return &CVERelationshipRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *CVERelationshipRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_CleanupOrphanedRecords_Call) Return(err error) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Create(tx shared.DB, t *models.CVERelationship) error {
-	ret := _mock.Called(tx, t)
+func (_mock *CVERelationshipRepository) Create(ctx context.Context, tx shared.DB, t *models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -219,25 +298,31 @@ type CVERelationshipRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) Create(tx interface{}, t interface{}) *CVERelationshipRepository_Create_Call {
-	return &CVERelationshipRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *CVERelationshipRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *CVERelationshipRepository_Create_Call {
+	return &CVERelationshipRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *CVERelationshipRepository_Create_Call) Run(run func(tx shared.DB, t *models.CVERelationship)) *CVERelationshipRepository_Create_Call {
+func (_c *CVERelationshipRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.CVERelationship)) *CVERelationshipRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.CVERelationship
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.CVERelationship)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].(*models.CVERelationship)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -248,22 +333,22 @@ func (_c *CVERelationshipRepository_Create_Call) Return(err error) *CVERelations
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.CVERelationship) error) *CVERelationshipRepository_Create_Call {
+func (_c *CVERelationshipRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.CVERelationship) error) *CVERelationshipRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) CreateBatch(tx shared.DB, ts []models.CVERelationship) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *CVERelationshipRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -276,25 +361,31 @@ type CVERelationshipRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *CVERelationshipRepository_CreateBatch_Call {
-	return &CVERelationshipRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *CVERelationshipRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *CVERelationshipRepository_CreateBatch_Call {
+	return &CVERelationshipRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *CVERelationshipRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_CreateBatch_Call {
+func (_c *CVERelationshipRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.CVERelationship
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.CVERelationship)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].([]models.CVERelationship)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -305,22 +396,22 @@ func (_c *CVERelationshipRepository_CreateBatch_Call) Return(err error) *CVERela
 	return _c
 }
 
-func (_c *CVERelationshipRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_CreateBatch_Call {
+func (_c *CVERelationshipRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Delete(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *CVERelationshipRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -333,25 +424,31 @@ type CVERelationshipRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CVERelationshipRepository_Expecter) Delete(tx interface{}, id interface{}) *CVERelationshipRepository_Delete_Call {
-	return &CVERelationshipRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *CVERelationshipRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Delete_Call {
+	return &CVERelationshipRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *CVERelationshipRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *CVERelationshipRepository_Delete_Call {
+func (_c *CVERelationshipRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *CVERelationshipRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -362,22 +459,22 @@ func (_c *CVERelationshipRepository_Delete_Call) Return(err error) *CVERelations
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *CVERelationshipRepository_Delete_Call {
+func (_c *CVERelationshipRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *CVERelationshipRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) DeleteBatch(tx shared.DB, ids []models.CVERelationship) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *CVERelationshipRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -390,25 +487,31 @@ type CVERelationshipRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *CVERelationshipRepository_DeleteBatch_Call {
-	return &CVERelationshipRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *CVERelationshipRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *CVERelationshipRepository_DeleteBatch_Call {
+	return &CVERelationshipRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *CVERelationshipRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.CVERelationship)) *CVERelationshipRepository_DeleteBatch_Call {
+func (_c *CVERelationshipRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.CVERelationship)) *CVERelationshipRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.CVERelationship
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.CVERelationship)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].([]models.CVERelationship)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -419,22 +522,22 @@ func (_c *CVERelationshipRepository_DeleteBatch_Call) Return(err error) *CVERela
 	return _c
 }
 
-func (_c *CVERelationshipRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.CVERelationship) error) *CVERelationshipRepository_DeleteBatch_Call {
+func (_c *CVERelationshipRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.CVERelationship) error) *CVERelationshipRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FilterOutRelationsWithInvalidTargetCVE provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(tx shared.DB) error {
-	ret := _mock.Called(tx)
+func (_mock *CVERelationshipRepository) FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx shared.DB) error {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FilterOutRelationsWithInvalidTargetCVE")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) error); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) error); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -447,19 +550,25 @@ type CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call struc
 }
 
 // FilterOutRelationsWithInvalidTargetCVE is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *CVERelationshipRepository_Expecter) FilterOutRelationsWithInvalidTargetCVE(tx interface{}) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
-	return &CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call{Call: _e.mock.On("FilterOutRelationsWithInvalidTargetCVE", tx)}
+func (_e *CVERelationshipRepository_Expecter) FilterOutRelationsWithInvalidTargetCVE(ctx interface{}, tx interface{}) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
+	return &CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call{Call: _e.mock.On("FilterOutRelationsWithInvalidTargetCVE", ctx, tx)}
 }
 
-func (_c *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call) Run(run func(tx shared.DB)) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
+func (_c *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call) Run(run func(ctx context.Context, tx shared.DB)) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -470,14 +579,14 @@ func (_c *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call)
 	return _c
 }
 
-func (_c *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call) RunAndReturn(run func(tx shared.DB) error) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
+func (_c *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) error) *CVERelationshipRepository_FilterOutRelationsWithInvalidTargetCVE_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllRelationsForCVE provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) GetAllRelationsForCVE(tx shared.DB, targetCVEID string) ([]models.CVERelationship, error) {
-	ret := _mock.Called(tx, targetCVEID)
+func (_mock *CVERelationshipRepository) GetAllRelationsForCVE(ctx context.Context, tx shared.DB, targetCVEID string) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, targetCVEID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllRelationsForCVE")
@@ -485,18 +594,18 @@ func (_mock *CVERelationshipRepository) GetAllRelationsForCVE(tx shared.DB, targ
 
 	var r0 []models.CVERelationship
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) ([]models.CVERelationship, error)); ok {
-		return returnFunc(tx, targetCVEID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, targetCVEID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) []models.CVERelationship); ok {
-		r0 = returnFunc(tx, targetCVEID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, targetCVEID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.CVERelationship)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string) error); ok {
-		r1 = returnFunc(tx, targetCVEID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, targetCVEID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -509,25 +618,31 @@ type CVERelationshipRepository_GetAllRelationsForCVE_Call struct {
 }
 
 // GetAllRelationsForCVE is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - targetCVEID string
-func (_e *CVERelationshipRepository_Expecter) GetAllRelationsForCVE(tx interface{}, targetCVEID interface{}) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
-	return &CVERelationshipRepository_GetAllRelationsForCVE_Call{Call: _e.mock.On("GetAllRelationsForCVE", tx, targetCVEID)}
+func (_e *CVERelationshipRepository_Expecter) GetAllRelationsForCVE(ctx interface{}, tx interface{}, targetCVEID interface{}) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
+	return &CVERelationshipRepository_GetAllRelationsForCVE_Call{Call: _e.mock.On("GetAllRelationsForCVE", ctx, tx, targetCVEID)}
 }
 
-func (_c *CVERelationshipRepository_GetAllRelationsForCVE_Call) Run(run func(tx shared.DB, targetCVEID string)) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
+func (_c *CVERelationshipRepository_GetAllRelationsForCVE_Call) Run(run func(ctx context.Context, tx shared.DB, targetCVEID string)) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -538,14 +653,14 @@ func (_c *CVERelationshipRepository_GetAllRelationsForCVE_Call) Return(cVERelati
 	return _c
 }
 
-func (_c *CVERelationshipRepository_GetAllRelationsForCVE_Call) RunAndReturn(run func(tx shared.DB, targetCVEID string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
+func (_c *CVERelationshipRepository_GetAllRelationsForCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, targetCVEID string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetAllRelationsForCVE_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllRelationshipsForCVEBatch provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) GetAllRelationshipsForCVEBatch(tx shared.DB, sourceCVEIDs []string) ([]models.CVERelationship, error) {
-	ret := _mock.Called(tx, sourceCVEIDs)
+func (_mock *CVERelationshipRepository) GetAllRelationshipsForCVEBatch(ctx context.Context, tx shared.DB, sourceCVEIDs []string) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, sourceCVEIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllRelationshipsForCVEBatch")
@@ -553,18 +668,18 @@ func (_mock *CVERelationshipRepository) GetAllRelationshipsForCVEBatch(tx shared
 
 	var r0 []models.CVERelationship
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) ([]models.CVERelationship, error)); ok {
-		return returnFunc(tx, sourceCVEIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, sourceCVEIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) []models.CVERelationship); ok {
-		r0 = returnFunc(tx, sourceCVEIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, sourceCVEIDs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.CVERelationship)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, []string) error); ok {
-		r1 = returnFunc(tx, sourceCVEIDs)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, sourceCVEIDs)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -577,544 +692,22 @@ type CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call struct {
 }
 
 // GetAllRelationshipsForCVEBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - sourceCVEIDs []string
-func (_e *CVERelationshipRepository_Expecter) GetAllRelationshipsForCVEBatch(tx interface{}, sourceCVEIDs interface{}) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
-	return &CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call{Call: _e.mock.On("GetAllRelationshipsForCVEBatch", tx, sourceCVEIDs)}
+func (_e *CVERelationshipRepository_Expecter) GetAllRelationshipsForCVEBatch(ctx interface{}, tx interface{}, sourceCVEIDs interface{}) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
+	return &CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call{Call: _e.mock.On("GetAllRelationshipsForCVEBatch", ctx, tx, sourceCVEIDs)}
 }
 
-func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) Run(run func(tx shared.DB, sourceCVEIDs []string)) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
+func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) Run(run func(ctx context.Context, tx shared.DB, sourceCVEIDs []string)) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
-	_c.Call.Return(cVERelationships, err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) RunAndReturn(run func(tx shared.DB, sourceCVEIDs []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetDB provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDB")
-	}
-
-	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(shared.DB)
-		}
-	}
-	return r0
-}
-
-// CVERelationshipRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
-type CVERelationshipRepository_GetDB_Call struct {
-	*mock.Call
-}
-
-// GetDB is a helper method to define mock.On call
-//   - tx shared.DB
-func (_e *CVERelationshipRepository_Expecter) GetDB(tx interface{}) *CVERelationshipRepository_GetDB_Call {
-	return &CVERelationshipRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
-}
-
-func (_c *CVERelationshipRepository_GetDB_Call) Run(run func(tx shared.DB)) *CVERelationshipRepository_GetDB_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetDB_Call) Return(v shared.DB) *CVERelationshipRepository_GetDB_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *CVERelationshipRepository_GetDB_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetRelationshipsByTargetCVEBatch provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) GetRelationshipsByTargetCVEBatch(tx shared.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
-	ret := _mock.Called(tx, targetCVEIDs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetRelationshipsByTargetCVEBatch")
-	}
-
-	var r0 []models.CVERelationship
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) ([]models.CVERelationship, error)); ok {
-		return returnFunc(tx, targetCVEIDs)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []string) []models.CVERelationship); ok {
-		r0 = returnFunc(tx, targetCVEIDs)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.CVERelationship)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, []string) error); ok {
-		r1 = returnFunc(tx, targetCVEIDs)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRelationshipsByTargetCVEBatch'
-type CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call struct {
-	*mock.Call
-}
-
-// GetRelationshipsByTargetCVEBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - targetCVEIDs []string
-func (_e *CVERelationshipRepository_Expecter) GetRelationshipsByTargetCVEBatch(tx interface{}, targetCVEIDs interface{}) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
-	return &CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call{Call: _e.mock.On("GetRelationshipsByTargetCVEBatch", tx, targetCVEIDs)}
-}
-
-func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) Run(run func(tx shared.DB, targetCVEIDs []string)) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []string
-		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
-	_c.Call.Return(cVERelationships, err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) RunAndReturn(run func(tx shared.DB, targetCVEIDs []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// List provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) List(ids []string) ([]models.CVERelationship, error) {
-	ret := _mock.Called(ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for List")
-	}
-
-	var r0 []models.CVERelationship
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.CVERelationship, error)); ok {
-		return returnFunc(ids)
-	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []models.CVERelationship); ok {
-		r0 = returnFunc(ids)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.CVERelationship)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = returnFunc(ids)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// CVERelationshipRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type CVERelationshipRepository_List_Call struct {
-	*mock.Call
-}
-
-// List is a helper method to define mock.On call
-//   - ids []string
-func (_e *CVERelationshipRepository_Expecter) List(ids interface{}) *CVERelationshipRepository_List_Call {
-	return &CVERelationshipRepository_List_Call{Call: _e.mock.On("List", ids)}
-}
-
-func (_c *CVERelationshipRepository_List_Call) Run(run func(ids []string)) *CVERelationshipRepository_List_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
-		if args[0] != nil {
-			arg0 = args[0].([]string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_List_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_List_Call {
-	_c.Call.Return(cVERelationships, err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Read(id string) (models.CVERelationship, error) {
-	ret := _mock.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.CVERelationship
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.CVERelationship, error)); ok {
-		return returnFunc(id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.CVERelationship); ok {
-		r0 = returnFunc(id)
-	} else {
-		r0 = ret.Get(0).(models.CVERelationship)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// CVERelationshipRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type CVERelationshipRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - id string
-func (_e *CVERelationshipRepository_Expecter) Read(id interface{}) *CVERelationshipRepository_Read_Call {
-	return &CVERelationshipRepository_Read_Call{Call: _e.mock.On("Read", id)}
-}
-
-func (_c *CVERelationshipRepository_Read_Call) Run(run func(id string)) *CVERelationshipRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Read_Call) Return(cVERelationship models.CVERelationship, err error) *CVERelationshipRepository_Read_Call {
-	_c.Call.Return(cVERelationship, err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Read_Call) RunAndReturn(run func(id string) (models.CVERelationship, error)) *CVERelationshipRepository_Read_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Save provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Save(tx shared.DB, t *models.CVERelationship) error {
-	ret := _mock.Called(tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Save")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CVERelationshipRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
-type CVERelationshipRepository_Save_Call struct {
-	*mock.Call
-}
-
-// Save is a helper method to define mock.On call
-//   - tx shared.DB
-//   - t *models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) Save(tx interface{}, t interface{}) *CVERelationshipRepository_Save_Call {
-	return &CVERelationshipRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
-}
-
-func (_c *CVERelationshipRepository_Save_Call) Run(run func(tx shared.DB, t *models.CVERelationship)) *CVERelationshipRepository_Save_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.CVERelationship
-		if args[1] != nil {
-			arg1 = args[1].(*models.CVERelationship)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Save_Call) Return(err error) *CVERelationshipRepository_Save_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.CVERelationship) error) *CVERelationshipRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatch provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) SaveBatch(tx shared.DB, ts []models.CVERelationship) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CVERelationshipRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
-type CVERelationshipRepository_SaveBatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *CVERelationshipRepository_SaveBatch_Call {
-	return &CVERelationshipRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
-}
-
-func (_c *CVERelationshipRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_SaveBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.CVERelationship
-		if args[1] != nil {
-			arg1 = args[1].([]models.CVERelationship)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_SaveBatch_Call) Return(err error) *CVERelationshipRepository_SaveBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchBestEffort provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) SaveBatchBestEffort(tx shared.DB, ts []models.CVERelationship) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.CVERelationship) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CVERelationshipRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type CVERelationshipRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *CVERelationshipRepository_SaveBatchBestEffort_Call {
-	return &CVERelationshipRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
-}
-
-func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.CVERelationship
-		if args[1] != nil {
-			arg1 = args[1].([]models.CVERelationship)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) Return(err error) *CVERelationshipRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CVERelationshipRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type CVERelationshipRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - fn func(tx shared.DB) error
-func (_e *CVERelationshipRepository_Expecter) Transaction(fn interface{}) *CVERelationshipRepository_Transaction_Call {
-	return &CVERelationshipRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
-}
-
-func (_c *CVERelationshipRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *CVERelationshipRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Transaction_Call) Return(err error) *CVERelationshipRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CVERelationshipRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *CVERelationshipRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Upsert provides a mock function for the type CVERelationshipRepository
-func (_mock *CVERelationshipRepository) Upsert(t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.CVERelationship, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CVERelationshipRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
-type CVERelationshipRepository_Upsert_Call struct {
-	*mock.Call
-}
-
-// Upsert is a helper method to define mock.On call
-//   - t *[]*models.CVERelationship
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
-func (_e *CVERelationshipRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *CVERelationshipRepository_Upsert_Call {
-	return &CVERelationshipRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
-}
-
-func (_c *CVERelationshipRepository_Upsert_Call) Run(run func(t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string)) *CVERelationshipRepository_Upsert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.CVERelationship
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.CVERelationship)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 []string
 		if args[2] != nil {
@@ -1129,12 +722,612 @@ func (_c *CVERelationshipRepository_Upsert_Call) Run(run func(t *[]*models.CVERe
 	return _c
 }
 
+func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
+	_c.Call.Return(cVERelationships, err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, sourceCVEIDs []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetAllRelationshipsForCVEBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDB provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// CVERelationshipRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type CVERelationshipRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *CVERelationshipRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *CVERelationshipRepository_GetDB_Call {
+	return &CVERelationshipRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
+}
+
+func (_c *CVERelationshipRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *CVERelationshipRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_GetDB_Call) Return(v shared.DB) *CVERelationshipRepository_GetDB_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *CVERelationshipRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRelationshipsByTargetCVEBatch provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) GetRelationshipsByTargetCVEBatch(ctx context.Context, tx shared.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, targetCVEIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRelationshipsByTargetCVEBatch")
+	}
+
+	var r0 []models.CVERelationship
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, targetCVEIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, targetCVEIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVERelationship)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, targetCVEIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRelationshipsByTargetCVEBatch'
+type CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call struct {
+	*mock.Call
+}
+
+// GetRelationshipsByTargetCVEBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - targetCVEIDs []string
+func (_e *CVERelationshipRepository_Expecter) GetRelationshipsByTargetCVEBatch(ctx interface{}, tx interface{}, targetCVEIDs interface{}) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
+	return &CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call{Call: _e.mock.On("GetRelationshipsByTargetCVEBatch", ctx, tx, targetCVEIDs)}
+}
+
+func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) Run(run func(ctx context.Context, tx shared.DB, targetCVEIDs []string)) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
+	_c.Call.Return(cVERelationships, err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, targetCVEIDs []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// List provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []models.CVERelationship
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVERelationship)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CVERelationshipRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type CVERelationshipRepository_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []string
+func (_e *CVERelationshipRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *CVERelationshipRepository_List_Call {
+	return &CVERelationshipRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
+}
+
+func (_c *CVERelationshipRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *CVERelationshipRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_List_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_List_Call {
+	_c.Call.Return(cVERelationships, err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) Read(ctx context.Context, tx shared.DB, id string) (models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.CVERelationship
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.CVERelationship)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CVERelationshipRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type CVERelationshipRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *CVERelationshipRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Read_Call {
+	return &CVERelationshipRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
+}
+
+func (_c *CVERelationshipRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *CVERelationshipRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Read_Call) Return(cVERelationship models.CVERelationship, err error) *CVERelationshipRepository_Read_Call {
+	_c.Call.Return(cVERelationship, err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.CVERelationship, error)) *CVERelationshipRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) Save(ctx context.Context, tx shared.DB, t *models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type CVERelationshipRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.CVERelationship
+func (_e *CVERelationshipRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *CVERelationshipRepository_Save_Call {
+	return &CVERelationshipRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
+}
+
+func (_c *CVERelationshipRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.CVERelationship)) *CVERelationshipRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].(*models.CVERelationship)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Save_Call) Return(err error) *CVERelationshipRepository_Save_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.CVERelationship) error) *CVERelationshipRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type CVERelationshipRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.CVERelationship
+func (_e *CVERelationshipRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *CVERelationshipRepository_SaveBatch_Call {
+	return &CVERelationshipRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
+}
+
+func (_c *CVERelationshipRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].([]models.CVERelationship)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_SaveBatch_Call) Return(err error) *CVERelationshipRepository_SaveBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVERelationship) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type CVERelationshipRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.CVERelationship
+func (_e *CVERelationshipRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *CVERelationshipRepository_SaveBatchBestEffort_Call {
+	return &CVERelationshipRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
+}
+
+func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship)) *CVERelationshipRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].([]models.CVERelationship)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) Return(err error) *CVERelationshipRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.CVERelationship) error) *CVERelationshipRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type CVERelationshipRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(tx shared.DB) error
+func (_e *CVERelationshipRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *CVERelationshipRepository_Transaction_Call {
+	return &CVERelationshipRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
+}
+
+func (_c *CVERelationshipRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *CVERelationshipRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Transaction_Call) Return(err error) *CVERelationshipRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *CVERelationshipRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.CVERelationship, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CVERelationshipRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type CVERelationshipRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *[]*models.CVERelationship
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *CVERelationshipRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *CVERelationshipRepository_Upsert_Call {
+	return &CVERelationshipRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+}
+
+func (_c *CVERelationshipRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string)) *CVERelationshipRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *[]*models.CVERelationship
+		if args[2] != nil {
+			arg2 = args[2].(*[]*models.CVERelationship)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
 func (_c *CVERelationshipRepository_Upsert_Call) Return(err error) *CVERelationshipRepository_Upsert_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string) error) *CVERelationshipRepository_Upsert_Call {
+func (_c *CVERelationshipRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.CVERelationship, conflictingColumns []clause.Column, updateOnly []string) error) *CVERelationshipRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

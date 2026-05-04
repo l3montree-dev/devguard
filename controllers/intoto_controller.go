@@ -59,7 +59,7 @@ func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 
 	if imageNameOrSupplyChainID == "" {
 		// just verify the digest
-		valid, err := a.inTotoVerifierService.VerifySupplyChainByDigestOnly(digest)
+		valid, err := a.inTotoVerifierService.VerifySupplyChainByDigestOnly(ctx.Request().Context(), digest)
 		if err != nil {
 			slog.Error("could not verify supply chain", "err", err)
 			return echo.NewHTTPError(500, "could not verify supply chain").WithInternal(err)
@@ -71,7 +71,7 @@ func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 		}
 	}
 
-	valid, err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
+	valid, err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(ctx.Request().Context(), imageNameOrSupplyChainID, digest)
 	if err != nil {
 		slog.Error("could not verify supply chain", "err", err)
 		return echo.NewHTTPError(500, "could not verify supply chain").WithInternal(err)
@@ -93,7 +93,7 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	}
 
 	// check if valid - get the signed pat
-	pat, valid := a.patRepository.GetByFingerprint(ctx.Request().Header.Get("X-Fingerprint"))
+	pat, valid := a.patRepository.GetByFingerprint(ctx.Request().Context(), nil, ctx.Request().Header.Get("X-Fingerprint"))
 	if valid != nil {
 		return echo.NewHTTPError(401, "could not find pat").WithInternal(valid)
 	}
@@ -138,7 +138,7 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	if defaultBranch == "" {
 		defaultBranch = "main"
 	}
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		return err
 	}
@@ -153,13 +153,13 @@ func (a *InToToController) Create(ctx shared.Context) error {
 		Filename:         req.Filename,
 	}
 
-	valid = a.linkRepository.Save(nil, &link)
+	valid = a.linkRepository.Save(ctx.Request().Context(), nil, &link)
 	if valid != nil {
 		return echo.NewHTTPError(500, "could not save in-toto link").WithInternal(valid)
 	}
 
 	if req.SupplyChainOutputDigest != "" {
-		verified, err := a.inTotoVerifierService.VerifySupplyChain(req.SupplyChainID)
+		verified, err := a.inTotoVerifierService.VerifySupplyChain(ctx.Request().Context(), req.SupplyChainID)
 		if err != nil {
 			slog.Error("could not verify supply chain", "err", err)
 		} else {
@@ -172,7 +172,7 @@ func (a *InToToController) Create(ctx shared.Context) error {
 			}
 
 			// save the digest
-			err = a.supplyChainRepository.Save(nil, &supplyChain)
+			err = a.supplyChainRepository.Save(ctx.Request().Context(), nil, &supplyChain)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not create supply chain").WithInternal(valid)
 			}
@@ -203,7 +203,7 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 		userUuids = append(userUuids, uuid)
 	}
 
-	pats, err := a.patRepository.FindByUserIDs(userUuids)
+	pats, err := a.patRepository.FindByUserIDs(ctx.Request().Context(), nil, userUuids)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get pats").WithInternal(err)
 	}
@@ -312,7 +312,7 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 func (a *InToToController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// find a link with the corresponding opaque id
-	links, err := a.linkRepository.FindByAssetAndSupplyChainID(app.GetID(), ctx.Param("supplyChainID"))
+	links, err := a.linkRepository.FindByAssetAndSupplyChainID(ctx.Request().Context(), nil, app.GetID(), ctx.Param("supplyChainID"))
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}

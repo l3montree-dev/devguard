@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/pkg/errors"
@@ -61,8 +62,14 @@ func secretScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	var scannerCmd *exec.Cmd
 
 	slog.Info("Starting secret scanning", "path", p, "result-path", sarifFilePath)
+	var configFileArgs []string
+	if config.RuntimeBaseConfig.ConfigFilePath != "" {
+		configFileArgs = []string{"--config", config.RuntimeBaseConfig.ConfigFilePath}
+	}
+	args := []string{"git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0"}
+	args = append(args, configFileArgs...)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+	scannerCmd = exec.Command("gitleaks", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr

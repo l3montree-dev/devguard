@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -73,6 +74,7 @@ func runMigrations() error {
 		integrations.Module,
 		vulndb.Module,
 		daemons.Module,
+		fixedversion.Module,
 
 		fx.Invoke(func(
 			pool *pgxpool.Pool,

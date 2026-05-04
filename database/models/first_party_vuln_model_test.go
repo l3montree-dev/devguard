@@ -67,7 +67,7 @@ func TestCalculateHash(t *testing.T) {
 			URI:           "",
 			Vulnerability: Vulnerability{AssetID: uuid.New(), AssetVersionName: "bombardini krokodili"},
 		}
-		expectedHash := utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName)
+		expectedHash := uuid.MustParse(utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName)[:32])
 		assert.Equal(t, expectedHash, firstPartyVuln.CalculateHash())
 	})
 }

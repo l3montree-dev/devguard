@@ -16,7 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func (i *JiraIntegration) HandleEvent(event any) error {
+func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 	switch event := event.(type) {
 	case shared.ManualMitigateEvent:
 		asset := shared.GetAsset(event.Ctx)
@@ -47,13 +47,13 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case dtos.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := i.dependencyVulnRepository.Read(vulnID)
+			v, err := i.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(vulnID)
+			v, err := i.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -73,20 +73,21 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 
 		asset := shared.GetAsset(event.Ctx)
 		assetVersionSlug := shared.GetAssetVersion(event.Ctx).Slug
-		vulnType := ev.VulnType
+		vulnType := ev.GetVulnType()
+		vulnID := ev.GetVulnID()
 
 		var vuln models.Vuln
 		switch vulnType {
 		case dtos.VulnTypeLicenseRisk:
 			return nil
 		case dtos.VulnTypeDependencyVuln:
-			v, err := i.dependencyVulnRepository.Read(ev.VulnID)
+			v, err := i.dependencyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case dtos.VulnTypeFirstPartyVuln:
-			v, err := i.firstPartyVulnRepository.Read(ev.VulnID)
+			v, err := i.firstPartyVulnRepository.Read(ctx, nil, vulnID)
 			if err != nil {
 				return err
 			}
@@ -103,7 +104,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		client, projectID, err := i.getClientBasedOnAsset(asset)
+		client, projectID, err := i.getClientBasedOnAsset(ctx, asset)
 		if err != nil {
 			return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 		}
@@ -212,7 +213,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 
 		}
-		return i.UpdateIssue(context.Background(), asset, assetVersionSlug, vuln)
+		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
 	}
 	return nil
 

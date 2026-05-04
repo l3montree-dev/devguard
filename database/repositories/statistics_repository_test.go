@@ -42,12 +42,12 @@ func TestReplayHistoricalEvents(t *testing.T) {
 			{
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFixed, // current persisted state (Day 5)
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeDetected},
-						{Type: dtos.EventTypeAccepted},
-						{Type: dtos.EventTypeReopened},
-						// EventTypeFixed excluded because it was created after the time-travel point
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeAccepted},
+					{Type: dtos.EventTypeReopened},
+					// EventTypeFixed excluded because it was created after the time-travel point
 				},
 			},
 		}
@@ -64,9 +64,9 @@ func TestReplayHistoricalEvents(t *testing.T) {
 			{
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFixed,
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeDetected},
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
 				},
 			},
 		}
@@ -95,10 +95,10 @@ func TestReplayHistoricalEvents(t *testing.T) {
 			{
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen, // current DB state changed later
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeDetected},
-						{Type: dtos.EventTypeAccepted},
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeAccepted},
 				},
 			},
 		}
@@ -113,18 +113,18 @@ func TestReplayHistoricalEvents(t *testing.T) {
 		vulns := []models.DependencyVuln{
 			{
 				Vulnerability: models.Vulnerability{
-					State:  dtos.VulnStateFixed,
-					Events: []models.VulnEvent{{Type: dtos.EventTypeDetected}},
+					State: dtos.VulnStateFixed,
 				},
+				Events:            []models.VulnEvent{{Type: dtos.EventTypeDetected}},
 				RawRiskAssessment: &risk,
 			},
 			{
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateOpen,
-					Events: []models.VulnEvent{
-						{Type: dtos.EventTypeDetected},
-						{Type: dtos.EventTypeFixed},
-					},
+				},
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeFixed},
 				},
 			},
 		}

@@ -26,7 +26,18 @@ func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 	frontendURL := os.Getenv("FRONTEND_URL")
 
 	assetVersion := shared.GetAssetVersion(ctx)
-	artifact := shared.GetArtifact(ctx)
+	artifactName := ""
+	artifact, err := shared.MaybeGetArtifact(ctx)
+	if err != nil {
+		org := shared.GetOrg(ctx)
+		project := shared.GetProject(ctx)
+
+		asset := shared.GetAsset(ctx)
+		artifactName = "pkg:devguard/" + org.Slug + "/" + project.Slug + "/" + asset.Slug
+	} else {
+		artifactName = artifact.ArtifactName
+	}
+
 	asset := shared.GetAsset(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
@@ -37,7 +48,7 @@ func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 		OrgSlug:               org.Slug,
 		ProjectSlug:           project.Slug,
 		FrontendURL:           frontendURL,
-		ArtifactName:          artifact.ArtifactName,
+		ArtifactName:          artifactName,
 		AssetID:               asset.ID,
 		AddExternalReferences: asset.SharesInformation,
 		AssetVersionName:      assetVersion.Name,

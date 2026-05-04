@@ -16,46 +16,54 @@
 package transformer
 
 import (
-	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
+    "github.com/l3montree-dev/devguard/database/models"
+    "github.com/l3montree-dev/devguard/dtos"
 )
 
 func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHistoryDTO {
-	return dtos.RiskHistoryDTO{
-		History: dtos.History{
-			Distribution: dtos.Distribution{
-				Low:          history.Low,
-				High:         history.High,
-				Medium:       history.Medium,
-				Critical:     history.Critical,
-				LowCVSS:      history.LowCVSS,
-				MediumCVSS:   history.MediumCVSS,
-				HighCVSS:     history.HighCVSS,
-				CriticalCVSS: history.CriticalCVSS,
+    return dtos.RiskHistoryDTO{
+        History: dtos.History{
+            Distribution: dtos.Distribution{
+                Low:             history.Low,
+                High:            history.High,
+                Medium:          history.Medium,
+                Critical:        history.Critical,
+                FixableLow:      history.FixableLow,
+                FixableMedium:   history.FixableMedium,
+                FixableHigh:     history.FixableHigh,
+                FixableCritical: history.FixableCritical,
+                LowCVSS:         history.LowCVSS,
+                MediumCVSS:      history.MediumCVSS,
+                HighCVSS:        history.HighCVSS,
+                CriticalCVSS:    history.CriticalCVSS,
 
-				CVEPurlLow:          history.CVEPurlLow,
-				CVEPurlMedium:       history.CVEPurlMedium,
-				CVEPurlHigh:         history.CVEPurlHigh,
-				CVEPurlCritical:     history.CVEPurlCritical,
-				CVEPurlLowCVSS:      history.CVEPurlLowCVSS,
-				CVEPurlMediumCVSS:   history.CVEPurlMediumCVSS,
-				CVEPurlHighCVSS:     history.CVEPurlHighCVSS,
-				CVEPurlCriticalCVSS: history.CVEPurlCriticalCVSS,
-			},
-			Day:                  history.Day,
-			SumOpenRisk:          history.SumOpenRisk,
-			AvgOpenRisk:          history.AvgOpenRisk,
-			MaxOpenRisk:          history.MaxOpenRisk,
-			MinOpenRisk:          history.MinOpenRisk,
-			SumClosedRisk:        history.SumClosedRisk,
-			AvgClosedRisk:        history.AvgClosedRisk,
-			MaxClosedRisk:        history.MaxClosedRisk,
-			MinClosedRisk:        history.MinClosedRisk,
-			OpenDependencyVulns:  history.OpenDependencyVulns,
-			FixedDependencyVulns: history.FixedDependencyVulns,
-		},
-		ArtifactName:     history.ArtifactName,
-		AssetVersionName: history.AssetVersionName,
-		AssetID:          history.AssetID,
-	}
+                CVEPurlLow:             history.CVEPurlLow,
+                CVEPurlMedium:          history.CVEPurlMedium,
+                CVEPurlHigh:            history.CVEPurlHigh,
+                CVEPurlCritical:        history.CVEPurlCritical,
+                CVEPurlLowCVSS:         history.CVEPurlLowCVSS,
+                CVEPurlMediumCVSS:      history.CVEPurlMediumCVSS,
+                CVEPurlHighCVSS:        history.CVEPurlHighCVSS,
+                CVEPurlCriticalCVSS:    history.CVEPurlCriticalCVSS,
+                CVEPurlFixableLow:      history.CVEPurlFixableLow,
+                CVEPurlFixableMedium:   history.CVEPurlFixableMedium,
+                CVEPurlFixableHigh:     history.CVEPurlFixableHigh,
+                CVEPurlFixableCritical: history.CVEPurlFixableCritical,
+            },
+            Day:                  history.Day,
+            SumOpenRisk:          history.SumOpenRisk,
+            AvgOpenRisk:          history.AvgOpenRisk,
+            MaxOpenRisk:          history.MaxOpenRisk,
+            MinOpenRisk:          history.MinOpenRisk,
+            SumClosedRisk:        history.SumClosedRisk,
+            AvgClosedRisk:        history.AvgClosedRisk,
+            MaxClosedRisk:        history.MaxClosedRisk,
+            MinClosedRisk:        history.MinClosedRisk,
+            OpenDependencyVulns:  history.OpenDependencyVulns,
+            FixedDependencyVulns: history.FixedDependencyVulns,
+        },
+        ArtifactName:     history.ArtifactName,
+        AssetVersionName: history.AssetVersionName,
+        AssetID:          history.AssetID,
+    }
 }

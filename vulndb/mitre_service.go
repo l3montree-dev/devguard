@@ -1,6 +1,7 @@
 package vulndb
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 
@@ -66,11 +67,11 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 func NewMitreService(cweRepository shared.CweRepository) mitreService {
 	return mitreService{
 		cweRepository: cweRepository,
-		httpClient:    &http.Client{},
+		httpClient:    &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
-func (mitreService mitreService) Mirror() error {
+func (mitreService mitreService) Mirror(ctx context.Context) error {
 	// parse the CWEs
 	cwes, err := mitreService.fetchCWEXML()
 
@@ -84,5 +85,5 @@ func (mitreService mitreService) Mirror() error {
 		models[i] = cwe.toModel()
 	}
 
-	return mitreService.cweRepository.SaveBatch(nil, models)
+	return mitreService.cweRepository.SaveBatch(ctx, nil, models)
 }

@@ -24,8 +24,10 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -115,35 +117,59 @@ func GetAuthAdminClient(ctx Context) AdminClient {
 	return ctx.Get("authAdminClient").(AdminClient)
 }
 
-func GetVulnID(ctx Context) (string, dtos.VulnType, error) {
+func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 	dependencyVulnID := ctx.Param("dependencyVulnID")
 	if dependencyVulnID != "" {
-		return dependencyVulnID, dtos.VulnTypeDependencyVuln, nil
+		id, err := uuid.Parse(dependencyVulnID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid dependency vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeDependencyVuln, nil
 	}
 	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
 	if ok && dependencyVulnIDFromGet != "" {
-		return dependencyVulnIDFromGet, dtos.VulnTypeDependencyVuln, nil
+		id, err := uuid.Parse(dependencyVulnIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid dependency vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeDependencyVuln, nil
 	}
 
 	firstPartyVulnID := ctx.Param("firstPartyVulnID")
 	if firstPartyVulnID != "" {
-		return firstPartyVulnID, dtos.VulnTypeFirstPartyVuln, nil
+		id, err := uuid.Parse(firstPartyVulnID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid first party vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
 	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
 	if ok && firstPartyVulnIDFromGet != "" {
-		return firstPartyVulnIDFromGet, dtos.VulnTypeFirstPartyVuln, nil
+		id, err := uuid.Parse(firstPartyVulnIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid first party vuln id: %w", err)
+		}
+		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
 
 	licenseRiskID := ctx.Param("licenseRiskID")
 	if licenseRiskID != "" {
-		return licenseRiskID, dtos.VulnTypeLicenseRisk, nil
+		id, err := uuid.Parse(licenseRiskID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid license risk id: %w", err)
+		}
+		return id, dtos.VulnTypeLicenseRisk, nil
 	}
 	licenseRiskIDFromGet, ok := ctx.Get("licenseRiskID").(string)
 	if ok && licenseRiskIDFromGet != "" {
-		return licenseRiskIDFromGet, dtos.VulnTypeLicenseRisk, nil
+		id, err := uuid.Parse(licenseRiskIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid license risk id: %w", err)
+		}
+		return id, dtos.VulnTypeLicenseRisk, nil
 	}
 
-	return "", "", fmt.Errorf("could not get vuln id")
+	return uuid.Nil, "", fmt.Errorf("could not get vuln id")
 }
 
 func SetRBAC(ctx Context, rbac AccessControl) {
@@ -291,6 +317,30 @@ func SetAsset(ctx Context, asset models.Asset) {
 
 func GetAssetVersion(ctx Context) models.AssetVersion {
 	return ctx.Get("assetVersion").(models.AssetVersion)
+}
+
+func MaybeGetOrganization(ctx Context) (models.Org, error) {
+	org, ok := ctx.Get("organization").(models.Org)
+	if !ok {
+		return models.Org{}, fmt.Errorf("could not get organization")
+	}
+	return org, nil
+}
+
+func MaybeGetProject(ctx Context) (models.Project, error) {
+	project, ok := ctx.Get("project").(models.Project)
+	if !ok {
+		return models.Project{}, fmt.Errorf("could not get project")
+	}
+	return project, nil
+}
+
+func MaybeGetAsset(ctx Context) (models.Asset, error) {
+	asset, ok := ctx.Get("asset").(models.Asset)
+	if !ok {
+		return models.Asset{}, fmt.Errorf("could not get asset")
+	}
+	return asset, nil
 }
 
 func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
@@ -512,6 +562,8 @@ func (f FilterQuery) SQL() string {
 		return field + " < ?"
 	case "like":
 		return field + " LIKE ?"
+	case "ilike":
+		return field + " ILIKE ?"
 	case "any":
 		return "? = ANY(string_to_array(" + field + ", ' '))"
 	default:
@@ -690,4 +742,8 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 		return ""
 	}
 	return buf.String()
+}
+
+func CreateLinkedCtx(ctx context.Context) context.Context {
+	return trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
 }

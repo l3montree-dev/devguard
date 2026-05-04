@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -41,16 +43,16 @@ func (_m *LicenseRiskRepository) EXPECT() *LicenseRiskRepository_Expecter {
 }
 
 // Activate provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Activate(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
+func (_mock *LicenseRiskRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -63,898 +65,22 @@ type LicenseRiskRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-//   - id string
-func (_e *LicenseRiskRepository_Expecter) Activate(tx interface{}, id interface{}) *LicenseRiskRepository_Activate_Call {
-	return &LicenseRiskRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+//   - id uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Activate_Call {
+	return &LicenseRiskRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *LicenseRiskRepository_Activate_Call) Run(run func(tx shared.DB, id string)) *LicenseRiskRepository_Activate_Call {
+func (_c *LicenseRiskRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *LicenseRiskRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Activate_Call) Return(err error) *LicenseRiskRepository_Activate_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id string) error) *LicenseRiskRepository_Activate_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// All provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) All() ([]models.LicenseRisk, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for All")
-	}
-
-	var r0 []models.LicenseRisk
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.LicenseRisk, error)); ok {
-		return returnFunc()
-	}
-	if returnFunc, ok := ret.Get(0).(func() []models.LicenseRisk); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.LicenseRisk)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
-type LicenseRiskRepository_All_Call struct {
-	*mock.Call
-}
-
-// All is a helper method to define mock.On call
-func (_e *LicenseRiskRepository_Expecter) All() *LicenseRiskRepository_All_Call {
-	return &LicenseRiskRepository_All_Call{Call: _e.mock.On("All")}
-}
-
-func (_c *LicenseRiskRepository_All_Call) Run(run func()) *LicenseRiskRepository_All_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_All_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_All_Call {
-	_c.Call.Return(licenseRisks, err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_All_Call) RunAndReturn(run func() ([]models.LicenseRisk, error)) *LicenseRiskRepository_All_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ApplyAndSave provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) ApplyAndSave(tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
-	ret := _mock.Called(tx, licenseRisk, vulnEvent)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ApplyAndSave")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.LicenseRisk, *models.VulnEvent) error); ok {
-		r0 = returnFunc(tx, licenseRisk, vulnEvent)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
-type LicenseRiskRepository_ApplyAndSave_Call struct {
-	*mock.Call
-}
-
-// ApplyAndSave is a helper method to define mock.On call
-//   - tx shared.DB
-//   - licenseRisk *models.LicenseRisk
-//   - vulnEvent *models.VulnEvent
-func (_e *LicenseRiskRepository_Expecter) ApplyAndSave(tx interface{}, licenseRisk interface{}, vulnEvent interface{}) *LicenseRiskRepository_ApplyAndSave_Call {
-	return &LicenseRiskRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, licenseRisk, vulnEvent)}
-}
-
-func (_c *LicenseRiskRepository_ApplyAndSave_Call) Run(run func(tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent)) *LicenseRiskRepository_ApplyAndSave_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.LicenseRisk
-		if args[1] != nil {
-			arg1 = args[1].(*models.LicenseRisk)
-		}
-		var arg2 *models.VulnEvent
-		if args[2] != nil {
-			arg2 = args[2].(*models.VulnEvent)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_ApplyAndSave_Call) Return(err error) *LicenseRiskRepository_ApplyAndSave_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_ApplyAndSave_Call) RunAndReturn(run func(tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error) *LicenseRiskRepository_ApplyAndSave_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Begin provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Begin() shared.DB {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Begin")
-	}
-
-	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(shared.DB)
-		}
-	}
-	return r0
-}
-
-// LicenseRiskRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
-type LicenseRiskRepository_Begin_Call struct {
-	*mock.Call
-}
-
-// Begin is a helper method to define mock.On call
-func (_e *LicenseRiskRepository_Expecter) Begin() *LicenseRiskRepository_Begin_Call {
-	return &LicenseRiskRepository_Begin_Call{Call: _e.mock.On("Begin")}
-}
-
-func (_c *LicenseRiskRepository_Begin_Call) Run(run func()) *LicenseRiskRepository_Begin_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Begin_Call) Return(v shared.DB) *LicenseRiskRepository_Begin_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Begin_Call) RunAndReturn(run func() shared.DB) *LicenseRiskRepository_Begin_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Create provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Create(tx shared.DB, t *models.LicenseRisk) error {
-	ret := _mock.Called(tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Create")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
-type LicenseRiskRepository_Create_Call struct {
-	*mock.Call
-}
-
-// Create is a helper method to define mock.On call
-//   - tx shared.DB
-//   - t *models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) Create(tx interface{}, t interface{}) *LicenseRiskRepository_Create_Call {
-	return &LicenseRiskRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
-}
-
-func (_c *LicenseRiskRepository_Create_Call) Run(run func(tx shared.DB, t *models.LicenseRisk)) *LicenseRiskRepository_Create_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 *models.LicenseRisk
-		if args[1] != nil {
-			arg1 = args[1].(*models.LicenseRisk)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Create_Call) Return(err error) *LicenseRiskRepository_Create_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.LicenseRisk) error) *LicenseRiskRepository_Create_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CreateBatch provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) CreateBatch(tx shared.DB, ts []models.LicenseRisk) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
-type LicenseRiskRepository_CreateBatch_Call struct {
-	*mock.Call
-}
-
-// CreateBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *LicenseRiskRepository_CreateBatch_Call {
-	return &LicenseRiskRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
-}
-
-func (_c *LicenseRiskRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_CreateBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.LicenseRisk
-		if args[1] != nil {
-			arg1 = args[1].([]models.LicenseRisk)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_CreateBatch_Call) Return(err error) *LicenseRiskRepository_CreateBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_CreateBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Delete provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Delete(tx shared.DB, id string) error {
-	ret := _mock.Called(tx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Delete")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string) error); ok {
-		r0 = returnFunc(tx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type LicenseRiskRepository_Delete_Call struct {
-	*mock.Call
-}
-
-// Delete is a helper method to define mock.On call
-//   - tx shared.DB
-//   - id string
-func (_e *LicenseRiskRepository_Expecter) Delete(tx interface{}, id interface{}) *LicenseRiskRepository_Delete_Call {
-	return &LicenseRiskRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
-}
-
-func (_c *LicenseRiskRepository_Delete_Call) Run(run func(tx shared.DB, id string)) *LicenseRiskRepository_Delete_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Delete_Call) Return(err error) *LicenseRiskRepository_Delete_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id string) error) *LicenseRiskRepository_Delete_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteBatch provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) DeleteBatch(tx shared.DB, ids []models.LicenseRisk) error {
-	ret := _mock.Called(tx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, ids)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
-type LicenseRiskRepository_DeleteBatch_Call struct {
-	*mock.Call
-}
-
-// DeleteBatch is a helper method to define mock.On call
-//   - tx shared.DB
-//   - ids []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *LicenseRiskRepository_DeleteBatch_Call {
-	return &LicenseRiskRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
-}
-
-func (_c *LicenseRiskRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.LicenseRisk)) *LicenseRiskRepository_DeleteBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 []models.LicenseRisk
-		if args[1] != nil {
-			arg1 = args[1].([]models.LicenseRisk)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_DeleteBatch_Call) Return(err error) *LicenseRiskRepository_DeleteBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.LicenseRisk) error) *LicenseRiskRepository_DeleteBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteByComponentPurl provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error {
-	ret := _mock.Called(assetID, assetVersionName, purl)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteByComponentPurl")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, packageurl.PackageURL) error); ok {
-		r0 = returnFunc(assetID, assetVersionName, purl)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_DeleteByComponentPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByComponentPurl'
-type LicenseRiskRepository_DeleteByComponentPurl_Call struct {
-	*mock.Call
-}
-
-// DeleteByComponentPurl is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-//   - purl packageurl.PackageURL
-func (_e *LicenseRiskRepository_Expecter) DeleteByComponentPurl(assetID interface{}, assetVersionName interface{}, purl interface{}) *LicenseRiskRepository_DeleteByComponentPurl_Call {
-	return &LicenseRiskRepository_DeleteByComponentPurl_Call{Call: _e.mock.On("DeleteByComponentPurl", assetID, assetVersionName, purl)}
-}
-
-func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) Run(run func(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL)) *LicenseRiskRepository_DeleteByComponentPurl_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 packageurl.PackageURL
-		if args[2] != nil {
-			arg2 = args[2].(packageurl.PackageURL)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) Return(err error) *LicenseRiskRepository_DeleteByComponentPurl_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error) *LicenseRiskRepository_DeleteByComponentPurl_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAllLicenseRisksForAssetVersion provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(assetID, assetVersionName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllLicenseRisksForAssetVersion")
-	}
-
-	var r0 []models.LicenseRisk
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(assetID, assetVersionName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.LicenseRisk); ok {
-		r0 = returnFunc(assetID, assetVersionName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.LicenseRisk)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetID, assetVersionName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllLicenseRisksForAssetVersion'
-type LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call struct {
-	*mock.Call
-}
-
-// GetAllLicenseRisksForAssetVersion is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersion(assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
-	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersion", assetID, assetVersionName)}
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
-	_c.Call.Return(licenseRisks, err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAllLicenseRisksForAssetVersionPaged provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
-	ret := _mock.Called(tx, assetID, assetVersionName, pageInfo, search, filter, sort)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllLicenseRisksForAssetVersionPaged")
-	}
-
-	var r0 shared.Paged[models.LicenseRisk]
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.LicenseRisk], error)); ok {
-		return returnFunc(tx, assetID, assetVersionName, pageInfo, search, filter, sort)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.LicenseRisk]); ok {
-		r0 = returnFunc(tx, assetID, assetVersionName, pageInfo, search, filter, sort)
-	} else {
-		r0 = ret.Get(0).(shared.Paged[models.LicenseRisk])
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(tx, assetID, assetVersionName, pageInfo, search, filter, sort)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllLicenseRisksForAssetVersionPaged'
-type LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call struct {
-	*mock.Call
-}
-
-// GetAllLicenseRisksForAssetVersionPaged is a helper method to define mock.On call
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
-//   - pageInfo shared.PageInfo
-//   - search string
-//   - filter []shared.FilterQuery
-//   - sort []shared.SortQuery
-func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersionPaged(tx interface{}, assetID interface{}, assetVersionName interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
-	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersionPaged", tx, assetID, assetVersionName, pageInfo, search, filter, sort)}
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) Run(run func(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 shared.PageInfo
-		if args[3] != nil {
-			arg3 = args[3].(shared.PageInfo)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		var arg5 []shared.FilterQuery
-		if args[5] != nil {
-			arg5 = args[5].([]shared.FilterQuery)
-		}
-		var arg6 []shared.SortQuery
-		if args[6] != nil {
-			arg6 = args[6].([]shared.SortQuery)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) Return(paged shared.Paged[models.LicenseRisk], err error) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
-	_c.Call.Return(paged, err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAllOverwrittenLicensesForAssetVersion provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(assetID, assetVersionName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllOverwrittenLicensesForAssetVersion")
-	}
-
-	var r0 []models.LicenseRisk
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(assetID, assetVersionName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.LicenseRisk); ok {
-		r0 = returnFunc(assetID, assetVersionName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.LicenseRisk)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetID, assetVersionName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOverwrittenLicensesForAssetVersion'
-type LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call struct {
-	*mock.Call
-}
-
-// GetAllOverwrittenLicensesForAssetVersion is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *LicenseRiskRepository_Expecter) GetAllOverwrittenLicensesForAssetVersion(assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
-	return &LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call{Call: _e.mock.On("GetAllOverwrittenLicensesForAssetVersion", assetID, assetVersionName)}
-}
-
-func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) Run(run func(assetID uuid.UUID, assetVersionName string)) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
-	_c.Call.Return(licenseRisks, err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByAssetID provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetByAssetID(tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(tx, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByAssetID")
-	}
-
-	var r0 []models.LicenseRisk
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(tx, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) []models.LicenseRisk); ok {
-		r0 = returnFunc(tx, assetID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.LicenseRisk)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(tx, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_GetByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetID'
-type LicenseRiskRepository_GetByAssetID_Call struct {
-	*mock.Call
-}
-
-// GetByAssetID is a helper method to define mock.On call
-//   - tx shared.DB
-//   - assetID uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) GetByAssetID(tx interface{}, assetID interface{}) *LicenseRiskRepository_GetByAssetID_Call {
-	return &LicenseRiskRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", tx, assetID)}
-}
-
-func (_c *LicenseRiskRepository_GetByAssetID_Call) Run(run func(tx shared.DB, assetID uuid.UUID)) *LicenseRiskRepository_GetByAssetID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetByAssetID_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetByAssetID_Call {
-	_c.Call.Return(licenseRisks, err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetByAssetID_Call) RunAndReturn(run func(tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetByAssetID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetDB provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDB")
-	}
-
-	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(shared.DB)
-		}
-	}
-	return r0
-}
-
-// LicenseRiskRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
-type LicenseRiskRepository_GetDB_Call struct {
-	*mock.Call
-}
-
-// GetDB is a helper method to define mock.On call
-//   - tx shared.DB
-func (_e *LicenseRiskRepository_Expecter) GetDB(tx interface{}) *LicenseRiskRepository_GetDB_Call {
-	return &LicenseRiskRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
-}
-
-func (_c *LicenseRiskRepository_GetDB_Call) Run(run func(tx shared.DB)) *LicenseRiskRepository_GetDB_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetDB_Call) Return(v shared.DB) *LicenseRiskRepository_GetDB_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *LicenseRiskRepository_GetDB_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetLicenseRisksByOtherAssetVersions provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetLicenseRisksByOtherAssetVersions")
-	}
-
-	var r0 []models.LicenseRisk
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, string, uuid.UUID) []models.LicenseRisk); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.LicenseRisk)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.DB, string, uuid.UUID) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicenseRisksByOtherAssetVersions'
-type LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call struct {
-	*mock.Call
-}
-
-// GetLicenseRisksByOtherAssetVersions is a helper method to define mock.On call
-//   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) GetLicenseRisksByOtherAssetVersions(tx interface{}, assetVersionName interface{}, assetID interface{}) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
-	return &LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call{Call: _e.mock.On("GetLicenseRisksByOtherAssetVersions", tx, assetVersionName, assetID)}
-}
-
-func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) Run(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID)) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
-		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 uuid.UUID
 		if args[2] != nil {
@@ -969,19 +95,1062 @@ func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) Run(ru
 	return _c
 }
 
+func (_c *LicenseRiskRepository_Activate_Call) Return(err error) *LicenseRiskRepository_Activate_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *LicenseRiskRepository_Activate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// All provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) All(ctx context.Context, tx shared.DB) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type LicenseRiskRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *LicenseRiskRepository_Expecter) All(ctx interface{}, tx interface{}) *LicenseRiskRepository_All_Call {
+	return &LicenseRiskRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
+}
+
+func (_c *LicenseRiskRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *LicenseRiskRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_All_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_All_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.LicenseRisk, error)) *LicenseRiskRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ApplyAndSave provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) ApplyAndSave(ctx context.Context, tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
+	ret := _mock.Called(ctx, tx, licenseRisk, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.LicenseRisk, *models.VulnEvent) error); ok {
+		r0 = returnFunc(ctx, tx, licenseRisk, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type LicenseRiskRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - licenseRisk *models.LicenseRisk
+//   - vulnEvent *models.VulnEvent
+func (_e *LicenseRiskRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, licenseRisk interface{}, vulnEvent interface{}) *LicenseRiskRepository_ApplyAndSave_Call {
+	return &LicenseRiskRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, licenseRisk, vulnEvent)}
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) Run(run func(ctx context.Context, tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent)) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].(*models.LicenseRisk)
+		}
+		var arg3 *models.VulnEvent
+		if args[3] != nil {
+			arg3 = args[3].(*models.VulnEvent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) Return(err error) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Begin provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// LicenseRiskRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type LicenseRiskRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *LicenseRiskRepository_Expecter) Begin(ctx interface{}) *LicenseRiskRepository_Begin_Call {
+	return &LicenseRiskRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
+}
+
+func (_c *LicenseRiskRepository_Begin_Call) Run(run func(ctx context.Context)) *LicenseRiskRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Begin_Call) Return(v shared.DB) *LicenseRiskRepository_Begin_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *LicenseRiskRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type LicenseRiskRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *LicenseRiskRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
+	return &LicenseRiskRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *LicenseRiskRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_CleanupOrphanedRecords_Call) Return(err error) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) Create(ctx context.Context, tx shared.DB, t *models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type LicenseRiskRepository_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.LicenseRisk
+func (_e *LicenseRiskRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *LicenseRiskRepository_Create_Call {
+	return &LicenseRiskRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
+}
+
+func (_c *LicenseRiskRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.LicenseRisk)) *LicenseRiskRepository_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].(*models.LicenseRisk)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Create_Call) Return(err error) *LicenseRiskRepository_Create_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.LicenseRisk) error) *LicenseRiskRepository_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateBatch provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
+type LicenseRiskRepository_CreateBatch_Call struct {
+	*mock.Call
+}
+
+// CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.LicenseRisk
+func (_e *LicenseRiskRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *LicenseRiskRepository_CreateBatch_Call {
+	return &LicenseRiskRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
+}
+
+func (_c *LicenseRiskRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_CreateBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].([]models.LicenseRisk)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_CreateBatch_Call) Return(err error) *LicenseRiskRepository_CreateBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_CreateBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type LicenseRiskRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Delete_Call {
+	return &LicenseRiskRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
+}
+
+func (_c *LicenseRiskRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *LicenseRiskRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Delete_Call) Return(err error) *LicenseRiskRepository_Delete_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *LicenseRiskRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteBatch provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type LicenseRiskRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []models.LicenseRisk
+func (_e *LicenseRiskRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *LicenseRiskRepository_DeleteBatch_Call {
+	return &LicenseRiskRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
+}
+
+func (_c *LicenseRiskRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.LicenseRisk)) *LicenseRiskRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].([]models.LicenseRisk)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_DeleteBatch_Call) Return(err error) *LicenseRiskRepository_DeleteBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.LicenseRisk) error) *LicenseRiskRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteByComponentPurl provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) DeleteByComponentPurl(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName, purl)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteByComponentPurl")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, packageurl.PackageURL) error); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName, purl)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_DeleteByComponentPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByComponentPurl'
+type LicenseRiskRepository_DeleteByComponentPurl_Call struct {
+	*mock.Call
+}
+
+// DeleteByComponentPurl is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - purl packageurl.PackageURL
+func (_e *LicenseRiskRepository_Expecter) DeleteByComponentPurl(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, purl interface{}) *LicenseRiskRepository_DeleteByComponentPurl_Call {
+	return &LicenseRiskRepository_DeleteByComponentPurl_Call{Call: _e.mock.On("DeleteByComponentPurl", ctx, tx, assetID, assetVersionName, purl)}
+}
+
+func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL)) *LicenseRiskRepository_DeleteByComponentPurl_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 packageurl.PackageURL
+		if args[4] != nil {
+			arg4 = args[4].(packageurl.PackageURL)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) Return(err error) *LicenseRiskRepository_DeleteByComponentPurl_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_DeleteByComponentPurl_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error) *LicenseRiskRepository_DeleteByComponentPurl_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllLicenseRisksForAssetVersion provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllLicenseRisksForAssetVersion")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllLicenseRisksForAssetVersion'
+type LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetAllLicenseRisksForAssetVersion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - assetVersionName string
+func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
+	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersion", ctx, tx, assetID, assetVersionName)}
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllLicenseRisksForAssetVersionPaged provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllLicenseRisksForAssetVersionPaged")
+	}
+
+	var r0 shared.Paged[models.LicenseRisk]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.LicenseRisk], error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.LicenseRisk]); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[models.LicenseRisk])
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllLicenseRisksForAssetVersionPaged'
+type LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call struct {
+	*mock.Call
+}
+
+// GetAllLicenseRisksForAssetVersionPaged is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - pageInfo shared.PageInfo
+//   - search string
+//   - filter []shared.FilterQuery
+//   - sort []shared.SortQuery
+func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersionPaged(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
+	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersionPaged", ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)}
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 shared.PageInfo
+		if args[4] != nil {
+			arg4 = args[4].(shared.PageInfo)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 []shared.FilterQuery
+		if args[6] != nil {
+			arg6 = args[6].([]shared.FilterQuery)
+		}
+		var arg7 []shared.SortQuery
+		if args[7] != nil {
+			arg7 = args[7].([]shared.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) Return(paged shared.Paged[models.LicenseRisk], err error) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error)) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllOverwrittenLicensesForAssetVersion provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllOverwrittenLicensesForAssetVersion")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOverwrittenLicensesForAssetVersion'
+type LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetAllOverwrittenLicensesForAssetVersion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - assetVersionName string
+func (_e *LicenseRiskRepository_Expecter) GetAllOverwrittenLicensesForAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
+	return &LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call{Call: _e.mock.On("GetAllOverwrittenLicensesForAssetVersion", ctx, tx, assetID, assetVersionName)}
+}
+
+func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByAssetID provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetID")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetID'
+type LicenseRiskRepository_GetByAssetID_Call struct {
+	*mock.Call
+}
+
+// GetByAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *LicenseRiskRepository_GetByAssetID_Call {
+	return &LicenseRiskRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetByAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDB provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// LicenseRiskRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type LicenseRiskRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *LicenseRiskRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *LicenseRiskRepository_GetDB_Call {
+	return &LicenseRiskRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
+}
+
+func (_c *LicenseRiskRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *LicenseRiskRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetDB_Call) Return(v shared.DB) *LicenseRiskRepository_GetDB_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *LicenseRiskRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetLicenseRisksByOtherAssetVersions provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLicenseRisksByOtherAssetVersions")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicenseRisksByOtherAssetVersions'
+type LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call struct {
+	*mock.Call
+}
+
+// GetLicenseRisksByOtherAssetVersions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) GetLicenseRisksByOtherAssetVersions(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
+	return &LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call{Call: _e.mock.On("GetLicenseRisksByOtherAssetVersions", ctx, tx, assetVersionName, assetID)}
+}
+
+func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID)) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
 func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
 	_c.Call.Return(licenseRisks, err)
 	return _c
 }
 
-func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) RunAndReturn(run func(tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
+func (_c *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) List(ids []string) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(ids)
+func (_mock *LicenseRiskRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -989,18 +1158,18 @@ func (_mock *LicenseRiskRepository) List(ids []string) ([]models.LicenseRisk, er
 
 	var r0 []models.LicenseRisk
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]string) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]string) []models.LicenseRisk); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.LicenseRisk)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]string) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1013,19 +1182,31 @@ type LicenseRiskRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []string
-func (_e *LicenseRiskRepository_Expecter) List(ids interface{}) *LicenseRiskRepository_List_Call {
-	return &LicenseRiskRepository_List_Call{Call: _e.mock.On("List", ids)}
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *LicenseRiskRepository_List_Call {
+	return &LicenseRiskRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *LicenseRiskRepository_List_Call) Run(run func(ids []string)) *LicenseRiskRepository_List_Call {
+func (_c *LicenseRiskRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *LicenseRiskRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1036,14 +1217,14 @@ func (_c *LicenseRiskRepository_List_Call) Return(licenseRisks []models.LicenseR
 	return _c
 }
 
-func (_c *LicenseRiskRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_List_Call {
+func (_c *LicenseRiskRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.LicenseRisk, error)) *LicenseRiskRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListByArtifactName provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) ListByArtifactName(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
-	ret := _mock.Called(assetVersionName, assetID, scannerID)
+func (_mock *LicenseRiskRepository) ListByArtifactName(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetVersionName, assetID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByArtifactName")
@@ -1051,18 +1232,18 @@ func (_mock *LicenseRiskRepository) ListByArtifactName(assetVersionName string, 
 
 	var r0 []models.LicenseRisk
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
-		return returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.LicenseRisk); ok {
-		r0 = returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) []models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.LicenseRisk)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1075,31 +1256,43 @@ type LicenseRiskRepository_ListByArtifactName_Call struct {
 }
 
 // ListByArtifactName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *LicenseRiskRepository_Expecter) ListByArtifactName(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *LicenseRiskRepository_ListByArtifactName_Call {
-	return &LicenseRiskRepository_ListByArtifactName_Call{Call: _e.mock.On("ListByArtifactName", assetVersionName, assetID, scannerID)}
+func (_e *LicenseRiskRepository_Expecter) ListByArtifactName(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *LicenseRiskRepository_ListByArtifactName_Call {
+	return &LicenseRiskRepository_ListByArtifactName_Call{Call: _e.mock.On("ListByArtifactName", ctx, tx, assetVersionName, assetID, scannerID)}
 }
 
-func (_c *LicenseRiskRepository_ListByArtifactName_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *LicenseRiskRepository_ListByArtifactName_Call {
+func (_c *LicenseRiskRepository_ListByArtifactName_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *LicenseRiskRepository_ListByArtifactName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
 		}
 		var arg2 string
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1110,14 +1303,14 @@ func (_c *LicenseRiskRepository_ListByArtifactName_Call) Return(licenseRisks []m
 	return _c
 }
 
-func (_c *LicenseRiskRepository_ListByArtifactName_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_ListByArtifactName_Call {
+func (_c *LicenseRiskRepository_ListByArtifactName_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_ListByArtifactName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // MaybeGetLicenseOverwriteForComponent provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
-	ret := _mock.Called(assetID, assetVersionName, pURL)
+func (_mock *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName, pURL)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MaybeGetLicenseOverwriteForComponent")
@@ -1125,16 +1318,16 @@ func (_mock *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(assetID
 
 	var r0 models.LicenseRisk
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, packageurl.PackageURL) (models.LicenseRisk, error)); ok {
-		return returnFunc(assetID, assetVersionName, pURL)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, packageurl.PackageURL) (models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionName, pURL)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string, packageurl.PackageURL) models.LicenseRisk); ok {
-		r0 = returnFunc(assetID, assetVersionName, pURL)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, packageurl.PackageURL) models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName, pURL)
 	} else {
 		r0 = ret.Get(0).(models.LicenseRisk)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string, packageurl.PackageURL) error); ok {
-		r1 = returnFunc(assetID, assetVersionName, pURL)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, packageurl.PackageURL) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionName, pURL)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1147,31 +1340,43 @@ type LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call struct {
 }
 
 // MaybeGetLicenseOverwriteForComponent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - pURL packageurl.PackageURL
-func (_e *LicenseRiskRepository_Expecter) MaybeGetLicenseOverwriteForComponent(assetID interface{}, assetVersionName interface{}, pURL interface{}) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
-	return &LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call{Call: _e.mock.On("MaybeGetLicenseOverwriteForComponent", assetID, assetVersionName, pURL)}
+func (_e *LicenseRiskRepository_Expecter) MaybeGetLicenseOverwriteForComponent(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pURL interface{}) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
+	return &LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call{Call: _e.mock.On("MaybeGetLicenseOverwriteForComponent", ctx, tx, assetID, assetVersionName, pURL)}
 }
 
-func (_c *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call) Run(run func(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL)) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
+func (_c *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL)) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 packageurl.PackageURL
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(packageurl.PackageURL)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 packageurl.PackageURL
+		if args[4] != nil {
+			arg4 = args[4].(packageurl.PackageURL)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1182,14 +1387,14 @@ func (_c *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call) Retur
 	return _c
 }
 
-func (_c *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error)) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
+func (_c *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error)) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Read(id string) (models.LicenseRisk, error) {
-	ret := _mock.Called(id)
+func (_mock *LicenseRiskRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.LicenseRisk, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -1197,16 +1402,16 @@ func (_mock *LicenseRiskRepository) Read(id string) (models.LicenseRisk, error) 
 
 	var r0 models.LicenseRisk
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.LicenseRisk, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.LicenseRisk, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.LicenseRisk); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.LicenseRisk); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.LicenseRisk)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1219,19 +1424,31 @@ type LicenseRiskRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id string
-func (_e *LicenseRiskRepository_Expecter) Read(id interface{}) *LicenseRiskRepository_Read_Call {
-	return &LicenseRiskRepository_Read_Call{Call: _e.mock.On("Read", id)}
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id uuid.UUID
+func (_e *LicenseRiskRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Read_Call {
+	return &LicenseRiskRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *LicenseRiskRepository_Read_Call) Run(run func(id string)) *LicenseRiskRepository_Read_Call {
+func (_c *LicenseRiskRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *LicenseRiskRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1242,22 +1459,22 @@ func (_c *LicenseRiskRepository_Read_Call) Return(licenseRisk models.LicenseRisk
 	return _c
 }
 
-func (_c *LicenseRiskRepository_Read_Call) RunAndReturn(run func(id string) (models.LicenseRisk, error)) *LicenseRiskRepository_Read_Call {
+func (_c *LicenseRiskRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.LicenseRisk, error)) *LicenseRiskRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Save(tx shared.DB, t *models.LicenseRisk) error {
-	ret := _mock.Called(tx, t)
+func (_mock *LicenseRiskRepository) Save(ctx context.Context, tx shared.DB, t *models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1270,25 +1487,31 @@ type LicenseRiskRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) Save(tx interface{}, t interface{}) *LicenseRiskRepository_Save_Call {
-	return &LicenseRiskRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+func (_e *LicenseRiskRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *LicenseRiskRepository_Save_Call {
+	return &LicenseRiskRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *LicenseRiskRepository_Save_Call) Run(run func(tx shared.DB, t *models.LicenseRisk)) *LicenseRiskRepository_Save_Call {
+func (_c *LicenseRiskRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.LicenseRisk)) *LicenseRiskRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.LicenseRisk
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.LicenseRisk)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].(*models.LicenseRisk)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1299,22 +1522,22 @@ func (_c *LicenseRiskRepository_Save_Call) Return(err error) *LicenseRiskReposit
 	return _c
 }
 
-func (_c *LicenseRiskRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.LicenseRisk) error) *LicenseRiskRepository_Save_Call {
+func (_c *LicenseRiskRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.LicenseRisk) error) *LicenseRiskRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) SaveBatch(tx shared.DB, ts []models.LicenseRisk) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *LicenseRiskRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1327,25 +1550,31 @@ type LicenseRiskRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *LicenseRiskRepository_SaveBatch_Call {
-	return &LicenseRiskRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *LicenseRiskRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *LicenseRiskRepository_SaveBatch_Call {
+	return &LicenseRiskRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *LicenseRiskRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_SaveBatch_Call {
+func (_c *LicenseRiskRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.LicenseRisk
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.LicenseRisk)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].([]models.LicenseRisk)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1356,22 +1585,22 @@ func (_c *LicenseRiskRepository_SaveBatch_Call) Return(err error) *LicenseRiskRe
 	return _c
 }
 
-func (_c *LicenseRiskRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_SaveBatch_Call {
+func (_c *LicenseRiskRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) SaveBatchBestEffort(tx shared.DB, ts []models.LicenseRisk) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *LicenseRiskRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.LicenseRisk) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1384,25 +1613,31 @@ type LicenseRiskRepository_SaveBatchBestEffort_Call struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *LicenseRiskRepository_SaveBatchBestEffort_Call {
-	return &LicenseRiskRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *LicenseRiskRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *LicenseRiskRepository_SaveBatchBestEffort_Call {
+	return &LicenseRiskRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_SaveBatchBestEffort_Call {
+func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_SaveBatchBestEffort_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.LicenseRisk
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.LicenseRisk)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.LicenseRisk
+		if args[2] != nil {
+			arg2 = args[2].([]models.LicenseRisk)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1413,22 +1648,22 @@ func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) Return(err error) *Lic
 	return _c
 }
 
-func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_SaveBatchBestEffort_Call {
+func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *LicenseRiskRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1441,19 +1676,25 @@ type LicenseRiskRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *LicenseRiskRepository_Expecter) Transaction(fn interface{}) *LicenseRiskRepository_Transaction_Call {
-	return &LicenseRiskRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *LicenseRiskRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *LicenseRiskRepository_Transaction_Call {
+	return &LicenseRiskRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *LicenseRiskRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *LicenseRiskRepository_Transaction_Call {
+func (_c *LicenseRiskRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *LicenseRiskRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1464,22 +1705,22 @@ func (_c *LicenseRiskRepository_Transaction_Call) Return(err error) *LicenseRisk
 	return _c
 }
 
-func (_c *LicenseRiskRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *LicenseRiskRepository_Transaction_Call {
+func (_c *LicenseRiskRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *LicenseRiskRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) Upsert(t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *LicenseRiskRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.LicenseRisk, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.LicenseRisk, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1492,31 +1733,43 @@ type LicenseRiskRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - t *[]*models.LicenseRisk
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *LicenseRiskRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *LicenseRiskRepository_Upsert_Call {
-	return &LicenseRiskRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *LicenseRiskRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *LicenseRiskRepository_Upsert_Call {
+	return &LicenseRiskRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *LicenseRiskRepository_Upsert_Call) Run(run func(t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string)) *LicenseRiskRepository_Upsert_Call {
+func (_c *LicenseRiskRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string)) *LicenseRiskRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.LicenseRisk
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*models.LicenseRisk)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 *[]*models.LicenseRisk
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*models.LicenseRisk)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1527,7 +1780,7 @@ func (_c *LicenseRiskRepository_Upsert_Call) Return(err error) *LicenseRiskRepos
 	return _c
 }
 
-func (_c *LicenseRiskRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string) error) *LicenseRiskRepository_Upsert_Call {
+func (_c *LicenseRiskRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.LicenseRisk, conflictingColumns []clause.Column, updateOnly []string) error) *LicenseRiskRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

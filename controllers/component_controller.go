@@ -47,14 +47,14 @@ func (componentController ComponentController) LicenseDistribution(ctx shared.Co
 
 	if err != nil {
 		// we need to get the default asset version
-		assetVersion, err = componentController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		assetVersion, err = componentController.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
 		if err != nil {
 			return ctx.JSON(404, nil)
 		}
 	}
 
 	// Load the full SBOM
-	sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(assetVersion)
+	sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 	}
@@ -108,7 +108,7 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 	// unescape artifact name
 	artifactName, _ = url.PathUnescape(artifactName)
 
-	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 	// If artifact is specified, we need to filter using the SBOM graph
 	if artifactName != "" {
 		// Load the full SBOM to determine which components belong to this artifact
-		sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(assetVersion)
+		sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 		}
@@ -162,7 +162,7 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 		})
 	}
 
-	components, err := componentController.componentRepository.LoadComponentsWithProject(nil,
+	components, err := componentController.componentRepository.LoadComponentsWithProject(ctx.Request().Context(), nil,
 		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,
@@ -189,7 +189,7 @@ func (componentController ComponentController) SearchComponentOccurrences(ctx sh
 	project := shared.GetProject(ctx)
 
 	// get all child projects as well
-	projects, err := componentController.projectRepository.RecursivelyGetChildProjects(project.ID)
+	projects, err := componentController.projectRepository.RecursivelyGetChildProjects(ctx.Request().Context(), nil, project.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch child projects").WithInternal(err)
 	}
@@ -202,7 +202,7 @@ func (componentController ComponentController) SearchComponentOccurrences(ctx sh
 	}
 
 	pagedResp, err := componentController.componentRepository.SearchComponentOccurrencesByProject(
-		nil,
+		ctx.Request().Context(), nil,
 		projectIDs,
 		shared.GetPageInfo(ctx),
 		ctx.QueryParam("search"),

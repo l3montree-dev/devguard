@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -30,34 +31,36 @@ import (
 
 type assetVersionRepository struct {
 	db *gorm.DB
+	utils.FireAndForgetSynchronizer
 	utils.Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
 }
 
-func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {
+func NewAssetVersionRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchronizer) *assetVersionRepository {
 	return &assetVersionRepository{
-		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
+		db:                        db,
+		Repository:                newGormRepository[uuid.UUID, models.AssetVersion](db),
+		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
 var _ shared.AssetVersionRepository = (*assetVersionRepository)(nil)
 
-func (repository *assetVersionRepository) All() ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) All(ctx context.Context, tx *gorm.DB) ([]models.AssetVersion, error) {
 	var result []models.AssetVersion
 
-	err := repository.db.Model(models.AssetVersion{}).Preload("Asset").Find(&result).Error
+	err := repository.GetDB(ctx, tx).Model(models.AssetVersion{}).Preload("Asset").Find(&result).Error
 	return result, err
 }
 
-func (repository *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
-	err := repository.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
+	err := repository.GetDB(ctx, tx).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
 }
 
-func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *models.AssetVersion) error {
+func (repository *assetVersionRepository) Delete(ctx context.Context, tx *gorm.DB, assetVersion *models.AssetVersion) error {
 	// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-	err := repository.GetDB(tx).Transaction(func(dbTx *gorm.DB) error {
+	err := repository.GetDB(ctx, tx).Transaction(func(dbTx *gorm.DB) error {
 		// First, explicitly delete all related artifacts to ensure proper cleanup
 		if err := dbTx.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Delete(&models.Artifact{}).Error; err != nil {
 			slog.Error("error deleting artifacts for asset version", "err", err, "assetVersion", assetVersion.Name)
@@ -77,35 +80,37 @@ func (repository *assetVersionRepository) Delete(tx *gorm.DB, assetVersion *mode
 		return err
 	}
 
-	err = repository.db.Exec(CleanupOrphanedRecordsSQL).Error
-	if err != nil {
-		slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-	}
+	linkedCtx := shared.CreateLinkedCtx(ctx)
+	repository.FireAndForget(func() {
+		if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
+			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
+		}
+	})
 
 	return nil
 }
 
-func (repository *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindByName(ctx context.Context, tx *gorm.DB, name string) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := repository.db.Where("name = ?", name).First(&app).Error
+	err := repository.GetDB(ctx, tx).Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
 	}
 	return app, nil
 }
 
-func (repository *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) findByAssetVersionNameAndAssetID(ctx context.Context, tx *gorm.DB, name string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := repository.db.Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
+	err := repository.GetDB(ctx, tx).Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
 	if err != nil {
 		return app, err
 	}
 	return app, nil
 }
 
-func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
-	assetVersion, err := repository.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
+	assetVersion, err := repository.findByAssetVersionNameAndAssetID(ctx, tx, assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
 		if isTag {
@@ -125,10 +130,10 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
 		}
 
-		err := repository.db.Create(&assetVersion).Error
+		err := repository.GetDB(ctx, tx).Create(&assetVersion).Error
 		//Check if the given assetVersion already exists if thats the case don't want to add repository new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			repository.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName)
+			repository.GetDB(ctx, tx).Unscoped().Model(&assetVersion).Where("name", assetVersionName)
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
@@ -138,7 +143,7 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 	if defaultBranchName != nil {
 		assetVersion.DefaultBranch = *defaultBranchName == assetVersion.Name
 		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
-		if err := repository.UpdateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
+		if err := repository.UpdateAssetDefaultBranch(ctx, tx, assetID, *defaultBranchName); err != nil {
 			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)
 			// just swallow the error here - we don't want to fail the whole operation if we can't set the default branch
 		}
@@ -147,8 +152,8 @@ func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, 
 	return assetVersion, nil
 }
 
-func (repository *assetVersionRepository) UpdateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
-	return repository.db.Transaction(func(tx *gorm.DB) error {
+func (repository *assetVersionRepository) UpdateAssetDefaultBranch(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, defaultBranch string) error {
+	return repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
 		// reset the default branch for all versions of this asset
 		if err := tx.Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Update("default_branch", false).Error; err != nil {
 			slog.Error("error resetting default branch for asset versions", "err", err, "assetID", assetID)
@@ -164,9 +169,9 @@ func (repository *assetVersionRepository) UpdateAssetDefaultBranch(assetID uuid.
 	})
 }
 
-func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
+	err := repository.GetDB(ctx, tx).Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("projects.id = ?", projectID).
 		Find(&apps).Error
@@ -176,15 +181,15 @@ func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(pro
 	return apps, nil
 }
 
-func (repository *assetVersionRepository) GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := repository.db.Model(&models.AssetVersion{}).Where("default_branch = true AND asset_id = ?", assetID).First(&app).Error
+	err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Where("default_branch = true AND asset_id = ?", assetID).First(&app).Error
 	return app, err
 }
 
-func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+	err := repository.GetDB(ctx, tx).Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("default_branch = true").
 		Where("projects.id IN (?)", projectIDs).
@@ -195,15 +200,15 @@ func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(pr
 	return apps, nil
 }
 
-func (repository *assetVersionRepository) ReadBySlug(AssetID uuid.UUID, slug string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, AssetID uuid.UUID, slug string) (models.AssetVersion, error) {
 	var t models.AssetVersion
-	err := repository.db.Where("slug = ? AND asset_id = ?", slug, AssetID).First(&t).Error
+	err := repository.GetDB(ctx, tx).Where("slug = ? AND asset_id = ?", slug, AssetID).First(&t).Error
 	return t, err
 }
 
-func (repository *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) ReadBySlugUnscoped(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, slug string) (models.AssetVersion, error) {
 	var asset models.AssetVersion
-	err := repository.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
+	err := repository.GetDB(ctx, tx).Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
 	return asset, err
 }
 
@@ -215,35 +220,35 @@ func (repository *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID
 	return app.ID, nil
 } */
 
-func (repository *assetVersionRepository) Update(tx *gorm.DB, asset *models.AssetVersion) error {
-	return repository.db.Save(asset).Error
+func (repository *assetVersionRepository) Update(ctx context.Context, tx *gorm.DB, asset *models.AssetVersion) error {
+	return repository.GetDB(ctx, tx).Save(asset).Error
 }
 
-func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(tx *gorm.DB) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(ctx context.Context, tx *gorm.DB) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
-	err := repository.db.Find(&assets).Error
+	err := repository.GetDB(ctx, tx).Find(&assets).Error
 	return assets, err
 }
 
-func (repository *assetVersionRepository) GetAssetVersionsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAssetVersionsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
-	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
+	err := repository.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
 }
 
-func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assetVersion []models.AssetVersion
-	err := repository.db.Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
+	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
 	return assetVersion, err
 }
 
-func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {
+func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Context, tx *gorm.DB, day int) (int64, error) {
 	//this is not exploitable because the day is an int and golang is statically typed
 	interval := fmt.Sprintf("INTERVAL '%d days'", day)
 	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch'", interval)
 
 	var count int64
-	err := repository.db.Model(&models.AssetVersion{}).
+	err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).
 		Where(query).
 		Count(&count).Error
 	if err != nil {
@@ -252,7 +257,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 
 	if count > 0 {
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-		err = repository.db.Transaction(func(tx *gorm.DB) error {
+		err = repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
 			// Delete all artifacts for the asset versions being deleted in a single query
 			artifactDeleteQuery := `
 				DELETE FROM artifacts 
@@ -281,27 +286,26 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.db.Exec(sql).Error
-			if err != nil {
+		linkedCtx := shared.CreateLinkedCtx(ctx)
+		repository.FireAndForget(func() {
+			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
 				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 			}
-		}() //nolint:errcheck
+		})
 
 	}
 
 	return count, nil
 }
 
-func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(assetID uuid.UUID, day int) (int64, error) {
+func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, day int) (int64, error) {
 
 	//this is not exploitable because the day is an int and golang is statically typed
 	interval := fmt.Sprintf("INTERVAL '%d days'", day)
 	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch' AND asset_id = ?", interval)
 
 	var count int64
-	err := repository.db.Model(&models.AssetVersion{}).
+	err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).
 		Where(query, assetID).
 		Count(&count).Error
 	if err != nil {
@@ -311,7 +315,7 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(assetID 
 	if count > 0 {
 
 		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-		err = repository.db.Transaction(func(tx *gorm.DB) error {
+		err = repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
 			// Delete all artifacts for the asset versions being deleted in a single query
 			artifactDeleteQuery := `
 				DELETE FROM artifacts 
@@ -341,22 +345,38 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(assetID 
 		if err != nil {
 			return 0, err
 		}
-		go func() {
-			sql := CleanupOrphanedRecordsSQL
-			err = repository.db.Exec(sql).Error
-			if err != nil {
+		linkedCtx := shared.CreateLinkedCtx(ctx)
+		repository.FireAndForget(func() {
+			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
 				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
 			}
-		}() //nolint:errcheck
+		})
 	}
 	return count, nil
 }
 
-func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assetVersions []models.AssetVersion
-	err := repository.Repository.GetDB(tx).Raw("SELECT * FROM asset_versions WHERE asset_id = ? AND (default_branch = true OR type = 'tag')", assetID).Find(&assetVersions).Error
+	err := repository.Repository.GetDB(ctx, tx).Raw("SELECT * FROM asset_versions WHERE asset_id = ? AND (default_branch = true OR type = 'tag')", assetID).Find(&assetVersions).Error
 	if err != nil {
 		return nil, err
 	}
 	return assetVersions, nil
+}
+
+func (repository *assetVersionRepository) GetAmountOfAssetVersionsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (int, error) {
+	var totalAmount int
+	err := repository.GetDB(ctx, tx).Raw(`
+	SELECT 
+		COUNT(*) as totalAmount
+	FROM 
+		asset_versions
+	JOIN
+		assets ON assets.id = asset_versions.asset_id
+	JOIN 
+		projects ON projects.id = assets.project_id
+	WHERE 
+		projects.organization_id = ?;
+	`, orgID).Find(&totalAmount).Error
+	return totalAmount, err
 }

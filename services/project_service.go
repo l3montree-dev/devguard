@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -16,6 +17,8 @@ type projectService struct {
 	assetRepository   shared.AssetRepository
 }
 
+var _ shared.ProjectService = (*projectService)(nil) // Ensure projectService implements shared.ProjectService interface
+
 func NewProjectService(projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *projectService {
 	return &projectService{
 		projectRepository: projectRepository,
@@ -24,7 +27,7 @@ func NewProjectService(projectRepository shared.ProjectRepository, assetReposito
 }
 
 func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
-	project, err := s.projectRepository.ReadBySlug(organizationID, slug)
+	project, err := s.projectRepository.ReadBySlug(ctx.Request().Context(), nil, organizationID, slug)
 	if err != nil {
 		return models.Project{}, echo.NewHTTPError(404, "project not found").WithInternal(err)
 	}
@@ -37,17 +40,17 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 
 	newProject := project
 
-	err := s.assetRepository.Transaction(func(tx shared.DB) error {
-		if err := s.projectRepository.Create(tx, newProject); err != nil {
+	err := s.assetRepository.Transaction(ctx.Request().Context(), func(tx shared.DB) error {
+		if err := s.projectRepository.Create(ctx.Request().Context(), tx, newProject); err != nil {
 			// check if duplicate key error
 			if database.IsDuplicateKeyError(err) {
 				// get the project by slug and project id unscoped
-				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
+				project, err := s.projectRepository.ReadBySlugUnscoped(ctx.Request().Context(), tx, project.OrganizationID, project.Slug)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 				}
 
-				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
+				if err = s.projectRepository.Activate(ctx.Request().Context(), tx, project.GetID()); err != nil {
 					return echo.NewHTTPError(500, "could not activate project").WithInternal(err)
 				}
 
@@ -60,7 +63,7 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 		}
 
 		// enable the default community policies
-		return s.projectRepository.EnableCommunityManagedPolicies(tx, newProject.ID)
+		return s.projectRepository.EnableCommunityManagedPolicies(ctx.Request().Context(), tx, newProject.ID)
 	})
 	if err != nil {
 		slog.Error("could not create project", "err", err, "projectSlug", project.Slug, "projectID", project.ID)
@@ -69,26 +72,26 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 
 	domainRBAC := shared.GetRBAC(ctx)
 
-	if err := s.BootstrapProject(domainRBAC, project); err != nil {
+	if err := s.BootstrapProject(ctx.Request().Context(), domainRBAC, project); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
 	}
 
 	return nil
 }
 
-func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *models.Project) error {
+func (s *projectService) BootstrapProject(ctx context.Context, rbac shared.AccessControl, project *models.Project) error {
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	if err := rbac.LinkDomainAndProjectRole(shared.RoleAdmin, shared.RoleAdmin, project.ID.String()); err != nil {
+	if err := rbac.LinkDomainAndProjectRole(ctx, shared.RoleAdmin, shared.RoleAdmin, project.ID.String()); err != nil {
 		return err
 	}
 
 	// give the admin of a project all member permissions
-	if err := rbac.InheritProjectRole(shared.RoleAdmin, shared.RoleMember, project.ID.String()); err != nil {
+	if err := rbac.InheritProjectRole(ctx, shared.RoleAdmin, shared.RoleMember, project.ID.String()); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectUser, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectUser, []shared.Action{
 		shared.ActionCreate,
 		shared.ActionDelete,
 		shared.ActionUpdate,
@@ -96,7 +99,7 @@ func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *mo
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
 		shared.ActionCreate,
 		shared.ActionDelete,
 		shared.ActionUpdate,
@@ -104,20 +107,20 @@ func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *mo
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleAdmin, shared.ObjectProject, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleAdmin, shared.ObjectProject, []shared.Action{
 		shared.ActionDelete,
 		shared.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleMember, shared.ObjectProject, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleMember, shared.ObjectProject, []shared.Action{
 		shared.ActionRead,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{
+	if err := rbac.AllowRoleInProject(ctx, project.ID.String(), shared.RoleMember, shared.ObjectAsset, []shared.Action{
 		shared.ActionRead,
 	}); err != nil {
 		return err
@@ -126,7 +129,7 @@ func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *mo
 	// check if there is a parent project - if so, we need to further inherit the roles
 	if project.ParentID != nil {
 		// make a parent project admin an admin of the child project
-		if err := rbac.InheritProjectRolesAcrossProjects(shared.ProjectRole{
+		if err := rbac.InheritProjectRolesAcrossProjects(ctx, shared.ProjectRole{
 			Role:    shared.RoleAdmin,
 			Project: (*project.ParentID).String(),
 		}, shared.ProjectRole{
@@ -140,8 +143,8 @@ func (s *projectService) BootstrapProject(rbac shared.AccessControl, project *mo
 	return nil
 }
 
-func (s *projectService) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.GetByOrgID(organizationID)
+func (s *projectService) ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.GetByOrgID(ctx, nil, organizationID)
 }
 
 func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
@@ -192,7 +195,7 @@ func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) 
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
 
-	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(c.Request().Context(), nil, allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
@@ -219,7 +222,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 		return shared.Paged[models.Project]{}, err
 	}
 
-	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	projects, err := s.projectRepository.ListPaged(c.Request().Context(), nil, projectIDsSlice, parentID, shared.GetOrg(c).GetID(), pageInfo, search, shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
@@ -240,7 +243,7 @@ func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project
 		return nil, err
 	}
 
-	projects, err := s.projectRepository.List(projectIDsSlice, parentID, shared.GetOrg(c).GetID())
+	projects, err := s.projectRepository.List(c.Request().Context(), nil, projectIDsSlice, parentID, shared.GetOrg(c).GetID())
 
 	if err != nil {
 		return nil, err
@@ -249,10 +252,10 @@ func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project
 	return projects, nil
 }
 
-func (s *projectService) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.RecursivelyGetChildProjects(projectID)
+func (s *projectService) RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.RecursivelyGetChildProjects(ctx, nil, projectID)
 }
 
-func (s *projectService) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
-	return s.projectRepository.GetDirectChildProjects(projectID)
+func (s *projectService) GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.GetDirectChildProjects(ctx, nil, projectID)
 }

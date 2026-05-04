@@ -28,9 +28,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 
 	"github.com/l3montree-dev/devguard/services"
@@ -104,7 +104,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 
 	// read and parse the body - it should be an array of dependencyVulns
 	// print the dependencyVulns to the console
-	var scanResponse dtos.FirstPartyScanResponse
+	var scanResponse compat.FirstPartyScanResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 	if err != nil {
@@ -177,6 +177,12 @@ func expandAndObfuscateSnippet(sarifScan *sarif.SarifSchema210Json, path string)
 				// obfuscate the snippet
 				obfuscateSnippet := scanner.ObfuscateString(expandedSnippet)
 
+				// discard snippets exceeding 10 KB to prevent oversized reports
+				if len(obfuscateSnippet) > 10*1024 {
+					slog.Warn("snippet exceeds 10 KB, discarding", "uri", utils.OrDefault(location.PhysicalLocation.ArtifactLocation.URI, ""), "startLine", startLine)
+					continue
+				}
+
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = &obfuscateSnippet
 
@@ -242,7 +248,7 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
+		sarifResult, err := executeCodeScan(cmd.Context(), scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -306,7 +312,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		// read and parse the body - it should be an array of dependencyVulns
 		// print the dependencyVulns to the console
-		var scanResponse dtos.FirstPartyScanResponse
+		var scanResponse compat.FirstPartyScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {
@@ -317,13 +323,44 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {
+func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {
 	switch scannerID {
 	case "secret-scanning":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			configFilePath, err := config.GetAndWriteConfigFile(ctx, "gitleaks.toml", config.RuntimeBaseConfig.AssetName)
+			if err != nil {
+				slog.Warn("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
+			} else {
+				// set the config file path in the runtime config so that it can be used in the secret scanner
+				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
+			}
+
+		}
 		return secretScan(path, outputPath)
 	case "sast":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".semgrep.yaml", config.RuntimeBaseConfig.AssetName)
+			if err != nil {
+				slog.Warn("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
+			} else {
+				// set the config file path in the runtime config so that it can be used in the sast scanner
+				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
+			}
+		}
 		return sastScan(path, outputPath)
 	case "iac":
+		if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
+			// download any config file if exists
+			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".checkov.yml", config.RuntimeBaseConfig.AssetName)
+			if err != nil {
+				slog.Warn("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
+			} else {
+				// set the config file path in the runtime config so that it can be used in the iac scanner
+				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
+			}
+		}
 		return iacScan(path, outputPath)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)

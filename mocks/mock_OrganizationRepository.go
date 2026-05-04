@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,16 @@ func (_m *OrganizationRepository) EXPECT() *OrganizationRepository_Expecter {
 }
 
 // Activate provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Activate(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *OrganizationRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Activate")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,25 +64,31 @@ type OrganizationRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Activate(tx interface{}, id interface{}) *OrganizationRepository_Activate_Call {
-	return &OrganizationRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+func (_e *OrganizationRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Activate_Call {
+	return &OrganizationRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *OrganizationRepository_Activate_Call) Run(run func(tx shared.DB, id uuid.UUID)) *OrganizationRepository_Activate_Call {
+func (_c *OrganizationRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *OrganizationRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,14 +99,14 @@ func (_c *OrganizationRepository_Activate_Call) Return(err error) *OrganizationR
 	return _c
 }
 
-func (_c *OrganizationRepository_Activate_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *OrganizationRepository_Activate_Call {
+func (_c *OrganizationRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *OrganizationRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // All provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) All() ([]models.Org, error) {
-	ret := _mock.Called()
+func (_mock *OrganizationRepository) All(ctx context.Context, tx shared.DB) ([]models.Org, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
@@ -106,18 +114,18 @@ func (_mock *OrganizationRepository) All() ([]models.Org, error) {
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Org, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Org, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Org); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Org); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -130,13 +138,26 @@ type OrganizationRepository_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *OrganizationRepository_Expecter) All() *OrganizationRepository_All_Call {
-	return &OrganizationRepository_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *OrganizationRepository_Expecter) All(ctx interface{}, tx interface{}) *OrganizationRepository_All_Call {
+	return &OrganizationRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
-func (_c *OrganizationRepository_All_Call) Run(run func()) *OrganizationRepository_All_Call {
+func (_c *OrganizationRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *OrganizationRepository_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -146,22 +167,22 @@ func (_c *OrganizationRepository_All_Call) Return(orgs []models.Org, err error) 
 	return _c
 }
 
-func (_c *OrganizationRepository_All_Call) RunAndReturn(run func() ([]models.Org, error)) *OrganizationRepository_All_Call {
+func (_c *OrganizationRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Org, error)) *OrganizationRepository_All_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Begin provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Begin() shared.DB {
-	ret := _mock.Called()
+func (_mock *OrganizationRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func() shared.DB); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -176,13 +197,20 @@ type OrganizationRepository_Begin_Call struct {
 }
 
 // Begin is a helper method to define mock.On call
-func (_e *OrganizationRepository_Expecter) Begin() *OrganizationRepository_Begin_Call {
-	return &OrganizationRepository_Begin_Call{Call: _e.mock.On("Begin")}
+//   - ctx context.Context
+func (_e *OrganizationRepository_Expecter) Begin(ctx interface{}) *OrganizationRepository_Begin_Call {
+	return &OrganizationRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *OrganizationRepository_Begin_Call) Run(run func()) *OrganizationRepository_Begin_Call {
+func (_c *OrganizationRepository_Begin_Call) Run(run func(ctx context.Context)) *OrganizationRepository_Begin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -192,22 +220,73 @@ func (_c *OrganizationRepository_Begin_Call) Return(v shared.DB) *OrganizationRe
 	return _c
 }
 
-func (_c *OrganizationRepository_Begin_Call) RunAndReturn(run func() shared.DB) *OrganizationRepository_Begin_Call {
+func (_c *OrganizationRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *OrganizationRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type OrganizationRepository
+func (_mock *OrganizationRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrganizationRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type OrganizationRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *OrganizationRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *OrganizationRepository_CleanupOrphanedRecords_Call {
+	return &OrganizationRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *OrganizationRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *OrganizationRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *OrganizationRepository_CleanupOrphanedRecords_Call) Return(err error) *OrganizationRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrganizationRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *OrganizationRepository_CleanupOrphanedRecords_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ContentTree provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) ContentTree(orgID uuid.UUID, projects []string) []any {
-	ret := _mock.Called(orgID, projects)
+func (_mock *OrganizationRepository) ContentTree(ctx context.Context, tx shared.DB, orgID uuid.UUID, projects []string) []any {
+	ret := _mock.Called(ctx, tx, orgID, projects)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ContentTree")
 	}
 
 	var r0 []any
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, []string) []any); ok {
-		r0 = returnFunc(orgID, projects)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, []string) []any); ok {
+		r0 = returnFunc(ctx, tx, orgID, projects)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]any)
@@ -222,25 +301,37 @@ type OrganizationRepository_ContentTree_Call struct {
 }
 
 // ContentTree is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projects []string
-func (_e *OrganizationRepository_Expecter) ContentTree(orgID interface{}, projects interface{}) *OrganizationRepository_ContentTree_Call {
-	return &OrganizationRepository_ContentTree_Call{Call: _e.mock.On("ContentTree", orgID, projects)}
+func (_e *OrganizationRepository_Expecter) ContentTree(ctx interface{}, tx interface{}, orgID interface{}, projects interface{}) *OrganizationRepository_ContentTree_Call {
+	return &OrganizationRepository_ContentTree_Call{Call: _e.mock.On("ContentTree", ctx, tx, orgID, projects)}
 }
 
-func (_c *OrganizationRepository_ContentTree_Call) Run(run func(orgID uuid.UUID, projects []string)) *OrganizationRepository_ContentTree_Call {
+func (_c *OrganizationRepository_ContentTree_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projects []string)) *OrganizationRepository_ContentTree_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]string)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -251,22 +342,22 @@ func (_c *OrganizationRepository_ContentTree_Call) Return(vs []any) *Organizatio
 	return _c
 }
 
-func (_c *OrganizationRepository_ContentTree_Call) RunAndReturn(run func(orgID uuid.UUID, projects []string) []any) *OrganizationRepository_ContentTree_Call {
+func (_c *OrganizationRepository_ContentTree_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projects []string) []any) *OrganizationRepository_ContentTree_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Create provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Create(tx shared.DB, t *models.Org) error {
-	ret := _mock.Called(tx, t)
+func (_mock *OrganizationRepository) Create(ctx context.Context, tx shared.DB, t *models.Org) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Org) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -279,25 +370,31 @@ type OrganizationRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Org
-func (_e *OrganizationRepository_Expecter) Create(tx interface{}, t interface{}) *OrganizationRepository_Create_Call {
-	return &OrganizationRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+func (_e *OrganizationRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *OrganizationRepository_Create_Call {
+	return &OrganizationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
-func (_c *OrganizationRepository_Create_Call) Run(run func(tx shared.DB, t *models.Org)) *OrganizationRepository_Create_Call {
+func (_c *OrganizationRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Org)) *OrganizationRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Org
+		if args[2] != nil {
+			arg2 = args[2].(*models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -308,22 +405,22 @@ func (_c *OrganizationRepository_Create_Call) Return(err error) *OrganizationRep
 	return _c
 }
 
-func (_c *OrganizationRepository_Create_Call) RunAndReturn(run func(tx shared.DB, t *models.Org) error) *OrganizationRepository_Create_Call {
+func (_c *OrganizationRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Org) error) *OrganizationRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) CreateBatch(tx shared.DB, ts []models.Org) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *OrganizationRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.Org) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Org) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -336,25 +433,31 @@ type OrganizationRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *OrganizationRepository_CreateBatch_Call {
-	return &OrganizationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+func (_e *OrganizationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *OrganizationRepository_CreateBatch_Call {
+	return &OrganizationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *OrganizationRepository_CreateBatch_Call) Run(run func(tx shared.DB, ts []models.Org)) *OrganizationRepository_CreateBatch_Call {
+func (_c *OrganizationRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Org)) *OrganizationRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Org
+		if args[2] != nil {
+			arg2 = args[2].([]models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -365,22 +468,22 @@ func (_c *OrganizationRepository_CreateBatch_Call) Return(err error) *Organizati
 	return _c
 }
 
-func (_c *OrganizationRepository_CreateBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Org) error) *OrganizationRepository_CreateBatch_Call {
+func (_c *OrganizationRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Org) error) *OrganizationRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Delete(tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+func (_mock *OrganizationRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -393,25 +496,31 @@ type OrganizationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Delete(tx interface{}, id interface{}) *OrganizationRepository_Delete_Call {
-	return &OrganizationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+func (_e *OrganizationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Delete_Call {
+	return &OrganizationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *OrganizationRepository_Delete_Call) Run(run func(tx shared.DB, id uuid.UUID)) *OrganizationRepository_Delete_Call {
+func (_c *OrganizationRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *OrganizationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -422,22 +531,22 @@ func (_c *OrganizationRepository_Delete_Call) Return(err error) *OrganizationRep
 	return _c
 }
 
-func (_c *OrganizationRepository_Delete_Call) RunAndReturn(run func(tx shared.DB, id uuid.UUID) error) *OrganizationRepository_Delete_Call {
+func (_c *OrganizationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *OrganizationRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBatch provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) DeleteBatch(tx shared.DB, ids []models.Org) error {
-	ret := _mock.Called(tx, ids)
+func (_mock *OrganizationRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.Org) error {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Org) error); ok {
-		r0 = returnFunc(tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -450,25 +559,31 @@ type OrganizationRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Org
-func (_e *OrganizationRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *OrganizationRepository_DeleteBatch_Call {
-	return &OrganizationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+func (_e *OrganizationRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *OrganizationRepository_DeleteBatch_Call {
+	return &OrganizationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
-func (_c *OrganizationRepository_DeleteBatch_Call) Run(run func(tx shared.DB, ids []models.Org)) *OrganizationRepository_DeleteBatch_Call {
+func (_c *OrganizationRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.Org)) *OrganizationRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Org
+		if args[2] != nil {
+			arg2 = args[2].([]models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -479,22 +594,22 @@ func (_c *OrganizationRepository_DeleteBatch_Call) Return(err error) *Organizati
 	return _c
 }
 
-func (_c *OrganizationRepository_DeleteBatch_Call) RunAndReturn(run func(tx shared.DB, ids []models.Org) error) *OrganizationRepository_DeleteBatch_Call {
+func (_c *OrganizationRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Org) error) *OrganizationRepository_DeleteBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDB provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) GetDB(tx shared.DB) shared.DB {
-	ret := _mock.Called(tx)
+func (_mock *OrganizationRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDB")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(shared.DB) shared.DB); ok {
-		r0 = returnFunc(tx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -509,19 +624,25 @@ type OrganizationRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
-func (_e *OrganizationRepository_Expecter) GetDB(tx interface{}) *OrganizationRepository_GetDB_Call {
-	return &OrganizationRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+func (_e *OrganizationRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *OrganizationRepository_GetDB_Call {
+	return &OrganizationRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
-func (_c *OrganizationRepository_GetDB_Call) Run(run func(tx shared.DB)) *OrganizationRepository_GetDB_Call {
+func (_c *OrganizationRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *OrganizationRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -532,14 +653,14 @@ func (_c *OrganizationRepository_GetDB_Call) Return(v shared.DB) *OrganizationRe
 	return _c
 }
 
-func (_c *OrganizationRepository_GetDB_Call) RunAndReturn(run func(tx shared.DB) shared.DB) *OrganizationRepository_GetDB_Call {
+func (_c *OrganizationRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *OrganizationRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetOrgByID provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
-	ret := _mock.Called(id)
+func (_mock *OrganizationRepository) GetOrgByID(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Org, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetOrgByID")
@@ -547,16 +668,16 @@ func (_mock *OrganizationRepository) GetOrgByID(id uuid.UUID) (models.Org, error
 
 	var r0 models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Org, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Org, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Org); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Org); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Org)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -569,19 +690,31 @@ type OrganizationRepository_GetOrgByID_Call struct {
 }
 
 // GetOrgByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) GetOrgByID(id interface{}) *OrganizationRepository_GetOrgByID_Call {
-	return &OrganizationRepository_GetOrgByID_Call{Call: _e.mock.On("GetOrgByID", id)}
+func (_e *OrganizationRepository_Expecter) GetOrgByID(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_GetOrgByID_Call {
+	return &OrganizationRepository_GetOrgByID_Call{Call: _e.mock.On("GetOrgByID", ctx, tx, id)}
 }
 
-func (_c *OrganizationRepository_GetOrgByID_Call) Run(run func(id uuid.UUID)) *OrganizationRepository_GetOrgByID_Call {
+func (_c *OrganizationRepository_GetOrgByID_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *OrganizationRepository_GetOrgByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -592,14 +725,14 @@ func (_c *OrganizationRepository_GetOrgByID_Call) Return(org models.Org, err err
 	return _c
 }
 
-func (_c *OrganizationRepository_GetOrgByID_Call) RunAndReturn(run func(id uuid.UUID) (models.Org, error)) *OrganizationRepository_GetOrgByID_Call {
+func (_c *OrganizationRepository_GetOrgByID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Org, error)) *OrganizationRepository_GetOrgByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetOrgsWithVulnSharingAssets provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) GetOrgsWithVulnSharingAssets() ([]models.Org, error) {
-	ret := _mock.Called()
+func (_mock *OrganizationRepository) GetOrgsWithVulnSharingAssets(ctx context.Context, tx shared.DB) ([]models.Org, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetOrgsWithVulnSharingAssets")
@@ -607,18 +740,18 @@ func (_mock *OrganizationRepository) GetOrgsWithVulnSharingAssets() ([]models.Or
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.Org, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Org, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.Org); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Org); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -631,13 +764,26 @@ type OrganizationRepository_GetOrgsWithVulnSharingAssets_Call struct {
 }
 
 // GetOrgsWithVulnSharingAssets is a helper method to define mock.On call
-func (_e *OrganizationRepository_Expecter) GetOrgsWithVulnSharingAssets() *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
-	return &OrganizationRepository_GetOrgsWithVulnSharingAssets_Call{Call: _e.mock.On("GetOrgsWithVulnSharingAssets")}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *OrganizationRepository_Expecter) GetOrgsWithVulnSharingAssets(ctx interface{}, tx interface{}) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+	return &OrganizationRepository_GetOrgsWithVulnSharingAssets_Call{Call: _e.mock.On("GetOrgsWithVulnSharingAssets", ctx, tx)}
 }
 
-func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) Run(run func()) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) Run(run func(ctx context.Context, tx shared.DB)) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -647,14 +793,14 @@ func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) Return(orgs 
 	return _c
 }
 
-func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) RunAndReturn(run func() ([]models.Org, error)) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+func (_c *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Org, error)) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) List(ids []uuid.UUID) ([]models.Org, error) {
-	ret := _mock.Called(ids)
+func (_mock *OrganizationRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Org, error) {
+	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -662,18 +808,18 @@ func (_mock *OrganizationRepository) List(ids []uuid.UUID) ([]models.Org, error)
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.Org, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.Org, error)); ok {
+		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.Org); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.Org); ok {
+		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -686,19 +832,31 @@ type OrganizationRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *OrganizationRepository_Expecter) List(ids interface{}) *OrganizationRepository_List_Call {
-	return &OrganizationRepository_List_Call{Call: _e.mock.On("List", ids)}
+func (_e *OrganizationRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *OrganizationRepository_List_Call {
+	return &OrganizationRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *OrganizationRepository_List_Call) Run(run func(ids []uuid.UUID)) *OrganizationRepository_List_Call {
+func (_c *OrganizationRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *OrganizationRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -709,14 +867,14 @@ func (_c *OrganizationRepository_List_Call) Return(orgs []models.Org, err error)
 	return _c
 }
 
-func (_c *OrganizationRepository_List_Call) RunAndReturn(run func(ids []uuid.UUID) ([]models.Org, error)) *OrganizationRepository_List_Call {
+func (_c *OrganizationRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.Org, error)) *OrganizationRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Read(id uuid.UUID) (models.Org, error) {
-	ret := _mock.Called(id)
+func (_mock *OrganizationRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Org, error) {
+	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
@@ -724,16 +882,16 @@ func (_mock *OrganizationRepository) Read(id uuid.UUID) (models.Org, error) {
 
 	var r0 models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Org, error)); ok {
-		return returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Org, error)); ok {
+		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Org); ok {
-		r0 = returnFunc(id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Org); ok {
+		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Org)
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -746,19 +904,31 @@ type OrganizationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Read(id interface{}) *OrganizationRepository_Read_Call {
-	return &OrganizationRepository_Read_Call{Call: _e.mock.On("Read", id)}
+func (_e *OrganizationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Read_Call {
+	return &OrganizationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *OrganizationRepository_Read_Call) Run(run func(id uuid.UUID)) *OrganizationRepository_Read_Call {
+func (_c *OrganizationRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *OrganizationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -769,14 +939,14 @@ func (_c *OrganizationRepository_Read_Call) Return(org models.Org, err error) *O
 	return _c
 }
 
-func (_c *OrganizationRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.Org, error)) *OrganizationRepository_Read_Call {
+func (_c *OrganizationRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Org, error)) *OrganizationRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ReadBySlug provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) ReadBySlug(slug string) (models.Org, error) {
-	ret := _mock.Called(slug)
+func (_mock *OrganizationRepository) ReadBySlug(ctx context.Context, tx shared.DB, slug string) (models.Org, error) {
+	ret := _mock.Called(ctx, tx, slug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadBySlug")
@@ -784,16 +954,16 @@ func (_mock *OrganizationRepository) ReadBySlug(slug string) (models.Org, error)
 
 	var r0 models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (models.Org, error)); ok {
-		return returnFunc(slug)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.Org, error)); ok {
+		return returnFunc(ctx, tx, slug)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) models.Org); ok {
-		r0 = returnFunc(slug)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.Org); ok {
+		r0 = returnFunc(ctx, tx, slug)
 	} else {
 		r0 = ret.Get(0).(models.Org)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(slug)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, slug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -806,19 +976,31 @@ type OrganizationRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - slug string
-func (_e *OrganizationRepository_Expecter) ReadBySlug(slug interface{}) *OrganizationRepository_ReadBySlug_Call {
-	return &OrganizationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", slug)}
+func (_e *OrganizationRepository_Expecter) ReadBySlug(ctx interface{}, tx interface{}, slug interface{}) *OrganizationRepository_ReadBySlug_Call {
+	return &OrganizationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, tx, slug)}
 }
 
-func (_c *OrganizationRepository_ReadBySlug_Call) Run(run func(slug string)) *OrganizationRepository_ReadBySlug_Call {
+func (_c *OrganizationRepository_ReadBySlug_Call) Run(run func(ctx context.Context, tx shared.DB, slug string)) *OrganizationRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -829,22 +1011,22 @@ func (_c *OrganizationRepository_ReadBySlug_Call) Return(org models.Org, err err
 	return _c
 }
 
-func (_c *OrganizationRepository_ReadBySlug_Call) RunAndReturn(run func(slug string) (models.Org, error)) *OrganizationRepository_ReadBySlug_Call {
+func (_c *OrganizationRepository_ReadBySlug_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, slug string) (models.Org, error)) *OrganizationRepository_ReadBySlug_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Save(tx shared.DB, t *models.Org) error {
-	ret := _mock.Called(tx, t)
+func (_mock *OrganizationRepository) Save(ctx context.Context, tx shared.DB, t *models.Org) error {
+	ret := _mock.Called(ctx, tx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Org) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, t)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -857,25 +1039,31 @@ type OrganizationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Org
-func (_e *OrganizationRepository_Expecter) Save(tx interface{}, t interface{}) *OrganizationRepository_Save_Call {
-	return &OrganizationRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+func (_e *OrganizationRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *OrganizationRepository_Save_Call {
+	return &OrganizationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
-func (_c *OrganizationRepository_Save_Call) Run(run func(tx shared.DB, t *models.Org)) *OrganizationRepository_Save_Call {
+func (_c *OrganizationRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Org)) *OrganizationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Org
+		if args[2] != nil {
+			arg2 = args[2].(*models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -886,22 +1074,22 @@ func (_c *OrganizationRepository_Save_Call) Return(err error) *OrganizationRepos
 	return _c
 }
 
-func (_c *OrganizationRepository_Save_Call) RunAndReturn(run func(tx shared.DB, t *models.Org) error) *OrganizationRepository_Save_Call {
+func (_c *OrganizationRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Org) error) *OrganizationRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) SaveBatch(tx shared.DB, ts []models.Org) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *OrganizationRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.Org) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatch")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Org) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -914,25 +1102,31 @@ type OrganizationRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *OrganizationRepository_SaveBatch_Call {
-	return &OrganizationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+func (_e *OrganizationRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *OrganizationRepository_SaveBatch_Call {
+	return &OrganizationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
-func (_c *OrganizationRepository_SaveBatch_Call) Run(run func(tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatch_Call {
+func (_c *OrganizationRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Org
+		if args[2] != nil {
+			arg2 = args[2].([]models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -943,22 +1137,22 @@ func (_c *OrganizationRepository_SaveBatch_Call) Return(err error) *Organization
 	return _c
 }
 
-func (_c *OrganizationRepository_SaveBatch_Call) RunAndReturn(run func(tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatch_Call {
+func (_c *OrganizationRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatchBestEffort provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) SaveBatchBestEffort(tx shared.DB, ts []models.Org) error {
-	ret := _mock.Called(tx, ts)
+func (_mock *OrganizationRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Org) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBatchBestEffort")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, []models.Org) error); ok {
-		r0 = returnFunc(tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -971,25 +1165,31 @@ type OrganizationRepository_SaveBatchBestEffort_Call struct {
 }
 
 // SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) SaveBatchBestEffort(tx interface{}, ts interface{}) *OrganizationRepository_SaveBatchBestEffort_Call {
-	return &OrganizationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", tx, ts)}
+func (_e *OrganizationRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *OrganizationRepository_SaveBatchBestEffort_Call {
+	return &OrganizationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
-func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Run(run func(tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatchBestEffort_Call {
+func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatchBestEffort_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.Org
+		if args[2] != nil {
+			arg2 = args[2].([]models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1000,22 +1200,22 @@ func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Return(err error) *Or
 	return _c
 }
 
-func (_c *OrganizationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatchBestEffort_Call {
+func (_c *OrganizationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatchBestEffort_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Transaction provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Transaction(fn func(tx shared.DB) error) error {
-	ret := _mock.Called(fn)
+func (_mock *OrganizationRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Transaction")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(fn)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1028,19 +1228,25 @@ type OrganizationRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
+//   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *OrganizationRepository_Expecter) Transaction(fn interface{}) *OrganizationRepository_Transaction_Call {
-	return &OrganizationRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
+func (_e *OrganizationRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *OrganizationRepository_Transaction_Call {
+	return &OrganizationRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
-func (_c *OrganizationRepository_Transaction_Call) Run(run func(fn func(tx shared.DB) error)) *OrganizationRepository_Transaction_Call {
+func (_c *OrganizationRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *OrganizationRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx shared.DB) error
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(func(tx shared.DB) error)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1051,22 +1257,22 @@ func (_c *OrganizationRepository_Transaction_Call) Return(err error) *Organizati
 	return _c
 }
 
-func (_c *OrganizationRepository_Transaction_Call) RunAndReturn(run func(fn func(tx shared.DB) error) error) *OrganizationRepository_Transaction_Call {
+func (_c *OrganizationRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *OrganizationRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Update provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Update(tx shared.DB, organization *models.Org) error {
-	ret := _mock.Called(tx, organization)
+func (_mock *OrganizationRepository) Update(ctx context.Context, tx shared.DB, organization *models.Org) error {
+	ret := _mock.Called(ctx, tx, organization)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.DB, *models.Org) error); ok {
-		r0 = returnFunc(tx, organization)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Org) error); ok {
+		r0 = returnFunc(ctx, tx, organization)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1079,25 +1285,31 @@ type OrganizationRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
+//   - ctx context.Context
 //   - tx shared.DB
 //   - organization *models.Org
-func (_e *OrganizationRepository_Expecter) Update(tx interface{}, organization interface{}) *OrganizationRepository_Update_Call {
-	return &OrganizationRepository_Update_Call{Call: _e.mock.On("Update", tx, organization)}
+func (_e *OrganizationRepository_Expecter) Update(ctx interface{}, tx interface{}, organization interface{}) *OrganizationRepository_Update_Call {
+	return &OrganizationRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, organization)}
 }
 
-func (_c *OrganizationRepository_Update_Call) Run(run func(tx shared.DB, organization *models.Org)) *OrganizationRepository_Update_Call {
+func (_c *OrganizationRepository_Update_Call) Run(run func(ctx context.Context, tx shared.DB, organization *models.Org)) *OrganizationRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.DB
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(shared.DB)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Org
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Org)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Org
+		if args[2] != nil {
+			arg2 = args[2].(*models.Org)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1108,22 +1320,22 @@ func (_c *OrganizationRepository_Update_Call) Return(err error) *OrganizationRep
 	return _c
 }
 
-func (_c *OrganizationRepository_Update_Call) RunAndReturn(run func(tx shared.DB, organization *models.Org) error) *OrganizationRepository_Update_Call {
+func (_c *OrganizationRepository_Update_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organization *models.Org) error) *OrganizationRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Upsert provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Upsert(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(t, conflictingColumns, updateOnly)
+func (_mock *OrganizationRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Org, []clause.Column, []string) error); ok {
-		r0 = returnFunc(t, conflictingColumns, updateOnly)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Org, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1136,31 +1348,43 @@ type OrganizationRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
 //   - t *[]*models.Org
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *OrganizationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *OrganizationRepository_Upsert_Call {
-	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
+func (_e *OrganizationRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *OrganizationRepository_Upsert_Call {
+	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
-func (_c *OrganizationRepository_Upsert_Call) Run(run func(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string)) *OrganizationRepository_Upsert_Call {
+func (_c *OrganizationRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string)) *OrganizationRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Org
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Org)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 []clause.Column
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []string
+		var arg2 *[]*models.Org
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].(*[]*models.Org)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -1171,7 +1395,7 @@ func (_c *OrganizationRepository_Upsert_Call) Return(err error) *OrganizationRep
 	return _c
 }
 
-func (_c *OrganizationRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error) *OrganizationRepository_Upsert_Call {
+func (_c *OrganizationRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error) *OrganizationRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -4,6 +4,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -21,10 +23,10 @@ func NewWebhookRepository(db *gorm.DB) *webhookRepository {
 		Repository: newGormRepository[uuid.UUID, models.WebhookIntegration](db),
 	}
 }
-func (r *webhookRepository) FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
+func (r *webhookRepository) FindByOrgIDAndProjectID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
 	var integrations []models.WebhookIntegration
 
-	query := r.db.Where("org_id = ? AND project_id IS NULL", orgID).Or("org_id = ? AND project_id = ?", orgID, projectID)
+	query := r.GetDB(ctx, tx).Where("org_id = ? AND project_id IS NULL", orgID).Or("org_id = ? AND project_id = ?", orgID, projectID)
 
 	if err := query.Find(&integrations).Error; err != nil {
 		return nil, err
@@ -32,10 +34,10 @@ func (r *webhookRepository) FindByOrgIDAndProjectID(orgID uuid.UUID, projectID u
 
 	return integrations, nil
 }
-func (r *webhookRepository) GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
+func (r *webhookRepository) GetProjectWebhooks(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
 	var integrations []models.WebhookIntegration
 
-	query := r.db.Where("org_id = ? AND project_id = ?", orgID, projectID)
+	query := r.GetDB(ctx, tx).Where("org_id = ? AND project_id = ?", orgID, projectID)
 
 	if err := query.Find(&integrations).Error; err != nil {
 		return nil, err
@@ -44,9 +46,9 @@ func (r *webhookRepository) GetProjectWebhooks(orgID uuid.UUID, projectID uuid.U
 	return integrations, nil
 }
 
-func (r *webhookRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error) {
+func (r *webhookRepository) GetClientByIntegrationID(ctx context.Context, tx *gorm.DB, integrationID uuid.UUID) (models.WebhookIntegration, error) {
 	var integration models.WebhookIntegration
-	if err := r.db.First(&integration, "id = ?", integrationID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).First(&integration, "id = ?", integrationID).Error; err != nil {
 		return models.WebhookIntegration{}, err
 	}
 	return integration, nil

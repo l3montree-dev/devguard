@@ -76,7 +76,7 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifie
 				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
 				return next(ctx)
 			} else {
-				session, err := verifier.VerifyRequestSignature(ctx.Request())
+				session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request())
 				if err != nil {
 					if strings.EqualFold(err.Error(), "could not verify request") || strings.EqualFold(err.Error(), "no fingerprint provided") {
 						ctx.Set("session", accesscontrol.NoSession)

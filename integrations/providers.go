@@ -16,6 +16,7 @@
 package integrations
 
 import (
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
@@ -38,8 +39,8 @@ var Module = fx.Options(
 
 	// Aggregated Third Party Integration
 	fx.Provide(fx.Annotate(
-		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration) shared.IntegrationAggregate {
-			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration)
+		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration, webhookIntegration *controllers.WebhookController) shared.IntegrationAggregate {
+			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration, webhookIntegration)
 		},
 		fx.As(new(shared.IntegrationAggregate)),
 	)),

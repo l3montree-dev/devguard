@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -34,17 +36,17 @@ func NewGithubAppInstallationRepository(db *gorm.DB) *githubAppInstallationRepos
 	}
 }
 
-func (r *githubAppInstallationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
+func (r *githubAppInstallationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
 	var installations []models.GithubAppInstallation
-	if err := r.db.Find(&installations, "orgID = ?", orgID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Find(&installations, "orgID = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return installations, nil
 }
 
-func (r *githubAppInstallationRepository) Read(id int) (models.GithubAppInstallation, error) {
+func (r *githubAppInstallationRepository) Read(ctx context.Context, tx *gorm.DB, id int) (models.GithubAppInstallation, error) {
 	var installation models.GithubAppInstallation
-	if err := r.db.First(&installation, "installation_id = ?", id).Error; err != nil {
+	if err := r.GetDB(ctx, tx).First(&installation, "installation_id = ?", id).Error; err != nil {
 		return models.GithubAppInstallation{}, err
 	}
 	return installation, nil

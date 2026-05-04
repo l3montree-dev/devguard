@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
@@ -78,7 +78,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
 				URL:              csafURL,
 				Type:             models.ExternalReferenceTypeCSAF,
 				CSAFPackageScope: normalize.Purlify(artifact.ArtifactName, assetVersion.Name),
@@ -144,11 +144,11 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 				pathParts := strings.Split(r.URL.Path, "/white/")
 				fmt.Println(r.URL.Path)
 				yearAndMaybeVersion := pathParts[1]
-				yearAndMaybeVersionParts := strings.Split(yearAndMaybeVersion, "/")
-				year := yearAndMaybeVersionParts[0]
+				parts := strings.SplitN(yearAndMaybeVersion, "/", 2)
+				year := parts[0]
 				version := ""
-				if len(yearAndMaybeVersionParts) > 1 {
-					version = yearAndMaybeVersionParts[1]
+				if len(parts) > 1 {
+					version = parts[1]
 				}
 
 				ctx := app.NewContext(r, w)
@@ -169,7 +169,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
 
 			// we create a fake VEX report for the same artifact which has the same purl
-			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream([]models.ExternalReference{{
+			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
 				URL:              testserver.URL + "/provider-metadata.json",
 				Type:             models.ExternalReferenceTypeCSAF,
 				CSAFPackageScope: purl,
@@ -263,44 +263,40 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		VulnID:   vuln1.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
-		Type:     "detected",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln1.ID),
+		CreatedAt:        time.Now().Add(-10 * time.Minute),
+		Type:             "detected",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln1DetectedEvent).Error; err != nil {
 		panic(err)
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		VulnID:   vuln1.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-7 * time.Minute), UpdatedAt: time.Now().Add(-7 * time.Minute)},
-		Type:     "comment",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln1.ID),
+		CreatedAt:        time.Now().Add(-7 * time.Minute),
+		Type:             "comment",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln1CommentEvent).Error; err != nil {
 		panic(err)
 	}
 
 	vuln2DetectedEvent := models.VulnEvent{
-		VulnID:   vuln2.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-2 * time.Minute)},
-		Type:     "detected",
-		UserID:   "system",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln2.ID),
+		CreatedAt:        time.Now().Add(-3 * time.Minute),
+		Type:             "detected",
+		UserID:           "system",
 	}
 	if err = db.Create(&vuln2DetectedEvent).Error; err != nil {
 		panic(err)
 	}
 
 	vuln2FalsePositiveEvent := models.VulnEvent{
-		VulnID:   vuln2.ID,
-		Model:    models.Model{CreatedAt: time.Now().Add(-1 * time.Minute), UpdatedAt: time.Now().Add(-1 * time.Minute)},
-		Type:     "falsePositive",
-		UserID:   "xyz",
-		VulnType: dtos.VulnTypeDependencyVuln,
+		DependencyVulnID: utils.Ptr(vuln2.ID),
+		CreatedAt:        time.Now().Add(-1 * time.Minute),
+		Type:             "falsePositive",
+		UserID:           "xyz",
 	}
 	if err = db.Create(&vuln2FalsePositiveEvent).Error; err != nil {
 		panic(err)
