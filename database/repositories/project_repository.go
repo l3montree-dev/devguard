@@ -119,6 +119,7 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 	assetParams := []interface{}{
 		"%" + search + "%",
 		pq.Array(allowedAssetIDs),
+		orgID,
 	}
 
 	projectParams := []interface{}{
@@ -136,57 +137,34 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 		parentStopParam = []interface{}{*parentID}
 	}
 
-	// matching_assets CTE avoids repeating the asset filter (and its params) twice.
-	// asset_project_chain walks up to root projects that contain matching assets.
-	// project_chain walks up to root projects that match the project filter.
-	// Both recursive steps stop at parentID when it is set.
-	cteBlock := `
+	searchResultsCTE := `
 WITH RECURSIVE
-matching_assets AS (
-    SELECT * FROM assets a WHERE a.name ILIKE ? AND (a.id = ANY(?) OR a.is_public = true)
-),
-asset_project_chain AS (
-    SELECT pr.*
-    FROM projects pr
-    WHERE pr.id IN (SELECT project_id FROM matching_assets)
-    UNION
-    SELECT pr.*
-    FROM projects pr
-    INNER JOIN asset_project_chain apc ON pr.id = apc.parent_id` + assetChainStopCond + `
-),
-project_chain AS (
-    SELECT p.*
-    FROM projects p
-    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))
-    UNION
-    SELECT pr.*
-    FROM projects pr
-    INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
-),
-combined AS (
+searchResults AS (
     SELECT 'asset'::text AS resource_type, a.id, a.name, a.slug, a.description,
            a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
            a.is_public, a.state, a.created_at, a.updated_at
-    FROM matching_assets a
-    UNION ALL
-    SELECT 'project'::text AS resource_type, c.id, c.name, c.slug, c.description,
-           NULL::uuid AS project_id, c.parent_id, c.organization_id,
-           c.is_public, c.state, c.created_at, c.updated_at
-    FROM (SELECT * FROM asset_project_chain UNION SELECT * FROM project_chain) c
+    FROM assets a
+    INNER JOIN projects p ON p.id = a.project_id
+    WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))
+    UNION
+    SELECT 'project'::text AS resource_type, p.id, p.name, p.slug, p.description,
+           NULL::uuid AS project_id, p.parent_id, p.organization_id,
+           p.is_public, p.state, p.created_at, p.updated_at
+    FROM projects p
+    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))
 )`
 
-	allParams := make([]interface{}, 0, len(assetParams)+len(parentStopParam)+len(projectParams)+len(parentStopParam))
-	allParams = append(allParams, assetParams...)
-	allParams = append(allParams, parentStopParam...)
-	allParams = append(allParams, projectParams...)
-	allParams = append(allParams, parentStopParam...)
+	// Count only the matched assets and projects, not the parent chain.
+	countParams := make([]interface{}, 0, len(assetParams)+len(projectParams))
+	countParams = append(countParams, assetParams...)
+	countParams = append(countParams, projectParams...)
 
 	var count int64
-	if err := g.GetDB(ctx, tx).Raw(cteBlock+" SELECT COUNT(*) FROM combined", allParams...).Scan(&count).Error; err != nil {
+	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
 		return shared.Paged[dtos.ProjectDTO]{}, err
 	}
 
-	orderClause := "combined.name ASC"
+	orderClause := "name ASC"
 	if len(sort) > 0 {
 		parts := make([]string, len(sort))
 		for i, s := range sort {
@@ -195,8 +173,42 @@ combined AS (
 		orderClause = strings.Join(parts, ", ")
 	}
 
-	dataSQL := cteBlock + " SELECT * FROM combined ORDER BY " + orderClause + " LIMIT ? OFFSET ?"
-	dataParams := append(allParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
+	// Paginate the matched results first, then fetch parent chains for each item.
+	dataSQL := searchResultsCTE + `,
+paginatedResults AS (
+    SELECT * FROM searchResults ORDER BY ` + orderClause + ` LIMIT ? OFFSET ?
+),
+asset_project_chain AS (
+    SELECT pr.*
+    FROM projects pr
+    WHERE pr.id IN (SELECT project_id FROM paginatedResults WHERE resource_type = 'asset')
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN asset_project_chain apc ON pr.id = apc.parent_id` + assetChainStopCond + `
+),
+project_chain AS (
+    SELECT pr.*
+    FROM projects pr
+    WHERE pr.id IN (SELECT parent_id FROM paginatedResults WHERE resource_type = 'project' AND parent_id IS NOT NULL)
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
+)
+SELECT resource_type, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
+UNION
+SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
+UNION
+SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
+
+	dataParams := make([]interface{}, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
+	dataParams = append(dataParams, assetParams...)
+	dataParams = append(dataParams, projectParams...)
+	dataParams = append(dataParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
+	dataParams = append(dataParams, parentStopParam...)
+	dataParams = append(dataParams, parentStopParam...)
+
 	if err := g.GetDB(ctx, tx).Raw(dataSQL, dataParams...).Scan(&results).Error; err != nil {
 		return shared.Paged[dtos.ProjectDTO]{}, err
 	}
