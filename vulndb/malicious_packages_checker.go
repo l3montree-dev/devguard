@@ -159,13 +159,10 @@ func (c *MaliciousPackageChecker) FetchAll(ctx context.Context) ([]models.Malici
 	return packages, components, nil
 }
 
-// ApplyToDB clears the malicious packages tables and bulk-inserts the provided data
-// within the given transaction. The caller is responsible for committing or rolling back.
+// ApplyToDB upserts the provided malicious packages and affected components within the given
+// transaction. The caller is responsible for committing or rolling back.
+// For a full re-import, clear the tables before calling this.
 func (c *MaliciousPackageChecker) ApplyToDB(ctx context.Context, tx shared.DB, packages []models.MaliciousPackage, components []models.MaliciousAffectedComponent) error {
-	if err := clearMaliciousPackagesDB(tx); err != nil {
-		return fmt.Errorf("could not clear malicious package database: %w", err)
-	}
-
 	for i := 0; i < len(packages); i += BatchSize {
 		end := min(i+BatchSize, len(packages))
 		if err := c.repository.UpsertPackages(ctx, tx, packages[i:end]); err != nil {
@@ -177,6 +174,9 @@ func (c *MaliciousPackageChecker) ApplyToDB(ctx context.Context, tx shared.DB, p
 		if err := c.repository.UpsertAffectedComponents(ctx, tx, components[i:end]); err != nil {
 			return fmt.Errorf("failed to upsert components: %w", err)
 		}
+	}
+	if err := c.loadFakePackages(ctx, tx); err != nil {
+		return fmt.Errorf("failed to load fake packages: %w", err)
 	}
 	return nil
 }
@@ -278,7 +278,7 @@ func clearMaliciousPackagesDB(tx *gorm.DB) error {
 	return nil
 }
 
-func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
+func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context, tx shared.DB) error {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -325,10 +325,10 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 		}
 	}
 
-	if err := c.repository.UpsertPackages(ctx, nil, packages); err != nil {
+	if err := c.repository.UpsertPackages(ctx, tx, packages); err != nil {
 		return err
 	}
-	return c.repository.UpsertAffectedComponents(ctx, nil, affectedComponents)
+	return c.repository.UpsertAffectedComponents(ctx, tx, affectedComponents)
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {

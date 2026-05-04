@@ -25,6 +25,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -72,7 +73,7 @@ func NewVulnDBService(
 	pool *pgxpool.Pool,
 ) *VulnDBService {
 	return &VulnDBService{
-		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, configService, pool),
+		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
 		epss:              NewEPSSService(cveRepository, cveRelationshipRepository),
 		cisaKEV:           NewCISAKEVService(cveRepository, cveRelationshipRepository),
 		githubExploits:    NewGithubExploitDBService(exploitRepository),
@@ -189,6 +190,13 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		return strings.Compare(a.TableName, b.TableName)
 	})
 
+	for _, ti := range tableIntegrity {
+		if ti.TotalCount == 0 || len(ti.Checksum) == 0 {
+			return fmt.Errorf("refusing to export: table %q has zero rows or empty checksum — database is likely incomplete", ti.TableName)
+		}
+		slog.Info("table integrity", "table", ti.TableName, "count", ti.TableName, "total", ti.TotalCount)
+	}
+
 	integrityFD, err := os.Create("integrity_checks.json")
 	if err != nil {
 		return fmt.Errorf("could not create integrity_checks.json: %w", err)
@@ -221,6 +229,8 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 
 // ImportRC pulls the latest vulndb artifact from the OCI registry and applies
 // all data sources (OSV, CISA KEV, exploits, malicious packages) to the database.
+// If the integrity check fails after an incremental import, it alerts and retries
+// as a full import (ignoring the last-import watermark).
 func (s *VulnDBService) ImportRC(ctx context.Context) error {
 	slog.Info("start vulndb import")
 	start := time.Now()
@@ -237,15 +247,50 @@ func (s *VulnDBService) ImportRC(ctx context.Context) error {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 
+	databaseStateTime, err := s.applyFromWorkingDir(ctx, workingDir, lastImportTime)
+	if err != nil {
+		return err
+	}
+
+	// Integrity check failed on the incremental import — alert and retry as a full import.
+	if databaseStateTime.IsZero() {
+		monitoring.Alert("vulndb integrity check failed after incremental import — retrying as full import", fmt.Errorf("integrity validation failed"))
+		slog.Warn("integrity check failed, retrying as full import")
+		databaseStateTime, err = s.applyFromWorkingDir(ctx, workingDir, time.Time{})
+		if err != nil {
+			return err
+		}
+		if databaseStateTime.IsZero() {
+			err := fmt.Errorf("integrity validation failed after full import fallback")
+			monitoring.Alert("vulndb integrity check failed after full import fallback", err)
+			return err
+		}
+	}
+
+	slog.Info("successfully validated checksums")
+
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", databaseStateTime.Format(time.RFC3339Nano)); err != nil {
+		return fmt.Errorf("could not update last import time: %w", err)
+	}
+
+	slog.Info("finished vulndb import", "time", time.Since(start))
+	return nil
+}
+
+// applyFromWorkingDir decodes all gob files in workingDir and applies them to the database.
+// lastImportTime controls which entries are treated as new (zero value = full import).
+// Returns the import timestamp from the integrity manifest on success, zero time if integrity fails.
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, workingDir string, lastImportTime time.Time) (time.Time, error) {
 	// --- OSV ---
 	slog.Info("applying OSV data")
 	var osvEntries []OSVEntry
 	if err := readGobFile(workingDir+"/osv.gob", &osvEntries); err != nil {
-		return fmt.Errorf("could not read OSV gob: %w", err)
+		return time.Time{}, fmt.Errorf("could not read OSV gob: %w", err)
 	}
 	slog.Info("decoded OSV gob file", "amount", len(osvEntries))
-	if err := s.osv.applyOSVEntries(ctx, osvEntries); err != nil {
-		return fmt.Errorf("OSV import failed: %w", err)
+
+	if err := s.osv.applyOSVEntries(ctx, osvEntries, lastImportTime); err != nil {
+		return time.Time{}, fmt.Errorf("OSV import failed: %w", err)
 	}
 
 	// Decode and transform the standalone gob payloads in parallel before opening the transaction.
@@ -284,7 +329,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context) error {
 			return fmt.Errorf("could not read exploits gob: %w", err)
 		}
 		exploits = gobExploitsToModels(gobExploits)
-		if lastImportTime != (time.Time{}) {
+		if !lastImportTime.IsZero() {
 			filtered := exploits[:0]
 			for _, e := range exploits {
 				if e.Updated != nil && e.Updated.After(lastImportTime) {
@@ -304,7 +349,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context) error {
 		return nil
 	})
 	if err := group.Wait(); err != nil {
-		return err
+		return time.Time{}, err
 	}
 
 	// Apply everything in a single transaction.
@@ -313,52 +358,45 @@ func (s *VulnDBService) ImportRC(ctx context.Context) error {
 
 	slog.Info("applying EPSS data")
 	if err := s.cveRepository.UpdateEpssBatch(ctx, tx, epssModels); err != nil {
-		return fmt.Errorf("could not apply EPSS data: %w", err)
+		return time.Time{}, fmt.Errorf("could not apply EPSS data: %w", err)
 	}
 	slog.Info("applied EPSS data", "entries", len(epssModels))
 
 	slog.Info("applying CISA KEV data")
 	if err := s.cisaKEV.Apply(ctx, tx, kevModels); err != nil {
-		return fmt.Errorf("could not apply CISA KEV data: %w", err)
+		return time.Time{}, fmt.Errorf("could not apply CISA KEV data: %w", err)
 	}
 	slog.Info("applied CISA KEV data", "entries", len(kevModels))
 
 	slog.Info("applying exploit data")
 	if err := s.exploitRepository.SaveBatch(ctx, tx, exploits); err != nil {
-		return fmt.Errorf("could not apply exploit data: %w", err)
+		return time.Time{}, fmt.Errorf("could not apply exploit data: %w", err)
 	}
 	slog.Info("applied exploit data", "entries", len(exploits))
 
 	slog.Info("applying malicious packages")
 	if err := s.maliciousPackages.ApplyToDB(ctx, tx, pkgs, comps); err != nil {
-		return fmt.Errorf("could not apply malicious packages: %w", err)
+		return time.Time{}, fmt.Errorf("could not apply malicious packages: %w", err)
 	}
 	slog.Info("applied malicious packages", "packages", len(pkgs), "components", len(comps))
 
 	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("could not commit import transaction: %w", err)
+		return time.Time{}, fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
 	// --- Integrity validation ---
 	localIntegrity, err := calculateTotalIntegrityInformation(ctx, s.pool)
 	if err != nil {
-		return fmt.Errorf("could not calculate integrity information: %w", err)
+		return time.Time{}, fmt.Errorf("could not calculate integrity information: %w", err)
 	}
 	valid, databaseStateTime, err := validateIntegrityInformation(workingDir, localIntegrity)
 	if err != nil {
-		return fmt.Errorf("could not validate integrity: %w", err)
+		return time.Time{}, fmt.Errorf("could not validate integrity: %w", err)
 	}
 	if !valid {
-		return fmt.Errorf("integrity validation failed")
+		return time.Time{}, nil
 	}
-	slog.Info("successfully validated checksums")
-
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", databaseStateTime.Format(time.RFC3339Nano)); err != nil {
-		return fmt.Errorf("could not update last import time: %w", err)
-	}
-
-	slog.Info("finished vulndb import", "time", time.Since(start))
-	return nil
+	return databaseStateTime, nil
 }
 
 // readGobFile is the counterpart of writeGobFile — decodes a plain gob file.
@@ -614,7 +652,7 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
 				if !tableIntegrity.isEqual(tableGroundTruth) {
-					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName)
+					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName, "expectedCount", tableGroundTruth.TotalCount, "actualCount", tableIntegrity.TotalCount, "expectedChecksum", fmt.Sprintf("%x", tableGroundTruth.Checksum), "actualChecksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
 					return false, time.Time{}, nil
 				} else {
 					found = true
@@ -690,12 +728,14 @@ func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool)
 					coalesce(modified::text, '\0')
 				) AS row_hash
 				FROM malicious_packages
+				WHERE id NOT LIKE 'FAKE-TEST-%'
 			) sub;`,
 
 		"malicious_affected_components": `
 			SELECT count(*) AS row_count,
 			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
-			FROM malicious_affected_components;`,
+			FROM malicious_affected_components
+			WHERE malicious_package_id NOT LIKE 'FAKE-TEST-%';`,
 	}
 
 	mutex := &sync.Mutex{}

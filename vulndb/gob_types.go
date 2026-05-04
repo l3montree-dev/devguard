@@ -206,14 +206,12 @@ func gobMalPackagesExportToModels(g GobMaliciousPackagesExport, lastImportTime t
 			filteredPkgs = append(filteredPkgs, pkg)
 		}
 	}
-	comps := make([]models.MaliciousAffectedComponent, len(g.Components))
-	for i, c := range g.Components {
-		// only import components whose package was modified after the last import time
+	comps := make([]models.MaliciousAffectedComponent, 0, len(g.Components))
+	for _, c := range g.Components {
 		if _, ok := pkgImportTimes[c.MaliciousPackageID]; !ok {
 			continue
 		}
-
-		comps[i] = gobComponentToModel(c)
+		comps = append(comps, gobComponentToModel(c))
 	}
 	return filteredPkgs, comps
 }

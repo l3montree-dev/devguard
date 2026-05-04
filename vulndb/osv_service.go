@@ -47,11 +47,10 @@ type osvService struct {
 	affectedCmpRepository     shared.AffectedComponentRepository
 	cveRepository             shared.CveRepository
 	cveRelationshipRepository shared.CVERelationshipRepository
-	configService             shared.ConfigService
 	pool                      *pgxpool.Pool
 }
 
-func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, configService shared.ConfigService, pool *pgxpool.Pool) osvService {
+func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, pool *pgxpool.Pool) osvService {
 	// use custom transport to adjust the workload to the number of go routines
 	base := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
@@ -74,7 +73,6 @@ func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cve
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		configService:             configService,
 		pool:                      pool,
 	}
 }
@@ -118,7 +116,7 @@ type vulndbRows struct {
 const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 
-const debugLocalZips = true
+const debugLocalZips = false
 
 var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 type zipJob struct {
@@ -126,24 +124,20 @@ type zipJob struct {
 	Ecosystem string
 }
 
-// applyOSVEntries filters the provided entries by the last-import watermark and applies them to the database.
-func (s osvService) applyOSVEntries(ctx context.Context, osvVulns []OSVEntry) error {
-	var lastUpdate string
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate); err == nil {
+// applyOSVEntries filters the provided entries by lastImportTime and applies them to the database.
+// A zero lastImportTime means all entries are applied (full import).
+func (s osvService) applyOSVEntries(ctx context.Context, osvVulns []OSVEntry, lastImportTime time.Time) error {
+	if !lastImportTime.IsZero() {
 		slog.Info("found last import timestamp, only loading diff since last import")
-		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
-		if err != nil {
-			return fmt.Errorf("could not parse config timestamp: %w", err)
-		}
 		filtered := make([]OSVEntry, 0, 10_000)
 		for _, vuln := range osvVulns {
-			if vuln.ModifiedTimestamp.After(lastUpdateTimestamp) {
+			if vuln.ModifiedTimestamp.After(lastImportTime) {
 				filtered = append(filtered, vuln)
 			}
 		}
 		osvVulns = filtered
 	} else {
-		slog.Info("could not determine last import, loading full database")
+		slog.Info("no last import timestamp, loading full database")
 	}
 
 	if len(osvVulns) == 0 {
