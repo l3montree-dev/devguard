@@ -225,12 +225,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context) error {
 	slog.Info("start vulndb import")
 	start := time.Now()
 
-	// workingDir, err := pullVulnDBFromPackageRegistry(ctx)
-	// if err != nil {
-	// 	return fmt.Errorf("could not pull from remote repository: %w", err)
-	// }
-	// defer os.RemoveAll(workingDir)
-	workingDir := "."
+	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
+	if err != nil {
+		return fmt.Errorf("could not pull from remote repository: %w", err)
+	}
+	defer os.RemoveAll(workingDir)
 
 	var lastImportTime time.Time
 	var lastImportStr string
@@ -484,7 +483,7 @@ func untarZstd(src, dest string) error {
 }
 
 func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror"
+	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v2"
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
 		return "", fmt.Errorf("could not connect to remote repository: %w", err)
