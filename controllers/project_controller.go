@@ -368,6 +368,16 @@ func (ProjectController *ProjectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
+func (ProjectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
+
+	results, err := ProjectController.projectService.SearchProjectsWithSubProjectsAndAssetsPaged(c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, results)
+}
+
 // @Summary Update project
 // @Tags Projects
 // @Security CookieAuth

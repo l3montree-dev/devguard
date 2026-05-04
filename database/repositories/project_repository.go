@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -110,6 +111,153 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 
 func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *models.Project) error {
 	return g.GetDB(ctx, tx).Save(project).Error
+}
+
+func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
+	var results []dtos.ProjectAssetDTO
+
+	assetParams := []interface{}{
+		"%" + search + "%",
+		pq.Array(allowedAssetIDs),
+		orgID,
+	}
+
+	projectParams := []interface{}{
+		"%" + search + "%",
+		pq.Array(allowedProjectIDs),
+		orgID,
+	}
+
+	// When parentID is set, stop the upward recursion once we reach that project.
+	var assetChainStopCond, projectChainStopCond string
+	var parentStopParam []interface{}
+	if parentID != nil {
+		assetChainStopCond = " WHERE apc.id != ?"
+		projectChainStopCond = " WHERE pc.id != ?"
+		parentStopParam = []interface{}{*parentID}
+	}
+
+	searchResultsCTE := `
+WITH RECURSIVE
+searchResults AS (
+    SELECT 'asset'::text AS resource_type, a.id, a.name, a.slug, a.description,
+           a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
+           a.is_public, a.state, a.created_at, a.updated_at
+    FROM assets a
+    INNER JOIN projects p ON p.id = a.project_id
+    WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))
+    UNION
+    SELECT 'project'::text AS resource_type, p.id, p.name, p.slug, p.description,
+           NULL::uuid AS project_id, p.parent_id, p.organization_id,
+           p.is_public, p.state, p.created_at, p.updated_at
+    FROM projects p
+    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))
+)`
+
+	// Count only the matched assets and projects, not the parent chain.
+	countParams := make([]interface{}, 0, len(assetParams)+len(projectParams))
+	countParams = append(countParams, assetParams...)
+	countParams = append(countParams, projectParams...)
+
+	var count int64
+	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, err
+	}
+
+	orderClause := "name ASC"
+	if len(sort) > 0 {
+		parts := make([]string, len(sort))
+		for i, s := range sort {
+			parts[i] = s.SQL()
+		}
+		orderClause = strings.Join(parts, ", ")
+	}
+
+	// Paginate the matched results first, then fetch parent chains for each item.
+	dataSQL := searchResultsCTE + `,
+paginatedResults AS (
+    SELECT * FROM searchResults ORDER BY ` + orderClause + ` LIMIT ? OFFSET ?
+),
+asset_project_chain AS (
+    SELECT pr.*
+    FROM projects pr
+    WHERE pr.id IN (SELECT project_id FROM paginatedResults WHERE resource_type = 'asset')
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN asset_project_chain apc ON pr.id = apc.parent_id` + assetChainStopCond + `
+),
+project_chain AS (
+    SELECT pr.*
+    FROM projects pr
+    WHERE pr.id IN (SELECT parent_id FROM paginatedResults WHERE resource_type = 'project' AND parent_id IS NOT NULL)
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
+)
+SELECT resource_type, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
+UNION
+SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
+UNION
+SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
+
+	dataParams := make([]interface{}, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
+	dataParams = append(dataParams, assetParams...)
+	dataParams = append(dataParams, projectParams...)
+	dataParams = append(dataParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
+	dataParams = append(dataParams, parentStopParam...)
+	dataParams = append(dataParams, parentStopParam...)
+
+	if err := g.GetDB(ctx, tx).Raw(dataSQL, dataParams...).Scan(&results).Error; err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results)), nil
+}
+
+func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
+	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
+	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
+	var rootProjects []dtos.ProjectAssetDTO
+
+	for _, r := range results {
+		if r.ResourceType == "asset" {
+			assetsByProjectID[r.ProjectID] = append(assetsByProjectID[r.ProjectID], r)
+		} else {
+			if r.ParentID != nil {
+				subprojectsByParentID[*r.ParentID] = append(subprojectsByParentID[*r.ParentID], r)
+			} else {
+				rootProjects = append(rootProjects, r)
+			}
+		}
+	}
+
+	// recursively build SubGroupsAndAssets for a given project ID
+	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAssetDTO
+	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAssetDTO {
+		var children []dtos.ProjectAssetDTO
+		for _, sub := range subprojectsByParentID[projectID] {
+			sub.SubGroupsAndAssets = buildChildren(sub.ID)
+			children = append(children, sub)
+		}
+		children = append(children, assetsByProjectID[projectID]...)
+		return children
+	}
+
+	rootDTOs := make([]dtos.ProjectDTO, 0, len(rootProjects))
+	for _, r := range rootProjects {
+		rootDTOs = append(rootDTOs, dtos.ProjectDTO{
+			ID:                 r.ID,
+			Name:               r.Name,
+			Slug:               r.Slug,
+			Description:        r.Description,
+			IsPublic:           r.IsPublic,
+			SubGroupsAndAssets: buildChildren(r.ID),
+		})
+	}
+
+	return rootDTOs
 }
 
 func (g *projectRepository) ListSubProjectsAndAssets(
