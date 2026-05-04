@@ -13,3 +13,9 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS scheme text;
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS type text;
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS name text;
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS namespace text;
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS qualifiers text;
+ALTER TABLE public.malicious_affected_components ADD COLUMN IF NOT EXISTS subpath text;

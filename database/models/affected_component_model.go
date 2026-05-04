@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sync"
 
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"gorm.io/gorm"
@@ -44,14 +43,6 @@ type AffectedComponent struct {
 
 func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
-}
-
-func convertToStringMap(jsonb databasetypes.JSONB) map[string]string {
-	result := make(map[string]string)
-	for key, value := range jsonb {
-		result[key] = fmt.Sprintf("%v", value)
-	}
-	return result
 }
 
 func (affectedComponent AffectedComponent) CalculateHash() int64 {

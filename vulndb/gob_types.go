@@ -1,11 +1,9 @@
 package vulndb
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"gorm.io/datatypes"
 )
 
@@ -39,18 +37,11 @@ type GobExploit struct {
 }
 
 // GobMaliciousComponent is the gob-safe representation of models.MaliciousAffectedComponent.
-// databasetypes.JSONB (map[string]any) is stored as a JSON string.
 type GobMaliciousComponent struct {
 	ID                 string
 	MaliciousPackageID string
 	PurlWithoutVersion string
 	Ecosystem          string
-	Scheme             string
-	ComponentType      string
-	Name               string
-	Namespace          *string
-	QualifiersJSON     string
-	Subpath            *string
 	Version            *string
 	SemverIntroduced   *string
 	SemverFixed        *string
@@ -170,22 +161,11 @@ func gobExploitsToModels(gs []GobExploit) []models.Exploit {
 // --- Malicious package conversions ---
 
 func maliciousComponentToGob(c models.MaliciousAffectedComponent) GobMaliciousComponent {
-	qualJSON := ""
-	if c.Qualifiers != nil {
-		b, _ := json.Marshal(c.Qualifiers)
-		qualJSON = string(b)
-	}
 	return GobMaliciousComponent{
 		ID:                 c.ID,
 		MaliciousPackageID: c.MaliciousPackageID,
 		PurlWithoutVersion: c.PurlWithoutVersion,
 		Ecosystem:          c.Ecosystem,
-		Scheme:             c.Scheme,
-		ComponentType:      c.Type,
-		Name:               c.Name,
-		Namespace:          c.Namespace,
-		QualifiersJSON:     qualJSON,
-		Subpath:            c.Subpath,
 		Version:            c.Version,
 		SemverIntroduced:   c.SemverIntroduced,
 		SemverFixed:        c.SemverFixed,
@@ -195,28 +175,16 @@ func maliciousComponentToGob(c models.MaliciousAffectedComponent) GobMaliciousCo
 }
 
 func gobComponentToModel(g GobMaliciousComponent) models.MaliciousAffectedComponent {
-	var qualifiers databasetypes.JSONB
-	if g.QualifiersJSON != "" {
-		_ = json.Unmarshal([]byte(g.QualifiersJSON), &qualifiers)
-	}
 	return models.MaliciousAffectedComponent{
 		ID:                 g.ID,
 		MaliciousPackageID: g.MaliciousPackageID,
-		AffectedComponentBase: models.AffectedComponentBase{
-			PurlWithoutVersion: g.PurlWithoutVersion,
-			Ecosystem:          g.Ecosystem,
-			Scheme:             g.Scheme,
-			Type:               g.ComponentType,
-			Name:               g.Name,
-			Namespace:          g.Namespace,
-			Qualifiers:         qualifiers,
-			Subpath:            g.Subpath,
-			Version:            g.Version,
-			SemverIntroduced:   g.SemverIntroduced,
-			SemverFixed:        g.SemverFixed,
-			VersionIntroduced:  g.VersionIntroduced,
-			VersionFixed:       g.VersionFixed,
-		},
+		PurlWithoutVersion: g.PurlWithoutVersion,
+		Ecosystem:          g.Ecosystem,
+		Version:            g.Version,
+		SemverIntroduced:   g.SemverIntroduced,
+		SemverFixed:        g.SemverFixed,
+		VersionIntroduced:  g.VersionIntroduced,
+		VersionFixed:       g.VersionFixed,
 	}
 }
 

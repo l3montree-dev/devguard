@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
@@ -107,65 +106,30 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 	affectedComponents := make([]models.AffectedComponent, 0, len(osv.Affected)*3)
 
 	for _, affected := range osv.Affected {
-		// check if the affected package has a purl
 		if affected.EcosystemSpecific != nil {
-			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
+			// debian defines urgency: https://security-team.debian.org/security_tracker.html#severity-levels
 			if affected.EcosystemSpecific.Urgency == "unimportant" {
-				// just continue
 				continue
 			}
 		}
 
 		if affected.Package.Purl != "" {
-			// Use the shared helper function with ecosystem conversion enabled
-			bases := affectedComponentBaseFromAffected(affected)
-			for _, base := range bases {
-				affectedComponent := models.AffectedComponent{
-					PurlWithoutVersion: base.PurlWithoutVersion,
-					Ecosystem:          base.Ecosystem,
-
-					Version:           base.Version,
-					SemverIntroduced:  base.SemverIntroduced,
-					SemverFixed:       base.SemverFixed,
-					VersionIntroduced: base.VersionIntroduced,
-					VersionFixed:      base.VersionFixed,
-				}
-				affectedComponents = append(affectedComponents, affectedComponent)
-			}
+			affectedComponents = append(affectedComponents, affectedComponentsFromAffected(affected)...)
 		} else {
-			// Handle GIT ranges (no purl case)
-			bases := affectedComponentBaseFromGitRange(affected)
-			for _, base := range bases {
-				affectedComponent := models.AffectedComponent{
-					PurlWithoutVersion: base.PurlWithoutVersion,
-					Ecosystem:          base.Ecosystem,
-
-					Version:           base.Version,
-					SemverIntroduced:  base.SemverIntroduced,
-					SemverFixed:       base.SemverFixed,
-					VersionIntroduced: base.VersionIntroduced,
-					VersionFixed:      base.VersionFixed,
-				}
-				affectedComponents = append(affectedComponents, affectedComponent)
-			}
+			affectedComponents = append(affectedComponents, affectedComponentsFromGitRange(affected)...)
 		}
 	}
 	return affectedComponents
 }
 
-// affectedComponentBaseFromAffected extracts common base component data from an OSV affected entry.
-// This helper is shared between malicious package and CVE processing; callers handle any ecosystem
-// conversion (e.g., for Red Hat, Debian, Alpine) before invoking it.
-func affectedComponentBaseFromAffected(affected dtos.Affected) []models.AffectedComponentBase {
+func affectedComponentsFromAffected(affected dtos.Affected) []models.AffectedComponent {
 	purlStr := affected.Package.Purl
 
-	// If no purl provided, construct it from ecosystem and name
 	if purlStr == "" {
 		if affected.Package.Ecosystem == "" || affected.Package.Name == "" {
 			return nil
 		}
 
-		// Map ecosystem to purl type
 		ecosystemToPurlType := map[string]string{
 			"npm":       "npm",
 			"PyPI":      "pypi",
@@ -179,7 +143,6 @@ func affectedComponentBaseFromAffected(affected dtos.Affected) []models.Affected
 
 		purlType, ok := ecosystemToPurlType[affected.Package.Ecosystem]
 		if !ok {
-			// Try lowercase version
 			purlType = strings.ToLower(affected.Package.Ecosystem)
 		}
 
@@ -191,43 +154,39 @@ func affectedComponentBaseFromAffected(affected dtos.Affected) []models.Affected
 		return nil
 	}
 
-	// Try processing ranges first
-	bases := processRanges(affected.Ranges, affected.Package.Ecosystem, purl)
+	components := processRanges(affected.Ranges, affected.Package.Ecosystem, purl)
 
-	// If no ranges produced results, fall back to explicit versions
-	if len(bases) == 0 && len(affected.Versions) > 0 {
-		bases = processVersions(affected.Versions, affected.Package.Ecosystem, purl)
+	if len(components) == 0 && len(affected.Versions) > 0 {
+		components = processVersions(affected.Versions, affected.Package.Ecosystem, purl)
 	}
 
-	// If still nothing, all versions are affected
-	if len(bases) == 0 {
-		bases = []models.AffectedComponentBase{createBase(affected.Package.Ecosystem, purl, nil, nil, nil, nil, nil)}
+	if len(components) == 0 {
+		components = []models.AffectedComponent{newAffectedComponent(affected.Package.Ecosystem, purl, nil, nil, nil, nil, nil)}
 	}
 
-	return bases
+	return components
 }
 
-func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
+func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {
 	upper := 0
 	for _, r := range ranges {
 		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
 			upper += len(r.Events)/2 + 1
 		}
 	}
-	bases := make([]models.AffectedComponentBase, 0, upper)
+	components := make([]models.AffectedComponent, 0, upper)
 
 	for _, r := range ranges {
 		if r.Type == "SEMVER" || r.Type == "ECOSYSTEM" {
-			// Try to process all ECOSYSTEM ranges - conversion will fail naturally if not compatible
-			bases = append(bases, processRange(r, ecosystem, purl)...)
+			components = append(components, processRange(r, ecosystem, purl)...)
 		}
 	}
 
-	return bases
+	return components
 }
 
-func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
-	bases := make([]models.AffectedComponentBase, 0, len(r.Events)/2+1)
+func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {
+	components := make([]models.AffectedComponent, 0, len(r.Events)/2+1)
 
 	for i := 0; i < len(r.Events); i += 2 {
 		introduced := r.Events[i].Introduced
@@ -236,13 +195,11 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 			fixed = r.Events[i+1].Fixed
 		}
 
-		// versionIntroduced and semverIntroduced should be nil if introduced is "0"
 		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
 		if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
 			if introduced != "0" && introduced != "" {
 				versionIntroduced = &introduced
 			}
-
 			if fixed != "" {
 				versionFixed = &fixed
 			}
@@ -254,7 +211,6 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 				}
 				semverIntroduced = &semverInt
 			}
-
 			if fixed != "" {
 				converted, err := normalize.ConvertToSemver(fixed)
 				if err != nil {
@@ -264,32 +220,24 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 			}
 		}
 
-		bases = append(bases, createBase(ecosystem, purl, semverIntroduced, semverFixed, nil, versionIntroduced, versionFixed))
+		components = append(components, newAffectedComponent(ecosystem, purl, semverIntroduced, semverFixed, nil, versionIntroduced, versionFixed))
 	}
 
-	return bases
+	return components
 }
 
-func processVersions(versions []string, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponentBase {
-	bases := make([]models.AffectedComponentBase, 0, len(versions))
-
+func processVersions(versions []string, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {
+	components := make([]models.AffectedComponent, 0, len(versions))
 	for i := range versions {
-		bases = append(bases, createBase(ecosystem, purl, nil, nil, &versions[i], nil, nil))
+		components = append(components, newAffectedComponent(ecosystem, purl, nil, nil, &versions[i], nil, nil))
 	}
-
-	return bases
+	return components
 }
 
-func createBase(ecosystem string, purl packageurl.PackageURL, semverIntroduced, semverFixed, version, versionIntroduced, versionFixed *string) models.AffectedComponentBase {
-	return models.AffectedComponentBase{
+func newAffectedComponent(ecosystem string, purl packageurl.PackageURL, semverIntroduced, semverFixed, version, versionIntroduced, versionFixed *string) models.AffectedComponent {
+	return models.AffectedComponent{
 		PurlWithoutVersion: normalize.ToPurlWithoutVersion(purl),
 		Ecosystem:          ecosystem,
-		Scheme:             "pkg",
-		Type:               purl.Type,
-		Name:               purl.Name,
-		Namespace:          &purl.Namespace,
-		Qualifiers:         databasetypes.JSONBFromStringMap(purl.Qualifiers.Map()),
-		Subpath:            &purl.Subpath,
 		SemverIntroduced:   semverIntroduced,
 		SemverFixed:        semverFixed,
 		Version:            version,
@@ -298,74 +246,60 @@ func createBase(ecosystem string, purl packageurl.PackageURL, semverIntroduced, 
 	}
 }
 
-// affectedComponentBaseFromGitRange extracts base component data from GIT ranges (used for CVEs)
-func affectedComponentBaseFromGitRange(affected dtos.Affected) []models.AffectedComponentBase {
+func affectedComponentsFromGitRange(affected dtos.Affected) []models.AffectedComponent {
 	upper := 0
 	for _, r := range affected.Ranges {
 		if r.Type == "GIT" {
 			upper += len(affected.Versions)
 		}
 	}
-	bases := make([]models.AffectedComponentBase, 0, upper)
+	components := make([]models.AffectedComponent, 0, upper)
 
 	for _, r := range affected.Ranges {
 		if r.Type != "GIT" {
 			continue
 		}
 
-		// parse the repo as url
-		url, err := url.Parse(r.Repo)
+		u, err := url.Parse(r.Repo)
 		if err != nil {
 			slog.Debug("could not parse repo url", "url", r.Repo, "err", err)
 			continue
 		}
 
-		if url.Host != "github.com" && url.Host != "gitlab.com" && url.Host != "bitbucket.org" {
-			// we currently dont support those.
+		if u.Host != "github.com" && u.Host != "gitlab.com" && u.Host != "bitbucket.org" {
 			continue
 		}
-		// remove the scheme
-		url.Scheme = ""
-		purl := fmt.Sprintf("pkg:%s", url.Host+strings.TrimSuffix(url.Path, ".git"))
-
-		// parse the purl to get the name and namespace
-		purlParsed, err := packageurl.FromString(purl)
-		if err != nil {
-			slog.Debug("could not parse purl", "purl", purl, "err", err)
-			continue
-		}
-
-		namespacePtr := &purlParsed.Namespace
+		u.Scheme = ""
+		purl := fmt.Sprintf("pkg:%s", u.Host+strings.TrimSuffix(u.Path, ".git"))
 
 		for i := range affected.Versions {
-			bases = append(bases, models.AffectedComponentBase{
+			components = append(components, models.AffectedComponent{
 				PurlWithoutVersion: purl,
 				Ecosystem:          "GIT",
-				Scheme:             "pkg",
-				Type:               purlParsed.Type,
-				Name:               purlParsed.Name,
 				Version:            &affected.Versions[i],
-				Namespace:          namespacePtr,
 			})
 		}
 	}
 
-	return bases
+	return components
 }
 
 // MaliciousAffectedComponentFromOSV converts OSV data to MaliciousAffectedComponent entries
 func MaliciousAffectedComponentFromOSV(osv dtos.OSV, maliciousPackageID string) []models.MaliciousAffectedComponent {
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
 	for _, affected := range osv.Affected {
-		bases := affectedComponentBaseFromAffected(affected) // malicious packages don't need ecosystem conversion
-		for _, base := range bases {
-			affectedComponent := models.MaliciousAffectedComponent{
-				MaliciousPackageID:    maliciousPackageID,
-				AffectedComponentBase: base,
-			}
-			affectedComponents = append(affectedComponents, affectedComponent)
+		for _, c := range affectedComponentsFromAffected(affected) {
+			affectedComponents = append(affectedComponents, models.MaliciousAffectedComponent{
+				MaliciousPackageID: maliciousPackageID,
+				PurlWithoutVersion: c.PurlWithoutVersion,
+				Ecosystem:          c.Ecosystem,
+				Version:            c.Version,
+				SemverIntroduced:   c.SemverIntroduced,
+				SemverFixed:        c.SemverFixed,
+				VersionIntroduced:  c.VersionIntroduced,
+				VersionFixed:       c.VersionFixed,
+			})
 		}
 	}
-
 	return affectedComponents
 }

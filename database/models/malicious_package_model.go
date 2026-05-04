@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -52,48 +50,17 @@ func (mp MaliciousPackage) ToOSV() dtos.OSV {
 	}
 }
 
-// AffectedComponentBase contains common fields for both CVE and malicious package affected components
-type AffectedComponentBase struct {
-	PurlWithoutVersion string              `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem          string              `json:"ecosystem" gorm:"type:text;"`
-	Scheme             string              `json:"scheme" gorm:"type:text;"`
-	Type               string              `json:"type" gorm:"type:text;"`
-	Name               string              `json:"name" gorm:"type:text;"`
-	Namespace          *string             `json:"namespace" gorm:"type:text;"`
-	Qualifiers         databasetypes.JSONB `json:"qualifiers" gorm:"type:text;"`
-	Subpath            *string             `json:"subpath" gorm:"type:text;"`
-	Version            *string             `json:"version" gorm:"index"`
-	SemverIntroduced   *string             `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed        *string             `json:"semverEnd" gorm:"type:semver;index"`
-	VersionIntroduced  *string             `json:"versionIntroduced" gorm:"index"`
-	VersionFixed       *string             `json:"versionFixed" gorm:"index"`
-}
-
-func (base AffectedComponentBase) calculateBaseHash(prefix string) string {
-	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
-		prefix,
-		base.PurlWithoutVersion,
-		base.Ecosystem,
-		base.Name,
-		utils.SafeDereference(base.Namespace),
-		normalize.QualifiersMapToString(convertToStringMap(base.Qualifiers)),
-		utils.SafeDereference(base.Subpath),
-		utils.SafeDereference(base.Version),
-		utils.SafeDereference(base.SemverIntroduced),
-		utils.SafeDereference(base.SemverFixed),
-		utils.SafeDereference(base.VersionIntroduced),
-		utils.SafeDereference(base.VersionFixed),
-	)
-
-	hash := sha256.Sum256([]byte(toHash))
-	return hex.EncodeToString(hash[:])[:16]
-}
-
 // MaliciousAffectedComponent stores affected component information for malicious packages
 type MaliciousAffectedComponent struct {
-	ID                 string `json:"id" gorm:"primaryKey;"`
-	MaliciousPackageID string `json:"maliciousPackageId" gorm:"index"`
-	AffectedComponentBase
+	ID                 string  `json:"id" gorm:"primaryKey;"`
+	MaliciousPackageID string  `json:"maliciousPackageId" gorm:"index"`
+	PurlWithoutVersion string  `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string  `json:"ecosystem" gorm:"type:text;"`
+	Version            *string `json:"version" gorm:"index"`
+	SemverIntroduced   *string `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed        *string `json:"semverEnd" gorm:"type:semver;index"`
+	VersionIntroduced  *string `json:"versionIntroduced" gorm:"index"`
+	VersionFixed       *string `json:"versionFixed" gorm:"index"`
 }
 
 func (MaliciousAffectedComponent) TableName() string {
@@ -101,7 +68,19 @@ func (MaliciousAffectedComponent) TableName() string {
 }
 
 func (mac MaliciousAffectedComponent) CalculateHash() string {
-	return mac.calculateBaseHash(mac.MaliciousPackageID)
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s",
+		mac.MaliciousPackageID,
+		mac.PurlWithoutVersion,
+		mac.Ecosystem,
+		utils.SafeDereference(mac.Version),
+		utils.SafeDereference(mac.SemverIntroduced),
+		utils.SafeDereference(mac.SemverFixed),
+		utils.SafeDereference(mac.VersionIntroduced),
+		utils.SafeDereference(mac.VersionFixed),
+	)
+
+	hash := sha256.Sum256([]byte(toHash))
+	return hex.EncodeToString(hash[:])[:16]
 }
 
 func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
