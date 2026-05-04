@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -110,6 +111,141 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 
 func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *models.Project) error {
 	return g.GetDB(ctx, tx).Save(project).Error
+}
+
+func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
+	var results []dtos.ProjectAssetDTO
+
+	assetParams := []interface{}{
+		"%" + search + "%",
+		pq.Array(allowedAssetIDs),
+	}
+
+	projectParams := []interface{}{
+		"%" + search + "%",
+		pq.Array(allowedProjectIDs),
+		orgID,
+	}
+
+	// When parentID is set, stop the upward recursion once we reach that project.
+	var assetChainStopCond, projectChainStopCond string
+	var parentStopParam []interface{}
+	if parentID != nil {
+		assetChainStopCond = " WHERE apc.id != ?"
+		projectChainStopCond = " WHERE pc.id != ?"
+		parentStopParam = []interface{}{*parentID}
+	}
+
+	// matching_assets CTE avoids repeating the asset filter (and its params) twice.
+	// asset_project_chain walks up to root projects that contain matching assets.
+	// project_chain walks up to root projects that match the project filter.
+	// Both recursive steps stop at parentID when it is set.
+	cteBlock := `
+WITH RECURSIVE
+matching_assets AS (
+    SELECT * FROM assets a WHERE a.name ILIKE ? AND (a.id = ANY(?) OR a.is_public = true)
+),
+asset_project_chain AS (
+    SELECT pr.*
+    FROM projects pr
+    WHERE pr.id IN (SELECT project_id FROM matching_assets)
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN asset_project_chain apc ON pr.id = apc.parent_id` + assetChainStopCond + `
+),
+project_chain AS (
+    SELECT p.*
+    FROM projects p
+    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))
+    UNION
+    SELECT pr.*
+    FROM projects pr
+    INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
+),
+combined AS (
+    SELECT 'asset'::text AS resource_type, a.id, a.name, a.slug, a.description,
+           a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
+           a.is_public, a.state, a.created_at, a.updated_at
+    FROM matching_assets a
+    UNION ALL
+    SELECT 'project'::text AS resource_type, c.id, c.name, c.slug, c.description,
+           NULL::uuid AS project_id, c.parent_id, c.organization_id,
+           c.is_public, c.state, c.created_at, c.updated_at
+    FROM (SELECT * FROM asset_project_chain UNION SELECT * FROM project_chain) c
+)`
+
+	allParams := make([]interface{}, 0, len(assetParams)+len(parentStopParam)+len(projectParams)+len(parentStopParam))
+	allParams = append(allParams, assetParams...)
+	allParams = append(allParams, parentStopParam...)
+	allParams = append(allParams, projectParams...)
+	allParams = append(allParams, parentStopParam...)
+
+	var count int64
+	if err := g.GetDB(ctx, tx).Raw(cteBlock+" SELECT COUNT(*) FROM combined", allParams...).Scan(&count).Error; err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, err
+	}
+
+	orderClause := "combined.name ASC"
+	if len(sort) > 0 {
+		parts := make([]string, len(sort))
+		for i, s := range sort {
+			parts[i] = s.SQL()
+		}
+		orderClause = strings.Join(parts, ", ")
+	}
+
+	dataSQL := cteBlock + " SELECT * FROM combined ORDER BY " + orderClause + " LIMIT ? OFFSET ?"
+	dataParams := append(allParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
+	if err := g.GetDB(ctx, tx).Raw(dataSQL, dataParams...).Scan(&results).Error; err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results)), nil
+}
+
+func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
+	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
+	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
+	var rootProjects []dtos.ProjectAssetDTO
+
+	for _, r := range results {
+		if r.ResourceType == "asset" {
+			assetsByProjectID[r.ProjectID] = append(assetsByProjectID[r.ProjectID], r)
+		} else {
+			if r.ParentID != nil {
+				subprojectsByParentID[*r.ParentID] = append(subprojectsByParentID[*r.ParentID], r)
+			} else {
+				rootProjects = append(rootProjects, r)
+			}
+		}
+	}
+
+	// recursively build SubGroupsAndAssets for a given project ID
+	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAssetDTO
+	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAssetDTO {
+		var children []dtos.ProjectAssetDTO
+		for _, sub := range subprojectsByParentID[projectID] {
+			sub.SubGroupsAndAssets = buildChildren(sub.ID)
+			children = append(children, sub)
+		}
+		children = append(children, assetsByProjectID[projectID]...)
+		return children
+	}
+
+	rootDTOs := make([]dtos.ProjectDTO, 0, len(rootProjects))
+	for _, r := range rootProjects {
+		rootDTOs = append(rootDTOs, dtos.ProjectDTO{
+			ID:                 r.ID,
+			Name:               r.Name,
+			Slug:               r.Slug,
+			Description:        r.Description,
+			IsPublic:           r.IsPublic,
+			SubGroupsAndAssets: buildChildren(r.ID),
+		})
+	}
+
+	return rootDTOs
 }
 
 func (g *projectRepository) ListSubProjectsAndAssets(

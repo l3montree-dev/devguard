@@ -78,6 +78,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
+	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))

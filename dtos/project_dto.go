@@ -69,6 +69,8 @@ type ProjectDTO struct {
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"` // only set if this is an external entity
+
+	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset"`
 }
 
 type ProjectDetailsDTO struct {
@@ -89,4 +91,6 @@ type ProjectAssetDTO struct {
 	State        string     `json:"state"`
 	CreatedAt    time.Time  `json:"createdAt"`
 	UpdatedAt    time.Time  `json:"updatedAt"`
+
+	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset" gorm:"-"`
 }

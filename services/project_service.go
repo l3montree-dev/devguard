@@ -177,6 +177,35 @@ func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []stri
 	return projectIDsSlice, parentID, nil
 }
 
+func (s *projectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectDTO], error) {
+	rbac := shared.GetRBAC(c)
+	parentIDStr := c.QueryParam("parentId")
+	var parentID *uuid.UUID
+	if parentIDStr != "" {
+		tmp, err := uuid.Parse(parentIDStr)
+		if err != nil {
+			return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(400, "invalid parentId").WithInternal(err)
+		}
+		parentID = &tmp
+	}
+
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	if err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+	}
+	allowedProjectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	if err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
+	}
+
+	projects, err := s.projectRepository.SearchProjectsWithSubProjectsAndAssetsPaged(c.Request().Context(), nil, allowedAssetIDs, allowedProjectIDs, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
+	if err != nil {
+		return shared.Paged[dtos.ProjectDTO]{}, err
+	}
+
+	return projects, nil
+}
+
 func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
 
 	rbac := shared.GetRBAC(c)
