@@ -17,10 +17,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -92,39 +90,6 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	return nil
 }
 
-func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
-	// Drop all foreign key constraints that reference cves table before deleting
-	err := db.Exec(`
-		ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
-		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
-		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
-	`).Error
-	if err != nil {
-		slog.Error("could not drop foreign key constraints", "err", err)
-		return err
-	}
-
-	// import the new VulnDB state, containing the (new) CVEs from the OSV database
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-	configService := services.NewConfigService(db)
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService, pool)
-
-	err = configService.RemoveConfig(context.Background(), "vulndb.lastIncrementalImport")
-	if err != nil {
-		slog.Error("could not remove last incremental import config", "err", err)
-		return err
-	}
-	// the import will create foreign keys we need to disable temporarily
-	vulndb.DisableForeignKeyFix = true
-	// slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(context.Background(), nil)
-	vulndb.DisableForeignKeyFix = false
-	return err
-}
-
 // this function handles the migration for importing new CVEs from the OSV.
 // existing components may now have (multiple) different CVEs associated with them and we need to first determine affected dependency_vulns, then update the assigned CVE and lastly adjust the hash on the dependency_vuln itself and all references
 func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) error {
@@ -164,12 +129,6 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			},
 		),
 	})
-
-	slog.Info("Syncing vulndb")
-	if err := manuallyLoadNewVulnDB(db, pool); err != nil {
-		slog.Error("could not initialize database for migration", "err", err)
-		panic(err)
-	}
 
 	slog.Info("start running cve migration...")
 	// Load all vulns with artifacts and events

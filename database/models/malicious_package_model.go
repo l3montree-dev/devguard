@@ -30,14 +30,11 @@ import (
 
 // MaliciousPackage stores metadata for malicious packages from OSV
 type MaliciousPackage struct {
-	ID        string    `gorm:"primarykey;type:varchar(255)" json:"id"` // OSV ID
-	Summary   string    `gorm:"type:text" json:"summary"`
-	Details   string    `gorm:"type:text" json:"details"`
-	Published time.Time `json:"published"`
-	Modified  time.Time `json:"modified"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-
+	ID                          string                       `gorm:"primarykey;type:varchar(255)" json:"id"` // OSV ID
+	Summary                     string                       `gorm:"type:text" json:"summary"`
+	Details                     string                       `gorm:"type:text" json:"details"`
+	Published                   time.Time                    `json:"published"`
+	Modified                    time.Time                    `json:"modified"`
 	MaliciousAffectedComponents []MaliciousAffectedComponent `json:"affectedComponents" gorm:"foreignKey:MaliciousPackageID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -97,8 +94,6 @@ type MaliciousAffectedComponent struct {
 	ID                 string `json:"id" gorm:"primaryKey;"`
 	MaliciousPackageID string `json:"maliciousPackageId" gorm:"index"`
 	AffectedComponentBase
-
-	MaliciousPackage MaliciousPackage `json:"maliciousPackage" gorm:"foreignKey:MaliciousPackageID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (MaliciousAffectedComponent) TableName() string {

@@ -111,7 +111,7 @@ type TestApp struct {
 	// Integrations
 	GitlabIntegration    *gitlabint.GitlabIntegration
 	IntegrationAggregate shared.IntegrationAggregate
-	VulnDBImportService  shared.VulnDBImportService
+	VulnDBService        shared.VulnDBService
 
 	// Daemons
 	DaemonRunner         shared.DaemonRunner

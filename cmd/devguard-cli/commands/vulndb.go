@@ -29,7 +29,6 @@ func NewVulndbCommand() *cobra.Command {
 		Long:  "Commands for managing, synchronizing, and maintaining the vulnerability database from multiple upstream sources including NVD, OSV, ExploitDB, and others.",
 	}
 
-	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	vulndbCmd.AddCommand(newExportCommand())
 	vulndbCmd.AddCommand(newAliasMappingCommand())

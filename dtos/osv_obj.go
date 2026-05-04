@@ -50,3 +50,8 @@ type OSV struct {
 		Score string `json:"score"`
 	} `json:"severity"`
 }
+
+type EPSS struct {
+	EPSS       float64
+	Percentile float64
+}

@@ -58,8 +58,14 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 	// - If VersionIsValid is not nil, perform an exact version match.
 	// - Otherwise, fall back to semver range matching.
 
-	err := BuildQueryBasedOnMatchContext(query, matchCtx).Preload("MaliciousPackage").Find(&components).Error
+	err := BuildQueryBasedOnMatchContext(query, matchCtx).Find(&components).Error
 	return components, err
+}
+
+func (r *MaliciousPackageRepository) GetMaliciousPackageByID(ctx context.Context, tx *gorm.DB, id string) (models.MaliciousPackage, error) {
+	var maliciousPackage models.MaliciousPackage
+	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&maliciousPackage).Error
+	return maliciousPackage, err
 }
 
 func (r *MaliciousPackageRepository) UpsertPackages(ctx context.Context, tx *gorm.DB, packages []models.MaliciousPackage) error {

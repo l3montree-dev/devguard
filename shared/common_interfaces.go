@@ -192,6 +192,10 @@ type CveRepository interface {
 	UpdateCISAKEVBatch(ctx context.Context, tx DB, batch []models.CVE) error
 }
 
+type EPSService interface {
+	Fetch(ctx context.Context) (map[string]dtos.EPSS, error)
+}
+
 type CweRepository interface {
 	GetAllCWEsID(ctx context.Context, tx DB) ([]string, error)
 	SaveBatch(ctx context.Context, tx DB, cwes []models.CWE) error
@@ -200,6 +204,7 @@ type CweRepository interface {
 type ExploitRepository interface {
 	GetAllExploitsID(ctx context.Context, tx DB) ([]string, error)
 	SaveBatch(ctx context.Context, tx DB, exploits []models.Exploit) error
+	Begin(ctx context.Context) DB
 }
 
 type AffectedComponentRepository interface {
@@ -208,7 +213,6 @@ type AffectedComponentRepository interface {
 }
 
 type MaliciousPackageChecker interface {
-	DownloadAndProcessDB(ctx context.Context) error
 	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
 }
 
@@ -624,11 +628,9 @@ type LicenseRiskService interface {
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
-type VulnDBImportService interface {
-	ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error
-	CleanupOrphanedTables(ctx context.Context) error
-	CreateTablesWithSuffix(ctx context.Context, suffix string) error
-	ExportDiffs(ctx context.Context, extraTableNameSuffix string) error
+type VulnDBService interface {
+	ImportRC(ctx context.Context) error
+	ExportRC(ctx context.Context) error
 }
 
 type AccessControl interface {

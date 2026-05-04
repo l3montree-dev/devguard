@@ -15,3 +15,6 @@
 
 ALTER TABLE public.cves DROP COLUMN IF EXISTS created_at;
 ALTER TABLE public.cves DROP COLUMN IF EXISTS updated_at;
+
+ALTER TABLE public.malicious_packages DROP COLUMN IF EXISTS created_at;
+ALTER TABLE public.malicious_packages DROP COLUMN IF EXISTS updated_at;

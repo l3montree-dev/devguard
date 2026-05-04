@@ -14,7 +14,7 @@ func (runner *DaemonRunner) UpdateVulnDB(ctx context.Context) error {
 
 	slog.Info("updating vulndb")
 
-	err := runner.vulnDBImportService.ImportFromDiff(ctx, nil)
+	err := runner.vulnDBImportService.ImportRC(ctx)
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err

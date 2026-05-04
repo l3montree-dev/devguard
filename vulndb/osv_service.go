@@ -17,9 +17,7 @@ package vulndb
 
 import (
 	"archive/zip"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +33,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/klauspost/compress/zstd"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -43,9 +40,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 type osvService struct {
@@ -121,11 +115,6 @@ type vulndbRows struct {
 	CVEAffectedComponents []cveAffectedComponentRow
 }
 
-type OSVWithEcosystem struct {
-	OSV       *dtos.OSV
-	Ecosystem string
-}
-
 const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 
@@ -137,68 +126,31 @@ type zipJob struct {
 	Ecosystem string
 }
 
-func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
-	return integrity.TotalCount == compareInformation.TotalCount && bytes.Equal(integrity.Checksum, compareInformation.Checksum)
-}
-
-// imports the newest vulnerability data from the OCI registry (gob file) and applies it to our vulndb tables
-func (s osvService) ImportRC(ctx context.Context) error {
-	slog.Info("start vulndb import")
-	start := time.Now()
-
-	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
-	if err != nil {
-		return fmt.Errorf("could not pull from remote repository: %w", err)
-	}
-	defer os.RemoveAll(workingDir)
-
-	gobFile, err := os.Open(workingDir + "/allOSVVulns.gob.zst")
-	if err != nil {
-		return fmt.Errorf("could not open vulndb gob file: %w", err)
-	}
-	defer gobFile.Close()
-
-	zstWriter, err := zstd.NewReader(gobFile)
-	if err != nil {
-		return fmt.Errorf("could not create zstd reader: %w", err)
-	}
-	defer zstWriter.Close()
-
-	osvVulns := make([]OSVWithTimestamp, 0, 1<<18)
-	if err := gob.NewDecoder(zstWriter).Decode(&osvVulns); err != nil {
-		return fmt.Errorf("could not decode vulndb gob file: %w", err)
-	}
-	slog.Info("decoded gob file", "amount", len(osvVulns))
-
+// applyOSVEntries filters the provided entries by the last-import watermark and applies them to the database.
+func (s osvService) applyOSVEntries(ctx context.Context, osvVulns []OSVEntry) error {
 	var lastUpdate string
-
 	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastUpdate); err == nil {
 		slog.Info("found last import timestamp, only loading diff since last import")
 		lastUpdateTimestamp, err := time.Parse(time.RFC3339Nano, lastUpdate)
 		if err != nil {
 			return fmt.Errorf("could not parse config timestamp: %w", err)
 		}
-		filteredVulns := make([]OSVWithTimestamp, 0, 10_000)
-
-		// filter only the vulns since the last import
+		filtered := make([]OSVEntry, 0, 10_000)
 		for _, vuln := range osvVulns {
-			modifiedTimestamp := vuln.ModifiedTimestamp
-			if modifiedTimestamp.After(lastUpdateTimestamp) {
-				filteredVulns = append(filteredVulns, vuln)
-			} else {
-				continue
+			if vuln.ModifiedTimestamp.After(lastUpdateTimestamp) {
+				filtered = append(filtered, vuln)
 			}
 		}
-		osvVulns = filteredVulns
-
+		osvVulns = filtered
 	} else {
 		slog.Info("could not determine last import, loading full database")
 	}
 
 	if len(osvVulns) == 0 {
-		slog.Info("vulnerability database is already up to date")
+		slog.Info("OSV vulnerability database is already up to date")
 		return nil
 	}
+
 	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, osvVulns)
 	if err != nil {
 		return fmt.Errorf("could not build rows from osv objects: %w", err)
@@ -206,95 +158,24 @@ func (s osvService) ImportRC(ctx context.Context) error {
 
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		return fmt.Errorf("could acquire postgresql connection: %w", err)
+		return fmt.Errorf("could not acquire postgresql connection: %w", err)
 	}
 	defer conn.Release()
 
 	if err := s.writeToDatabase(ctx, conn, rows, false); err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
-
-	integrityInformation, err := calculateTotalIntegrityInformation(ctx, s.pool)
-	if err != nil {
-		return fmt.Errorf("could not calculate integrity information; %w", err)
-	}
-	valid, databaseStateTime, err := validateIntegrityInformation(workingDir, integrityInformation)
-	if err != nil {
-		return fmt.Errorf("could not validate information: %w", err)
-	}
-	if !valid {
-		return fmt.Errorf("validation was not successful!")
-	}
-	slog.Info("successfully validated checksums")
-
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", databaseStateTime.Format(time.RFC3339Nano)); err != nil {
-		return fmt.Errorf("could not update last import time: %w", err)
-	}
-
-	slog.Info("finished vulndb import", "time", time.Since(start))
 	return nil
 }
 
-func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, time.Time, error) {
-	fd, err := os.Open(workingDir + "/integrity_checks.json")
-	if err != nil {
-		return false, time.Time{}, fmt.Errorf("could not open integrity check json file: %w", err)
-	}
-
-	var groundTruth integrityInformation
-	err = json.NewDecoder(fd).Decode(&groundTruth)
-	if err != nil {
-		return false, time.Time{}, fmt.Errorf("could not decode remote integrity information")
-	}
-
-	for _, tableIntegrity := range localIntegrityInformation {
-		found := false
-		for _, tableGroundTruth := range groundTruth.TableIntegrity {
-			if tableGroundTruth.TableName == tableIntegrity.TableName {
-				if !tableIntegrity.isEqual(tableGroundTruth) {
-					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName)
-					return false, time.Time{}, nil
-				} else {
-					found = true
-					break
-				}
-			}
-		}
-		if !found {
-			return false, time.Time{}, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
-		}
-	}
-	return true, groundTruth.ImportTimestamp, nil
+type OSVEntry struct {
+	OSV               *dtos.OSV
+	ModifiedTimestamp time.Time
 }
 
-func writeGobFile(object any, fileName string) error {
-	gobFile, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("could not create gob file: %w", err)
-	}
-	defer gobFile.Close()
-	// create a zstd encoder
-	zstdWriter, err := zstd.NewWriter(gobFile, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-	if err != nil {
-		return fmt.Errorf("could not create zstd writer: %w", err)
-	}
-	defer zstdWriter.Close()
-	if err := gob.NewEncoder(zstdWriter).Encode(object); err != nil {
-		return fmt.Errorf("could not encode object to gob file: %w", err)
-	}
-	return nil
-}
-
-type OSVWithTimestamp struct {
-	OSV               *dtos.OSV `json:"osv"`
-	ModifiedTimestamp time.Time `json:"modified"`
-}
-
-func (s osvService) ExportRC(ctx context.Context) error {
-	slog.Info("start vulndb export")
-
-	importStart := time.Now() //10:57 bonn
-
+// fetchOSVEntries fetches all OSV vulnerabilities, populates the database,
+// and returns the full list of entries (for the caller to gob-serialize).
+func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) ([]OSVEntry, error) {
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
@@ -302,8 +183,6 @@ func (s osvService) ExportRC(ctx context.Context) error {
 
 	zipJobs := make(chan zipJob, 10_000)
 	vulnData := make(chan *dtos.OSV, 5000)
-
-	fetchingStart := time.Now()
 
 	for range numberOfZipWorkers {
 		zipWorkWaitGroup.Add(1)
@@ -313,255 +192,52 @@ func (s osvService) ExportRC(ctx context.Context) error {
 	zipPushWaitGroup.Add(1)
 	go s.fetchingController(zipPushWaitGroup, zipJobs, &fetchFailures)
 
-	// handle sync via independent go routines
 	go func() {
 		zipPushWaitGroup.Wait()
 		close(zipJobs)
 	}()
-
 	go func() {
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
 
-	// collect all OSV objects first
-	allOSVVulns := make([]OSVWithTimestamp, 0, 200_000)
+	allOSVVulns := make([]OSVEntry, 0, 200_000)
 	for osvObject := range vulnData {
-		allOSVVulns = append(allOSVVulns, OSVWithTimestamp{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
+		allOSVVulns = append(allOSVVulns, OSVEntry{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
 	}
 
-	// abort before any DB work if any fetch failed — watermark stays where it is, next run retries the whole window
 	if n := fetchFailures.Load(); n > 0 {
-		return fmt.Errorf("aborting import: %d ids could not be fetched; watermark not advanced, will retry on next run", n)
+		return nil, fmt.Errorf("aborting export: %d ids could not be fetched; will retry on next run", n)
 	}
-
 	if len(allOSVVulns) == 0 {
-		slog.Warn("could not fetch any OSV vulns")
-		return nil
+		return nil, fmt.Errorf("could not fetch any OSV vulns")
 	}
 
-	sortStart := time.Now()
-	slices.SortFunc(allOSVVulns, func(v1, v2 OSVWithTimestamp) int {
+	slices.SortFunc(allOSVVulns, func(v1, v2 OSVEntry) int {
 		return -v1.ModifiedTimestamp.Compare(v2.ModifiedTimestamp)
 	})
-	slog.Info("finished sorting slice", "amount", len(allOSVVulns), "time", time.Since(sortStart), "latest entry", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
+	slog.Info("fetched OSV vulns", "amount", len(allOSVVulns), "latest", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
 
-	// save all vulns for a fresh import
-	if err := writeGobFile(allOSVVulns, "allOSVVulns.gob.zst"); err != nil {
-		return err
-	}
-	slog.Info("finished collecting results start processing osv data", "fetching time", time.Since(fetchingStart))
-
-	// build all the rows from the OSV objects
 	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
 	if err != nil {
-		return fmt.Errorf("could not build vulndb rows: %w", err)
+		return nil, fmt.Errorf("could not build vulndb rows: %w", err)
 	}
 
-	// acquire a connection first
-	// use pgx for support of the COPY function
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		return fmt.Errorf("could acquire postgresql connection: %w", err)
+		return nil, fmt.Errorf("could not acquire postgresql connection: %w", err)
 	}
 	defer conn.Release()
 
-	err = s.writeToDatabase(ctx, conn, rows, false)
-	if err != nil {
-		return fmt.Errorf("could not process new OSV data, error: %w", err)
+	if err := s.writeToDatabase(ctx, conn, rows, false); err != nil {
+		return nil, fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
-
-	// the core job is done; run sanity checks/clean ups afterwards
-	//runCleanUpJobs(ctx, conn.Conn())
-
-	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, s.pool)
-	if err != nil {
-		return fmt.Errorf("could not calculate the integrity information for tables: %w", err)
-	}
-
-	slices.SortFunc(tableIntegrity, func(a, b tableIntegrityInformation) int {
-		return strings.Compare(a.TableName, b.TableName)
-	})
-
-	integrityFD, err := os.Create("integrity_checks.json")
-	if err != nil {
-		return fmt.Errorf("could not create integrity_checks.json: %w", err)
-	}
-	defer integrityFD.Close()
-
-	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: importStart})
-	if err != nil {
-		return fmt.Errorf("could not parse integrity information to json format: %w", err)
-	}
-
-	if _, err := integrityFD.Write(jsonContents); err != nil {
-		return fmt.Errorf("could not write json to file: %w", err)
-	}
-
-	slog.Info("finished vulndb export", "time", time.Since(importStart))
-	return nil
+	return allOSVVulns, nil
 }
 
-// vulnDBArtifactFiles enumerates the per-file blobs that the workflow pushes
-// to the OCI registry. Each file is cosign-signed independently and must
-// pass verification before the importer is allowed to read it.
-var vulnDBArtifactFiles = []string{
-	"allOSVVulns.gob.zst",
-	"integrity_checks.json",
-}
+const vulnDBArchiveName = "vulndb.tar.zst"
 
 const vulnDBPubKeyFile = "cosign.pub"
-
-func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror"
-	repo, err := remote.NewRepository(reg)
-	if err != nil {
-		return "", fmt.Errorf("could not connect to remote repository: %w", err)
-	}
-
-	outpath, err := os.MkdirTemp("", "vulndb")
-	if err != nil {
-		return "", fmt.Errorf("could not create temp directory: %w", err)
-	}
-
-	fs, err := file.New(outpath)
-	if err != nil {
-		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not create file store: %w", err)
-	}
-
-	// pull the multi-file artifact (modified_id.csv, ecosystem.zip, integrity_checks.json)
-	const tag = "latest"
-	if _, err = oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions); err != nil {
-		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not copy artifact from remote repository: %w", err)
-	}
-
-	// pull the matching signatures (one .sig per file) from the sibling tag
-	const sigTag = tag + ".sig"
-	if _, err = oras.Copy(ctx, repo, sigTag, fs, sigTag, oras.DefaultCopyOptions); err != nil {
-		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not copy signatures from remote repository: %w", err)
-	}
-
-	// verify each blob against its signature before any caller is allowed
-	// to use the working dir. If any signature fails we wipe the dir so a
-	// partial/untrusted state cannot leak into the import path.
-	for _, name := range vulnDBArtifactFiles {
-		blob := outpath + "/" + name
-		sig := blob + ".sig"
-		if err := verifySignature(ctx, vulnDBPubKeyFile, sig, blob); err != nil {
-			os.RemoveAll(outpath)
-			return "", fmt.Errorf("could not verify signature for %s: %w", name, err)
-		}
-	}
-	slog.Info("successfully verified signatures for all vulndb files")
-	return outpath, nil
-}
-
-type tableIntegrityInformation struct {
-	TableName  string `json:"table_name"`
-	Checksum   []byte `json:"checksum"`
-	TotalCount int    `json:"total_count"`
-}
-
-// computes and returns the tables integrity information using the provided query
-func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Pool, table string, query string) (tableIntegrityInformation, error) {
-	var result tableIntegrityInformation
-	result.TableName = table
-
-	start := time.Now()
-	slog.Info("start calculating integrity information", "table", table)
-
-	err := pool.QueryRow(ctx, query).Scan(&result.TotalCount, &result.Checksum)
-	if err != nil {
-		return result, fmt.Errorf("could not calculate integrity information for table %s: %w", table, err)
-	}
-
-	slog.Info("finished calculating integrity information", "table", table, "time", time.Since(start))
-
-	return result, nil
-}
-
-type integrityInformation struct {
-	TableIntegrity  []tableIntegrityInformation `json:"table_integrity"`
-	ImportTimestamp time.Time                   `json:"import_timestamp"`
-}
-
-func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool) ([]tableIntegrityInformation, error) {
-
-	queries := map[string]string{
-		"cves": `
-			SELECT count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY id)) AS checksum
-			FROM (
-				SELECT id, md5(
-					coalesce(id::text, '\0') || '|' ||
-					coalesce(description, '\0') || '|' ||
-					coalesce(cvss::text, '\0') || '|' ||
-					coalesce(vector, '\0')
-				) AS row_hash
-				FROM cves
-			) sub;`,
-
-		"cve_relationships": `
-			SELECT count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY source_cve, target_cve, relationship_type)) AS checksum
-			FROM (
-				SELECT source_cve, target_cve, relationship_type, md5(
-					source_cve || '|' || target_cve || '|' || relationship_type
-				) AS row_hash
-				FROM cve_relationships
-			) sub;`,
-
-		"cve_affected_component": `
-			SELECT count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY cve_id, affected_component_id)) AS checksum
-			FROM (
-				SELECT cve_id, affected_component_id, md5(
-					cve_id::text || '|' || affected_component_id::text
-				) AS row_hash
-				FROM cve_affected_component
-			) sub;`,
-
-		"affected_components": `
-			SELECT count(*) AS row_count,
-			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
-			FROM affected_components;`,
-	}
-
-	mutex := &sync.Mutex{}
-	waitGroup := &sync.WaitGroup{}
-
-	results := make([]tableIntegrityInformation, 0, 4)
-	errors := make([]error, 0, 4)
-
-	// launch 1 go routine per table for parallelization of the calculations
-	for table, query := range queries {
-		waitGroup.Add(1)
-		go func(table, query string) {
-			defer waitGroup.Done()
-
-			result, err := calculateIntegrityInformationForTable(ctx, pool, table, query)
-
-			mutex.Lock()
-			defer mutex.Unlock()
-			if err != nil {
-				errors = append(errors, err)
-			} else {
-				results = append(results, result)
-			}
-		}(table, query)
-	}
-
-	waitGroup.Wait()
-
-	if len(errors) > 0 {
-		return results, fmt.Errorf("ran into one or multiple errors whilst trying to calculate integrity information: %v", errors)
-	}
-
-	return results, nil
-}
 
 // controls in what order and what method to use for each ecosystem
 func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
@@ -594,7 +270,7 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 	for i := range zipReader.File {
 		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem}
 	}
-	slog.Info("finished pushing zip files", "ecosystem", ecosystem, "time elapsed", time.Since(start))
+	slog.Info("finished pushing zip files", "ecosystem", ecosystem, "timeElapsed", time.Since(start))
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
@@ -671,7 +347,7 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 }
 
 // build all the vuln database rows from the OSV objects
-func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedComponentRepository, allEntries []OSVWithTimestamp) (vulndbRows, error) {
+func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedComponentRepository, allEntries []OSVEntry) (vulndbRows, error) {
 	// get the current state of the affected components to avoid creating duplicate entries
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
 	err := affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
