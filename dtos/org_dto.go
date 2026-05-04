@@ -98,15 +98,19 @@ type OrgDTO struct {
 
 	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	SharesVulnInformation    bool                    `json:"sharesVulnInformation"`
-	IsPublic                 bool                    `json:"isPublic" gorm:"default:false;"`
-	Webhooks                 []WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
-	ConfigFiles              map[string]any          `json:"configFiles"`
-	Language                 string                  `json:"language"`
-	ExternalEntityProviderID *string                 `json:"externalEntityProviderId" gorm:"type:text"`
+	SharesVulnInformation    bool           `json:"sharesVulnInformation"`
+	IsPublic                 bool           `json:"isPublic" gorm:"default:false;"`
+	ConfigFiles              map[string]any `json:"configFiles"`
+	Language                 string         `json:"language"`
+	ExternalEntityProviderID *string        `json:"externalEntityProviderId" gorm:"type:text"`
 }
 
 type OrgDetailsDTO struct {
 	OrgDTO
 	Members []UserDTO `json:"members"`
+}
+
+type OrgSettingsDTO struct {
+	OrgDetailsDTO
+	Webhooks []WebhookIntegrationDTO `json:"webhooks"`
 }

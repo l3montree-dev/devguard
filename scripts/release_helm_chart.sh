@@ -59,7 +59,12 @@ update_helm_chart_tags() {
 
     echo "Updating values.yaml image tags to $tag..."
 
-    sed -i "s|tag: v[0-9]\+\.[0-9]\+\.[0-9]\+$|tag: $tag|g" "$values_file"
+    # Only update tags for devguard-owned images; leave third-party images (e.g. postgres-exporter) untouched.
+    awk -v tag="$tag" '
+      /repository:/ { in_devguard = /ghcr\.io\/l3montree-dev\// }
+      in_devguard && /^[[:space:]]+tag:/ { sub(/tag: .*/, "tag: " tag) }
+      { print }
+    ' "$values_file" > /tmp/values_helm_tmp && mv /tmp/values_helm_tmp "$values_file"
 
     if grep -q "tag: $tag" "$values_file"; then
         log_change "Updated values.yaml image tags to $tag"
@@ -150,7 +155,7 @@ fi
 (cd devguard && git add docker-compose-try-it.yaml && git commit -m "chore: update docker-compose-try-it.yaml to $TAG" && git push)
 log_change "Committed and pushed docker-compose-try-it.yaml"
 
-(cd devguard-helm-chart && git add Chart.yaml && git commit -m "chore: update Helm chart to $TAG
+(cd devguard-helm-chart && git add . && git commit -m "chore: update Helm chart to $TAG
 
 - Updated devguard image to $TAG
 - Updated devguard-web image to $TAG

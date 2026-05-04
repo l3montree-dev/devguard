@@ -1,7 +1,8 @@
 # postgresql database for local development
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.2.0
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.3.0
+    shm_size: 1g
     # If you want to build the image locally, uncomment the following lines
     # build:
     # context: .
@@ -12,6 +13,7 @@ services:
     volumes:
     - postgres:/var/lib/postgresql/data
     - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    tmpfs: /run/postgresql
     # command: ["postgres", "-c", "log_statement=all"] # enable to log all queries into the log
 
 

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.1] - 2026-04-28
+
+### Fixed
+
+- Wrong digest verification — Added trim suffix to correctly parse and compare image digests (oci dependency proxy)
+- PostgreSQL exporter tag being updated unintentionally during release
+- Go scanner helper binaries — Added `CGO_ENABLED` flag to ensure static binaries
+
+### Changed
+
+- Release scripts — Added confirmation message before applying changes; files are now auto-staged after confirmation
+- Helm chart — `values.yaml` is now included in release script updates
+
 ## [v1.3.0] - 2026-04-27
 
 ### Added

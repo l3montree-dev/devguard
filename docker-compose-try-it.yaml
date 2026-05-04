@@ -12,7 +12,8 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.3.0
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.3.1
+    shm_size: 1g
     container_name: devguard-postgres
     security_opt:
       - no-new-privileges:true 
@@ -30,6 +31,7 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
       - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    tmpfs: /run/postgresql
     networks:
       - devguard-local
 
@@ -83,7 +85,7 @@ services:
       - devguard-local
 
   devguard-migrate:
-    image: ghcr.io/l3montree-dev/devguard:v1.3.0
+    image: ghcr.io/l3montree-dev/devguard:v1.3.1
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -107,7 +109,7 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:v1.3.0
+    image: ghcr.io/l3montree-dev/devguard:v1.3.1
     container_name: devguard-api
     read_only: true
     tmpfs:
@@ -142,7 +144,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.3.0
+    image: ghcr.io/l3montree-dev/devguard-web:v1.3.1
     container_name: devguard-web
     read_only: true
     tmpfs:

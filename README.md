@@ -10,7 +10,7 @@
 <h3 align="center">Open-source vulnerability management for the full software supply chain</h3>
 
 <p align="center">
-  An <a href="https://owasp.org/www-project-devguard/">OWASP Incubating Project</a> · Made in Germany 🇩🇪 for Europe 🇪🇺
+  An <a href="https://owasp.org/www-project-devguard/">OWASP Incubating Project</a> · Made in Germany 🇩🇪 for the world 🌍
 </p>
 
 <p align="center">

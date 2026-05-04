@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -162,6 +164,89 @@ func TestOrgControllerUpdateConfigFile(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
 	})
+}
+
+func TestOrgControllerAdminSettings(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	webhookName := "Alerts"
+	webhookDescription := "Security alerts"
+	org := models.Org{
+		Name: "DevGuard",
+		Slug: "devguard",
+		Webhooks: []models.WebhookIntegration{{
+			Name:        &webhookName,
+			Description: &webhookDescription,
+			URL:         "https://example.com/webhook",
+			SbomEnabled: true,
+			VulnEnabled: true,
+		}},
+	}
+	shared.SetOrg(ctx, org)
+
+	mockRBAC := mocks.NewAccessControl(t)
+	mockRBAC.On("GetAllMembersOfOrganization").Return([]string{}, nil)
+	shared.SetRBAC(ctx, mockRBAC)
+
+	mockIntegrations := mocks.NewIntegrationAggregate(t)
+	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
+	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
+
+	controller := &OrgController{}
+	err := controller.AdminSettings(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response dtos.OrgSettingsDTO
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	assert.Equal(t, org.Name, response.Name)
+	assert.Equal(t, org.Slug, response.Slug)
+	assert.Empty(t, response.Members)
+	assert.Len(t, response.Webhooks, 1)
+	assert.Equal(t, "https://example.com/webhook", response.Webhooks[0].URL)
+}
+
+func TestOrgControllerReadDoesNotExposeWebhooks(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+
+	webhookName := "Alerts"
+	webhookDescription := "Security alerts"
+	org := models.Org{
+		Name: "DevGuard",
+		Slug: "devguard",
+		Webhooks: []models.WebhookIntegration{{
+			Name:        &webhookName,
+			Description: &webhookDescription,
+			URL:         "https://example.com/webhook",
+		}},
+	}
+	shared.SetOrg(ctx, org)
+
+	mockRBAC := mocks.NewAccessControl(t)
+	mockRBAC.On("GetAllMembersOfOrganization").Return([]string{}, nil)
+	shared.SetRBAC(ctx, mockRBAC)
+
+	mockIntegrations := mocks.NewIntegrationAggregate(t)
+	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
+	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
+
+	controller := &OrgController{}
+	err := controller.Read(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response map[string]any
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	assert.Equal(t, org.Name, response["name"])
+	assert.NotContains(t, response, "webhooks")
 }
 
 // Test function for Create and bootstrap from org_controller
