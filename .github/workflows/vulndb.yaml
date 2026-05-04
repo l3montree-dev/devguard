@@ -84,11 +84,11 @@ jobs:
 
       - name: Push the database archive to GitHub Container Registry (snapshot)
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:$date \
             vulndb.tar.zst
-          oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date latest
+          oras tag ghcr.io/l3montree-dev/devguard/vulndb/v2:$date latest
       - name: Push the archive signature to the GitHub Container Registry (snapshot)
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:$date.sig \
             vulndb.tar.zst.sig
-          oras tag ghcr.io/l3montree-dev/devguard/vulndb/osv-mirror:$date.sig latest.sig
+          oras tag ghcr.io/l3montree-dev/devguard/vulndb/v2:$date.sig latest.sig
