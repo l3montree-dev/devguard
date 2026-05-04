@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -48,12 +49,14 @@ Use --databases flag to sync specific sources only.`,
 					affectedCmpRepository shared.AffectedComponentRepository,
 					exploitRepository shared.ExploitRepository,
 					maliciousPackageChecker shared.MaliciousPackageChecker,
+					configService shared.ConfigService,
+					pool *pgxpool.Pool,
 				) error {
 
 					mitreService := vulndb.NewMitreService(cweRepository)
 					epssService := vulndb.NewEPSSService(cveRepository, cveRelationshipRepository)
 					cisaKEVService := vulndb.NewCISAKEVService(cveRepository, cveRelationshipRepository)
-					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository)
+					osvService := vulndb.NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, configService, pool)
 					expoitDBService := vulndb.NewExploitDBService(exploitRepository)
 					githubExploitDBService := vulndb.NewGithubExploitDBService(exploitRepository)
 
@@ -69,7 +72,7 @@ Use --databases flag to sync specific sources only.`,
 					if emptyOrContains(databasesToSync, "osv") {
 						slog.Info("starting osv database sync")
 						now := time.Now()
-						if err := osvService.Mirror(context.Background()); err != nil {
+						if err := osvService.ImportRC(context.Background()); err != nil {
 							slog.Error("could not sync osv database", "err", err)
 						}
 						slog.Info("finished osv database sync", "duration", time.Since(now))

@@ -182,7 +182,7 @@ type CveRepository interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.CVE, error)
 	GetLastModDate(ctx context.Context, tx DB) (time.Time, error)
 	GetAllCVEsID(ctx context.Context, tx DB) ([]string, error)
-	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []int64) error
 	FindCVE(ctx context.Context, tx DB, id string) (models.CVE, error)
 	FindCVEs(ctx context.Context, tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(ctx context.Context, tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
@@ -204,8 +204,6 @@ type ExploitRepository interface {
 
 type AffectedComponentRepository interface {
 	utils.Repository[string, models.AffectedComponent, DB]
-	GetAllAffectedComponentsID(ctx context.Context, tx DB) ([]string, error)
-	DeleteAll(ctx context.Context, tx DB, ecosystem string) error
 	CreateAffectedComponentsUsingUnnest(ctx context.Context, tx DB, components []models.AffectedComponent) error
 }
 
@@ -617,10 +615,7 @@ type ComponentService interface {
 
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
-	GetAllRelationsForCVE(ctx context.Context, tx DB, targetCVEID string) ([]models.CVERelationship, error)
-	GetAllRelationshipsForCVEBatch(ctx context.Context, tx DB, sourceCVEIDs []string) ([]models.CVERelationship, error)
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
-	FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx DB) error
 }
 
 type LicenseRiskService interface {

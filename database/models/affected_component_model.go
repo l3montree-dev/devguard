@@ -17,31 +17,25 @@ package models
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/binary"
 	"fmt"
+	"sync"
 
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"gorm.io/gorm"
 )
 
 type AffectedComponent struct {
-	ID                 string `json:"id" gorm:"primaryKey;"`
-	Source             string
-	PurlWithoutVersion string              `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem          string              `json:"ecosystem" gorm:"type:text;"`
-	Scheme             string              `json:"scheme" gorm:"type:text;"`
-	Type               string              `json:"type" gorm:"type:text;"`
-	Name               string              `json:"name" gorm:"type:text;"`
-	Namespace          *string             `json:"namespace" gorm:"type:text;"`
-	Qualifiers         databasetypes.JSONB `json:"qualifiers" gorm:"type:text;"`
-	Subpath            *string             `json:"subpath" gorm:"type:text;"`
-	Version            *string             `json:"version" gorm:"index"` // either version or semver is defined
-	SemverIntroduced   *string             `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed        *string             `json:"semverEnd" gorm:"type:semver;index"`
+	ID int64 `json:"id" gorm:"primaryKey;"`
 
+	PurlWithoutVersion string `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string `json:"ecosystem" gorm:"type:text;"`
+
+	Version           *string `json:"version" gorm:"index"` // either version or semver is defined
+	SemverIntroduced  *string `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed       *string `json:"semverEnd" gorm:"type:semver;index"`
 	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 
@@ -60,15 +54,11 @@ func convertToStringMap(jsonb databasetypes.JSONB) map[string]string {
 	return result
 }
 
-func (affectedComponent AffectedComponent) CalculateHash() string {
+func (affectedComponent AffectedComponent) CalculateHash() int64 {
 
-	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s",
 		affectedComponent.PurlWithoutVersion,
 		affectedComponent.Ecosystem,
-		affectedComponent.Name,
-		utils.SafeDereference(affectedComponent.Namespace),
-		normalize.QualifiersMapToString(convertToStringMap(affectedComponent.Qualifiers)),
-		utils.SafeDereference(affectedComponent.Subpath),
 		utils.SafeDereference(affectedComponent.Version),
 		utils.SafeDereference(affectedComponent.SemverIntroduced),
 		utils.SafeDereference(affectedComponent.SemverFixed),
@@ -76,13 +66,58 @@ func (affectedComponent AffectedComponent) CalculateHash() string {
 		utils.SafeDereference(affectedComponent.VersionFixed),
 	)
 
-	hash := sha256.Sum256([]byte(toHash))
-	return hex.EncodeToString(hash[:])[:16]
+	sum := sha256.Sum256([]byte(toHash))
+	return int64(binary.BigEndian.Uint64(sum[:8]))
 }
 
 func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
-	if affectedComponent.ID == "" {
+	if affectedComponent.ID == 0 {
 		affectedComponent.ID = affectedComponent.CalculateHash()
 	}
 	return nil
+}
+
+var hashBufferPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, 0, 512)
+		return &b
+	},
+}
+
+// CalculateHashFast produces the same hash as CalculateHash but avoids
+// fmt.Sprintf and the intermediate convertToStringMap allocation.
+func (affectedComponent AffectedComponent) CalculateHashFast() int64 {
+	bufPtr := hashBufferPool.Get().(*[]byte)
+	buf := (*bufPtr)[:0]
+
+	buf = append(buf, affectedComponent.PurlWithoutVersion...)
+	buf = append(buf, '/')
+	buf = append(buf, affectedComponent.Ecosystem...)
+	buf = append(buf, '/')
+	if affectedComponent.Version != nil {
+		buf = append(buf, *affectedComponent.Version...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.SemverIntroduced != nil {
+		buf = append(buf, *affectedComponent.SemverIntroduced...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.SemverFixed != nil {
+		buf = append(buf, *affectedComponent.SemverFixed...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.VersionIntroduced != nil {
+		buf = append(buf, *affectedComponent.VersionIntroduced...)
+	}
+	buf = append(buf, '/')
+	if affectedComponent.VersionFixed != nil {
+		buf = append(buf, *affectedComponent.VersionFixed...)
+	}
+
+	sum := sha256.Sum256(buf)
+	out := int64(binary.BigEndian.Uint64(sum[:8]))
+
+	*bufPtr = buf[:0]
+	hashBufferPool.Put(bufPtr)
+	return out
 }

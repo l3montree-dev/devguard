@@ -62,41 +62,10 @@ func NewImportService(cvesRepository shared.CveRepository, cweRepository shared.
 }
 
 // maps every table associated with the vulndb to their respective primary key(s) used in the diff queries
-var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cvecve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}, "cve_relationships": {"target_cve", "source_cve", "relationship_type"}}
+var primaryKeysFromTables = map[string][]string{"cves": {"cve"}, "cwes": {"cwe"}, "affected_components": {"id"}, "cve_affected_component": {"affected_component_id", "cve_cve"}, "exploits": {"id"}, "malicious_packages": {"id"}, "malicious_affected_components": {"id"}, "cve_relationships": {"target_cve", "source_cve", "relationship_type"}}
 
 // maps every table associated with the vulndb to their attributes we want to watch for the diff_update queries
 var relevantAttributesFromTables = map[string][]string{"cves": {"date_last_modified"}, "cwes": {"description"}, "affected_components": {}, "cve_affected_component": {}, "exploits": {"*"}, "malicious_packages": {"modified"}, "malicious_affected_components": {}, "cve_relationships": {}}
-
-func (service importService) Import(ctx context.Context, tag string) error {
-	begin := time.Now()
-
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v1"
-	// Connect to a remote repository
-	repo, err := remote.NewRepository(reg)
-	if err != nil {
-		return fmt.Errorf("could not connect to remote repository: %w", err)
-	}
-	outpath, err := os.MkdirTemp("", "vulndb")
-	if err != nil {
-		return fmt.Errorf("could not create temp directory: %w", err)
-	}
-
-	_, err = downloadAndSaveZipToTemp(ctx, repo, tag, outpath)
-	if err != nil {
-		return err
-	}
-
-	//copy csv files to database
-	err = service.copyCSVToDB(ctx, outpath, nil)
-	if err != nil {
-		return fmt.Errorf("could not copy csv to db: %w", err)
-	}
-
-	slog.Info("importing vulndb completed", "duration", time.Since(begin))
-
-	os.RemoveAll(outpath) //nolint
-	return nil
-}
 
 func (service importService) CreateTablesWithSuffix(ctx context.Context, suffix string) error {
 	// create the tables with the suffix
@@ -250,22 +219,13 @@ func processDiffCSVs(ctx context.Context, dirPath string, tx pgx.Tx, tableSuffix
 		return err
 	}
 
-	// filter and sort files beforehand because we need to update cve_affected_components after cves and affected component tables have been updated
+	// filter and sort files beforehand since we need a consistent and sound order of execution
 	sort.Slice(files, func(i, j int) bool {
-		if strings.HasPrefix(files[i].Name(), "cve_affected_component") {
-			return false
+		pi, pj := getExecutionPriority(files[i].Name()), getExecutionPriority(files[j].Name())
+		if pi != pj {
+			return pi < pj
 		}
-		if strings.HasPrefix(files[j].Name(), "cve_affected_component") {
-			return true
-		}
-		// Move exploits to the end
-		if strings.HasPrefix(files[i].Name(), "exploits") {
-			return false
-		}
-		if strings.HasPrefix(files[j].Name(), "exploits") {
-			return true
-		}
-		return strings.Compare(files[i].Name(), files[j].Name()) < 0
+		return files[i].Name() < files[j].Name()
 	})
 
 	for _, file := range files {
@@ -338,12 +298,12 @@ ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_com
 -- Delete orphaned rows where the CVE no longer exists
 DELETE FROM cve_affected_component 
 WHERE NOT EXISTS (
-    SELECT 1 FROM cves WHERE cves.cve = cve_affected_component.cvecve
+    SELECT 1 FROM cves WHERE cves.id = cve_affected_component.cve_cve
 );
 
 -- Recreate the foreign key constraint
 ALTER TABLE cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve 
-  FOREIGN KEY (cvecve) REFERENCES cves(cve);
+  FOREIGN KEY (cve_cve) REFERENCES cves(id);
 
 
 ALTER TABLE weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
@@ -928,7 +888,8 @@ func processDeleteDiff(ctx context.Context, tx pgx.Tx, filePath string, tableNam
 			sql := fmt.Sprintf("DELETE FROM %s WHERE %s.%s = %s", tableName, tableName, primaryKeyColumnName, "'"+primaryKeyValue+"'")
 			_, err := tx.Exec(ctx, sql)
 			if err != nil {
-				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue)
+				tx.Rollback(ctx) // nolint
+				slog.Error("error when deleting from table", "table", tableName, "id", primaryKeyValue, "err", err)
 				continue
 			}
 		}
@@ -1062,7 +1023,7 @@ func (service importService) GetAllIncrementalTagsSinceSnapshot(ctx context.Cont
 		slices.Reverse(tags)
 
 		for i := range tags {
-			if strings.Contains(tags[i], ".sig") {
+			if strings.HasSuffix(tags[i], ".sig") {
 				continue
 			}
 			allTags = append(allTags, tags[i])
@@ -1094,7 +1055,7 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	err = repo.Tags(ctx, lastVersion, func(tags []string) error {
 		slices.Reverse(tags)
 		for i := range tags {
-			if strings.Contains(tags[i], ".sig") {
+			if strings.HasSuffix(tags[i], ".sig") {
 				continue
 			}
 			allTags = append(allTags, tags[i])
@@ -1110,9 +1071,39 @@ func (service importService) GetIncrementalTags(ctx context.Context, repo *remot
 	}
 	slices.Reverse(allTags)
 
-	if len(allTags) >= 2 && !slices.IsSorted(allTags) {
-		slog.Error("slice not sorted")
-		return nil, fmt.Errorf("slice not sorted")
+	if !slices.IsSorted(allTags) {
+		slices.Sort(allTags)
 	}
 	return allTags, nil
+}
+
+// assigns a priority to each table and mode combination
+func getExecutionPriority(name string) int {
+	order := 1 // we need to reverse the order for the delete statements
+	if strings.HasSuffix(strings.TrimSuffix(name, ".csv"), "_delete") {
+		order = -1
+	}
+	switch {
+	// first handle the base tables
+	case strings.HasPrefix(name, "cves_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "affected_components_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "cwes_diff"):
+		return 1 * order
+	case strings.HasPrefix(name, "malicious_packages_diff"):
+		return 1 * order
+
+	// tables which are dependant on the base tables values (e.g. foreign key constraint)
+	case strings.HasPrefix(name, "exploits_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "cve_relationships_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "cve_affected_component_diff"):
+		return 2 * order
+	case strings.HasPrefix(name, "malicious_affected_components_diff"):
+		return 2 * order
+	default:
+		return 3
+	}
 }

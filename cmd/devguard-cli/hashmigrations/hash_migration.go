@@ -434,7 +434,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 			DELETE FROM public.cve_affected_component
 			WHERE NOT EXISTS (
-				SELECT 1 FROM public.cves WHERE cves.cve = cve_affected_component.cvecve
+				SELECT 1 FROM public.cves WHERE cves.id = cve_affected_component.cve_id
 			);
 
 			DELETE FROM public.cve_affected_component
@@ -460,7 +460,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 			ALTER TABLE public.cve_affected_component
 			ADD CONSTRAINT fk_cve_affected_component_cve
-			FOREIGN KEY (cvecve) REFERENCES public.cves(cve)
+			FOREIGN KEY (cve_id) REFERENCES public.cves(id)
 			ON DELETE CASCADE ON UPDATE CASCADE;
 
 			ALTER TABLE ONLY public.cve_affected_component

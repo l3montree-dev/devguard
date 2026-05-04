@@ -558,7 +558,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			markFP(t, repo, vuln, "art")
 
 			for i := 0; i < 3; i++ {
-				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom)           // gone
+				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom) // gone
 				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 				scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability) // back
 				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
@@ -1636,12 +1636,6 @@ func TestTicketHandling(t *testing.T) {
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
 
-			cve := models.CVE{
-				CVE:  "CVE-2025-46569",
-				CVSS: 8.0,
-			}
-			err = f.DB.Save(&cve).Error
-			assert.Nil(t, err)
 			// scan the sbom with the vulnerability again
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
@@ -1737,6 +1731,7 @@ func TestTicketHandling(t *testing.T) {
 				CVE:  "CVE-2025-46569",
 				CVSS: 8.0,
 			}
+			cve.ID = cve.CalculateHash()
 			err = f.DB.Save(&cve).Error
 			assert.Nil(t, err)
 			if err := f.DB.Exec("DELETE FROM artifact_dependency_vulns adv USING dependency_vulns dv WHERE adv.dependency_vuln_id = dv.id AND dv.cve_id = ?;", "CVE-2025-46569").Error; err != nil {
@@ -1852,11 +1847,6 @@ func createCVE2025_46569(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
-		Scheme:             "pkg",
-		Type:               "golang",
-		Name:               "github.com/open-policy-agent/opa",
-		Namespace:          utils.Ptr(""),
-		Qualifiers:         nil,
 		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 
@@ -2109,12 +2099,8 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		// Create AffectedComponent to link the CVE to the package
 		// This ensures the SBOM scan will find this vulnerability for the package
 		affectedComp := models.AffectedComponent{
-			ID:                 "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
 			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
 			Ecosystem:          "golang",
-			Scheme:             "pkg",
-			Type:               "golang",
-			Name:               "github.com/jinzhu/inflection",
 			Version:            utils.Ptr("1.0.0"),
 			CVE:                []models.CVE{newCVE},
 		}
