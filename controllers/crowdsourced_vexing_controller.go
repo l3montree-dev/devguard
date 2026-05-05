@@ -20,7 +20,7 @@ func NewCrowdsourcedVexingController(crowdsourcedVexingService shared.CrowdSourc
 func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	dependencyVulnID := ctx.QueryParam("dependencyVulnId")
 	if dependencyVulnID == "" {
-		return echo.NewHTTPError(400, "dependencyVulnID query parameter is required")
+		return echo.NewHTTPError(400, "dependencyVulnId query parameter is required")
 	}
 
 	dependencyVulnIDParsed, err := uuid.Parse(dependencyVulnID)
@@ -31,6 +31,9 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	rule, err := c.crowdsourcedVexingService.Recommend(ctx, nil, dependencyVulnIDParsed)
 	if err != nil {
 		return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
+	}
+	if rule.ID == "" {
+		return ctx.NoContent(204)
 	}
 	return ctx.JSON(200, transformer.VEXRuleToDTO(rule))
 }

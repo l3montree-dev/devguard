@@ -80,19 +80,20 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	if vuln.AssetID != assetversion.AssetID || vuln.AssetVersionName != assetversion.Name {
 		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
 	}
-
 	rawVexRules, err := s.vexRuleRepository.FindByCVE(requestCtx, tx, vuln.CVEID)
 	if err != nil {
 		return models.VEXRule{}, err
 	}
+
 	formattedVexRules := make([]crowdsourcevexing.VexRule, len(rawVexRules))
-	accordingAssetIDs := make([]uuid.UUID, len(rawVexRules))
+	assetPairs := make([]shared.AssetVersionPair, len(rawVexRules))
 	for i, vexrule := range rawVexRules {
-		accordingAssetIDs[i] = vexrule.AssetID
+		pair := shared.AssetVersionPair{AssetID: vexrule.AssetID, Name: vexrule.AssetVersionName}
+		assetPairs[i] = pair
 		formattedVexRules[i] = mapVexRule(vexrule)
 	}
 
-	rawAssetVersions, err := s.assetVersionRepository.GetAssetVersionsByAssetIDs(requestCtx, tx, accordingAssetIDs)
+	rawAssetVersions, err := s.assetVersionRepository.FindByAssetVersionNameAndAssetIDList(requestCtx, tx, assetPairs)
 	if err != nil {
 		return models.VEXRule{}, err
 	}
@@ -114,7 +115,7 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	trustedEntitiesByProjectTrustscores := make(map[string]float64, len(rawTrustedEntitiesByProject))
 	for _, te := range rawTrustedEntitiesByProject {
 		if te.OrganizationID != nil {
-			trustedEntitiesByProjectTrustscores[te.OrganizationID.String()] = te.TrustScore
+			trustedEntitiesByProjectTrustscores[te.ProjectID.String()] = te.TrustScore
 		}
 	}
 	formattedProjects := make([]crowdsourcevexing.Project, len(rawProjects))
@@ -160,7 +161,7 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 
 	recommendedRule, err := crowdsourcevexing.CrowdsourcedVexing(
 		vuln.VulnerabilityPath,
-		crowdsourcevexing.CVE{CVE: vuln.CVE.CVE},
+		crowdsourcevexing.CVE{CVE: vuln.CVEID},
 		formattedVexRules,
 		formattedOrganizations,
 		formattedProjects,
@@ -174,6 +175,5 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	if err != nil {
 		return models.VEXRule{}, err
 	}
-
 	return finalRecommendation, nil
 }

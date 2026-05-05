@@ -374,6 +374,80 @@ func (_c *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call) RunAndRetur
 	return _c
 }
 
+// FindByAssetVersionNameAndAssetIDList provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) FindByAssetVersionNameAndAssetIDList(ctx context.Context, tx shared.DB, assetPairs []shared.AssetVersionPair) ([]models.AssetVersion, error) {
+	ret := _mock.Called(ctx, tx, assetPairs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByAssetVersionNameAndAssetIDList")
+	}
+
+	var r0 []models.AssetVersion
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []shared.AssetVersionPair) ([]models.AssetVersion, error)); ok {
+		return returnFunc(ctx, tx, assetPairs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []shared.AssetVersionPair) []models.AssetVersion); ok {
+		r0 = returnFunc(ctx, tx, assetPairs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.AssetVersion)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []shared.AssetVersionPair) error); ok {
+		r1 = returnFunc(ctx, tx, assetPairs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetVersionNameAndAssetIDList'
+type AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call struct {
+	*mock.Call
+}
+
+// FindByAssetVersionNameAndAssetIDList is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetPairs []shared.AssetVersionPair
+func (_e *AssetVersionRepository_Expecter) FindByAssetVersionNameAndAssetIDList(ctx interface{}, tx interface{}, assetPairs interface{}) *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call {
+	return &AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call{Call: _e.mock.On("FindByAssetVersionNameAndAssetIDList", ctx, tx, assetPairs)}
+}
+
+func (_c *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call) Run(run func(ctx context.Context, tx shared.DB, assetPairs []shared.AssetVersionPair)) *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []shared.AssetVersionPair
+		if args[2] != nil {
+			arg2 = args[2].([]shared.AssetVersionPair)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call {
+	_c.Call.Return(assetVersions, err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetPairs []shared.AssetVersionPair) ([]models.AssetVersion, error)) *AssetVersionRepository_FindByAssetVersionNameAndAssetIDList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindOrCreate provides a mock function for the type AssetVersionRepository
 func (_mock *AssetVersionRepository) FindOrCreate(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	ret := _mock.Called(ctx, tx, assetVersionName, assetID, tag, defaultBranchName)

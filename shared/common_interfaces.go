@@ -35,7 +35,6 @@ import (
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -411,6 +410,11 @@ type AssetVersionService interface {
 	LoadFullSBOMGraph(ctx context.Context, tx DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
+type AssetVersionPair struct {
+	AssetID uuid.UUID `db:"asset_id"`
+	Name    string    `db:"name"`
+}
+
 type AssetVersionRepository interface {
 	All(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 	Read(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
@@ -420,6 +424,7 @@ type AssetVersionRepository interface {
 	Save(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetAssetVersionsByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error)
+	FindByAssetVersionNameAndAssetIDList(ctx context.Context, tx DB, assetPairs []AssetVersionPair) ([]models.AssetVersion, error)
 	GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error)
@@ -739,8 +744,8 @@ type TrustedEntityRepository interface {
 	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
 	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
 	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
-	GetTrustedEntitiesByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)
-	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx *gorm.DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
 }
 
 type Object string

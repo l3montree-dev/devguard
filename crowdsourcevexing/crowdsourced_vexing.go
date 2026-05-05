@@ -53,17 +53,19 @@ type CVE struct {
 
 type Vote struct {
 	Voters []struct {
-		OrganizationID string
-		ProjectID      string
-		AssetID        string
+		OrganizationID   string
+		ProjectID        string
+		AssetID          string
+		AssetVersionName string
 	}
 	Value float64
 }
 
 const (
 	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 0
+	minOrganizationAgeInDays = 30
 	minTrustscore            = 0.01
+	baseDiminishmentFactor   = 0.1
 )
 
 // [Mitigation 8] userVoteTracker tracks how many times each user has voted
@@ -78,13 +80,11 @@ func newUserVoteTracker() *userVoteTracker {
 	}
 }
 
-var diminishmentFactor = 0.1
-
 // recordVoteAndGetFactor increments the vote count for the organization's
 // creator (CreatedBy) and returns the amount for how often the creator
 // has already voted in the current voting context
 // This is used for diminishing the value of mass-created votes by one user
-func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) float64 {
+func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization, diminishmentFactor float64) float64 {
 	creator := organization.CreatedBy
 	priorVotes := t.voteCounts[creator]
 	t.voteCounts[creator]++
@@ -92,7 +92,7 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization) floa
 }
 
 func PathToString(vexRule VexRule) string {
-	stringPath := strings.Join(append(vexRule.PathPattern, []string{vexRule.Assessment}...), "->")
+	stringPath := strings.Join(vexRule.PathPattern, "->")
 	return stringPath
 }
 
@@ -132,9 +132,13 @@ func findVexRuleFromPath(vexRulePath string, vexRules []VexRule) (VexRule, bool)
 // Application / Creation of vex rules counts as a vote
 
 func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, organizations []Organization, projects []Project, assets []Asset) (VexRule, error) {
+	var adjustedDiminishmentFactor = baseDiminishmentFactor
+	// If there is only one organization, we don't need a diminishmentfactor and therefore it should be set to 1 (no diminishment, value is worth fully)
+	if len(organizations) < 2 {
+		adjustedDiminishmentFactor = 1
+	}
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
-
 	var assetMap = make(map[string]Asset)
 	for _, asst := range assets {
 		assetMap[asst.ID] = asst
@@ -202,7 +206,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if utils.Contains(AssessmentOptions, rule.Assessment) {
 				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
-				diminishingFactor := tracker.recordVoteAndGetFactor(organization)
+				diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
 				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
 				// Note to mitigation 8: Using an exponential decay approach allows for
 				// - lower trusted entities to not be able to surpass high trusted entities with many votes
@@ -212,17 +216,18 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
 					for _, vote := range votes[rulePath].Voters {
-						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID {
+						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID && vote.AssetVersionName == rule.AssetversionName {
 							alreadyExistingVote = true
 							break
 						}
 					}
 					if !alreadyExistingVote {
 						votes[rulePath].Voters = append(votes[rulePath].Voters, struct {
-							OrganizationID string
-							ProjectID      string
-							AssetID        string
-						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID})
+							OrganizationID   string
+							ProjectID        string
+							AssetID          string
+							AssetVersionName string
+						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetversionName})
 
 						votes[rulePath].Value += ruleConfidence
 
@@ -232,11 +237,12 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 					// This is the case if a vote was cast for a VexRule that hasn't been seen before
 					votes[rulePath] = &Vote{
 						Voters: []struct {
-							OrganizationID string
-							ProjectID      string
-							AssetID        string
+							OrganizationID   string
+							ProjectID        string
+							AssetID          string
+							AssetVersionName string
 						}{
-							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID},
+							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetversionName},
 						},
 						Value: 0.0,
 					}
