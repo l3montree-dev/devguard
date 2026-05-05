@@ -3,12 +3,14 @@ package vulndb
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -83,4 +85,50 @@ func (s *epssService) Fetch(ctx context.Context) (map[string]dtos.EPSS, error) {
 	}
 
 	return results, nil
+}
+
+func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+	if len(epssData) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE epss_stage (
+			cve_id     text,
+			epss       numeric(6,5),
+			percentile numeric(6,5)
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create epss staging table: %w", err)
+	}
+
+	type epssRow struct {
+		cve        string
+		epss       float64
+		percentile float64
+	}
+	rows := make([]epssRow, 0, len(epssData))
+	for cve, e := range epssData {
+		rows = append(rows, epssRow{cve, e.EPSS, e.Percentile})
+	}
+
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"epss_stage"}, []string{"cve_id", "epss", "percentile"},
+		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
+			return []any{rows[i].cve, rows[i].epss, rows[i].percentile}, nil
+		})); err != nil {
+		return fmt.Errorf("could not copy epss rows into staging table: %w", err)
+	}
+
+	// reset all epss and percentile values to null before updating with new data, to handle removed CVEs
+	if _, err := tx.Exec(ctx, `UPDATE cves SET epss = NULL, percentile = NULL`); err != nil {
+		return fmt.Errorf("could not reset epss values: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE cves SET
+			epss       = epss_stage.epss,
+			percentile = epss_stage.percentile
+		FROM epss_stage
+		WHERE cves.cve = epss_stage.cve_id`); err != nil {
+		return fmt.Errorf("could not update cves with epss data: %w", err)
+	}
+	return nil
 }

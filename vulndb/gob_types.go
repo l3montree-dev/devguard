@@ -72,34 +72,12 @@ func cisaKEVEntriesToGob(cves []models.CVE) []CISAKEVEntry {
 	return out
 }
 
-func gobCISAKEVEntriesToModels(entries []CISAKEVEntry) []models.CVE {
-	out := make([]models.CVE, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, models.CVE{
-			CVE:                   e.CVE,
-			CISAExploitAdd:        timePtrToDate(e.ExploitAddDate),
-			CISAActionDue:         timePtrToDate(e.ActionDueDate),
-			CISARequiredAction:    e.RequiredAction,
-			CISAVulnerabilityName: e.VulnerabilityName,
-		})
-	}
-	return out
-}
-
 func dateToTimePtr(d *datatypes.Date) *time.Time {
 	if d == nil {
 		return nil
 	}
 	t := time.Time(*d)
 	return &t
-}
-
-func timePtrToDate(t *time.Time) *datatypes.Date {
-	if t == nil {
-		return nil
-	}
-	d := datatypes.Date(*t)
-	return &d
 }
 
 // --- Exploit conversions ---
@@ -142,9 +120,12 @@ func gobExploitToModel(g GobExploit) models.Exploit {
 	}
 }
 
-func gobExploitsToModels(gs []GobExploit) []models.Exploit {
+func gobExploitsToModels(gs []GobExploit, lastImportTime time.Time) []models.Exploit {
 	out := make([]models.Exploit, len(gs))
 	for i, g := range gs {
+		if g.Updated != nil && g.Updated.Before(lastImportTime) {
+			continue
+		}
 		out[i] = gobExploitToModel(g)
 	}
 	return out

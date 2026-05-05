@@ -28,10 +28,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
@@ -158,28 +158,6 @@ func (c *MaliciousPackageChecker) FetchAll(ctx context.Context) ([]models.Malici
 	return packages, components, nil
 }
 
-// ApplyToDB upserts the provided malicious packages and affected components within the given
-// transaction. The caller is responsible for committing or rolling back.
-// For a full re-import, clear the tables before calling this.
-func (c *MaliciousPackageChecker) ApplyToDB(ctx context.Context, tx shared.DB, packages []models.MaliciousPackage, components []models.MaliciousAffectedComponent) error {
-	for i := 0; i < len(packages); i += BatchSize {
-		end := min(i+BatchSize, len(packages))
-		if err := c.repository.UpsertPackages(ctx, tx, packages[i:end]); err != nil {
-			return fmt.Errorf("failed to upsert packages: %w", err)
-		}
-	}
-	for i := 0; i < len(components); i += BatchSize {
-		end := min(i+BatchSize, len(components))
-		if err := c.repository.UpsertAffectedComponents(ctx, tx, components[i:end]); err != nil {
-			return fmt.Errorf("failed to upsert components: %w", err)
-		}
-	}
-	if err := c.loadFakePackages(ctx, tx); err != nil {
-		return fmt.Errorf("failed to load fake packages: %w", err)
-	}
-	return nil
-}
-
 type processingResults struct {
 	Package            models.MaliciousPackage
 	AffectedComponents []models.MaliciousAffectedComponent
@@ -223,7 +201,7 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 	}
 }
 
-func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context, tx shared.DB) error {
+func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent) {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -238,7 +216,8 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context, tx share
 
 	for ecosystem, pkgNames := range testPackages {
 		for _, pkgName := range pkgNames {
-			fakeID := fmt.Sprintf("FAKE-TEST-%s-001", strings.ToUpper(ecosystem))
+			normalizedPkgName := strings.NewReplacer("/", "-", "@", "-", ":", "-", ".", "-").Replace(pkgName)
+			fakeID := fmt.Sprintf("FAKE-TEST-%s-%s", strings.ToUpper(ecosystem), strings.ToUpper(normalizedPkgName))
 			fakeEntry := dtos.OSV{
 				ID:      fakeID,
 				Summary: fmt.Sprintf("Fake malicious %s package for testing", ecosystem),
@@ -250,30 +229,22 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context, tx share
 							Name:      pkgName,
 							Purl:      fmt.Sprintf("pkg:%s/%s", ecosystem, pkgName),
 						},
-						Versions: []string{}, // All versions affected
+						Versions: []string{},
 					},
 				},
 				Published: time.Now(),
 			}
-
-			pkg := models.MaliciousPackage{
+			packages = append(packages, models.MaliciousPackage{
 				ID:        fakeID,
 				Summary:   fakeEntry.Summary,
 				Details:   fakeEntry.Details,
 				Published: fakeEntry.Published,
 				Modified:  fakeEntry.Published,
-			}
-			packages = append(packages, pkg)
-
-			components := transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)
-			affectedComponents = append(affectedComponents, components...)
+			})
+			affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
 		}
 	}
-
-	if err := c.repository.UpsertPackages(ctx, tx, packages); err != nil {
-		return err
-	}
-	return c.repository.UpsertAffectedComponents(ctx, tx, affectedComponents)
+	return packages, affectedComponents
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
@@ -311,4 +282,72 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 	}
 
 	return false, nil, nil
+}
+
+func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
+	if len(pkgs) > 0 {
+		if _, err := tx.Exec(ctx, `
+			CREATE TEMP TABLE mal_pkgs_stage (
+				id        text,
+				summary   text,
+				details   text,
+				published timestamptz,
+				modified  timestamptz
+			) ON COMMIT DROP`); err != nil {
+			return fmt.Errorf("could not create malicious packages staging table: %w", err)
+		}
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
+			[]string{"id", "summary", "details", "published", "modified"},
+			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
+				p := pkgs[i]
+				return []any{p.ID, p.Summary, p.Details, p.Published, p.Modified}, nil
+			})); err != nil {
+			return fmt.Errorf("could not copy malicious packages into staging table: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO malicious_packages (id, summary, details, published, modified)
+			SELECT id, summary, details, published, modified FROM mal_pkgs_stage
+			ON CONFLICT (id) DO UPDATE SET
+				summary   = EXCLUDED.summary,
+				details   = EXCLUDED.details,
+				published = EXCLUDED.published,
+				modified  = EXCLUDED.modified`); err != nil {
+			return fmt.Errorf("could not upsert malicious packages: %w", err)
+		}
+	}
+
+	if len(comps) > 0 {
+		if _, err := tx.Exec(ctx, `
+			CREATE TEMP TABLE mal_comps_stage (
+				id                   text,
+				malicious_package_id text,
+				purl                 text,
+				ecosystem            text,
+				version              text,
+				semver_introduced    text,
+				semver_fixed         text,
+				version_introduced   text,
+				version_fixed        text
+			) ON COMMIT DROP`); err != nil {
+			return fmt.Errorf("could not create malicious components staging table: %w", err)
+		}
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
+			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
+			pgx.CopyFromSlice(len(comps), func(i int) ([]any, error) {
+				c := comps[i]
+				return []any{c.ID, c.MaliciousPackageID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
+			})); err != nil {
+			return fmt.Errorf("could not copy malicious components into staging table: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO malicious_affected_components (id, malicious_package_id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
+			SELECT id, malicious_package_id, purl, ecosystem, version,
+				semver_introduced::semver, semver_fixed::semver,
+				version_introduced, version_fixed
+			FROM mal_comps_stage
+			ON CONFLICT (id) DO NOTHING`); err != nil {
+			return fmt.Errorf("could not upsert malicious components: %w", err)
+		}
+	}
+	return nil
 }

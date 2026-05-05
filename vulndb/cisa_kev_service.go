@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -163,18 +164,44 @@ func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.C
 	return nil
 }
 
-func (s cisaKEVService) Mirror(ctx context.Context) error {
-	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	cves, err := s.Fetch(fetchCtx)
-	cancel()
-	if err != nil {
-		slog.Error("could not fetch CISA KEV data", "error", err)
-		return err
+func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+	if len(entries) == 0 {
+		return nil
 	}
-	tx := s.cveRepository.Begin(ctx)
-	defer tx.Rollback()
-	if err := s.Apply(ctx, tx, cves); err != nil {
-		return err
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE kev_stage (
+			cve                     text,
+			cisa_exploit_add        date,
+			cisa_action_due         date,
+			cisa_required_action    text,
+			cisa_vulnerability_name text
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create kev staging table: %w", err)
 	}
-	return tx.Commit().Error
+
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
+			e := entries[i]
+			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+		})); err != nil {
+		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
+	}
+
+	// Update direct CVEs and alias CVEs (linked via cve_relationships) in one statement.
+	if _, err := tx.Exec(ctx, `
+		UPDATE cves SET
+			cisa_exploit_add        = ks.cisa_exploit_add,
+			cisa_action_due         = ks.cisa_action_due,
+			cisa_required_action    = ks.cisa_required_action,
+			cisa_vulnerability_name = ks.cisa_vulnerability_name
+		FROM kev_stage ks
+		WHERE cves.cve = ks.cve
+		   OR EXISTS (
+		       SELECT 1 FROM cve_relationships cr
+		       WHERE cr.source_cve = cves.cve AND cr.target_cve = ks.cve
+		   )`); err != nil {
+		return fmt.Errorf("could not update cves with kev data: %w", err)
+	}
+	return nil
 }

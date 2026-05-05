@@ -116,7 +116,7 @@ type vulndbRows struct {
 const numberOfSingleFetchers = 100
 const numberOfZipWorkers = 10
 
-const debugLocalZips = false
+const debugLocalZips = true
 
 var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 type zipJob struct {
@@ -124,9 +124,9 @@ type zipJob struct {
 	Ecosystem string
 }
 
-// applyOSVEntries filters the provided entries by lastImportTime and applies them to the database.
-// A zero lastImportTime means all entries are applied (full import).
-func (s osvService) applyOSVEntries(ctx context.Context, osvVulns []OSVEntry, lastImportTime time.Time) error {
+// applyOSVEntries filters the provided entries by lastImportTime and writes them to the database
+// using the provided pgx transaction. The caller is responsible for Begin/Commit/Rollback.
+func (s osvService) applyOSVEntries(ctx context.Context, tx pgx.Tx, osvVulns []OSVEntry, lastImportTime time.Time) error {
 	if !lastImportTime.IsZero() {
 		slog.Info("found last import timestamp, only loading diff since last import")
 		filtered := make([]OSVEntry, 0, 10_000)
@@ -150,13 +150,7 @@ func (s osvService) applyOSVEntries(ctx context.Context, osvVulns []OSVEntry, la
 		return fmt.Errorf("could not build rows from osv objects: %w", err)
 	}
 
-	conn, err := s.pool.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("could not acquire postgresql connection: %w", err)
-	}
-	defer conn.Release()
-
-	if err := s.writeToDatabase(ctx, conn, rows); err != nil {
+	if err := s.writeToDatabase(ctx, tx, rows); err != nil {
 		return fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 	return nil
@@ -167,9 +161,10 @@ type OSVEntry struct {
 	ModifiedTimestamp time.Time
 }
 
-// fetchOSVEntries fetches all OSV vulnerabilities, populates the database,
-// and returns the full list of entries (for the caller to gob-serialize).
-func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) ([]OSVEntry, map[string]struct{}, error) {
+// fetchAndImportOSV fetches all OSV vulnerabilities from the network, writes them to the
+// database via tx, runs cleanup, and returns the surviving entries plus surviving CVE IDs.
+// The caller is responsible for Begin/Commit/Rollback on tx.
+func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStart time.Time) ([]OSVEntry, map[string]struct{}, error) {
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
@@ -217,23 +212,17 @@ func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) 
 		return nil, nil, fmt.Errorf("could not build vulndb rows: %w", err)
 	}
 
-	conn, err := s.pool.Acquire(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not acquire postgresql connection: %w", err)
-	}
-	defer conn.Release()
-
-	if err := s.writeToDatabase(ctx, conn, rows); err != nil {
+	if err := s.writeToDatabase(ctx, tx, rows); err != nil {
 		return nil, nil, fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
 
 	// Delete orphan CVEs and affected_components so the DB state matches what
 	// importers will end up with, and so integrity checksums are valid.
-	runCleanUpJobs(ctx, conn.Conn())
+	runCleanUpJobs(ctx, tx)
 
 	// Re-query surviving CVE IDs to filter the gob — no point serialising
 	// entries that were just deleted.
-	survivingRows, err := conn.Query(ctx, `SELECT cve FROM cves`)
+	survivingRows, err := tx.Query(ctx, `SELECT cve FROM cves`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not query surviving CVE IDs: %w", err)
 	}
@@ -437,51 +426,29 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 	return vulndbRows{CVEs: cves, CVERelationships: cveRelationships, AffectedComponents: affectedComponents, CVEAffectedComponents: cveAffectedComponents}, nil
 }
 
-// write all rows to the database using the appropriate insert method
-func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, rows vulndbRows) error {
+// writeToDatabase writes all rows to the database inside the provided transaction.
+// The caller is responsible for Begin/Commit/Rollback.
+func (s osvService) writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
-
-	// start the transaction; handle everything inside this single one to guarantee atomicity of the import
-	tx, err := conn.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer func() {
-		err := tx.Rollback(ctx)
-		if err != nil && err != pgx.ErrTxClosed { // only log if the error is not from trying to roll back a closed transaction
-			slog.Error("could not roll back transaction successfully, database state is potentially inconsistent!")
-			panic(err)
-		}
-	}() // if we run into any errors rollback the entire transaction
 
 	const bulkThreshold = 200_000
 
 	reachedBulkThreshold := len(rows.AffectedComponents) > bulkThreshold || len(rows.CVEAffectedComponents) > bulkThreshold
-	// if we reach a certain threshold of data we switch to an optimized bulk insert method:
 	if reachedBulkThreshold {
-		// index updates and constraint checks on each insert slow the process down drastically
-		// drop all first and later re-apply all again
 		slog.Info("reached bulk insert threshold; using bulk optimized import strategy")
-		err = PrepareBulkInsert(ctx, tx)
-		if err != nil {
+		if err := PrepareBulkInsert(ctx, tx); err != nil {
 			return fmt.Errorf("could not prepare transaction: %w", err)
 		}
 	}
 
-	// then we can just stream all our data with the COPY clause straight into the tables
-	err = insertCVEsBulk(ctx, tx, rows.CVEs)
-	if err != nil {
+	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 		return fmt.Errorf("could not insert cves: %w", err)
 	}
-
-	err = insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships)
-	if err != nil {
+	if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships); err != nil {
 		return fmt.Errorf("could not insert cve relationships: %w", err)
 	}
-
-	err = insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents)
-	if err != nil {
+	if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents); err != nil {
 		return fmt.Errorf("could not insert affected_components: %w", err)
 	}
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
@@ -489,17 +456,11 @@ func (s osvService) writeToDatabase(ctx context.Context, conn *pgxpool.Conn, row
 	}
 
 	if reachedBulkThreshold {
-		// after we finish inserting the data we need to re-apply all previously deleted constraints and indexes
-		err = AddIndexesAndConstraints(ctx, tx)
-		if err != nil {
+		if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
 		}
 	}
 
-	// finally commit the whole import transaction
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("could not commit transaction: %w", err)
-	}
 	slog.Info("finished writing everything to the database", "time", time.Since(start))
 	return nil
 }
@@ -799,7 +760,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 }
 
 // after importing check if the database state is consistent
-func runCleanUpJobs(ctx context.Context, conn *pgx.Conn) {
+func runCleanUpJobs(ctx context.Context, conn pgx.Tx) {
 	slog.Info("start running sanity checks")
 	// first delete all cves which have no affected components and also none of their relationships does
 	start := time.Now()
