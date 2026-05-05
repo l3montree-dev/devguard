@@ -169,7 +169,7 @@ type OSVEntry struct {
 
 // fetchOSVEntries fetches all OSV vulnerabilities, populates the database,
 // and returns the full list of entries (for the caller to gob-serialize).
-func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) ([]OSVEntry, error) {
+func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) ([]OSVEntry, map[string]struct{}, error) {
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
@@ -201,10 +201,10 @@ func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) 
 	}
 
 	if n := fetchFailures.Load(); n > 0 {
-		return nil, fmt.Errorf("aborting export: %d ids could not be fetched; will retry on next run", n)
+		return nil, nil, fmt.Errorf("aborting export: %d ids could not be fetched; will retry on next run", n)
 	}
 	if len(allOSVVulns) == 0 {
-		return nil, fmt.Errorf("could not fetch any OSV vulns")
+		return nil, nil, fmt.Errorf("could not fetch any OSV vulns")
 	}
 
 	slices.SortFunc(allOSVVulns, func(v1, v2 OSVEntry) int {
@@ -214,24 +214,52 @@ func (s osvService) fetchOSVEntries(ctx context.Context, importStart time.Time) 
 
 	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
 	if err != nil {
-		return nil, fmt.Errorf("could not build vulndb rows: %w", err)
+		return nil, nil, fmt.Errorf("could not build vulndb rows: %w", err)
 	}
 
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not acquire postgresql connection: %w", err)
+		return nil, nil, fmt.Errorf("could not acquire postgresql connection: %w", err)
 	}
 	defer conn.Release()
 
 	if err := s.writeToDatabase(ctx, conn, rows, false); err != nil {
-		return nil, fmt.Errorf("could not process new OSV data, error: %w", err)
+		return nil, nil, fmt.Errorf("could not process new OSV data, error: %w", err)
 	}
-	return allOSVVulns, nil
+
+	// Delete orphan CVEs and affected_components so the DB state matches what
+	// importers will end up with, and so integrity checksums are valid.
+	runCleanUpJobs(ctx, conn.Conn())
+
+	// Re-query surviving CVE IDs to filter the gob — no point serialising
+	// entries that were just deleted.
+	survivingRows, err := conn.Query(ctx, `SELECT cve FROM cves`)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not query surviving CVE IDs: %w", err)
+	}
+	surviving := make(map[string]struct{})
+	for survivingRows.Next() {
+		var id string
+		if err := survivingRows.Scan(&id); err != nil {
+			survivingRows.Close()
+			return nil, nil, fmt.Errorf("could not scan CVE ID: %w", err)
+		}
+		surviving[id] = struct{}{}
+	}
+	survivingRows.Close()
+	if err := survivingRows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("error iterating surviving CVE IDs: %w", err)
+	}
+
+	kept := allOSVVulns[:0]
+	for _, e := range allOSVVulns {
+		if _, ok := surviving[e.OSV.ID]; ok {
+			kept = append(kept, e)
+		}
+	}
+	slog.Info("filtered OSV entries after cleanup", "before", len(allOSVVulns), "after", len(kept))
+	return kept, surviving, nil
 }
-
-const vulnDBArchiveName = "vulndb.tar.zst"
-
-const vulnDBPubKeyFile = "cosign.pub"
 
 // controls in what order and what method to use for each ecosystem
 func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {

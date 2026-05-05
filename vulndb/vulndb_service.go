@@ -47,6 +47,9 @@ func writeGobFile(object any, fileName string) error {
 	return nil
 }
 
+const vulnDBArchiveName = "vulndb.tar.zst"
+const vulnDBPubKeyFile = "cosign.pub"
+
 // VulnDBService orchestrates the full vulnerability database export and import,
 // covering OSV, EPSS, CISA KEV, exploits (ExploitDB + GitHub PoC),
 // and malicious packages.
@@ -92,25 +95,30 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	slog.Info("start vulndb export")
 	start := time.Now()
 
-	group, groupCtx := errgroup.WithContext(ctx)
+	// OSV must run first: it populates the DB (including cleanup) so we know
+	// which CVE IDs exist before fetching the other sources.
+	osvEntries, survivingCVEs, err := s.osv.fetchOSVEntries(ctx, start)
+	if err != nil {
+		return fmt.Errorf("OSV fetch failed: %w", err)
+	}
+	if err := writeGobFile(osvEntries, "osv.gob"); err != nil {
+		return fmt.Errorf("could not write OSV gob: %w", err)
+	}
+	slog.Info("wrote osv.gob", "entries", len(osvEntries))
 
-	group.Go(func() error {
-		osvEntries, err := s.osv.fetchOSVEntries(groupCtx, start)
-		if err != nil {
-			return fmt.Errorf("OSV fetch failed: %w", err)
-		}
-		if err := writeGobFile(osvEntries, "osv.gob"); err != nil {
-			return fmt.Errorf("could not write OSV gob: %w", err)
-		}
-		slog.Info("wrote osv.gob", "entries", len(osvEntries))
-		return nil
-	})
+	// Fetch the remaining sources in parallel, filtering to surviving CVEs.
+	group, groupCtx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
 		slog.Info("fetching EPSS data")
 		epssData, err := s.epss.Fetch(groupCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EPSS data: %w", err)
+		}
+		for cve := range epssData {
+			if _, ok := survivingCVEs[cve]; !ok {
+				delete(epssData, cve)
+			}
 		}
 		if err := writeGobFile(epssData, "epss.gob"); err != nil {
 			return fmt.Errorf("could not write EPSS gob: %w", err)
@@ -127,10 +135,16 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not fetch CISA KEV data: %w", err)
 		}
-		if err := writeGobFile(cisaKEVEntriesToGob(kevCVEs), "cisakev.gob"); err != nil {
+		filtered := kevCVEs[:0]
+		for _, c := range kevCVEs {
+			if _, ok := survivingCVEs[c.CVE]; ok {
+				filtered = append(filtered, c)
+			}
+		}
+		if err := writeGobFile(cisaKEVEntriesToGob(filtered), "cisakev.gob"); err != nil {
 			return fmt.Errorf("could not write CISA KEV gob: %w", err)
 		}
-		slog.Info("wrote cisakev.gob", "entries", len(kevCVEs))
+		slog.Info("wrote cisakev.gob", "entries", len(filtered))
 		return nil
 	})
 
@@ -152,10 +166,14 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 
 		allExploits := make([]GobExploit, 0, len(edbExploits)+len(ghExploits))
 		for _, e := range edbExploits {
-			allExploits = append(allExploits, exploitToGob(e))
+			if _, ok := survivingCVEs[e.CVEID]; ok {
+				allExploits = append(allExploits, exploitToGob(e))
+			}
 		}
 		for _, e := range ghExploits {
-			allExploits = append(allExploits, exploitToGob(e))
+			if _, ok := survivingCVEs[e.CVEID]; ok {
+				allExploits = append(allExploits, exploitToGob(e))
+			}
 		}
 		if err := writeGobFile(allExploits, "exploits.gob"); err != nil {
 			return fmt.Errorf("could not write exploits gob: %w", err)
@@ -181,8 +199,8 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		return err
 	}
 
-	// Populate the database from the gob files so that the integrity checksums
-	// are computed against real data (the fresh GH Actions DB starts empty).
+	// Populate the database from the remaining gob files (OSV is already in
+	// the DB from fetchOSVEntries; the upserts are idempotent).
 	slog.Info("populating database from gob files for integrity calculation")
 	if err := s.populateDBFromGobs(ctx, ".", time.Time{}); err != nil {
 		return fmt.Errorf("could not populate database from gobs: %w", err)
@@ -201,7 +219,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		if ti.TotalCount == 0 || len(ti.Checksum) == 0 {
 			return fmt.Errorf("refusing to export: table %q has zero rows or empty checksum — database is likely incomplete", ti.TableName)
 		}
-		slog.Info("table integrity", "table", ti.TableName, "count", ti.TotalCount, "checksum", ti.Checksum)
+		slog.Info("table integrity", "table", ti.TableName, "count", ti.TotalCount, "checksum", string(ti.Checksum))
 	}
 
 	integrityFD, err := os.Create("integrity_checks.json")
