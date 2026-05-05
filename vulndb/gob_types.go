@@ -142,14 +142,6 @@ func gobExploitToModel(g GobExploit) models.Exploit {
 	}
 }
 
-func exploitsToGob(exploits []models.Exploit) []GobExploit {
-	out := make([]GobExploit, len(exploits))
-	for i, e := range exploits {
-		out[i] = exploitToGob(e)
-	}
-	return out
-}
-
 func gobExploitsToModels(gs []GobExploit) []models.Exploit {
 	out := make([]models.Exploit, len(gs))
 	for i, g := range gs {

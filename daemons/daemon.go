@@ -34,7 +34,7 @@ func shouldMirror(configService shared.ConfigService, key string) bool {
 		return false
 	}
 
-	return time.Since(lastTime) > 12*time.Hour
+	return time.Since(lastTime) > 1*time.Hour
 }
 
 func markMirrored(configService shared.ConfigService, key string) error {

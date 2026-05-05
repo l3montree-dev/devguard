@@ -234,6 +234,11 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 		}
 	}
 
+	// reset the epss and percentile values for all cves that are in the batch but have no epss or percentile value. This is necessary because the FIRST might remove the epss or percentile value for a cve and we need to reflect this in our database.
+	if err := g.GetDB(ctx, tx).Exec("UPDATE cves SET epss = NULL, percentile = NULL").Error; err != nil {
+		return err
+	}
+
 	sql := `UPDATE cves SET epss = new.epss, percentile = new.percentile
 	FROM (SELECT
 	unnest($1::text[]) as cve,

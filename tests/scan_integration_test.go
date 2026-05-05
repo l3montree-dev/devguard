@@ -1781,6 +1781,12 @@ func TestTicketHandling(t *testing.T) {
 			assert.Len(t, response.DependencyVulns, 1) // we expect the accepted vulnerability to be returned
 		})
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
+			// Ensure asset has thresholds and integration set for ticket creation
+			asset.CVSSAutomaticTicketThreshold = utils.Ptr(7.0)
+			asset.RepositoryID = utils.Ptr(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
+			err = f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
 				CVEID:         "CVE-2025-46569",
@@ -1800,6 +1806,10 @@ func TestTicketHandling(t *testing.T) {
 				UpdateAll: true,
 			}).Create(&vuln).Error
 
+			// Ensure the CVE has CVSS set so ShouldCreateThisIssue passes the threshold check.
+			// When this subtest runs in isolation the CVE was created without a CVSS score.
+			f.DB.Exec("UPDATE cves SET cvss = 8.0 WHERE cve = 'CVE-2025-46569'")
+
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
 			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
@@ -1809,7 +1819,8 @@ func TestTicketHandling(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			gitlabClientFacade.Calls = nil // reset the calls to the mock
+			gitlabClientFacade.Calls = nil           // reset recorded calls
+			gitlabClientFacade.ExpectedCalls = nil    // clear all prior expectations so they don't shadow new .Once() expectations
 			gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{
 				IID: 789,
 			}, nil, nil).Once()

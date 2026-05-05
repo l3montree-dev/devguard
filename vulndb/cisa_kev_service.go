@@ -150,7 +150,7 @@ func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.C
 		}
 	}
 
-	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "via_relationships", len(cves)-len(cveIDs))
+	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "viaRelationships", len(cves)-len(cveIDs))
 
 	for i := 0; i < len(cves); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cves))

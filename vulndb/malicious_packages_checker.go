@@ -35,7 +35,6 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
-	"gorm.io/gorm"
 )
 
 const (
@@ -222,60 +221,6 @@ func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, re
 			AffectedComponents: components,
 		}
 	}
-}
-
-// this function runs in the background and grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
-func (c *MaliciousPackageChecker) dbWriterFunction(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan processingResults) {
-	defer waitGroup.Done()
-	// stash the received results until the batch size threshold is reached
-	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
-	affectedComponentsBatch := make([]models.MaliciousAffectedComponent, 0, BatchSize*4)
-
-	total := 0
-	for job := range jobs {
-		packagesBatch = append(packagesBatch, job.Package)
-		affectedComponentsBatch = append(affectedComponentsBatch, job.AffectedComponents...)
-		if len(packagesBatch) >= BatchSize {
-			// if we reached the threshold save all to the db
-			if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
-				slog.Error("Failed to upsert packages batch", "error", err)
-			}
-			packagesBatch = packagesBatch[:0] // Reset slice
-
-			if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
-				slog.Error("Failed to upsert affected components batch", "error", err)
-			}
-			affectedComponentsBatch = affectedComponentsBatch[:0] // Reset slice
-			total += 1
-			if total*BatchSize%50000 == 0 {
-				slog.Info(fmt.Sprintf("processed %d Packages", total*BatchSize))
-			}
-		}
-	}
-
-	// Insert remaining batches
-	if len(packagesBatch) > 0 {
-		if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
-			slog.Error("Failed to upsert final packages batch", "error", err)
-		}
-	}
-	if len(affectedComponentsBatch) > 0 {
-		if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
-			slog.Error("Failed to upsert final affected components batch", "error", err)
-		}
-	}
-}
-
-// deletes all entries from the malicious packages/affected_components table, in a single transaction
-func clearMaliciousPackagesDB(tx *gorm.DB) error {
-	if err := tx.Exec("DELETE FROM malicious_affected_components").Error; err != nil {
-		return fmt.Errorf("failed to clear affected components table: %w", err)
-	}
-	if err := tx.Exec("DELETE FROM malicious_packages").Error; err != nil {
-		return fmt.Errorf("failed to clear packages table: %w", err)
-	}
-
-	return nil
 }
 
 func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context, tx shared.DB) error {
