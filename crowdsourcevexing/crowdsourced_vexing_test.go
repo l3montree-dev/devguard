@@ -129,8 +129,6 @@ var deepPathPattern4 = deepPath[4:]
 var veryDeepPath = []string{"ROOT", "app@1.0.0", "framework@2.0.0", "middleware@3.0.0", "adapter@4.0.0", "driver@5.0.0", "native@6.0.0"}
 var veryDeepPathPattern1 = veryDeepPath[1:]
 var veryDeepPathPattern2 = veryDeepPath[2:]
-var veryDeepPathPattern3 = veryDeepPath[3:]
-var veryDeepPathPattern4 = veryDeepPath[4:]
 
 var branchPathA = []string{"ROOT", "frameworkX@3.0.0", "libY@1.2.0", "pluginA@1.0.0"}
 var branchPathAPattern1 = branchPathA[1:]
