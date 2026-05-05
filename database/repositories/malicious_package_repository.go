@@ -23,17 +23,19 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/logger"
 )
 
 type MaliciousPackageRepository struct {
-	db *gorm.DB
+	db         *gorm.DB
+	pkgRepo    *GormRepository[string, models.MaliciousPackage]
+	compRepo   *GormRepository[string, models.MaliciousAffectedComponent]
 }
 
 func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
 	return &MaliciousPackageRepository{
-		db: db,
+		db:       db,
+		pkgRepo:  newGormRepository[string, models.MaliciousPackage](db),
+		compRepo: newGormRepository[string, models.MaliciousAffectedComponent](db),
 	}
 }
 
@@ -58,76 +60,22 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 	// - If VersionIsValid is not nil, perform an exact version match.
 	// - Otherwise, fall back to semver range matching.
 
-	err := BuildQueryBasedOnMatchContext(query, matchCtx).Preload("MaliciousPackage").Find(&components).Error
+	err := BuildQueryBasedOnMatchContext(query, matchCtx).Find(&components).Error
 	return components, err
 }
 
+func (r *MaliciousPackageRepository) GetMaliciousPackageByID(ctx context.Context, tx *gorm.DB, id string) (models.MaliciousPackage, error) {
+	var maliciousPackage models.MaliciousPackage
+	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&maliciousPackage).Error
+	return maliciousPackage, err
+}
+
 func (r *MaliciousPackageRepository) UpsertPackages(ctx context.Context, tx *gorm.DB, packages []models.MaliciousPackage) error {
-	if len(packages) == 0 {
-		return nil
-	}
-
-	// Use ON CONFLICT to update if exists, insert if not
-	err := r.GetDB(ctx, tx).Session(
-		&gorm.Session{
-			Logger: logger.Discard,
-		},
-	).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(&packages).Error
-
-	// If duplicate key error (cannot affect row a second time), split batch and retry
-	if err != nil && (strings.Contains(err.Error(), "cannot affect row a second time") ||
-		strings.Contains(err.Error(), "extended protocol limited to 65535 parameters")) {
-		// Split the batch in half and try again
-		half := len(packages) / 2
-		if half == 0 {
-			// Can't split further, skip this problematic entry
-			return nil
-		}
-		err = r.UpsertPackages(ctx, tx, packages[:half])
-		if err != nil {
-			return err
-		}
-		err = r.UpsertPackages(ctx, tx, packages[half:])
-	}
-
-	return err
+	return r.pkgRepo.SaveBatchBestEffort(ctx, tx, packages)
 }
 
 func (r *MaliciousPackageRepository) UpsertAffectedComponents(ctx context.Context, tx *gorm.DB, components []models.MaliciousAffectedComponent) error {
-	if len(components) == 0 {
-		return nil
-	}
-
-	// Use ON CONFLICT to update if exists, insert if not
-	err := r.GetDB(ctx, tx).Session(
-		&gorm.Session{
-			Logger: logger.Discard,
-		},
-	).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(&components).Error
-
-	// If duplicate key error (cannot affect row a second time), split batch and retry
-	if err != nil && (strings.Contains(err.Error(), "cannot affect row a second time") ||
-		strings.Contains(err.Error(), "extended protocol limited to 65535 parameters")) {
-		// Split the batch in half and try again
-		half := len(components) / 2
-		if half == 0 {
-			// Can't split further, skip this problematic entry
-			return nil
-		}
-		err = r.UpsertAffectedComponents(ctx, tx, components[:half])
-		if err != nil {
-			return err
-		}
-		err = r.UpsertAffectedComponents(ctx, tx, components[half:])
-	}
-
-	return err
+	return r.compRepo.SaveBatchBestEffort(ctx, tx, components)
 }
 
 func (r *MaliciousPackageRepository) DeleteAll(ctx context.Context, tx *gorm.DB) error {

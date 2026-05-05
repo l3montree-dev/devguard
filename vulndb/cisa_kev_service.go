@@ -55,7 +55,7 @@ type cisaKEVEntry struct {
 
 const kevBatchSize int = 50_000
 
-func (s *cisaKEVService) fetchJSON(ctx context.Context) ([]models.CVE, error) {
+func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, CisaKEVURL, nil)
 	if err != nil {
 		return nil, err
@@ -112,19 +112,10 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-func (s cisaKEVService) Mirror(ctx context.Context) error {
-	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	cves, err := s.fetchJSON(fetchCtx)
-	cancel()
-	if err != nil {
-		slog.Error("could not fetch CISA KEV data", "error", err)
-		return err
-	}
-
-	tx := s.cveRepository.Begin(ctx)
-	defer tx.Rollback()
-
-	// build a map of CVE ID -> KEV data for quick lookup
+// Apply writes pre-fetched CISA KEV entries to the database using the provided transaction,
+// expanding KEV data to alias CVEs via the relationship table.
+// The caller is responsible for committing or rolling back the transaction.
+func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.CVE) error {
 	kevMap := make(map[string]models.CVE, len(cves))
 	cveIDs := make([]string, len(cves))
 	for i, cve := range cves {
@@ -132,9 +123,6 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 		cveIDs[i] = cve.CVE
 	}
 
-	// query relationships where target_cve matches any of our CVE IDs
-	// this allows us to propagate KEV data to related CVEs (e.g., GHSA -> CVE aliases)
-	// process in batches to avoid PostgreSQL parameter limit
 	var relationships []models.CVERelationship
 	for i := 0; i < len(cveIDs); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cveIDs))
@@ -146,10 +134,8 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 		relationships = append(relationships, batch...)
 	}
 
-	// expand CVE list with related source CVEs that should inherit KEV data
 	for _, rel := range relationships {
 		if kevData, ok := kevMap[rel.TargetCVE]; ok {
-			// only add if not already in the map to avoid duplicates
 			if _, exists := kevMap[rel.SourceCVE]; !exists {
 				relatedCVE := models.CVE{
 					CVE:                   rel.SourceCVE,
@@ -166,15 +152,29 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 
 	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "via_relationships", len(cves)-len(cveIDs))
 
-	// process the CVEs in batches
 	for i := 0; i < len(cves); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cves))
-		err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end])
-		if err != nil {
+		if err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end]); err != nil {
 			slog.Error("error when trying to save CISA KEV information batch")
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (s cisaKEVService) Mirror(ctx context.Context) error {
+	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	cves, err := s.Fetch(fetchCtx)
+	cancel()
+	if err != nil {
+		slog.Error("could not fetch CISA KEV data", "error", err)
+		return err
+	}
+	tx := s.cveRepository.Begin(ctx)
+	defer tx.Rollback()
+	if err := s.Apply(ctx, tx, cves); err != nil {
+		return err
+	}
 	return tx.Commit().Error
 }

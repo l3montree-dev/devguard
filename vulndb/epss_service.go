@@ -8,9 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -22,6 +21,8 @@ type epssService struct {
 	httpClient                *http.Client
 }
 
+var _ shared.EPSService = (*epssService)(nil)
+
 func NewEPSSService(cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository) epssService {
 	return epssService{
 		cveRepository:             cveRepository,
@@ -32,13 +33,7 @@ func NewEPSSService(cveRepository shared.CveRepository, cveRelationshipRepositor
 
 var EpssURL = "https://epss.cyentia.com/epss_scores-current.csv.gz"
 
-func ptrFloat32(f float32) *float32 {
-	return &f
-}
-func ptrFloat64(f float64) *float64 {
-	return &f
-}
-func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
+func (s *epssService) Fetch(ctx context.Context) (map[string]dtos.EPSS, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, EpssURL, nil)
 
 	if err != nil {
@@ -62,7 +57,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 		return nil, errors.Wrap(err, "could not read body")
 	}
 
-	results := make([]models.CVE, 0)
+	results := make(map[string]dtos.EPSS, 200_000)
 	// parse the csv - we do not care about the first two lines
 	// the first line is information about the model,
 	// the second line is the header
@@ -80,90 +75,12 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not parse percentile")
 		}
-		results = append(results, models.CVE{
-			CVE:        columns[0],
-			EPSS:       ptrFloat64(float64(epss)),
-			Percentile: ptrFloat32(float32(percentile)),
-		})
+
+		results[columns[0]] = dtos.EPSS{
+			EPSS:       epss,
+			Percentile: percentile,
+		}
 	}
 
 	return results, nil
-}
-
-const epssBatchSize int = 50_000
-
-func (s epssService) Mirror(ctx context.Context) error {
-	fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	cves, err := s.fetchCSV(fetchCtx)
-	cancel()
-	if err != nil {
-		slog.Error("could not fetch EPSS data", "error", err)
-		return err
-	}
-
-	// use a transaction to guarantee atomicity, use defer to handle potential rollbacks
-	tx := s.cveRepository.Begin(ctx)
-	defer tx.Rollback()
-
-	// build a map of CVE ID -> EPSS data for quick lookup
-	epssMap := make(map[string]models.CVE, len(cves))
-	cveIDs := make([]string, len(cves))
-	for i, cve := range cves {
-		epssMap[cve.CVE] = cve
-		cveIDs[i] = cve.CVE
-	}
-
-	// query relationships where target_cve matches any of our CVE IDs
-	// this allows us to propagate EPSS scores to related CVEs (e.g., GHSA -> CVE aliases)
-	// process in batches to avoid PostgreSQL parameter limit
-	var relationships []models.CVERelationship
-	for i := 0; i < len(cveIDs); i += epssBatchSize {
-		end := min(i+epssBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(ctx, tx, cveIDs[i:end])
-		if err != nil {
-			slog.Error("could not fetch CVE relationships", "error", err)
-			return err
-		}
-		relationships = append(relationships, batch...)
-	}
-
-	// expand CVE list with related source CVEs that should inherit EPSS scores
-	for _, rel := range relationships {
-		if epssData, ok := epssMap[rel.TargetCVE]; ok {
-			// only add if not already in the map to avoid duplicates
-			if _, exists := epssMap[rel.SourceCVE]; !exists {
-				relatedCVE := models.CVE{
-					CVE:        rel.SourceCVE,
-					EPSS:       epssData.EPSS,
-					Percentile: epssData.Percentile,
-				}
-				cves = append(cves, relatedCVE)
-				epssMap[rel.SourceCVE] = relatedCVE
-			}
-		}
-	}
-
-	slog.Info("updating EPSS scores", "direct", len(cveIDs), "via_relationships", len(cves)-len(cveIDs))
-
-	// process the CVEs in batches to avoid memory problems
-	i := 0
-	for {
-		if i+epssBatchSize < len(cves) {
-			err := s.cveRepository.UpdateEpssBatch(ctx, tx, cves[i:i+epssBatchSize])
-			if err != nil {
-				slog.Error("error when trying to save epss information batch")
-				return err
-			}
-			i += epssBatchSize
-		} else {
-			// not enough cves for a whole batch so we just save the rest
-			err := s.cveRepository.UpdateEpssBatch(ctx, tx, cves[i:])
-			if err != nil {
-				slog.Error("error when trying to save epss information batch")
-				return err
-			}
-			break
-		}
-	}
-	return tx.Commit().Error
 }

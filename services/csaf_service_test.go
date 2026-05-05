@@ -524,7 +524,7 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	assetVersion := models.AssetVersion{Name: "main", AssetID: asset.ID, Type: "branch", CreatedAt: time1, DefaultBranch: true, Slug: "main"}
 	artifact := models.Artifact{ArtifactName: "pkg:devguard/testorg/testgroup/csaf-test", AssetVersionName: assetVersion.Name, AssetID: asset.ID, CreatedAt: time1}
 
-	cve1 := models.CVE{CVE: "GO-2026-4309", CreatedAt: time2, Description: "Test Description", CVSS: 7.50, EPSS: utils.Ptr(0.00753)}
+	cve1 := models.CVE{CVE: "GO-2026-4309", Description: "Test Description", CVSS: 7.50, EPSS: utils.Ptr(0.00753)}
 
 	affectedComponent1 := models.AffectedComponent{Ecosystem: "GIT", PurlWithoutVersion: "pkg:github.com/jetbrains/kotlin", Version: utils.Ptr("v872")}
 	affectedComponent2 := models.AffectedComponent{Ecosystem: "GIT", PurlWithoutVersion: "pkg:github.com/jetbrains/kotlin", Version: utils.Ptr("build-0.7.536")}

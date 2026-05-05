@@ -16,11 +16,10 @@ import (
 func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
-		Short: "Import vulnerability database from differential updates",
-		Long:  "Imports the vulnerability database using differential CSV files. This applies incremental updates to the database rather than doing a full rebuild, making it faster for regular updates.",
+		Short: "Import the latest state of the vulnerability database",
+		Long:  "Pulls the pre-built vulndb artifact from the OCI registry and applies all changes to the local database",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-
 			migrateDB()
 			app := fx.New(
 				fx.NopLogger,
@@ -29,10 +28,8 @@ func newImportCommand() *cobra.Command {
 				repositories.Module,
 				services.ServiceModule,
 				vulndb.Module,
-				fx.Invoke(func(
-					importService shared.VulnDBImportService,
-				) error {
-					return importService.ImportFromDiff(context.Background(), nil)
+				fx.Invoke(func(svc shared.VulnDBService) error {
+					return svc.ImportRC(context.Background())
 				}),
 			)
 
@@ -50,4 +47,40 @@ func newImportCommand() *cobra.Command {
 	}
 
 	return importCmd
+}
+
+func newExportCommand() *cobra.Command {
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export the vulnerability database to an OCI artifact",
+		Long:  "Fetches all vulnerability data sources, writes gob files, and produces an integrity manifest",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shared.LoadConfig() // nolint
+			migrateDB()
+			app := fx.New(
+				fx.NopLogger,
+				database.Module,
+				fx.Supply(database.GetPoolConfigFromEnv()),
+				repositories.Module,
+				services.ServiceModule,
+				vulndb.Module,
+				fx.Invoke(func(svc shared.VulnDBService) error {
+					return svc.ExportRC(context.Background())
+				}),
+			)
+
+			ctx := context.Background()
+			startCtx, cancel := context.WithTimeout(ctx, 120*time.Minute)
+			defer cancel()
+			if err := app.Start(startCtx); err != nil {
+				return err
+			}
+
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+			return app.Stop(stopCtx)
+		},
+	}
+
+	return exportCmd
 }

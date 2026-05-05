@@ -90,3 +90,11 @@ func (s StringSlice) String() string {
 	data, _ := json.Marshal(s)
 	return string(data)
 }
+
+func JSONBFromStringMap(m map[string]string) JSONB {
+	jsonb := make(JSONB, len(m))
+	for k, v := range m {
+		jsonb[k] = v
+	}
+	return jsonb
+}

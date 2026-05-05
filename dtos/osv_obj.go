@@ -36,18 +36,22 @@ type Affected struct {
 }
 
 type OSV struct {
-	ID            string     `json:"id"`
-	Summary       string     `json:"summary"`
-	Modified      time.Time  `json:"modified"`
-	Published     time.Time  `json:"published"`
-	Details       string     `json:"details"`
-	Related       []string   `json:"related"`
-	Aliases       []string   `json:"aliases"`
-	Upstream      []string   `json:"upstream"`
-	Affected      []Affected `json:"affected"`
-	SchemaVersion string     `json:"schema_version"`
-	Severity      []struct {
+	ID        string     `json:"id"`
+	Summary   string     `json:"summary"`
+	Modified  time.Time  `json:"modified"`
+	Published time.Time  `json:"published"`
+	Details   string     `json:"details"`
+	Related   []string   `json:"related"`
+	Aliases   []string   `json:"aliases"`
+	Upstream  []string   `json:"upstream"`
+	Affected  []Affected `json:"affected"`
+	Severity  []struct {
 		Type  string `json:"type"`
 		Score string `json:"score"`
 	} `json:"severity"`
+}
+
+type EPSS struct {
+	EPSS       float64
+	Percentile float64
 }
