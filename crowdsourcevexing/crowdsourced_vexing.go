@@ -12,6 +12,13 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
+const (
+	minVoterThreshold        = 4
+	minOrganizationAgeInDays = 30
+	minTrustscore            = 0.01
+	baseDiminishmentFactor   = 0.1
+)
+
 type User struct {
 	ID string
 }
@@ -42,7 +49,7 @@ type VexRule struct {
 	PathPattern      dtos.PathPattern
 	CVE              CVE
 	AssetID          string
-	AssetversionName string
+	AssetVersionName string
 	Reasoning        string
 	Assessment       string
 }
@@ -60,13 +67,6 @@ type Vote struct {
 	}
 	Value float64
 }
-
-const (
-	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 0
-	minTrustscore            = 0.01
-	baseDiminishmentFactor   = 0.1
-)
 
 // [Mitigation 8] userVoteTracker tracks how many times each user has voted
 // across all paths to apply diminishing returns on repeated votes.
@@ -92,7 +92,7 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization, dimi
 }
 
 func PathToString(vexRule VexRule) string {
-	stringPath := strings.Join(vexRule.PathPattern, "->")
+	stringPath := strings.Join(append(vexRule.PathPattern, []string{vexRule.Assessment}...), "->")
 	return stringPath
 }
 
@@ -216,7 +216,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
 					for _, vote := range votes[rulePath].Voters {
-						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID && vote.AssetVersionName == rule.AssetversionName {
+						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID && vote.AssetVersionName == rule.AssetVersionName {
 							alreadyExistingVote = true
 							break
 						}
@@ -227,7 +227,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 							ProjectID        string
 							AssetID          string
 							AssetVersionName string
-						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetversionName})
+						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetVersionName})
 
 						votes[rulePath].Value += ruleConfidence
 
@@ -242,7 +242,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 							AssetID          string
 							AssetVersionName string
 						}{
-							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetversionName},
+							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetVersionName},
 						},
 						Value: 0.0,
 					}

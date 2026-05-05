@@ -189,3 +189,11 @@ type VEXRuleDTO struct {
 	// Metrics
 	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`
 }
+
+type VexRuleRecommendation struct {
+	CVEID                   string                      `json:"cveId"`
+	PathPattern             PathPattern                 `json:"pathPattern"`
+	Justification           string                      `json:"justification"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+	EventType               VulnEventType               `json:"eventType"`
+}

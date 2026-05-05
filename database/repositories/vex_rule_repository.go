@@ -57,7 +57,7 @@ func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXR
 
 func (r *vexRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("cve_id = ?", cveID).Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("cve_id = ? AND enabled = ?", cveID, true).Find(&rules).Error
 	return rules, err
 }
 

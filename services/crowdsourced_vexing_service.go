@@ -43,7 +43,7 @@ func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
 		PathPattern:      vexrule.PathPattern,
 		CVE:              crowdsourcevexing.CVE{CVE: vexrule.CVEID},
 		AssetID:          vexrule.AssetID.String(),
-		AssetversionName: vexrule.AssetVersionName,
+		AssetVersionName: vexrule.AssetVersionName,
 		Reasoning:        vexrule.Justification,
 		Assessment:       string(vexrule.MechanicalJustification),
 	}
@@ -114,7 +114,7 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	}
 	trustedEntitiesByProjectTrustscores := make(map[string]float64, len(rawTrustedEntitiesByProject))
 	for _, te := range rawTrustedEntitiesByProject {
-		if te.OrganizationID != nil {
+		if te.ProjectID != nil {
 			trustedEntitiesByProjectTrustscores[te.ProjectID.String()] = te.TrustScore
 		}
 	}

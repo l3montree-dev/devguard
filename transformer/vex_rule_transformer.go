@@ -47,3 +47,13 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 		AppliesToAmountOfDependencyVulns: appliesToCount,
 	}
 }
+
+func VEXRuleToRecommendationDTO(rule models.VEXRule) dtos.VexRuleRecommendation {
+	return dtos.VexRuleRecommendation{
+		CVEID:                   rule.CVEID,
+		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		Justification:           rule.Justification,
+		MechanicalJustification: rule.MechanicalJustification,
+		EventType:               rule.EventType,
+	}
+}

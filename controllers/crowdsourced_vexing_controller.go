@@ -35,5 +35,5 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	if rule.ID == "" {
 		return ctx.NoContent(204)
 	}
-	return ctx.JSON(200, transformer.VEXRuleToDTO(rule))
+	return ctx.JSON(200, transformer.VEXRuleToRecommendationDTO(rule))
 }

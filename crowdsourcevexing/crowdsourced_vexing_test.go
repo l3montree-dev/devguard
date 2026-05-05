@@ -141,13 +141,13 @@ var branchPathBPattern2 = branchPathB[2:]
 
 func TestPathToString(t *testing.T) {
 	rule := makeVexRule([]string{"*", "pkg@1"}, testCVE, "a1", testAssessmentPrimary)
-	assert.Equal(t, "*->pkg@1", PathToString(rule))
+	assert.Equal(t, "*->pkg@1->"+testAssessmentPrimary, PathToString(rule))
 
 	ruleShort := makeVexRule([]string{"pkg@1", "*", "pkg@2"}, testCVE, "a1", testAssessmentPrimary)
-	assert.Equal(t, "pkg@1->*->pkg@2", PathToString(ruleShort))
+	assert.Equal(t, "pkg@1->*->pkg@2->"+testAssessmentPrimary, PathToString(ruleShort))
 
 	deepRule := makeVexRule(deepPath, testCVE, "a1", testAssessmentSecondary)
-	assert.Equal(t, "ROOT->frameworkX@3.0.0->libY@1.2.0->utilZ@0.5.0->coreW@4.1.0", PathToString(deepRule))
+	assert.Equal(t, "ROOT->frameworkX@3.0.0->libY@1.2.0->utilZ@0.5.0->coreW@4.1.0->"+testAssessmentSecondary, PathToString(deepRule))
 }
 func TestFindVexRuleFromPath(t *testing.T) {
 	rules := []VexRule{
