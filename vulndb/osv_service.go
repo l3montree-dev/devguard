@@ -20,11 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -39,7 +36,6 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type osvService struct {
@@ -51,25 +47,8 @@ type osvService struct {
 }
 
 func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, pool *pgxpool.Pool) osvService {
-	// use custom transport to adjust the workload to the number of go routines
-	base := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   90 * time.Second,
-			KeepAlive: 90 * time.Second,
-		}).DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          numberOfSingleFetchers * 2,
-		MaxIdleConnsPerHost:   numberOfSingleFetchers,
-		MaxConnsPerHost:       numberOfSingleFetchers,
-		IdleConnTimeout:       45 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-	transport := otelhttp.NewTransport(utils.EgressRoundTripper{R: base})
-
 	return osvService{
-		httpClient:                &http.Client{Transport: transport, Timeout: 90 * time.Second},
+		httpClient:                &http.Client{},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
@@ -113,16 +92,19 @@ type vulndbRows struct {
 	CVEAffectedComponents []cveAffectedComponentRow
 }
 
-const numberOfSingleFetchers = 100
-const numberOfZipWorkers = 10
+type OSVEntry struct {
+	OSV               *dtos.OSV
+	ModifiedTimestamp time.Time
+}
 
-const debugLocalZips = true
-
-var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 type zipJob struct {
 	File      *zip.File
 	Ecosystem string
 }
+
+const numberOfZipWorkers = 10
+
+var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 
 // applyOSVEntries filters the provided entries by lastImportTime and writes them to the database
 // using the provided pgx transaction. The caller is responsible for Begin/Commit/Rollback.
@@ -151,14 +133,9 @@ func (s osvService) applyOSVEntries(ctx context.Context, tx pgx.Tx, osvVulns []O
 	}
 
 	if err := s.writeToDatabase(ctx, tx, rows); err != nil {
-		return fmt.Errorf("could not process new OSV data, error: %w", err)
+		return fmt.Errorf("could not write OSV rows to database, error: %w", err)
 	}
 	return nil
-}
-
-type OSVEntry struct {
-	OSV               *dtos.OSV
-	ModifiedTimestamp time.Time
 }
 
 // fetchAndImportOSV fetches all OSV vulnerabilities from the network, writes them to the
@@ -173,39 +150,50 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	zipJobs := make(chan zipJob, 10_000)
 	vulnData := make(chan *dtos.OSV, 5000)
 
+	// start all zip workers which process individual zip files
 	for range numberOfZipWorkers {
 		zipWorkWaitGroup.Add(1)
 		go s.zipWorkerFunction(zipWorkWaitGroup, zipJobs, vulnData, importStart, &fetchFailures)
 	}
 
+	// start the fetching controller which's job is to call the fetching functions for each ecosystem
 	zipPushWaitGroup.Add(1)
 	go s.fetchingController(zipPushWaitGroup, zipJobs, &fetchFailures)
 
+	// when all zip files are pushed we do not receive more zip jobs
 	go func() {
 		zipPushWaitGroup.Wait()
 		close(zipJobs)
 	}()
+
+	// when all zips got processed we get no more osv vulns
 	go func() {
 		zipWorkWaitGroup.Wait()
 		close(vulnData)
 	}()
 
+	// collect all osv vulns from the zip workers
 	allOSVVulns := make([]OSVEntry, 0, 200_000)
 	for osvObject := range vulnData {
 		allOSVVulns = append(allOSVVulns, OSVEntry{OSV: osvObject, ModifiedTimestamp: osvObject.Modified})
 	}
 
+	// check if we ran into any errors while fetching
 	if n := fetchFailures.Load(); n > 0 {
 		return nil, nil, fmt.Errorf("aborting export: %d ids could not be fetched; will retry on next run", n)
 	}
+
+	// double check if we could fetch any data at all
 	if len(allOSVVulns) == 0 {
 		return nil, nil, fmt.Errorf("could not fetch any OSV vulns")
 	}
 
+	slog.Info("fetched OSV vulns", "amount", len(allOSVVulns), "latest", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
+
+	// sort the slice so the import is able to fast exit after hitting the last timestamp
 	slices.SortFunc(allOSVVulns, func(v1, v2 OSVEntry) int {
 		return -v1.ModifiedTimestamp.Compare(v2.ModifiedTimestamp)
 	})
-	slog.Info("fetched OSV vulns", "amount", len(allOSVVulns), "latest", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
 
 	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
 	if err != nil {
@@ -220,13 +208,15 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	// importers will end up with, and so integrity checksums are valid.
 	runCleanUpJobs(ctx, tx)
 
-	// Re-query surviving CVE IDs to filter the gob — no point serialising
+	// Re-query surviving CVE IDs to filter the gob — no point serializing
 	// entries that were just deleted.
-	survivingRows, err := tx.Query(ctx, `SELECT cve FROM cves`)
+	survivingRows, err := tx.Query(ctx, `SELECT cve FROM cves;`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not query surviving CVE IDs: %w", err)
 	}
-	surviving := make(map[string]struct{})
+
+	// build a map from the result set, using cursors
+	surviving := make(map[string]struct{}, len(rows.CVEs))
 	for survivingRows.Next() {
 		var id string
 		if err := survivingRows.Scan(&id); err != nil {
@@ -235,11 +225,13 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 		}
 		surviving[id] = struct{}{}
 	}
+
 	survivingRows.Close()
 	if err := survivingRows.Err(); err != nil {
 		return nil, nil, fmt.Errorf("error iterating surviving CVE IDs: %w", err)
 	}
 
+	// then filter out each OSV object that did not survive the clean up
 	kept := allOSVVulns[:0]
 	for _, e := range allOSVVulns {
 		if _, ok := surviving[e.OSV.ID]; ok {
@@ -250,17 +242,15 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	return kept, surviving, nil
 }
 
-// controls in what order and what method to use for each ecosystem
+// starts all zip fetches in the background
 func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 	for _, ecosystem := range importEcosystems {
-
-		// when fetching too many entries in an ecosystem, switch to downloading the full zip and filtering instead
-		slog.Info("start fetching via zip", "ecosystem", ecosystem)
+		slog.Info("start fetching zip", "ecosystem", ecosystem)
 		zipPushWaitGroup.Add(1)
 		go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, zipJobs, fetchFailures)
 	}
-	slog.Info("finished pushing all jobs")
+	slog.Info("finished starting all downloads")
 }
 
 func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
@@ -269,35 +259,34 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 
 	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
 	if err != nil {
-		// whole ecosystem worth of ids lost; count each so the abort log reflects the real blast radius
 		fetchFailures.Add(1)
 		return
 	}
+
 	if len(zipReader.File) == 0 {
 		fetchFailures.Add(1)
 		return
 	}
 
+	// filter and push all jobs to the zip worker functions
 	for i := range zipReader.File {
+		// first check if we want to even include this vuln based on the file name
+		if shouldIgnoreVulnerabilityID(zipReader.File[i].Name) {
+			continue
+		}
+
+		// check each OSV-ID only once even if it appears across different ecosystems
+		// warning: we always use the ecosystem of the first occurrence; we assume they are all equal, but its still non-deterministic behavior
+		if _, loaded := deduplicateCveMap.LoadOrStore(zipReader.File[i].Name, struct{}{}); loaded {
+			continue
+		}
+
 		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem}
 	}
 	slog.Info("finished pushing zip files", "ecosystem", ecosystem, "timeElapsed", time.Since(start))
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
-	if debugLocalZips {
-		// check if file does already exist
-		f, err := os.Open(fmt.Sprintf("%s.zip", ecosystem))
-		if err == nil {
-			// we already have that file on disk
-			stat, err := f.Stat()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get file stats for local zip file")
-			}
-			return zip.NewReader(f, stat.Size())
-		}
-	}
-
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/"+ecosystem+"/all.zip", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
@@ -308,27 +297,13 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 		return nil, errors.Wrap(err, "could not download zip")
 	}
 
-	if debugLocalZips {
-		// save the file on disk
-		outFile, err := os.Create(fmt.Sprintf("%s.zip", ecosystem))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create file for local zip")
-		}
-		// create a TEE Reader do read the body twice
-		tee := io.TeeReader(res.Body, outFile)
-		// set the response body to the TEE reader so it can be read by the zip reader and saved to disk at the same time
-		res.Body = io.NopCloser(tee)
-	}
-
 	return utils.ZipReaderFromResponse(res)
 }
 
 func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs chan zipJob, output chan *dtos.OSV, importStart time.Time, fetchFailures *atomic.Int64) {
 	defer zipWorkWaitGroup.Done()
 	for zipJob := range zipJobs {
-		if _, loaded := deduplicateCveMap.LoadOrStore(zipJob.File.Name, struct{}{}); loaded {
-			continue
-		}
+		// only then open and decode the json into an osv object
 		readCloser, err := zipJob.File.Open()
 		if err != nil {
 			fetchFailures.Add(1)
@@ -345,10 +320,12 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 		}
 		readCloser.Close()
 
+		// double check if we want to ignore it based on the id value in the json
 		if shouldIgnoreVulnerabilityID(osvEntry.ID) {
 			continue
 		}
 
+		// cut all vulns which are newer than our import start
 		if osvEntry.Modified.After(importStart) {
 			slog.Warn("ran into race condition on import, skipping vuln with newer information")
 			continue
@@ -360,7 +337,7 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 // build all the vuln database rows from the OSV objects
 func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedComponentRepository, allEntries []OSVEntry) (vulndbRows, error) {
 	// get the current state of the affected components to avoid creating duplicate entries
-	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*5)
+	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*55)
 	err := affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
 	if err != nil {
 		return vulndbRows{}, fmt.Errorf("could not get current state of affected components: %w", err)
@@ -369,7 +346,7 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 	// build a map of the current state for faster lookups of the existing state
 	// used for deduplicating rows in memory rather than on insert
 	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
-	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{}, len(currentCVEAffectedComponents)*7)
+	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{}, len(currentCVEAffectedComponents))
 	for _, cveAffectedComponent := range currentCVEAffectedComponents {
 		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
 		isCVEAffectedComponentPresent[cveAffectedComponent] = struct{}{}
@@ -394,10 +371,10 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 			continue // we do not need to process this entry since it will never be found
 		}
 
-		// only then process the rest
+		// only then continue building the remaining rows
 		cveRelationships = append(cveRelationships, relationships...)
 
-		// create the cve first
+		// create the cve
 		cve := transformer.OSVToCVE(allEntries[i].OSV)
 		cve.ID = cve.CalculateHash()
 		cves = append(cves, cve)
@@ -432,7 +409,7 @@ func (s osvService) writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbR
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
-	const bulkThreshold = 200_000
+	const bulkThreshold = 200_000 // determine at what point to switch import strategy to bulk mode (dropping indexes and constraints before inserting)
 
 	reachedBulkThreshold := len(rows.AffectedComponents) > bulkThreshold || len(rows.CVEAffectedComponents) > bulkThreshold
 	if reachedBulkThreshold {
@@ -625,7 +602,7 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	slog.Info("inserting into cve_affected_component using bulk insert", "amount", len(pivotRows))
 	start := time.Now()
 
-	// stream data straight into the table using COPY (by pass query executioner)
+	// stream data straight into the table using COPY (bypass query executioner)
 	// no ON CONFLICT needed since we deduplicated in memory
 	columnNames := []string{"affected_component_id", "cve_id"}
 
@@ -641,6 +618,8 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
+// if we insert a lot of entries its faster to drop indexes and constrains and then rebuilding them afterwards instead of maintaining them on each insert
+// also set some session parameters optimized for bulk inserts
 func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 	SET LOCAL synchronous_commit = OFF; -- this makes postgresql return as soon as the WAL has been written to and we do not need to wait until the contents have been written to the disk
@@ -744,7 +723,9 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return fmt.Errorf("could not build indexes: %w", err)
 	}
-	slog.Info("finsihed building all indexes", "time", time.Since(start))
+	slog.Info("finished building all indexes", "time", time.Since(start))
+
+	// at last run analyze on all vuln tables to help the planner choose better execution plans in the future
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	ANALYZE cves;
@@ -810,7 +791,7 @@ func shouldIgnoreVulnerabilityID(id string) bool {
 	prefix, _, ok := strings.Cut(id, "-")
 	if !ok {
 		// false negatives are ok
-		return true
+		return false
 	}
 	return slices.Contains(ignoreVulnerabilityEcosystems, prefix)
 }
