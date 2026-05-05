@@ -12,10 +12,19 @@ ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vuln
 -- Truncate all vulndb tables; CASCADE cleans up internal FKs automatically
 TRUNCATE public.cves, public.affected_components, public.malicious_packages, public.malicious_affected_components CASCADE;
 
--- Drop primary keys so we can redefine the column types
-ALTER TABLE public.affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
-ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
-ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_pkey;
+-- Drop primary keys so we can redefine the column types (look up actual constraint names to handle renames)
+DO $$ DECLARE r record;
+BEGIN
+    FOR r IN SELECT constraint_name FROM information_schema.table_constraints
+             WHERE table_schema = 'public' AND table_name = 'affected_components' AND constraint_type = 'PRIMARY KEY'
+    LOOP EXECUTE 'ALTER TABLE public.affected_components DROP CONSTRAINT ' || quote_ident(r.constraint_name); END LOOP;
+    FOR r IN SELECT constraint_name FROM information_schema.table_constraints
+             WHERE table_schema = 'public' AND table_name = 'cve_affected_component' AND constraint_type = 'PRIMARY KEY'
+    LOOP EXECUTE 'ALTER TABLE public.cve_affected_component DROP CONSTRAINT ' || quote_ident(r.constraint_name); END LOOP;
+    FOR r IN SELECT constraint_name FROM information_schema.table_constraints
+             WHERE table_schema = 'public' AND table_name = 'cves' AND constraint_type = 'PRIMARY KEY'
+    LOOP EXECUTE 'ALTER TABLE public.cves DROP CONSTRAINT ' || quote_ident(r.constraint_name); END LOOP;
+END $$;
 
 -- Rebuild affected_components with bigint id
 ALTER TABLE public.affected_components DROP COLUMN IF EXISTS id;

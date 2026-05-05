@@ -69,8 +69,8 @@ func RunMigrations(db shared.DB) error {
 	versionBefore, _, _ := migrator.Version()
 
 	// Run all pending migrations
-	if err := migrator.Up(); err != nil {
-		if err == migrate.ErrNoChange {
+	if migrateErr := migrator.Up(); migrateErr != nil {
+		if migrateErr == migrate.ErrNoChange {
 			slog.Info("no pending migrations")
 			return nil
 		}
@@ -78,11 +78,11 @@ func RunMigrations(db shared.DB) error {
 		sqlDB, dbErr := db.DB()
 		if dbErr == nil {
 			_, err = sqlDB.Exec("UPDATE schema_migrations SET dirty = false, version = $1", versionBefore)
-			if err != nil {
+			if migrateErr != nil {
 				monitoring.Alert("failed to reset migration state after failed migration", err)
 			}
 		}
-		return fmt.Errorf("failed to run migrations: %w", err)
+		return fmt.Errorf("failed to run migrations: %w", migrateErr)
 	}
 
 	migrationVersion, migrationDirty, migratorErr = migrator.Version()
