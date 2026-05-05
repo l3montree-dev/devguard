@@ -309,6 +309,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 			"test-user",
 			"Test acceptance",
 			false,
+			"test-user-agent",
 		)
 		acceptEvent.CreatedAt = time.Now().Add(-48 * time.Hour)
 		err = f.DB.Create(&acceptEvent).Error

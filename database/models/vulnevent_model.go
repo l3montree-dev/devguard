@@ -27,6 +27,13 @@ type VulnEvent struct {
 	UserAgent                *string `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
 }
 
+func (event VulnEvent) GetUserAgent() string {
+	if event.UserAgent == nil {
+		return ""
+	}
+	return *event.UserAgent
+}
+
 // GetVulnID returns the non-nil vuln ID from whichever column is set.
 func (event VulnEvent) GetVulnID() uuid.UUID {
 	if event.DependencyVulnID != nil {

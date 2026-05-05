@@ -384,7 +384,7 @@ func (s *LicenseRiskService) UpdateLicenseRiskState(ctx context.Context, tx shar
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.licenseRiskRepository.Transaction(ctx, func(d shared.DB) error {
-			ev, err = s.updateLicenseRiskState(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
+			ev, err = s.updateLicenseRiskState(ctx, d, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
 			return err
 		})
 		return ev, err
