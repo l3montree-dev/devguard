@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
@@ -318,7 +319,16 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 // all data sources (OSV, CISA KEV, exploits, malicious packages) to the database.
 // If the integrity check fails after an incremental import, it alerts and retries
 // as a full import (ignoring the last-import watermark).
-func (s *VulnDBService) ImportRC(ctx context.Context) error {
+func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
+	ctx, span := vulndbTracer.Start(ctx, "VulnDBService.ImportRC")
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	slog.Info("start vulndb import")
 	start := time.Now()
 
