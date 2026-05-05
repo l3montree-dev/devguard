@@ -8,6 +8,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -65,11 +66,21 @@ func RunMigrations(db shared.DB) error {
 		// only close the connetion pool if WE own it.
 		defer migrator.Close()
 	}
+	versionBefore, _, _ := migrator.Version()
+
 	// Run all pending migrations
 	if err := migrator.Up(); err != nil {
 		if err == migrate.ErrNoChange {
 			slog.Info("no pending migrations")
 			return nil
+		}
+		// clear dirty flag and restore version so the migration can be retried — safe in postgres since DDL is transactional
+		sqlDB, dbErr := db.DB()
+		if dbErr == nil {
+			_, err = sqlDB.Exec("UPDATE schema_migrations SET dirty = false, version = $1", versionBefore)
+			if err != nil {
+				monitoring.Alert("failed to reset migration state after failed migration", err)
+			}
 		}
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}

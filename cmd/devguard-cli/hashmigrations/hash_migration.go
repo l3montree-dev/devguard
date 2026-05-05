@@ -27,12 +27,12 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 3
+	CurrentHashVersion = 4
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
 
-func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) error {
+func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner, vulndbService shared.VulnDBService, configService shared.ConfigService) error {
 	// Check current version from config table
 	var config models.Config
 	db := database.NewGormDB(pool)
@@ -41,7 +41,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		config = models.Config{
 			Key: HashMigrationVersionKey,
-			Val: "3",
+			Val: "4",
 		}
 		// save initial version - no migration needed if empty
 		if err := db.Create(&config).Error; err != nil {
@@ -81,6 +81,18 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 		if currentVersion < 3 {
 			if err := runVulnerabilityPathHashMigration(pool); err != nil {
 				return fmt.Errorf("failed to run vulnerability path hash migration (v3): %w", err)
+			}
+		}
+
+		if currentVersion < 4 {
+			// Clear the last import timestamp so ImportRC runs as a full import.
+			ctx := context.Background()
+			if err := configService.SetJSONConfig(ctx, "vulndb.lastRCImport", ""); err != nil {
+				slog.Warn("could not clear vulndb.lastRCImport config", "err", err)
+			}
+			slog.Info("triggering full vulndb import after hash migration")
+			if err := vulndbService.ImportRC(ctx); err != nil {
+				return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
 			}
 		}
 
