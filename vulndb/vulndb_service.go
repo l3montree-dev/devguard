@@ -37,18 +37,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func writeGobFile(object any, fileName string) error {
-	gobFile, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("could not create gob file: %w", err)
-	}
-	defer gobFile.Close()
-	if err := gob.NewEncoder(gobFile).Encode(object); err != nil {
-		return fmt.Errorf("could not encode object to gob file: %w", err)
-	}
-	return nil
-}
-
 const vulnDBArchiveName = "vulndb.tar.zst"
 const vulnDBPubKeyFile = "cosign.pub"
 
@@ -131,7 +119,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	group, groupCtx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		slog.Info("fetching EPSS data")
+		slog.Info("start fetching EPSS data")
 		data, err := s.epss.Fetch(groupCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EPSS data: %w", err)
@@ -146,7 +134,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	})
 
 	group.Go(func() error {
-		slog.Info("fetching CISA KEV data")
+		slog.Info("start fetching CISA KEV data")
 		kevFetchCtx, kevCancel := context.WithTimeout(groupCtx, 30*time.Second)
 		defer kevCancel()
 		kevCVEs, err := s.cisaKEV.Fetch(kevFetchCtx)
@@ -164,7 +152,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	})
 
 	group.Go(func() error {
-		slog.Info("fetching exploit data")
+		slog.Info("start fetching exploit data")
 		exploitFetchCtx, exploitCancel := context.WithTimeout(groupCtx, 5*time.Minute)
 		defer exploitCancel()
 		edbExploits, err := s.exploitDB.Fetch(exploitFetchCtx)
@@ -193,7 +181,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	})
 
 	group.Go(func() error {
-		slog.Info("fetching malicious packages")
+		slog.Info("start fetching malicious packages")
 		packages, components, err := s.maliciousPackages.FetchAll(groupCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch malicious packages: %w", err)
@@ -891,6 +879,18 @@ func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Po
 	slog.Info("finished calculating integrity information", "table", table, "time", time.Since(start))
 
 	return result, nil
+}
+
+func writeGobFile(object any, fileName string) error {
+	gobFile, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("could not create gob file: %w", err)
+	}
+	defer gobFile.Close()
+	if err := gob.NewEncoder(gobFile).Encode(object); err != nil {
+		return fmt.Errorf("could not encode object to gob file: %w", err)
+	}
+	return nil
 }
 
 func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
