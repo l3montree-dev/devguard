@@ -63,7 +63,7 @@ type Vote struct {
 
 const (
 	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 30
+	minOrganizationAgeInDays = 0
 	minTrustscore            = 0.01
 	baseDiminishmentFactor   = 0.1
 )
