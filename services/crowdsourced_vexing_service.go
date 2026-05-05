@@ -46,6 +46,7 @@ func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
 		AssetVersionName: vexrule.AssetVersionName,
 		Reasoning:        vexrule.Justification,
 		Assessment:       string(vexrule.MechanicalJustification),
+		UpdatedAt:        vexrule.UpdatedAt,
 	}
 }
 

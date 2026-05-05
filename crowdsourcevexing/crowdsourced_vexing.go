@@ -52,20 +52,23 @@ type VexRule struct {
 	AssetVersionName string
 	Reasoning        string
 	Assessment       string
+	UpdatedAt        time.Time
 }
 
 type CVE struct {
 	CVE string
 }
 
+type VoterID struct {
+	OrganizationID   string
+	ProjectID        string
+	AssetID          string
+	AssetVersionName string
+}
+
 type Vote struct {
-	Voters []struct {
-		OrganizationID   string
-		ProjectID        string
-		AssetID          string
-		AssetVersionName string
-	}
-	Value float64
+	Voters []VoterID
+	Value  float64
 }
 
 // [Mitigation 8] userVoteTracker tracks how many times each user has voted
@@ -167,6 +170,12 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	//   }
 	// - vexRules contain every VexRule created by a user (full database list)
 
+	// Since we are dminishing the values of votes with increasing numbers coming from one user it is important to create a consistent behaviour
+	// for which vote will have less impact, so we sort the incoming vexrules by when they were last updated (update date implies freshness of rule)
+	sort.Slice(vexRules, func(i, j int) bool {
+		return vexRules[i].UpdatedAt.Before(vexRules[j].UpdatedAt)
+	})
+
 	// Filtering for VexRules that apply to the dependecy tree
 	// Deduplucate VexRules based on organizationn and project to avoid replay
 	// (every combination of organization and project will be allowed to have one non-contradicting VexRule for a Path submitted)
@@ -205,13 +214,6 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 		if rule.PathPattern.MatchesSuffix(dependencyPath) && rule.CVE.CVE == cve.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if utils.Contains(AssessmentOptions, rule.Assessment) {
-				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
-				diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
-				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
-				// Note to mitigation 8: Using an exponential decay approach allows for
-				// - lower trusted entities to not be able to surpass high trusted entities with many votes
-				// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
-				ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
 				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
 					alreadyExistingVote := false
@@ -222,26 +224,35 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 						}
 					}
 					if !alreadyExistingVote {
-						votes[rulePath].Voters = append(votes[rulePath].Voters, struct {
-							OrganizationID   string
-							ProjectID        string
-							AssetID          string
-							AssetVersionName string
-						}{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetVersionName})
+						// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
+						diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
+						// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
+						// Note to mitigation 8: Using an exponential decay approach allows for
+						// - lower trusted entities to not be able to surpass high trusted entities with many votes
+						// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
+						ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
+						votes[rulePath].Voters = append(votes[rulePath].Voters, VoterID{
+							OrganizationID:   organization.ID,
+							ProjectID:        project.ID,
+							AssetID:          asset.ID,
+							AssetVersionName: rule.AssetVersionName,
+						})
 
 						votes[rulePath].Value += ruleConfidence
 
 						validVotesCount++
 					}
 				} else {
+					// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
+					diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
+					// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
+					// Note to mitigation 8: Using an exponential decay approach allows for
+					// - lower trusted entities to not be able to surpass high trusted entities with many votes
+					// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
+					ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
 					// This is the case if a vote was cast for a VexRule that hasn't been seen before
 					votes[rulePath] = &Vote{
-						Voters: []struct {
-							OrganizationID   string
-							ProjectID        string
-							AssetID          string
-							AssetVersionName string
-						}{
+						Voters: []VoterID{
 							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetVersionName},
 						},
 						Value: 0.0,
