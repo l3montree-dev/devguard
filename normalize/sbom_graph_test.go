@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"fmt"
 	"os"
 	"slices"
 	"testing"
@@ -14,6 +15,63 @@ var GraphRootNodeIDMetadata = &cdx.Metadata{
 		BOMRef: GraphRootNodeID,
 		Name:   "test-artifact",
 	},
+}
+
+func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
+	if a.Metadata == nil || b.Metadata == nil || a.Metadata.Component == nil || b.Metadata.Component == nil {
+		return fmt.Errorf("one of the boms has no metadata or component")
+	}
+	if a.Metadata.Component.BOMRef != b.Metadata.Component.BOMRef {
+		return fmt.Errorf("root bom refs do not match: %s != %s", a.Metadata.Component.BOMRef, b.Metadata.Component.BOMRef)
+	}
+	if a.Components == nil || b.Components == nil {
+		return fmt.Errorf("one of the boms has no components")
+	}
+	if len(*a.Components) != len(*b.Components) {
+		return fmt.Errorf("component counts do not match: %d != %d", len(*a.Components), len(*b.Components))
+	}
+	if a.Dependencies == nil || b.Dependencies == nil {
+		return fmt.Errorf("one of the boms has no dependencies")
+	}
+	if len(*a.Dependencies) != len(*b.Dependencies) {
+		return fmt.Errorf("dependency counts do not match: %d != %d", len(*a.Dependencies), len(*b.Dependencies))
+	}
+
+	componentRefsA := make(map[string]bool)
+	for _, comp := range *a.Components {
+		componentRefsA[comp.BOMRef] = true
+	}
+	for _, comp := range *b.Components {
+		if _, exists := componentRefsA[comp.BOMRef]; !exists {
+			return fmt.Errorf("component ref %s not found in both boms", comp.BOMRef)
+		}
+	}
+
+	dependencyRefsA := make(map[string][]string)
+	for _, dep := range *a.Dependencies {
+		dependencyRefsA[dep.Ref] = *dep.Dependencies
+	}
+	for _, dep := range *b.Dependencies {
+		if _, exists := dependencyRefsA[dep.Ref]; !exists {
+			return fmt.Errorf("dependency ref %s not found in both boms", dep.Ref)
+		}
+		depsA := dependencyRefsA[dep.Ref]
+		depsB := *dep.Dependencies
+		if len(depsA) != len(depsB) {
+			return fmt.Errorf("dependency counts for ref %s do not match: %d != %d", dep.Ref, len(depsA), len(depsB))
+		}
+		depMap := make(map[string]bool)
+		for _, d := range depsA {
+			depMap[d] = true
+		}
+		for _, d := range depsB {
+			if _, exists := depMap[d]; !exists {
+				return fmt.Errorf("dependency %s for ref %s not found in both boms", d, dep.Ref)
+			}
+		}
+	}
+
+	return nil
 }
 
 func TestSBOMGraphFromCycloneDX(t *testing.T) {

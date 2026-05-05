@@ -476,7 +476,7 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	}
 	var artifactName *string
 	artifact, err := shared.MaybeGetArtifact(ctx)
-	if err == nil {
+	if err == nil && artifact != nil {
 		artifactName = &artifact.ArtifactName
 	}
 

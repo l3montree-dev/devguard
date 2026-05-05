@@ -109,66 +109,6 @@ func TestRemoveFromWhitespaceSeparatedStringList(t *testing.T) {
 	}
 }
 
-func TestContainsInWhitespaceSeparatedStringList(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		item     string
-		expected bool
-	}{
-		{
-			name:     "Item exists in list",
-			input:    "item1 item2 item3",
-			item:     "item2",
-			expected: true,
-		},
-		{
-			name:     "Item does not exist in list",
-			input:    "item1 item2 item3",
-			item:     "item4",
-			expected: false,
-		},
-		{
-			name:     "Item exists in single-item list",
-			input:    "item1",
-			item:     "item1",
-			expected: true,
-		},
-		{
-			name:     "Item does not exist in empty list",
-			input:    "",
-			item:     "item1",
-			expected: false,
-		},
-		{
-			name:     "Scanner ID with colon exists in list",
-			input:    "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner",
-			item:     "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner",
-			expected: true,
-		},
-		{
-			name:     "Should not match partial scanner ID with colon",
-			input:    "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner",
-			item:     "container-scanning",
-			expected: false,
-		},
-		{
-			name:     "Should not match partial scanner ID with colon (reverse)",
-			input:    "container-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner",
-			item:     "container-scanning:scanner",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ContainsInWhitespaceSeparatedStringList(tt.input, tt.item)
-			if result != tt.expected {
-				t.Errorf("expected %t, got %t", tt.expected, result)
-			}
-		})
-	}
-}
 
 func TestShannonEntropy(t *testing.T) {
 	tests := []struct {

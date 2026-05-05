@@ -28,7 +28,7 @@ func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ""
 	artifact, err := shared.MaybeGetArtifact(ctx)
-	if err != nil {
+	if err != nil || artifact == nil {
 		org := shared.GetOrg(ctx)
 		project := shared.GetProject(ctx)
 
