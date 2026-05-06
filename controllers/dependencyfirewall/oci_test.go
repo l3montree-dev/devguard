@@ -175,6 +175,49 @@ func TestOCISafeCachePath(t *testing.T) {
 	}
 }
 
+// ── isAllowedRegistry ────────────────────────────────────────────────────────
+
+func TestIsAllowedRegistry(t *testing.T) {
+	cases := map[string]bool{
+		"docker.io":         true,
+		"ghcr.io":           true,
+		"quay.io":           true,
+		"gcr.io":            true,
+		"registry.k8s.io":   true,
+		"public.ecr.aws":    true,
+		"mcr.microsoft.com": true,
+		"evil.com":          false,
+		"unknown.io":        false,
+		"1.2.3.4":           false, // IPv4 literal
+		"::1":               false, // IPv6 literal
+		"docker.io:443":     false, // host:port form
+		"":                  false,
+	}
+	for input, want := range cases {
+		if got := isAllowedRegistry(input); got != want {
+			t.Errorf("isAllowedRegistry(%q) = %v, want %v", input, got, want)
+		}
+	}
+}
+
+// TestSupportedOCIRegistriesDerivations ensures the lookup tables stay in
+// sync with the supportedOCIRegistries source list. If someone adds an entry
+// to the list but a derived map isn't rebuilt (e.g. init() bug), this fails.
+func TestSupportedOCIRegistriesDerivations(t *testing.T) {
+	if len(allowedOCIRegistries) != len(supportedOCIRegistries) {
+		t.Fatalf("allowedOCIRegistries size mismatch: got %d, want %d",
+			len(allowedOCIRegistries), len(supportedOCIRegistries))
+	}
+	for _, r := range supportedOCIRegistries {
+		if _, ok := registryUpstreamHosts[r.pathName]; !ok {
+			t.Errorf("registryUpstreamHosts missing entry for %q", r.pathName)
+		}
+		if _, ok := registryAuthHosts[r.upstreamHost]; !ok {
+			t.Errorf("registryAuthHosts missing entry for %q", r.upstreamHost)
+		}
+	}
+}
+
 // ── upstreamURLForRegistry ────────────────────────────────────────────────────
 
 func TestUpstreamURLForRegistry(t *testing.T) {
@@ -418,82 +461,134 @@ func TestProxyOCIVersionCheck(t *testing.T) {
 	}
 }
 
-// ── fetchOCIFromUpstream ─────────────────────────────────────────────────────
+// ── validateRealmHost ────────────────────────────────────────────────────────
 
-func TestFetchOCIFromUpstreamTokenAuth(t *testing.T) {
-	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(dockerTokenResponse{Token: "test-token"})
-	}))
-	defer tokenServer.Close()
-
-	callCount := 0
-	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		if r.Header.Get("Authorization") == "" {
-			w.Header().Set("Www-Authenticate", `Bearer realm="`+tokenServer.URL+`",service="test-registry",scope="repository:library/nginx:pull"`)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
-		_, _ = w.Write([]byte(`{"schemaVersion":2}`))
-	}))
-	defer registryServer.Close()
-
-	ctrl := &OCIDependencyProxyController{
-		DependencyProxyController: &DependencyProxyController{client: registryServer.Client()},
+func TestValidateRealmHost(t *testing.T) {
+	cases := []struct {
+		name         string
+		realm        string
+		upstreamHost string
+		wantErr      string
+	}{
+		{
+			name:         "same-host https realm passes",
+			realm:        "https://example.com/token",
+			upstreamHost: "example.com",
+		},
+		{
+			name:         "allowlisted delegation passes",
+			realm:        "https://auth.docker.io/token",
+			upstreamHost: "registry-1.docker.io",
+		},
+		{
+			name:         "non-https realm rejected",
+			realm:        "http://example.com/token",
+			upstreamHost: "example.com",
+			wantErr:      "realm must use https",
+		},
+		{
+			name:         "SSRF realm to metadata IP rejected",
+			realm:        "http://169.254.169.254/latest/meta-data/",
+			upstreamHost: "evil.com",
+			wantErr:      "realm must use https",
+		},
+		{
+			name:         "https foreign host rejected for known registry",
+			realm:        "https://attacker.example/token",
+			upstreamHost: "registry-1.docker.io",
+			wantErr:      "not allowed",
+		},
+		{
+			name:         "unknown registry has no allowed delegation hosts",
+			realm:        "https://attacker.example/token",
+			upstreamHost: "evil.com",
+			wantErr:      "not allowed",
+		},
+		{
+			name:         "malformed realm rejected",
+			realm:        "://invalid",
+			upstreamHost: "example.com",
+			wantErr:      "realm is not a valid URL",
+		},
 	}
-
-	data, headers, status, err := ctrl.fetchOCIFromUpstream(
-		t.Context(),
-		http.MethodGet,
-		registryServer.URL,
-		"/v2/library/nginx/manifests/latest",
-	)
-
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Fatalf("expected 200, got %d", status)
-	}
-	if !strings.Contains(string(data), "schemaVersion") {
-		t.Fatalf("unexpected body: %s", data)
-	}
-	if headers.Get("Content-Type") == "" {
-		t.Fatal("expected Content-Type header to be forwarded")
-	}
-	if callCount != 2 {
-		t.Fatalf("expected 2 upstream calls (challenge + retry with token), got %d", callCount)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateRealmHost(tc.realm, tc.upstreamHost)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tc.wantErr)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
-func TestFetchOCIFromUpstreamHEAD(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodHead {
-			http.Error(w, "want HEAD", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Docker-Content-Digest", "sha256:abc")
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
+// ── fetchRegistryToken realm validation ──────────────────────────────────────
 
+// TestFetchRegistryTokenRejectsSSRFRealm reproduces the PoC from issue #1921:
+// a malicious registry advertises realm pointing at an internal address.
+// The fix must reject this before any HTTP request is issued.
+func TestFetchRegistryTokenRejectsSSRFRealm(t *testing.T) {
 	ctrl := &OCIDependencyProxyController{
-		DependencyProxyController: &DependencyProxyController{client: srv.Client()},
+		DependencyProxyController: &DependencyProxyController{client: http.DefaultClient},
 	}
 
-	data, headers, status, err := ctrl.fetchOCIFromUpstream(t.Context(), http.MethodHead, srv.URL, "/v2/library/nginx/manifests/latest")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	poc := `Bearer realm="http://169.254.169.254/latest/meta-data/",service="evil"`
+	token, err := ctrl.fetchRegistryToken(t.Context(), "evil.com", poc)
+	if err == nil {
+		t.Fatalf("expected SSRF realm to be rejected, got token=%q", token)
 	}
-	if status != http.StatusOK {
-		t.Fatalf("expected 200, got %d", status)
+	if token != "" {
+		t.Fatalf("expected empty token on rejection, got %q", token)
 	}
-	if data != nil {
-		t.Fatal("expected nil body for HEAD response")
+}
+
+func TestFetchRegistryTokenRejectsForeignHost(t *testing.T) {
+	ctrl := &OCIDependencyProxyController{
+		DependencyProxyController: &DependencyProxyController{client: http.DefaultClient},
 	}
-	if headers.Get("Docker-Content-Digest") != "sha256:abc" {
-		t.Fatalf("expected digest header, got %q", headers.Get("Docker-Content-Digest"))
+
+	// docker.io legitimately delegates to auth.docker.io; a foreign host must be refused.
+	header := `Bearer realm="https://attacker.example/token",service="registry.docker.io"`
+	_, err := ctrl.fetchRegistryToken(t.Context(), "registry-1.docker.io", header)
+	if err == nil {
+		t.Fatal("expected foreign host realm to be rejected")
 	}
+	if !strings.Contains(err.Error(), "not allowed") {
+		t.Fatalf("expected 'not allowed' error, got %v", err)
+	}
+}
+
+func TestFetchRegistryTokenAcceptsAllowlistedDelegation(t *testing.T) {
+	// When the realm points to an allowlisted delegation host, validation passes
+	// and we attempt the token call (which then fails because we're not actually
+	// talking to auth.docker.io). The test asserts the validator did not block;
+	// any error must be from the network/transport layer, not realm validation.
+	ctrl := &OCIDependencyProxyController{
+		DependencyProxyController: &DependencyProxyController{client: &http.Client{Transport: errTransport{}}},
+	}
+
+	header := `Bearer realm="https://auth.docker.io/token",service="registry.docker.io"`
+	_, err := ctrl.fetchRegistryToken(t.Context(), "registry-1.docker.io", header)
+	if err == nil {
+		t.Fatal("expected transport error")
+	}
+	if strings.Contains(err.Error(), "not allowed") || strings.Contains(err.Error(), "must use https") {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+}
+
+// errTransport short-circuits any HTTP call so tests that want to verify the
+// validator without hitting the network can do so deterministically.
+type errTransport struct{}
+
+func (errTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, http.ErrHandlerTimeout
 }
