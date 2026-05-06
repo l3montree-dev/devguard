@@ -127,7 +127,7 @@ func (s osvService) applyOSVEntries(ctx context.Context, tx pgx.Tx, osvVulns []O
 		return nil
 	}
 
-	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, osvVulns)
+	rows, err := buildVulnDBRows(ctx, tx, osvVulns)
 	if err != nil {
 		return fmt.Errorf("could not build rows from osv objects: %w", err)
 	}
@@ -195,7 +195,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 		return -v1.ModifiedTimestamp.Compare(v2.ModifiedTimestamp)
 	})
 
-	rows, err := buildVulnDBRows(ctx, s.affectedCmpRepository, allOSVVulns)
+	rows, err := buildVulnDBRows(ctx, tx, allOSVVulns)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not build vulndb rows: %w", err)
 	}
@@ -335,12 +335,22 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 }
 
 // build all the vuln database rows from the OSV objects
-func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedComponentRepository, allEntries []OSVEntry) (vulndbRows, error) {
+func buildVulnDBRows(ctx context.Context, tx pgx.Tx, allEntries []OSVEntry) (vulndbRows, error) {
 	// get the current state of the affected components to avoid creating duplicate entries
 	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, len(allEntries)*55)
-	err := affectedCmpRepository.GetDB(ctx, nil).Raw(`SELECT * FROM cve_affected_component;`).Find(&currentCVEAffectedComponents).Error
+	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
 	if err != nil {
 		return vulndbRows{}, fmt.Errorf("could not get current state of affected components: %w", err)
+	}
+
+	// convert the rows to a slice of cveAffectedComponentRow
+	for rows.Next() {
+		var row cveAffectedComponentRow
+		if err := rows.Scan(&row.AffectedComponentID, &row.CveID); err != nil {
+			rows.Close()
+			return vulndbRows{}, fmt.Errorf("could not scan cve_affected_component row: %w", err)
+		}
+		currentCVEAffectedComponents = append(currentCVEAffectedComponents, row)
 	}
 
 	// build a map of the current state for faster lookups of the existing state
@@ -399,7 +409,7 @@ func buildVulnDBRows(ctx context.Context, affectedCmpRepository shared.AffectedC
 			}
 		}
 	}
-	slog.Info("finished building rows", "building time", time.Since(buildingTime))
+	slog.Info("finished building rows", "buildingTime", time.Since(buildingTime))
 	return vulndbRows{CVEs: cves, CVERelationships: cveRelationships, AffectedComponents: affectedComponents, CVEAffectedComponents: cveAffectedComponents}, nil
 }
 
