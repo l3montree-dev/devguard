@@ -10,7 +10,3 @@ type Comment struct {
 	UserID           uuid.UUID `json:"userId"`
 	Comment          string    `json:"comment"`
 }
-
-func (m Comment) TableName() string {
-	return "comments"
-}

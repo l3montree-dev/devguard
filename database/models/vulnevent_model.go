@@ -76,27 +76,6 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
-func EventTypeToVulnState(eventType dtos.VulnEventType) (dtos.VulnState, error) {
-	switch eventType {
-	case dtos.EventTypeComment:
-		return dtos.VulnStateOpen, nil
-	case dtos.EventTypeFixed:
-		return dtos.VulnStateFixed, nil
-	case dtos.EventTypeDetected:
-		fallthrough
-	case dtos.EventTypeReopened:
-		return dtos.VulnStateOpen, nil
-	case dtos.EventTypeAccepted:
-		return dtos.VulnStateAccepted, nil
-	case dtos.EventTypeFalsePositive:
-		return dtos.VulnStateFalsePositive, nil
-	case dtos.EventTypeMarkedForTransfer:
-		return dtos.VulnStateMarkedForTransfer, nil
-	default:
-		return "", fmt.Errorf("event type %s does not map to a vuln state", eventType)
-	}
-}
-
 func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
 	// parse the additional data
 	if event.ArbitraryJSONData == "" {

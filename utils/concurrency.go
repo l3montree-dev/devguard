@@ -16,7 +16,6 @@
 package utils
 
 import (
-	"fmt"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -38,12 +37,8 @@ func (c concurrentResult) Error() error {
 
 type concurrentResultSlice []concurrentResult
 
-func (c concurrentResultSlice) Values() []any {
-	res := make([]any, len(c))
-	for i, r := range c {
-		res[i] = r.Value()
-	}
-	return res
+func (c concurrentResultSlice) GetValue(index int) any {
+	return c[index].Value()
 }
 
 func (c concurrentResultSlice) HasErrors() bool {
@@ -56,33 +51,13 @@ func (c concurrentResultSlice) HasErrors() bool {
 }
 
 func (c concurrentResultSlice) Errors() []error {
-	res := make([]error, 0)
+	var errs []error
 	for _, r := range c {
-		if r.Error() != nil {
-			res = append(res, r.Error())
+		if err := r.Error(); err != nil {
+			errs = append(errs, err)
 		}
 	}
-	return res
-}
-
-func (c concurrentResultSlice) Error() error {
-	// concat all errors
-	msg := ""
-
-	for _, r := range c {
-		if r.Error() != nil {
-			msg += r.Error().Error() + "\n"
-		}
-	}
-	return fmt.Errorf("%s", msg)
-}
-
-func (c concurrentResultSlice) Get(index int) (any, error) {
-	return c[index].Value(), c[index].Error()
-}
-
-func (c concurrentResultSlice) GetValue(index int) any {
-	return c[index].Value()
+	return errs
 }
 
 type errGroup[T any] struct {
@@ -113,10 +88,6 @@ func (eg *errGroup[T]) startCollecting() {
 			eg.res = append(eg.res, r)
 		}
 	})
-}
-
-func (eg *errGroup[T]) SetLimit(limit int) {
-	eg.group.SetLimit(limit)
 }
 
 func (eg *errGroup[T]) WaitAndCollect() ([]T, error) {
@@ -215,10 +186,10 @@ func NewFireAndForgetSynchronizer() *GoroutineFireAndForgetSynchronizer {
 	return &GoroutineFireAndForgetSynchronizer{}
 }
 
-type SyncFireAndForgetSynchronizer struct {
-}
+// SyncFireAndForgetSynchronizer calls functions synchronously. Useful for tests that
+// want predictable execution ordering instead of spawning goroutines.
+type SyncFireAndForgetSynchronizer struct{}
 
-// just don't use a goroutine, but call the function directly
 func (f *SyncFireAndForgetSynchronizer) FireAndForget(fn func()) {
 	fn()
 }

@@ -69,12 +69,6 @@ func (s *VulnSet) Add(vuln models.DependencyVuln) {
 	}
 }
 
-// Contains checks if a vulnerability exists in the set
-func (s *VulnSet) Contains(vuln models.DependencyVuln) bool {
-	_, exists := s.byHash[vuln.CalculateHash()]
-	return exists
-}
-
 // Get retrieves a vulnerability from the set
 func (s *VulnSet) Get(vuln models.DependencyVuln) (models.DependencyVuln, bool) {
 	v, exists := s.byHash[vuln.CalculateHash()]

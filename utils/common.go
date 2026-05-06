@@ -81,16 +81,6 @@ func OrDefault[T any](val *T, def T) T {
 	return *val
 }
 
-func Or[T any](
-	val *T,
-	fallback *T,
-) *T {
-	if val == nil {
-		return fallback
-	}
-	return val
-}
-
 func AddToWhitespaceSeparatedStringList(s string, item string) string {
 	itemEls := strings.Fields(item)
 	// parse all scanner ids
@@ -117,11 +107,6 @@ func RemoveFromWhitespaceSeparatedStringList(s string, item string) string {
 	}
 
 	return strings.Join(res, " ")
-}
-
-func ContainsInWhitespaceSeparatedStringList(s string, item string) bool {
-	els := strings.Fields(s)
-	return slices.Contains(els, item)
 }
 
 func CompareFirstTwoDecimals(a, b float64) bool {

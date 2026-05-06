@@ -136,10 +136,6 @@ func All[T any](s []T, f func(T) bool) bool {
 	return true
 }
 
-func Some[T any](s []T, f func(T) bool) bool {
-	return Any(s, f)
-}
-
 func UniqBy[T any, K comparable](s []T, f func(T) K) []T {
 	seen := make(map[K]bool)
 	res := make([]T, 0) //len(s))
