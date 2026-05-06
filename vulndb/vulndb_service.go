@@ -468,17 +468,6 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir strin
 	}
 	slog.Info("applied malicious packages", "packages", len(pkgs), "components", len(comps))
 
-	if lastImportTime.IsZero() {
-		slog.Info("full import: deleting dependency_vulns with unknown CVEs")
-		if _, err := tx.Exec(ctx, `DELETE FROM dependency_vulns WHERE cve_id NOT IN (SELECT cve FROM cves)`); err != nil {
-			return fmt.Errorf("could not delete orphaned dependency_vulns: %w", err)
-		}
-		slog.Info("full import: re-adding foreign key constraint on dependency_vulns")
-		if _, err := tx.Exec(ctx, `ALTER TABLE dependency_vulns ADD CONSTRAINT fk_dependency_vulns_cve FOREIGN KEY (cve_id) REFERENCES cves (cve) ON DELETE CASCADE`); err != nil {
-			return fmt.Errorf("could not re-add FK on dependency_vulns: %w", err)
-		}
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
@@ -486,10 +475,6 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir strin
 }
 
 func truncateVulnDBTables(ctx context.Context, tx pgx.Tx) error {
-	// Drop the FK from dependency_vulns so TRUNCATE on cves doesn't cascade into user data.
-	if _, err := tx.Exec(ctx, `ALTER TABLE dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve`); err != nil {
-		return fmt.Errorf("could not drop FK fk_dependency_vulns_cve: %w", err)
-	}
 	// CASCADE handles the remaining vulndb-internal FKs (exploits, weaknesses, vex_rules, cve_relationships, cve_affected_component).
 	if _, err := tx.Exec(ctx, `TRUNCATE cves, affected_components, malicious_packages, malicious_affected_components CASCADE`); err != nil {
 		return fmt.Errorf("could not truncate vulndb tables: %w", err)

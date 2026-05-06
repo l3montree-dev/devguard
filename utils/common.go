@@ -31,6 +31,14 @@ func Ptr[T any](t T) *T {
 	return &t
 }
 
+func PtrMap[T any, U any](t *T, f func(T) U) *U {
+	if t == nil {
+		return nil
+	}
+	u := f(*t)
+	return &u
+}
+
 func SlicePtr[T any](t []T) []*T {
 	res := make([]*T, len(t))
 	for i := range t {

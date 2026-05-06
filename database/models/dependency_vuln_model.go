@@ -18,7 +18,7 @@ type DependencyVuln struct {
 
 	Events []VulnEvent `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
-	CVE                   CVE     `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
+	CVE                   *CVE    `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
 	CVEID                 string  `json:"cveId" gorm:"type:text;"`
 	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
 	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`

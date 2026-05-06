@@ -16,14 +16,14 @@ import (
 // in-memory by casbin's model layer; this adapter only satisfies the interface.
 type noopAdapter struct{}
 
-func (noopAdapter) LoadPolicy(_ casbinModel.Model) error                        { return nil }
-func (noopAdapter) SavePolicy(_ casbinModel.Model) error                        { return nil }
-func (noopAdapter) AddPolicy(_, _ string, _ []string) error                     { return nil }
-func (noopAdapter) RemovePolicy(_, _ string, _ []string) error                  { return nil }
-func (noopAdapter) RemoveFilteredPolicy(_, _ string, _ int, _ ...string) error  { return nil }
-func (noopAdapter) LoadPolicyCtx(_ context.Context, _ casbinModel.Model) error  { return nil }
-func (noopAdapter) SavePolicyCtx(_ context.Context, _ casbinModel.Model) error  { return nil }
-func (noopAdapter) AddPolicyCtx(_ context.Context, _, _ string, _ []string) error { return nil }
+func (noopAdapter) LoadPolicy(_ casbinModel.Model) error                             { return nil }
+func (noopAdapter) SavePolicy(_ casbinModel.Model) error                             { return nil }
+func (noopAdapter) AddPolicy(_, _ string, _ []string) error                          { return nil }
+func (noopAdapter) RemovePolicy(_, _ string, _ []string) error                       { return nil }
+func (noopAdapter) RemoveFilteredPolicy(_, _ string, _ int, _ ...string) error       { return nil }
+func (noopAdapter) LoadPolicyCtx(_ context.Context, _ casbinModel.Model) error       { return nil }
+func (noopAdapter) SavePolicyCtx(_ context.Context, _ casbinModel.Model) error       { return nil }
+func (noopAdapter) AddPolicyCtx(_ context.Context, _, _ string, _ []string) error    { return nil }
 func (noopAdapter) RemovePolicyCtx(_ context.Context, _, _ string, _ []string) error { return nil }
 func (noopAdapter) RemoveFilteredPolicyCtx(_ context.Context, _, _ string, _ int, _ ...string) error {
 	return nil

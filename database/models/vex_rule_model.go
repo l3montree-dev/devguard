@@ -45,7 +45,7 @@ type VEXRule struct {
 
 	// Relationships
 	Asset        Asset        `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	CVE          CVE          `json:"cve" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;"`
+	CVE          *CVE         `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
 	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	// Rule data

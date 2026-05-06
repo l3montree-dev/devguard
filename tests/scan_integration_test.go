@@ -1819,8 +1819,8 @@ func TestTicketHandling(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			gitlabClientFacade.Calls = nil           // reset recorded calls
-			gitlabClientFacade.ExpectedCalls = nil    // clear all prior expectations so they don't shadow new .Once() expectations
+			gitlabClientFacade.Calls = nil         // reset recorded calls
+			gitlabClientFacade.ExpectedCalls = nil // clear all prior expectations so they don't shadow new .Once() expectations
 			gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{
 				IID: 789,
 			}, nil, nil).Once()

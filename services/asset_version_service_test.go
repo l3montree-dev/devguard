@@ -162,7 +162,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:oci/my-image@sha256:abc", componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   7.5,
 					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
@@ -179,7 +179,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:oci/another-image@sha256:def", componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   7.5,
 					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
@@ -237,7 +237,7 @@ func TestBuildVeX(t *testing.T) {
 			{
 				CVEID:         cveID,
 				ComponentPurl: componentPurl,
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:         cveID,
 					CVSS:        float32(5.0),
 					Vector:      "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -300,7 +300,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   7.5,
 					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
@@ -317,7 +317,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   7.5,
 					Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
@@ -372,7 +372,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -390,7 +390,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -443,7 +443,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:npm/app@1.0.0", componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -461,7 +461,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:npm/other-app@2.0.0", componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -533,7 +533,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{"pkg:golang/myapp@v1.0", "pkg:golang/mid@v1.0", componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",
@@ -589,7 +589,7 @@ func TestBuildVeX(t *testing.T) {
 				CVEID:             cveID,
 				ComponentPurl:     componentPurl,
 				VulnerabilityPath: []string{componentPurl},
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					CVE:    cveID,
 					CVSS:   5.0,
 					Vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:L",

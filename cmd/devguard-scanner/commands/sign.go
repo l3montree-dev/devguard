@@ -82,7 +82,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 		&cosignoptions.RootOptions{},
 		ko,
 		fileOrImageName,
-		false, // b64
+		false,  // b64
 		"", "", // outputSignature, outputCertificate
 		false, // tlogUpload
 	)

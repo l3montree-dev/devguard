@@ -235,7 +235,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     "pkg:npm/next@14.2.13",
-		CVE:               cve,
+		CVE:               &cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
 		Artifacts:         []models.Artifact{artifact},
@@ -247,7 +247,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	vuln2 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "falsePositive"},
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
-		CVE:               cve2,
+		CVE:               &cve2,
 		CVEID:             cve2.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
 		Artifacts:         []models.Artifact{artifact},

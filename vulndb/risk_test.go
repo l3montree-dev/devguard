@@ -54,7 +54,7 @@ func TestCalculateRawRisk(t *testing.T) {
 			AvailabilityRequirements:    "L",
 		}
 		affectedComponentDepth := 0
-		riskReport := RawRisk(sut, env, affectedComponentDepth)
+		riskReport := RawRisk(&sut, env, affectedComponentDepth)
 
 		if riskReport.Risk != 1.7 {
 			t.Errorf("Expected risk to be 1.7, got %f", riskReport.Risk)
@@ -69,7 +69,7 @@ func TestCalculateRisk(t *testing.T) {
 			Vector: "",
 		}
 		env := shared.Environmental{}
-		riskMetrics, vector := RiskCalculation(sut, env)
+		riskMetrics, vector := RiskCalculation(&sut, env)
 
 		if riskMetrics.BaseScore != 0 {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
@@ -329,7 +329,7 @@ func TestCalculateRisk(t *testing.T) {
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics
-			riskMetrics, vector := RiskCalculation(sut, env)
+			riskMetrics, vector := RiskCalculation(&sut, env)
 
 			if !floatsEqual(riskMetrics.BaseScore, expectedRiskMetrics.BaseScore) {
 				t.Errorf("Expected base score to be %f, got %f", expectedRiskMetrics.BaseScore, riskMetrics.BaseScore)
@@ -651,7 +651,7 @@ func TestExploitMessage(t *testing.T) {
 	for _, exploitType := range []string{"P", "POC", "F"} {
 		t.Run(fmt.Sprintf("should be deterministic: %s", exploitType), func(t *testing.T) {
 			v := models.DependencyVuln{
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit1.com"},
 						{SourceURL: "http://exploit2.com"},
@@ -664,7 +664,7 @@ func TestExploitMessage(t *testing.T) {
 
 			// create another instance with exploits in different order
 			v2 := models.DependencyVuln{
-				CVE: models.CVE{
+				CVE: &models.CVE{
 					Exploits: []models.Exploit{
 						{SourceURL: "http://exploit2.com"},
 						{SourceURL: "http://exploit1.com"},

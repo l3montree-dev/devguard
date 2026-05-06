@@ -484,7 +484,7 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 			},
 			CVEID:             foundVuln.CVEID,
 			ComponentPurl:     firstOld.ComponentPurl,
-			CVE:               foundVuln.CVE,
+			CVE:               &foundVuln.CVE,
 			VulnerabilityPath: nil, // Will be populated by v3 migration
 		}
 

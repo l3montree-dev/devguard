@@ -26,9 +26,9 @@ import (
 )
 
 type MaliciousPackageRepository struct {
-	db         *gorm.DB
-	pkgRepo    *GormRepository[string, models.MaliciousPackage]
-	compRepo   *GormRepository[string, models.MaliciousAffectedComponent]
+	db       *gorm.DB
+	pkgRepo  *GormRepository[string, models.MaliciousPackage]
+	compRepo *GormRepository[string, models.MaliciousAffectedComponent]
 }
 
 func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
