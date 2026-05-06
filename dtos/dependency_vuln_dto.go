@@ -112,6 +112,13 @@ type DependencyVulnDTO struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
+func (d DependencyVulnDTO) GetCVE() CVEDTO {
+	if d.CVE == nil {
+		return CVEDTO{}
+	}
+	return *d.CVE
+}
+
 type DetailedDependencyVulnDTO struct {
 	DependencyVulnDTO
 	Events []VulnEventDTO `json:"events"`

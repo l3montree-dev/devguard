@@ -81,6 +81,14 @@ func (r *VEXRule) SetPathPattern(pattern []string) {
 	r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, pattern, r.VexSource)
 }
 
+// GetCVE returns the CVE or a zero-value CVE if not loaded, preventing nil dereferences.
+func (r VEXRule) GetCVE() CVE {
+	if r.CVE == nil {
+		return CVE{}
+	}
+	return *r.CVE
+}
+
 // EnsureID calculates the ID if it hasn't been set yet.
 func (r *VEXRule) EnsureID() {
 	if r.ID == "" {

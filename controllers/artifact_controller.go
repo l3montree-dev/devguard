@@ -672,7 +672,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 					SourceName:          escapeLatex(v.Source.Name),
 					SourceURL:           escapeLatex(v.Source.URL),
 					AffectedComponent:   escapeLatex(dv.ComponentPurl),
-					CveDescription:      escapeLatex(dv.CVE.Description),
+					CveDescription:      escapeLatex(dv.GetCVE().Description),
 					AnalysisState:       escapeLatex(string(v.Analysis.State)),
 					AnalysisResponse:    escapeLatex(response),
 					AnalysisDetail:      escapeLatex(v.Analysis.Detail),

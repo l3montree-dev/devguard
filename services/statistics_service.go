@@ -57,7 +57,7 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 		distribution := distributionPerComponent[componentName]
 
 		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
-		cvss := float64(dependencyVuln.CVE.CVSS)
+		cvss := float64(dependencyVuln.GetCVE().CVSS)
 
 		switch {
 		case risk >= 0.0 && risk < 4.0:
@@ -371,7 +371,7 @@ func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln)
 	uniqueCombinations := make(map[string]struct{})
 
 	for _, vuln := range dependencyVulns {
-		cvss := float64(vuln.CVE.CVSS)
+		cvss := float64(vuln.GetCVE().CVSS)
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		if _, exists := uniqueCombinations[combinationKey]; exists {
@@ -396,7 +396,7 @@ func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln)
 
 func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
 	for _, vuln := range dependencyVulns {
-		cvss := float64(vuln.CVE.CVSS)
+		cvss := float64(vuln.GetCVE().CVSS)
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:
 			low++
