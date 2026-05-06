@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,11 @@ import (
 func TestOSVPostInsertCleanup(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		t.Run("after inserting using the bulk method, we should have all indexes and constraints back in place correctly", func(t *testing.T) {
+			// this test is used to make sure that all indexes and constraints are dropped which are not needed on bulk inserts
+			// if you happen to fail this test, just make sure to add the sql to drop your index/constraint in the PrepareBulkInsert-Functions sql scripts
+			// then also re-add it in the AddIndexesAndConstraints-Function sql scripts just the same as you added it in the migrations
+			// this should then pass the test again
+
 			ctx := context.Background()
 
 			conn, err := f.Pool.Acquire(ctx)
@@ -29,6 +35,27 @@ func TestOSVPostInsertCleanup(t *testing.T) {
 			err = vulndb.PrepareBulkInsert(ctx, tx)
 			assert.NoError(t, err)
 
+			cleanedConstraints, cleanedIndexes, err := getCurrentIndexAndConstraintState(ctx, tx)
+			assert.NoError(t, err)
+			assert.Len(t, cleanedIndexes, 2, "only the primary key indexes of cves and cve_relationships should remain for the import to detect ON CONFLICT triggers")
+			for table, indexes := range cleanedIndexes {
+				if table == "cves" || table == "cve_relationships" {
+					assert.Len(t, indexes, 1)
+					assert.Equal(t, table+"_pkey", indexes[0])
+				} else {
+					t.Fail()
+				}
+			}
+			for table, constraints := range cleanedConstraints {
+				switch table {
+				case "cves", "cve_relationships":
+					assert.Equal(t, 1, amountOfNonNotNullConstraintsInSlice(constraints), "the primary key should still be in place as previously mentioned")
+				case "affected_components", "cve_affected_component":
+					assert.Equal(t, 0, amountOfNonNotNullConstraintsInSlice(constraints), "for the other tables all non not_null constraints should be removed")
+				default:
+					t.Fail()
+				}
+			}
 			err = vulndb.AddIndexesAndConstraints(ctx, tx)
 			assert.NoError(t, err)
 
@@ -51,6 +78,16 @@ func TestOSVPostInsertCleanup(t *testing.T) {
 			slog.Info("finished")
 		})
 	})
+}
+
+func amountOfNonNotNullConstraintsInSlice(constraints []string) int {
+	amount := 0
+	for _, constraint := range constraints {
+		if !strings.Contains(constraint, "not_null") {
+			amount++
+		}
+	}
+	return amount
 }
 
 func getCurrentIndexAndConstraintState(ctx context.Context, tx pgx.Tx) (map[string][]string, map[string][]string, error) {

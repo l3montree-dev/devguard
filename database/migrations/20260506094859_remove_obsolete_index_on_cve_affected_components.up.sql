@@ -1,0 +1,1 @@
+DROP INDEX public.idx_cve_affected_component_cve_id_aff_comp_id;

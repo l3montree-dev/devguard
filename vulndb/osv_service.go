@@ -647,7 +647,8 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
 
 	-- then drop all primary key (and unique) constraints
-	-- do not drop cves_pkey since we still need that index to detect and resolve indexes
+	-- do not drop cves_pkey since we still need that index to detect and resolve duplicates
+	-- do not drop cve_relationships_pkey since we need that index to detect ON CONFLICT 
 	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_cve_unique;
 	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
 	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
@@ -667,6 +668,7 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 
 	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
 	DROP INDEX IF EXISTS cve_affected_component_cve_id;
+	DROP INDEX IF EXISTS idx_cve_affected_component_cve_id_aff_comp_id;
 
 	DROP INDEX IF EXISTS idx_cve_relationships_target_cve;`)
 	if err != nil {
