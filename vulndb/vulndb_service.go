@@ -541,12 +541,9 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 	if err != nil {
 		return fmt.Errorf("could not calculate integrity information: %w", err)
 	}
-	valid, err := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+	err = validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
 	if err != nil {
 		return fmt.Errorf("could not validate integrity: %w", err)
-	}
-	if !valid {
-		return nil
 	}
 	return nil
 }
@@ -787,14 +784,16 @@ type integrityInformation struct {
 	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
-func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
+func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) error {
+	didErr := false
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName, "expectedCount", tableGroundTruth.TotalCount, "actualCount", tableIntegrity.TotalCount, "expectedChecksum", fmt.Sprintf("%x", tableGroundTruth.Checksum), "actualChecksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
-					return false, nil
+
+					didErr = true
 				} else {
 					found = true
 					break
@@ -802,10 +801,14 @@ func validateIntegrityInformation(workingDir string, groundTruth integrityInform
 			}
 		}
 		if !found {
-			return false, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
+			return fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
 		}
 	}
-	return true, nil
+	if didErr {
+		return fmt.Errorf("integrity validation failed for one or more tables when importing from %s", workingDir)
+	}
+
+	return nil
 }
 
 func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]tableIntegrityInformation, error) {
@@ -879,6 +882,7 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 		UNION ALL SELECT table_name, row_count, checksum FROM malicious_affected_components_integrity
 	`
 
+	slog.Info("start calculating integrity information")
 	start := time.Now()
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
@@ -897,7 +901,10 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("could not read integrity rows: %w", err)
 	}
-	slog.Info("calculated integrity information", "tables", len(results), "time", time.Since(start))
+	slog.Info("finished calculating integrity information", "took", time.Since(start).Round(time.Millisecond))
+	for _, r := range results {
+		slog.Info("integrity", "table", r.TableName, "rows", r.TotalCount, "checksum", fmt.Sprintf("%x", r.Checksum))
+	}
 
 	return results, nil
 }
