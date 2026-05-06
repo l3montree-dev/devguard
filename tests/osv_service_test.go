@@ -16,6 +16,11 @@ import (
 func TestOSVPostInsertCleanup(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		t.Run("after inserting using the bulk method, we should have all indexes and constraints back in place correctly", func(t *testing.T) {
+			// this test is used to make sure that all indexes and constraints are dropped which are not needed on bulk inserts
+			// if you happen to fail this test, just make sure to add the sql to drop your index/constraint in the PrepareBulkInsert-Functions sql scripts
+			// then also re-add it in the AddIndexesAndConstraints-Function sql scripts just the same as you added it in the migrations
+			// this should then pass the test again
+
 			ctx := context.Background()
 
 			conn, err := f.Pool.Acquire(ctx)
