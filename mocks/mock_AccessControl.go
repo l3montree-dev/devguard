@@ -258,6 +258,52 @@ func (_c *AccessControl_AllowRoleInProject_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// GetAdminsOfOrganization provides a mock function for the type AccessControl
+func (_mock *AccessControl) GetAdminsOfOrganization() []string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAdminsOfOrganization")
+	}
+
+	var r0 []string
+	if returnFunc, ok := ret.Get(0).(func() []string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	return r0
+}
+
+// AccessControl_GetAdminsOfOrganization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAdminsOfOrganization'
+type AccessControl_GetAdminsOfOrganization_Call struct {
+	*mock.Call
+}
+
+// GetAdminsOfOrganization is a helper method to define mock.On call
+func (_e *AccessControl_Expecter) GetAdminsOfOrganization() *AccessControl_GetAdminsOfOrganization_Call {
+	return &AccessControl_GetAdminsOfOrganization_Call{Call: _e.mock.On("GetAdminsOfOrganization")}
+}
+
+func (_c *AccessControl_GetAdminsOfOrganization_Call) Run(run func()) *AccessControl_GetAdminsOfOrganization_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AccessControl_GetAdminsOfOrganization_Call) Return(strings []string) *AccessControl_GetAdminsOfOrganization_Call {
+	_c.Call.Return(strings)
+	return _c
+}
+
+func (_c *AccessControl_GetAdminsOfOrganization_Call) RunAndReturn(run func() []string) *AccessControl_GetAdminsOfOrganization_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllAssetsForUser provides a mock function for the type AccessControl
 func (_mock *AccessControl) GetAllAssetsForUser(user string) ([]string, error) {
 	ret := _mock.Called(user)

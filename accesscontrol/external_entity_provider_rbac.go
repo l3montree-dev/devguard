@@ -131,6 +131,10 @@ func (e *externalEntityProviderRBAC) GetOwnerOfOrganization() (string, error) {
 	return e.rootAccessControl.GetOwnerOfOrganization()
 }
 
+func (e *externalEntityProviderRBAC) GetAdminsOfOrganization() []string {
+	return e.rootAccessControl.GetAdminsOfOrganization()
+}
+
 func (e *externalEntityProviderRBAC) GetAllMembersOfOrganization() ([]string, error) {
 	return e.rootAccessControl.GetAllMembersOfOrganization()
 }

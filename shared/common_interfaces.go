@@ -676,6 +676,7 @@ type AccessControl interface {
 	GetAllAssetsForUser(user string) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
+	GetAdminsOfOrganization() []string
 
 	GetAllMembersOfOrganization() ([]string, error)
 

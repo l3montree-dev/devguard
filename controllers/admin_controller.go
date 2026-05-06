@@ -25,9 +25,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
+	"github.com/ory/client-go"
 )
 
 // daemonCooldown is the minimum interval between two manual triggers of the same daemon.
@@ -39,20 +41,53 @@ type daemonTriggerTimestamp struct {
 
 type AdminController struct {
 	daemonRunner        shared.DaemonRunner
+	casbinRBACProvider  shared.RBACProvider
 	vulnDBImportService shared.VulnDBImportService
 	configService       shared.ConfigService
 }
 
 func NewAdminController(
 	daemonRunner shared.DaemonRunner,
+	casbinRBACProvider shared.RBACProvider,
 	vulnDBImportService shared.VulnDBImportService,
 	configService shared.ConfigService,
 ) *AdminController {
 	return &AdminController{
 		daemonRunner:        daemonRunner,
+		casbinRBACProvider:  casbinRBACProvider,
 		vulnDBImportService: vulnDBImportService,
 		configService:       configService,
 	}
+}
+
+func (c *AdminController) GetAdminsInOrg(ctx shared.Context) error {
+	orgID := ctx.Param("organizationID")
+	if orgID == "" {
+		return echo.NewHTTPError(400, "bad request")
+	}
+	orgIDParsed, err := uuid.Parse(orgID)
+	if err != nil {
+		return echo.NewHTTPError(400, "bad request")
+	}
+	orgRBAC := c.casbinRBACProvider.GetDomainRBAC(orgIDParsed.String())
+	adminIDs := orgRBAC.GetAdminsOfOrganization()
+
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+
+	memberIdentities, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(adminIDs))
+	if err != nil {
+		return err
+	}
+	users := make([]dtos.UserDTO, 0, len(adminIDs))
+	for _, member := range memberIdentities {
+		users = append(users, dtos.UserDTO{
+			ID:   member.Id,
+			Name: shared.IdentityName(member.Traits),
+			Role: string(shared.RoleAdmin),
+		})
+	}
+
+	return ctx.JSON(200, dtos.GetAdminsResponse{Admins: users})
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
