@@ -2,6 +2,7 @@ package shared
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -41,16 +42,16 @@ type IntegrationAggregate interface {
 
 type ExternalEntitySlug string
 
-func MaybeGetArtifact(ctx Context) (*models.Artifact, error) {
+func MaybeGetArtifact(ctx Context) (models.Artifact, error) {
 	val := ctx.Get("artifact")
 	if val == nil {
-		return nil, nil
+		return models.Artifact{}, fmt.Errorf("artifact not found in context")
 	}
 	if artifact, ok := val.(*models.Artifact); ok {
-		return artifact, nil
+		return *artifact, nil
 	}
 	if artifact, ok := val.(models.Artifact); ok {
-		return &artifact, nil
+		return artifact, nil
 	}
-	return nil, nil
+	return models.Artifact{}, fmt.Errorf("artifact context value has unexpected type %T", val)
 }

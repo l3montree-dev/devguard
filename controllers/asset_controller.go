@@ -19,14 +19,14 @@ import (
 )
 
 type AssetController struct {
-	assetRepository              shared.AssetRepository
-	assetVersionRepository       shared.AssetVersionRepository
+	assetRepository               shared.AssetRepository
+	assetVersionRepository        shared.AssetVersionRepository
 	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
-	assetService                 shared.AssetService
-	dependencyVulnService        shared.DependencyVulnService
-	statisticsService            shared.StatisticsService
-	thirdPartyIntegration        shared.IntegrationAggregate
-	daemonRunner                 shared.DaemonRunner
+	assetService                  shared.AssetService
+	dependencyVulnService         shared.DependencyVulnService
+	statisticsService             shared.StatisticsService
+	thirdPartyIntegration         shared.IntegrationAggregate
+	daemonRunner                  shared.DaemonRunner
 
 	utils.FireAndForgetSynchronizer
 }
@@ -476,7 +476,7 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 	}
 	var artifactName *string
 	artifact, err := shared.MaybeGetArtifact(ctx)
-	if err == nil && artifact != nil {
+	if err == nil {
 		artifactName = &artifact.ArtifactName
 	}
 

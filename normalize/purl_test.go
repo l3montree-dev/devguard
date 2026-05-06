@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestParsePurlForMatching(t *testing.T) {
 	t.Run("npm package should use semantic versioning", func(t *testing.T) {
 		p, _ := packageurl.FromString("pkg:npm/next@15.4.5")

@@ -109,7 +109,6 @@ func TestRemoveFromWhitespaceSeparatedStringList(t *testing.T) {
 	}
 }
 
-
 func TestShannonEntropy(t *testing.T) {
 	tests := []struct {
 		name     string

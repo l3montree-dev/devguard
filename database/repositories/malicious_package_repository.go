@@ -24,9 +24,9 @@ import (
 )
 
 type MaliciousPackageRepository struct {
-	db         *gorm.DB
-	pkgRepo    *GormRepository[string, models.MaliciousPackage]
-	compRepo   *GormRepository[string, models.MaliciousAffectedComponent]
+	db       *gorm.DB
+	pkgRepo  *GormRepository[string, models.MaliciousPackage]
+	compRepo *GormRepository[string, models.MaliciousAffectedComponent]
 }
 
 func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
@@ -67,4 +67,3 @@ func (r *MaliciousPackageRepository) GetMaliciousPackageByID(ctx context.Context
 	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&maliciousPackage).Error
 	return maliciousPackage, err
 }
-

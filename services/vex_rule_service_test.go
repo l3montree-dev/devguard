@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-
 func TestMapCDXToEventType(t *testing.T) {
 	cases := []struct {
 		name      string

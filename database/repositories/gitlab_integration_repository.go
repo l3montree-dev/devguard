@@ -112,10 +112,10 @@ func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx 
 	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		DoNothing: true,
 		Columns: []clause.Column{
-			clause.Column{
+			{
 				Name: "provider_id",
 			},
-			clause.Column{
+			{
 				Name: "user_id",
 			},
 		},
