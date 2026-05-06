@@ -164,16 +164,17 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not fetch GitHub exploit data: %w", err)
 		}
+		seen := make(map[string]struct{}, len(edbExploits)+len(ghExploits))
 		combined := make([]models.Exploit, 0, len(edbExploits)+len(ghExploits))
-		for _, e := range edbExploits {
-			if _, ok := survivingCVEs[e.CVEID]; ok {
-				combined = append(combined, e)
+		for _, e := range append(edbExploits, ghExploits...) {
+			if _, ok := survivingCVEs[e.CVEID]; !ok {
+				continue
 			}
-		}
-		for _, e := range ghExploits {
-			if _, ok := survivingCVEs[e.CVEID]; ok {
-				combined = append(combined, e)
+			if _, dup := seen[e.ID]; dup {
+				continue
 			}
+			seen[e.ID] = struct{}{}
+			combined = append(combined, e)
 		}
 		allExploits = combined
 		return nil
@@ -368,8 +369,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
-	err = s.applyFromWorkingDir(ctx, tx, workingDir, lastImportTime)
+	err = s.applyFromWorkingDir(ctx, tx, workingDir, lastImportTime, integrity)
 	if err != nil {
+		slog.Error("could not import vulndb incrementally, attempting full import", "error", err)
+		monitoring.Alert("vulndb integrity check failed, retrying as full import", err)
 		// we need to create a new transaction for the retry, so we rollback the previous one and start a new one
 		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
 			return fmt.Errorf("could not rollback transaction after failed import: %w (rollback error: %v)", err, rbErr)
@@ -380,9 +383,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 			return fmt.Errorf("could not begin transaction for full import retry: %w", err)
 		}
 
-		monitoring.Alert("vulndb integrity check failed after incremental import — retrying as full import", fmt.Errorf("integrity validation failed"))
-		slog.Warn("integrity check failed, retrying as full import")
-		err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{})
+		err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{}, integrity)
 		if err != nil {
 			if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
 				monitoring.Alert("could not rollback transaction after failed full import retry", fmt.Errorf("rollback failed: %w", rbErr))
@@ -474,23 +475,20 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 		return fmt.Errorf("OSV import failed: %w", err)
 	}
 
-	slog.Info("applying EPSS data")
+	slog.Info("applying EPSS data", "entries", len(epssData))
 	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not apply EPSS data: %w", err)
 	}
-	slog.Info("applied EPSS data", "entries", len(epssData))
 
-	slog.Info("applying CISA KEV data")
+	slog.Info("applying CISA KEV data", "entries", len(kevEntries))
 	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not apply CISA KEV data: %w", err)
 	}
-	slog.Info("applied CISA KEV data", "entries", len(kevEntries))
 
-	slog.Info("applying exploit data")
+	slog.Info("applying exploit data", "entries", len(exploits))
 	if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
 		return fmt.Errorf("could not apply exploit data: %w", err)
 	}
-	slog.Info("applied exploit data", "entries", len(exploits))
 
 	slog.Info("applying malicious packages")
 	if err := insertMaliciousPackagesBulk(ctx, tx, pkgs, comps); err != nil {
@@ -510,7 +508,7 @@ func truncateVulnDBTables(ctx context.Context, tx pgx.Tx) error {
 }
 
 // Returns the import timestamp from the integrity manifest on success, zero time if integrity fails.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time, integrityGroundTruth integrityInformation) error {
 	if err := s.populateDBFromGobs(ctx, tx, workingDir, lastImportTime); err != nil {
 		return err
 	}
@@ -520,7 +518,7 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 	if err != nil {
 		return fmt.Errorf("could not calculate integrity information: %w", err)
 	}
-	valid, err := validateIntegrityInformation(workingDir, localIntegrity)
+	valid, err := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
 	if err != nil {
 		return fmt.Errorf("could not validate integrity: %w", err)
 	}
@@ -766,18 +764,7 @@ type integrityInformation struct {
 	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
-func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
-	fd, err := os.Open(workingDir + "/integrity_checks.json")
-	if err != nil {
-		return false, fmt.Errorf("could not open integrity check json file: %w", err)
-	}
-
-	var groundTruth integrityInformation
-	err = json.NewDecoder(fd).Decode(&groundTruth)
-	if err != nil {
-		return false, fmt.Errorf("could not decode remote integrity information")
-	}
-
+func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
@@ -797,6 +784,7 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 	}
 	return true, nil
 }
+
 func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]tableIntegrityInformation, error) {
 	const query = `
 		WITH
