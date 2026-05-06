@@ -426,40 +426,54 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 
 	if lastImportTime.IsZero() {
 		group.Go(func() error {
-			slog.Info("full import: truncating vulndb tables")
-			return truncateVulnDBTables(ctx, tx)
+			t := time.Now()
+			slog.Info("start truncating vulndb tables")
+			if err := truncateVulnDBTables(ctx, tx); err != nil {
+				return err
+			}
+			slog.Info("finished truncating vulndb tables", "took", time.Since(t).Round(time.Millisecond))
+			return nil
 		})
 	}
 
 	group.Go(func() error {
+		t := time.Now()
 		if err := readGobFile(workingDir+"/osv.gob", &osvEntries); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
-		slog.Info("decoded OSV gob file", "amount", len(osvEntries))
+		slog.Info("finished decoding OSV gob", "entries", len(osvEntries), "took", time.Since(t).Round(time.Millisecond))
 		return nil
 	})
 	group.Go(func() error {
+		t := time.Now()
 		if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
 			return fmt.Errorf("could not read EPSS gob: %w", err)
 		}
+		slog.Info("finished decoding EPSS gob", "entries", len(epssData), "took", time.Since(t).Round(time.Millisecond))
 		return nil
 	})
 	group.Go(func() error {
+		t := time.Now()
 		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
 			return fmt.Errorf("could not read CISA KEV gob: %w", err)
 		}
+		slog.Info("finished decoding CISA KEV gob", "entries", len(kevEntries), "took", time.Since(t).Round(time.Millisecond))
 		return nil
 	})
 	group.Go(func() error {
+		t := time.Now()
 		if err := readGobFile(workingDir+"/exploits.gob", &gobExploit); err != nil {
 			return fmt.Errorf("could not read exploits gob: %w", err)
 		}
+		slog.Info("finished decoding exploits gob", "entries", len(gobExploit), "took", time.Since(t).Round(time.Millisecond))
 		return nil
 	})
 	group.Go(func() error {
+		t := time.Now()
 		if err := readGobFile(workingDir+"/maliciouspackages.gob", &malExport); err != nil {
 			return fmt.Errorf("could not read malicious packages gob: %w", err)
 		}
+		slog.Info("finished decoding malicious packages gob", "took", time.Since(t).Round(time.Millisecond))
 		return nil
 	})
 	if err := group.Wait(); err != nil {
@@ -470,31 +484,40 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	exploits := gobExploitsToModels(gobExploit, lastImportTime)
 	pkgs, comps := gobMalPackagesExportToModels(malExport, lastImportTime)
 
-	slog.Info("applying OSV data")
+	t := time.Now()
+	slog.Info("start applying OSV data", "entries", len(osvEntries), "incremental", !lastImportTime.IsZero())
 	if err := s.osv.applyOSVEntries(ctx, tx, osvEntries, lastImportTime); err != nil {
 		return fmt.Errorf("OSV import failed: %w", err)
 	}
+	slog.Info("finished applying OSV data", "took", time.Since(t).Round(time.Millisecond))
 
-	slog.Info("applying EPSS data", "entries", len(epssData))
+	t = time.Now()
+	slog.Info("start applying EPSS data", "entries", len(epssData))
 	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not apply EPSS data: %w", err)
 	}
+	slog.Info("finished applying EPSS data", "took", time.Since(t).Round(time.Millisecond))
 
-	slog.Info("applying CISA KEV data", "entries", len(kevEntries))
+	t = time.Now()
+	slog.Info("start applying CISA KEV data", "entries", len(kevEntries))
 	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not apply CISA KEV data: %w", err)
 	}
+	slog.Info("finished applying CISA KEV data", "took", time.Since(t).Round(time.Millisecond))
 
-	slog.Info("applying exploit data", "entries", len(exploits))
+	t = time.Now()
+	slog.Info("start applying exploit data", "entries", len(exploits))
 	if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
 		return fmt.Errorf("could not apply exploit data: %w", err)
 	}
+	slog.Info("finished applying exploit data", "took", time.Since(t).Round(time.Millisecond))
 
-	slog.Info("applying malicious packages")
+	t = time.Now()
+	slog.Info("start applying malicious packages", "packages", len(pkgs), "components", len(comps))
 	if err := insertMaliciousPackagesBulk(ctx, tx, pkgs, comps); err != nil {
 		return fmt.Errorf("could not apply malicious packages: %w", err)
 	}
-	slog.Info("applied malicious packages", "packages", len(pkgs), "components", len(comps))
+	slog.Info("finished applying malicious packages", "took", time.Since(t).Round(time.Millisecond))
 
 	return nil
 }
