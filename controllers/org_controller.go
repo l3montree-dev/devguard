@@ -36,15 +36,17 @@ type OrgController struct {
 	rbacProvider           shared.RBACProvider
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
+	configService          shared.ConfigService
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository) *OrgController {
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, configService shared.ConfigService) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
 		rbacProvider:           rbacProvider,
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
+		configService:          configService,
 	}
 }
 
@@ -56,6 +58,15 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 // @Success 200 {object} models.Org
 // @Router /organizations [post]
 func (controller *OrgController) Create(ctx shared.Context) error {
+	var settings shared.InstanceSettings
+	err := controller.configService.GetJSONConfig(ctx.Request().Context(), "instance_settings", &settings)
+	if err != nil {
+		// if there is an error getting the instance settings, we assume that the instance settings do not exist and we allow the creation of the organization
+		settings = shared.InstanceSettings{}
+	}
+	if settings.SingleOrganizationMode {
+		return echo.NewHTTPError(400, "creating organizations is not allowed in single organization mode")
+	}
 
 	var req dtos.OrgCreateRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -71,7 +82,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "slug is required")
 	}
 
-	err := controller.orgService.CreateOrganization(ctx, &organization)
+	err = controller.orgService.CreateOrganization(ctx, &organization)
 	if err != nil {
 		return err
 	}

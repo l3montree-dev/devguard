@@ -749,3 +749,7 @@ const (
 	ContainerScan ScannerType = "container-scan"
 	TestScanner   ScannerType = "test-scanner"
 )
+
+type InstanceSettings struct {
+	SingleOrganizationMode bool `json:"singleOrganizationMode"`
+}

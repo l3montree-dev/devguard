@@ -3,6 +3,7 @@ package daemons
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/l3montree-dev/devguard/shared"
@@ -68,8 +69,23 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
+func (runner *DaemonRunner) SetInstanceSettings(ctx context.Context) error {
+	singleOrganizationMode := os.Getenv("SINGLE_ORGANIZATION_MODE")
+	if singleOrganizationMode == "true" {
+		return runner.configService.SetJSONConfig(ctx, "instance_settings", shared.InstanceSettings{
+			SingleOrganizationMode: true,
+		})
+	}
+	return nil
+}
+
 func (runner *DaemonRunner) runDaemons() {
 	ctx := context.Background()
+
+	if err := runner.SetInstanceSettings(ctx); err != nil {
+		slog.Error("could not set instance settings", "err", err)
+	}
+
 	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
