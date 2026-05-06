@@ -152,6 +152,10 @@ func (runner *DaemonRunner) Start(ctx context.Context) {
 }
 
 func (runner *DaemonRunner) tick() {
+	if err := runner.SetInstanceSettings(context.Background()); err != nil {
+		slog.Error("could not set instance settings", "err", err)
+	}
+
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()

@@ -65,7 +65,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		settings = shared.InstanceSettings{}
 	}
 	if settings.SingleOrganizationMode {
-		return echo.NewHTTPError(400, "creating organizations is not allowed in single organization mode")
+		return echo.NewHTTPError(403, "creating organizations is not allowed in single organization mode")
 	}
 
 	var req dtos.OrgCreateRequest

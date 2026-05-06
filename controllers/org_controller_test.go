@@ -257,8 +257,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := NewOrganizationController(nil, nil, nil, nil, nil)
-
+		h := NewOrganizationController(nil, nil, nil, nil, nil, nil)
 		err := h.Create(ctx)
 		if err == nil {
 			t.Fail()
@@ -272,7 +271,7 @@ func TestCreate(t *testing.T) {
 
 		shared.SetOrg(ctx, models.Org{Name: "fantasy", Slug: "fantasy"})
 
-		h := NewOrganizationController(nil, nil, nil, nil, nil)
+		h := NewOrganizationController(nil, nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -286,7 +285,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := NewOrganizationController(nil, nil, nil, nil, nil)
+		h := NewOrganizationController(nil, nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {

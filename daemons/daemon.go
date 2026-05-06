@@ -75,16 +75,15 @@ func (runner *DaemonRunner) SetInstanceSettings(ctx context.Context) error {
 		return runner.configService.SetJSONConfig(ctx, "instance_settings", shared.InstanceSettings{
 			SingleOrganizationMode: true,
 		})
+	} else {
+		return runner.configService.SetJSONConfig(ctx, "instance_settings", shared.InstanceSettings{
+			SingleOrganizationMode: false,
+		})
 	}
-	return nil
 }
 
 func (runner *DaemonRunner) runDaemons() {
 	ctx := context.Background()
-
-	if err := runner.SetInstanceSettings(ctx); err != nil {
-		slog.Error("could not set instance settings", "err", err)
-	}
 
 	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
