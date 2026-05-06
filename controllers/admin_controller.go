@@ -29,7 +29,6 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
-	"github.com/ory/client-go"
 )
 
 // daemonCooldown is the minimum interval between two manual triggers of the same daemon.
@@ -40,63 +39,61 @@ type daemonTriggerTimestamp struct {
 }
 
 type AdminController struct {
+	adminService        shared.AdminService
+	adminRepository     shared.AdminRepository
 	daemonRunner        shared.DaemonRunner
-	casbinRBACProvider  shared.RBACProvider
 	vulnDBImportService shared.VulnDBImportService
 	configService       shared.ConfigService
 }
 
 func NewAdminController(
 	daemonRunner shared.DaemonRunner,
-	casbinRBACProvider shared.RBACProvider,
+	adminService shared.AdminService,
+	adminRepository shared.AdminRepository,
 	vulnDBImportService shared.VulnDBImportService,
 	configService shared.ConfigService,
 ) *AdminController {
 	return &AdminController{
 		daemonRunner:        daemonRunner,
-		casbinRBACProvider:  casbinRBACProvider,
+		adminService:        adminService,
+		adminRepository:     adminRepository,
 		vulnDBImportService: vulnDBImportService,
 		configService:       configService,
 	}
 }
 
-func (c *AdminController) GetAdminsInOrg(ctx shared.Context) error {
-	orgID := ctx.Param("organizationID")
-	if orgID == "" {
-		return echo.NewHTTPError(400, "bad request")
-	}
-	orgIDParsed, err := uuid.Parse(orgID)
+func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) error {
+	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations()
 	if err != nil {
-		return echo.NewHTTPError(400, "bad request")
+		return echo.NewHTTPError(500, "could not get external organizations")
 	}
-	orgRBAC := c.casbinRBACProvider.GetDomainRBAC(orgIDParsed.String())
-	adminIDs := orgRBAC.GetAdminsOfOrganization()
 
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-
-	memberIdentities, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(adminIDs))
-	if err != nil {
-		return err
-	}
-	users := make([]dtos.UserDTO, 0, len(adminIDs))
-	for _, member := range memberIdentities {
-		users = append(users, dtos.UserDTO{
-			ID:   member.Id,
-			Name: shared.IdentityName(member.Traits),
-			Role: string(shared.RoleAdmin),
+	orgsWithAdmins := make([]dtos.AdminsInOrg, 0, len(orgs))
+	for _, org := range orgs {
+		if org.ExternalEntityProviderID == nil {
+			return echo.NewHTTPError(500, "could not correctly fetch external organization")
+		}
+		admins, err := controller.adminService.GetAdminsForOrg(org.ID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not get admins for organization")
+		}
+		orgsWithAdmins = append(orgsWithAdmins, dtos.AdminsInOrg{
+			Admins:     admins,
+			ID:         org.ID,
+			Slug:       org.Slug,
+			InstanceID: *org.ExternalEntityProviderID,
 		})
 	}
-
-	return ctx.JSON(200, dtos.GetAdminsResponse{Admins: users})
+	return ctx.JSON(200, orgsWithAdmins)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
 // error message if the cooldown has not elapsed yet.
 // Because the timestamp lives in the shared config DB table, this correctly
 // prevents duplicate triggers across multiple API instances.
-func (c *AdminController) checkCooldown(ctx context.Context, configKey string) (ok bool, retryAfter time.Duration) {
+func (controller *AdminController) checkCooldown(ctx context.Context, configKey string) (ok bool, retryAfter time.Duration) {
 	var ts daemonTriggerTimestamp
-	err := c.configService.GetJSONConfig(ctx, configKey, &ts)
+	err := controller.configService.GetJSONConfig(ctx, configKey, &ts)
 	if err != nil {
 		// No record yet → ok to proceed
 		return true, 0
@@ -113,8 +110,8 @@ func (c *AdminController) checkCooldown(ctx context.Context, configKey string) (
 // It reuses the same key that the automatic daemon scheduler checks via
 // shouldMirror / markMirrored, so a manual trigger also resets the automatic
 // 12-hour timer.
-func (c *AdminController) markTriggered(ctx context.Context, configKey string) {
-	if err := c.configService.SetJSONConfig(ctx, configKey, daemonTriggerTimestamp{Time: time.Now()}); err != nil {
+func (controller *AdminController) markTriggered(ctx context.Context, configKey string) {
+	if err := controller.configService.SetJSONConfig(ctx, configKey, daemonTriggerTimestamp{Time: time.Now()}); err != nil {
 		slog.Error("admin: failed to mark daemon triggered in config DB",
 			"key", configKey, "err", err)
 	}
@@ -179,9 +176,9 @@ func (s *sseWriter) sendError(msg string) {
 // @Success 200 {string} string "SSE stream (event: log | done | error)"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/open-source-insights/trigger [post]
-func (c *AdminController) TriggerOpenSourceInsights(ctx shared.Context) error {
-	return c.runDaemonSSE(ctx, "vulndb.opensourceinsights", "Open Source Insights", func(sse *sseWriter) error {
-		return c.daemonRunner.UpdateOpenSourceInsightInformation(ctx.Request().Context())
+func (controller *AdminController) TriggerOpenSourceInsights(ctx shared.Context) error {
+	return controller.runDaemonSSE(ctx, "vulndb.opensourceinsights", "Open Source Insights", func(sse *sseWriter) error {
+		return controller.daemonRunner.UpdateOpenSourceInsightInformation(ctx.Request().Context())
 	})
 }
 
@@ -195,12 +192,12 @@ func (c *AdminController) TriggerOpenSourceInsights(ctx shared.Context) error {
 // @Success 200 {string} string "SSE stream (event: log | done | error)"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/vulndb/trigger [post]
-func (c *AdminController) TriggerVulnDB(ctx shared.Context) error {
+func (controller *AdminController) TriggerVulnDB(ctx shared.Context) error {
 	// The vulndb.vulndb timestamp is already set by markTriggered in
 	// runDaemonSSE (before the handler runs), so no extra write needed here.
-	return c.runDaemonSSE(ctx, "vulndb.vulndb", "VulnDB Import", func(sse *sseWriter) error {
+	return controller.runDaemonSSE(ctx, "vulndb.vulndb", "VulnDB Import", func(sse *sseWriter) error {
 		sse.sendLog("Running VulnDB import…")
-		return c.daemonRunner.UpdateVulnDB(ctx.Request().Context())
+		return controller.daemonRunner.UpdateVulnDB(ctx.Request().Context())
 	})
 }
 
@@ -214,9 +211,9 @@ func (c *AdminController) TriggerVulnDB(ctx shared.Context) error {
 // @Success 200 {string} string "SSE stream (event: log | done | error)"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/vulndb-cleanup/trigger [post]
-func (c *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
-	return c.runDaemonSSE(ctx, "daemon.vulndbCleanup", "VulnDB Cleanup", func(sse *sseWriter) error {
-		return c.vulnDBImportService.CleanupOrphanedTables(ctx.Request().Context())
+func (controller *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
+	return controller.runDaemonSSE(ctx, "daemon.vulndbCleanup", "VulnDB Cleanup", func(sse *sseWriter) error {
+		return controller.vulnDBImportService.CleanupOrphanedTables(ctx.Request().Context())
 	})
 }
 
@@ -230,9 +227,9 @@ func (c *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
 // @Success 200 {string} string "SSE stream (event: log | done | error)"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/fixed-versions/trigger [post]
-func (c *AdminController) TriggerFixedVersions(ctx shared.Context) error {
-	return c.runDaemonSSE(ctx, "vulndb.fixedVersions", "Fixed Versions", func(sse *sseWriter) error {
-		return c.daemonRunner.UpdateFixedVersions(ctx.Request().Context())
+func (controller *AdminController) TriggerFixedVersions(ctx shared.Context) error {
+	return controller.runDaemonSSE(ctx, "vulndb.fixedVersions", "Fixed Versions", func(sse *sseWriter) error {
+		return controller.daemonRunner.UpdateFixedVersions(ctx.Request().Context())
 	})
 }
 
@@ -246,9 +243,9 @@ func (c *AdminController) TriggerFixedVersions(ctx shared.Context) error {
 // @Success 200 {string} string "SSE stream (event: log | done | error)"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/asset-pipeline-all/trigger [post]
-func (c *AdminController) TriggerAssetPipelineAll(ctx shared.Context) error {
-	return c.runDaemonSSE(ctx, "daemon.assetPipelineAll", "Asset Pipeline (all)", func(sse *sseWriter) error {
-		c.daemonRunner.RunAssetPipeline(ctx.Request().Context(), true)
+func (controller *AdminController) TriggerAssetPipelineAll(ctx shared.Context) error {
+	return controller.runDaemonSSE(ctx, "daemon.assetPipelineAll", "Asset Pipeline (all)", func(sse *sseWriter) error {
+		controller.daemonRunner.RunAssetPipeline(ctx.Request().Context(), true)
 		return nil
 	})
 }
@@ -266,7 +263,7 @@ func (c *AdminController) TriggerAssetPipelineAll(ctx shared.Context) error {
 // @Failure 400 {object} echo.HTTPError "Invalid or missing assetId"
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/asset-pipeline-single/trigger [post]
-func (c *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
+func (controller *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
 	var req struct {
 		AssetID string `json:"assetId"`
 	}
@@ -284,8 +281,8 @@ func (c *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
 	// Use "." as separator to stay consistent with the dotted-path configKey
 	// convention (a ":" would be an anomalous character in the DB key).
 	configKey := "daemon.assetPipelineSingle." + assetID.String()
-	return c.runDaemonSSE(ctx, configKey, "Asset Pipeline ("+assetID.String()+")", func(sse *sseWriter) error {
-		return c.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), assetID)
+	return controller.runDaemonSSE(ctx, configKey, "Asset Pipeline ("+assetID.String()+")", func(sse *sseWriter) error {
+		return controller.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), assetID)
 	})
 }
 
@@ -303,7 +300,7 @@ func (c *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
 // the last-run timestamp. For daemons that share a key with the automatic
 // scheduler (e.g. "vulndb.vulndb"), the manual trigger also resets the
 // automatic 12-hour timer.
-func (c *AdminController) runDaemonSSE(
+func (controller *AdminController) runDaemonSSE(
 	ctx shared.Context,
 	configKey string,
 	label string,
@@ -313,7 +310,7 @@ func (c *AdminController) runDaemonSSE(
 	userID := session.GetUserID()
 
 	// ---- cooldown check (multi-instance safe via config DB) ----
-	ok, retryAfter := c.checkCooldown(ctx.Request().Context(), configKey)
+	ok, retryAfter := controller.checkCooldown(ctx.Request().Context(), configKey)
 	if !ok {
 		secs := int(retryAfter.Seconds()) + 1
 		return echo.NewHTTPError(429, fmt.Sprintf(
@@ -323,7 +320,7 @@ func (c *AdminController) runDaemonSSE(
 
 	// Mark triggered NOW (before processing) so parallel requests / other
 	// instances see the cooldown immediately.
-	c.markTriggered(ctx.Request().Context(), configKey)
+	controller.markTriggered(ctx.Request().Context(), configKey)
 
 	slog.Info("admin: triggering daemon via SSE", "key", configKey, "user", userID)
 

@@ -34,7 +34,7 @@ func NewAdminRouter(sessionRouter SessionRouter, adminController *controllers.Ad
 		return ctx.JSON(200, map[string]string{"status": "ok"})
 	})
 
-	adminRouter.GET("/organization-admins/:organizationID", adminController.GetAdminsInOrg)
+	adminRouter.GET("/external-org-admins/", adminController.GetAdminsForExternalOrgs)
 
 	// Daemon trigger endpoints – each daemon has its own SSE trigger route
 	daemonGroup := adminRouter.Group("/daemons")

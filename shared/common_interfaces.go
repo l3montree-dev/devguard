@@ -636,6 +636,14 @@ type VulnDBImportService interface {
 	ExportDiffs(ctx context.Context, extraTableNameSuffix string) error
 }
 
+type AdminService interface {
+	GetAdminsForOrg(orgID uuid.UUID) ([]dtos.UserDTO, error)
+}
+
+type AdminRepository interface {
+	GetAllExternalEntityOrganizations() ([]models.Org, error)
+}
+
 type AccessControl interface {
 	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
