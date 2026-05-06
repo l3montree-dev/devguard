@@ -4,22 +4,19 @@
 
 buildGoModule rec {
   pname = "crane";
-  version = "0.21.3";
+  version = "0.21.5";
 
   src = fetchFromGitHub {
     owner = "google";
     repo = "go-containerregistry";
     rev = "v${version}";
-    hash = "sha256-BfKiBjfL5th1TPpw6hpno04MffLnXmOVq7BsGUCkPT0=";
+    hash = "sha256-2cC2fZe22K8mPIXa8YI1MgUlEn6p1z7RBEQhFjYNsxA=";
   };
 
   # Source tree includes a vendor/ directory.
   vendorHash = null;
 
-  subPackages = [
-    "cmd/crane"
-    "cmd/gcrane"
-  ];
+  subPackages = [ "cmd/crane" "cmd/gcrane" ];
 
   ldflags = [
     "-s"
@@ -27,9 +24,7 @@ buildGoModule rec {
     "-X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v${version}"
     "-X github.com/google/go-containerregistry/internal/version.Version=${version}"
   ];
-  env = {
-    CGO_ENABLED = 0;
-  };
+  env = { CGO_ENABLED = 0; };
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = "";
