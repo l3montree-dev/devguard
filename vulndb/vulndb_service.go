@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -233,9 +232,38 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	if err := insertMaliciousPackagesBulk(ctx, tx, malPkgs, malComps); err != nil {
 		return fmt.Errorf("could not write malicious packages: %w", err)
 	}
+	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("could not calculate integrity information: %w", err)
+	}
+
+	slices.SortFunc(tableIntegrity, func(a, b tableIntegrityInformation) int {
+		return strings.Compare(a.TableName, b.TableName)
+	})
+
+	for _, ti := range tableIntegrity {
+		if ti.TotalCount == 0 || len(ti.Checksum) == 0 {
+			return fmt.Errorf("refusing to export: table %q has zero rows or empty checksum — database is likely incomplete", ti.TableName)
+		}
+		slog.Info("table integrity", "table", ti.TableName, "count", ti.TotalCount, "checksum", string(ti.Checksum))
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit export transaction: %w", err)
+	}
+
+	integrityFD, err := os.Create("integrity_checks.json")
+	if err != nil {
+		return fmt.Errorf("could not create integrity_checks.json: %w", err)
+	}
+	defer integrityFD.Close()
+
+	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: start})
+	if err != nil {
+		return fmt.Errorf("could not marshal integrity information: %w", err)
+	}
+	if _, err := integrityFD.Write(jsonContents); err != nil {
+		return fmt.Errorf("could not write integrity_checks.json: %w", err)
 	}
 
 	// Write gob files from in-memory data (DB is now committed).
@@ -258,34 +286,6 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	slog.Info("wrote all gob files")
 
 	// --- Integrity check (covers all tables including exploits + malicious) ---
-	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, s.pool)
-	if err != nil {
-		return fmt.Errorf("could not calculate integrity information: %w", err)
-	}
-	slices.SortFunc(tableIntegrity, func(a, b tableIntegrityInformation) int {
-		return strings.Compare(a.TableName, b.TableName)
-	})
-
-	for _, ti := range tableIntegrity {
-		if ti.TotalCount == 0 || len(ti.Checksum) == 0 {
-			return fmt.Errorf("refusing to export: table %q has zero rows or empty checksum — database is likely incomplete", ti.TableName)
-		}
-		slog.Info("table integrity", "table", ti.TableName, "count", ti.TotalCount, "checksum", string(ti.Checksum))
-	}
-
-	integrityFD, err := os.Create("integrity_checks.json")
-	if err != nil {
-		return fmt.Errorf("could not create integrity_checks.json: %w", err)
-	}
-	defer integrityFD.Close()
-
-	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: start})
-	if err != nil {
-		return fmt.Errorf("could not marshal integrity information: %w", err)
-	}
-	if _, err := integrityFD.Write(jsonContents); err != nil {
-		return fmt.Errorf("could not write integrity_checks.json: %w", err)
-	}
 
 	if err := writeVulnDBTarZst("vulndb.tar.zst", []string{
 		"osv.gob",
@@ -301,6 +301,20 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 
 	slog.Info("finished vulndb export", "time", time.Since(start))
 	return nil
+}
+
+func readIntegrityInformation(workingDir string) (integrityInformation, error) {
+	fd, err := os.Open(workingDir + "/integrity_checks.json")
+	if err != nil {
+		return integrityInformation{}, fmt.Errorf("could not open integrity_checks.json: %w", err)
+	}
+	defer fd.Close()
+	var integrity integrityInformation
+	if err := json.NewDecoder(fd).Decode(&integrity); err != nil {
+		return integrityInformation{}, fmt.Errorf("could not decode integrity_checks.json: %w", err)
+	}
+
+	return integrity, nil
 }
 
 // ImportRC pulls the latest vulndb artifact from the OCI registry and applies
@@ -332,30 +346,62 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 
-	databaseStateTime, err := s.applyFromWorkingDir(ctx, workingDir, lastImportTime)
+	integrity, err := readIntegrityInformation(workingDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read integrity information: %w", err)
 	}
 
-	// Integrity check failed on the incremental import — alert and retry as a full import.
-	if databaseStateTime.IsZero() {
+	if integrity.ImportTimestamp.Equal(lastImportTime) {
+		slog.Info("vulndb is up to date, skipping import", "lastImportTime", lastImportTime)
+		return nil
+	}
+
+	// Open a single pgx connection and transaction for all DB writes.
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("could not acquire db connection: %w", err)
+	}
+	defer conn.Release()
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("could not begin transaction: %w", err)
+	}
+
+	err = s.applyFromWorkingDir(ctx, tx, workingDir, lastImportTime)
+	if err != nil {
+		// we need to create a new transaction for the retry, so we rollback the previous one and start a new one
+		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
+			return fmt.Errorf("could not rollback transaction after failed import: %w (rollback error: %v)", err, rbErr)
+		}
+
+		tx, err = conn.Begin(ctx) //nolint:errcheck
+		if err != nil {
+			return fmt.Errorf("could not begin transaction for full import retry: %w", err)
+		}
+
 		monitoring.Alert("vulndb integrity check failed after incremental import — retrying as full import", fmt.Errorf("integrity validation failed"))
 		slog.Warn("integrity check failed, retrying as full import")
-		databaseStateTime, err = s.applyFromWorkingDir(ctx, workingDir, time.Time{})
+		err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{})
 		if err != nil {
-			return err
-		}
-		if databaseStateTime.IsZero() {
-			err := fmt.Errorf("integrity validation failed after full import fallback")
+			if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
+				monitoring.Alert("could not rollback transaction after failed full import retry", fmt.Errorf("rollback failed: %w", rbErr))
+				return fmt.Errorf("could not rollback transaction after failed full import retry: %w (rollback error: %v)", err, rbErr)
+			}
+
 			monitoring.Alert("vulndb integrity check failed after full import fallback", err)
-			return err
+			return fmt.Errorf("integrity validation failed after full import fallback: %w", err)
 		}
 	}
 
 	slog.Info("successfully validated checksums")
 
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", databaseStateTime.Format(time.RFC3339Nano)); err != nil {
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
 	slog.Info("finished vulndb import", "time", time.Since(start))
@@ -366,7 +412,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 // lastImportTime controls which entries are treated as new (zero value = full import).
 // populateDBFromGobs reads all gob files from workingDir and writes them to the database.
 // lastImportTime is used to filter incremental updates; pass time.Time{} for a full import.
-func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir string, lastImportTime time.Time) error {
+func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
 	// Decode all gob payloads in parallel before touching the database.
 	group, _ := errgroup.WithContext(ctx)
 	var (
@@ -376,6 +422,14 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir strin
 		gobExploit []GobExploit
 		malExport  GobMaliciousPackagesExport
 	)
+
+	if lastImportTime.IsZero() {
+		group.Go(func() error {
+			slog.Info("full import: truncating vulndb tables")
+			return truncateVulnDBTables(ctx, tx)
+		})
+	}
+
 	group.Go(func() error {
 		if err := readGobFile(workingDir+"/osv.gob", &osvEntries); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
@@ -415,30 +469,6 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir strin
 	exploits := gobExploitsToModels(gobExploit, lastImportTime)
 	pkgs, comps := gobMalPackagesExportToModels(malExport, lastImportTime)
 
-	// Open a single pgx connection and transaction for all DB writes.
-	conn, err := s.pool.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("could not acquire db connection: %w", err)
-	}
-	defer conn.Release()
-
-	tx, err := conn.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("could not begin transaction: %w", err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			slog.Error("could not rollback import transaction", "error", err)
-		}
-	}()
-
-	if lastImportTime.IsZero() {
-		slog.Info("full import: truncating vulndb tables")
-		if err := truncateVulnDBTables(ctx, tx); err != nil {
-			return fmt.Errorf("could not truncate vulndb tables for full import: %w", err)
-		}
-	}
-
 	slog.Info("applying OSV data")
 	if err := s.osv.applyOSVEntries(ctx, tx, osvEntries, lastImportTime); err != nil {
 		return fmt.Errorf("OSV import failed: %w", err)
@@ -468,9 +498,6 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, workingDir strin
 	}
 	slog.Info("applied malicious packages", "packages", len(pkgs), "components", len(comps))
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("could not commit import transaction: %w", err)
-	}
 	return nil
 }
 
@@ -483,24 +510,24 @@ func truncateVulnDBTables(ctx context.Context, tx pgx.Tx) error {
 }
 
 // Returns the import timestamp from the integrity manifest on success, zero time if integrity fails.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, workingDir string, lastImportTime time.Time) (time.Time, error) {
-	if err := s.populateDBFromGobs(ctx, workingDir, lastImportTime); err != nil {
-		return time.Time{}, err
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
+	if err := s.populateDBFromGobs(ctx, tx, workingDir, lastImportTime); err != nil {
+		return err
 	}
 
 	// --- Integrity validation ---
-	localIntegrity, err := calculateTotalIntegrityInformation(ctx, s.pool)
+	localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("could not calculate integrity information: %w", err)
+		return fmt.Errorf("could not calculate integrity information: %w", err)
 	}
-	valid, databaseStateTime, err := validateIntegrityInformation(workingDir, localIntegrity)
+	valid, err := validateIntegrityInformation(workingDir, localIntegrity)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("could not validate integrity: %w", err)
+		return fmt.Errorf("could not validate integrity: %w", err)
 	}
 	if !valid {
-		return time.Time{}, nil
+		return nil
 	}
-	return databaseStateTime, nil
+	return nil
 }
 
 // readGobFile is the counterpart of writeGobFile — decodes a plain gob file.
@@ -739,16 +766,16 @@ type integrityInformation struct {
 	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
-func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, time.Time, error) {
+func validateIntegrityInformation(workingDir string, localIntegrityInformation []tableIntegrityInformation) (bool, error) {
 	fd, err := os.Open(workingDir + "/integrity_checks.json")
 	if err != nil {
-		return false, time.Time{}, fmt.Errorf("could not open integrity check json file: %w", err)
+		return false, fmt.Errorf("could not open integrity check json file: %w", err)
 	}
 
 	var groundTruth integrityInformation
 	err = json.NewDecoder(fd).Decode(&groundTruth)
 	if err != nil {
-		return false, time.Time{}, fmt.Errorf("could not decode remote integrity information")
+		return false, fmt.Errorf("could not decode remote integrity information")
 	}
 
 	for _, tableIntegrity := range localIntegrityInformation {
@@ -757,7 +784,7 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName, "expectedCount", tableGroundTruth.TotalCount, "actualCount", tableIntegrity.TotalCount, "expectedChecksum", fmt.Sprintf("%x", tableGroundTruth.Checksum), "actualChecksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
-					return false, time.Time{}, nil
+					return false, nil
 				} else {
 					found = true
 					break
@@ -765,16 +792,16 @@ func validateIntegrityInformation(workingDir string, localIntegrityInformation [
 			}
 		}
 		if !found {
-			return false, time.Time{}, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
+			return false, fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
 		}
 	}
-	return true, groundTruth.ImportTimestamp, nil
+	return true, nil
 }
-func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool) ([]tableIntegrityInformation, error) {
-
-	queries := map[string]string{
-		"cves": `
-			SELECT count(*) AS row_count,
+func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]tableIntegrityInformation, error) {
+	const query = `
+		WITH
+		cves_integrity AS (
+			SELECT 'cves' AS table_name, count(*) AS row_count,
 			       md5(string_agg(row_hash, '' ORDER BY id)) AS checksum
 			FROM (
 				SELECT id, md5(
@@ -782,115 +809,86 @@ func calculateTotalIntegrityInformation(ctx context.Context, pool *pgxpool.Pool)
 					coalesce(description, '\0') || '|' ||
 					coalesce(cvss::text, '\0') || '|' ||
 					coalesce(vector, '\0')
-				) AS row_hash
-				FROM cves
-			) sub;`,
-
-		"cve_relationships": `
-			SELECT count(*) AS row_count,
+				) AS row_hash FROM cves
+			) sub
+		),
+		cve_relationships_integrity AS (
+			SELECT 'cve_relationships' AS table_name, count(*) AS row_count,
 			       md5(string_agg(row_hash, '' ORDER BY source_cve, target_cve, relationship_type)) AS checksum
 			FROM (
-				SELECT source_cve, target_cve, relationship_type, md5(
-					source_cve || '|' || target_cve || '|' || relationship_type
-				) AS row_hash
+				SELECT source_cve, target_cve, relationship_type,
+				       md5(source_cve || '|' || target_cve || '|' || relationship_type) AS row_hash
 				FROM cve_relationships
-			) sub;`,
-
-		"cve_affected_component": `
-			SELECT count(*) AS row_count,
+			) sub
+		),
+		cve_affected_component_integrity AS (
+			SELECT 'cve_affected_component' AS table_name, count(*) AS row_count,
 			       md5(
-				   count(*)::text || '|' ||
-				   coalesce(bit_xor(hashtextextended(cve_id::text || '|' || affected_component_id::text, 0))::text, '0') || '|' ||
-				   coalesce(bit_xor(hashtextextended(cve_id::text || '|' || affected_component_id::text, 1))::text, '0')
-			   ) AS checksum
-			FROM cve_affected_component;`,
-
-		"affected_components": `
-			SELECT count(*) AS row_count,
+			           count(*)::text || '|' ||
+			           coalesce(bit_xor(hashtextextended(cve_id::text || '|' || affected_component_id::text, 0))::text, '0') || '|' ||
+			           coalesce(bit_xor(hashtextextended(cve_id::text || '|' || affected_component_id::text, 1))::text, '0')
+			       ) AS checksum
+			FROM cve_affected_component
+		),
+		affected_components_integrity AS (
+			SELECT 'affected_components' AS table_name, count(*) AS row_count,
 			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
-			FROM affected_components;`,
-
-		"exploits": `
-			SELECT count(*) AS row_count,
+			FROM affected_components
+		),
+		exploits_integrity AS (
+			SELECT 'exploits' AS table_name, count(*) AS row_count,
 			       md5(string_agg(row_hash, '' ORDER BY id, cve_id, source_url, row_hash)) AS checksum
 			FROM (
-				SELECT id, md5(
+				SELECT id, cve_id, source_url, md5(
 					coalesce(id, '\0') || '|' ||
 					coalesce(cve_id, '\0') || '|' ||
 					coalesce(source_url, '\0')
-				) AS row_hash
-				, cve_id, source_url
-				FROM exploits
-			) sub;`,
-
-		"malicious_packages": `
-			SELECT count(*) AS row_count,
+				) AS row_hash FROM exploits
+			) sub
+		),
+		malicious_packages_integrity AS (
+			SELECT 'malicious_packages' AS table_name, count(*) AS row_count,
 			       md5(string_agg(row_hash, '' ORDER BY id)) AS checksum
 			FROM (
-				SELECT id, md5(
-					coalesce(id, '\0') || '|' ||
-					coalesce(modified::text, '\0')
-				) AS row_hash
-				FROM malicious_packages
-				WHERE id NOT LIKE 'FAKE-TEST-%'
-			) sub;`,
-
-		"malicious_affected_components": `
-			SELECT count(*) AS row_count,
+				SELECT id, md5(coalesce(id, '\0') || '|' || coalesce(modified::text, '\0')) AS row_hash
+				FROM malicious_packages WHERE id NOT LIKE 'FAKE-TEST-%'
+			) sub
+		),
+		malicious_affected_components_integrity AS (
+			SELECT 'malicious_affected_components' AS table_name, count(*) AS row_count,
 			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
-			FROM malicious_affected_components
-			WHERE malicious_package_id NOT LIKE 'FAKE-TEST-%';`,
-	}
-
-	mutex := &sync.Mutex{}
-	waitGroup := &sync.WaitGroup{}
-
-	results := make([]tableIntegrityInformation, 0, 4)
-	errors := make([]error, 0, 4)
-
-	// launch 1 go routine per table for parallelization of the calculations
-	for table, query := range queries {
-		waitGroup.Add(1)
-		go func(table, query string) {
-			defer waitGroup.Done()
-
-			result, err := calculateIntegrityInformationForTable(ctx, pool, table, query)
-
-			mutex.Lock()
-			defer mutex.Unlock()
-			if err != nil {
-				errors = append(errors, err)
-			} else {
-				results = append(results, result)
-			}
-		}(table, query)
-	}
-
-	waitGroup.Wait()
-
-	if len(errors) > 0 {
-		return results, fmt.Errorf("ran into one or multiple errors whilst trying to calculate integrity information: %v", errors)
-	}
-
-	return results, nil
-}
-
-// computes and returns the tables integrity information using the provided query
-func calculateIntegrityInformationForTable(ctx context.Context, pool *pgxpool.Pool, table string, query string) (tableIntegrityInformation, error) {
-	var result tableIntegrityInformation
-	result.TableName = table
+			FROM malicious_affected_components WHERE malicious_package_id NOT LIKE 'FAKE-TEST-%'
+		)
+		SELECT table_name, row_count, checksum FROM cves_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM cve_relationships_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM cve_affected_component_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM affected_components_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM exploits_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM malicious_packages_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM malicious_affected_components_integrity
+	`
 
 	start := time.Now()
-	slog.Info("start calculating integrity information", "table", table)
-
-	err := pool.QueryRow(ctx, query).Scan(&result.TotalCount, &result.Checksum)
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
-		return result, fmt.Errorf("could not calculate integrity information for table %s: %w", table, err)
+		return nil, fmt.Errorf("could not calculate integrity information: %w", err)
 	}
+	defer rows.Close()
 
-	slog.Info("finished calculating integrity information", "table", table, "time", time.Since(start))
+	results := make([]tableIntegrityInformation, 0, 7)
+	for rows.Next() {
+		var r tableIntegrityInformation
+		if err := rows.Scan(&r.TableName, &r.TotalCount, &r.Checksum); err != nil {
+			return nil, fmt.Errorf("could not scan integrity row: %w", err)
+		}
+		results = append(results, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("could not read integrity rows: %w", err)
+	}
+	slog.Info("calculated integrity information", "tables", len(results), "time", time.Since(start))
 
-	return result, nil
+	return results, nil
 }
 
 func writeGobFile(object any, fileName string) error {
