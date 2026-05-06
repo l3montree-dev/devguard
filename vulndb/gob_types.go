@@ -121,12 +121,12 @@ func gobExploitToModel(g GobExploit) models.Exploit {
 }
 
 func gobExploitsToModels(gs []GobExploit, lastImportTime time.Time) []models.Exploit {
-	out := make([]models.Exploit, len(gs))
-	for i, g := range gs {
+	out := make([]models.Exploit, 0, len(gs))
+	for _, g := range gs {
 		if g.Updated != nil && g.Updated.Before(lastImportTime) {
 			continue
 		}
-		out[i] = gobExploitToModel(g)
+		out = append(out, gobExploitToModel(g))
 	}
 	return out
 }
