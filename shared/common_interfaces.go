@@ -637,7 +637,7 @@ type VulnDBImportService interface {
 }
 
 type AdminService interface {
-	GetAdminsForOrg(orgID uuid.UUID) ([]dtos.UserDTO, error)
+	GetAdminsForOrg(orgID uuid.UUID, adminClient AdminClient) ([]dtos.UserDTO, error)
 }
 
 type AdminRepository interface {

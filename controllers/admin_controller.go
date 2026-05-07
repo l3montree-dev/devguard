@@ -68,12 +68,14 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 		return echo.NewHTTPError(500, "could not get external organizations")
 	}
 
+	adminClient := shared.GetAuthAdminClient(ctx)
+
 	orgsWithAdmins := make([]dtos.AdminsInOrg, 0, len(orgs))
 	for _, org := range orgs {
 		if org.ExternalEntityProviderID == nil {
 			return echo.NewHTTPError(500, "could not correctly fetch external organization")
 		}
-		admins, err := controller.adminService.GetAdminsForOrg(org.ID)
+		admins, err := controller.adminService.GetAdminsForOrg(org.ID, adminClient)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get admins for organization")
 		}
