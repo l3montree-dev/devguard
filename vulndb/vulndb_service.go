@@ -438,11 +438,11 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 		return fmt.Errorf("could not get current affected components: %w", err)
 	}
 	group.Go(func() error {
+		defer close(vulndbChan)
 		t := time.Now()
 		if err := readGobFileStream[OSVEntry, vulndbRows](workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(ctx, currentAffectedComponents)); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
-		close(vulndbChan)
 		slog.Info("decoded osv.gob", "took", time.Since(t))
 		return nil
 	})
@@ -463,20 +463,20 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 		return nil
 	})
 	group.Go(func() error {
+		defer close(exploitChan)
 		t := time.Now()
 		if err := readGobFileStream(workingDir+"/exploits.gob", exploitChan, gobExploitStreamingTransformer(lastImportTime)); err != nil {
 			return fmt.Errorf("could not read exploits gob: %w", err)
 		}
-		close(exploitChan)
 		slog.Info("decoded exploits.gob", "took", time.Since(t))
 		return nil
 	})
 	group.Go(func() error {
+		defer close(malPkgChan)
 		t := time.Now()
-		if err := readGobFileStream[GobMaliciousPackagesExport, malRow](workingDir+"/maliciouspackages.gob", malPkgChan, gobMalPackagesStreamingTransformer(lastImportTime)); err != nil {
+		if err := readGobFileStream(workingDir+"/maliciouspackages.gob", malPkgChan, gobMalPackagesStreamingTransformer(lastImportTime)); err != nil {
 			return fmt.Errorf("could not read malicious packages gob: %w", err)
 		}
-		close(malPkgChan)
 		slog.Info("decoded maliciouspackages.gob", "took", time.Since(t))
 		return nil
 	})
