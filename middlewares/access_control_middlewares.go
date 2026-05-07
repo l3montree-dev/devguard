@@ -23,20 +23,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
-func InstanceAdminMiddleware() echo.MiddlewareFunc {
+func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			session := shared.GetSession(ctx)
-			if !session.IsInstanceAdmin() {
-				slog.Error("access denied in InstanceAdminMiddleware - user is not an instance admin", "user", session.GetUserID())
-				return echo.NewHTTPError(403, "you do not have access to this resource")
+			isAdmin, err := pat.VerifyAdminRequest(ctx.Request())
+			if err == nil {
+				if isAdmin {
+					ctx.Set("session", accesscontrol.NewSession("admin", dtos.AllowedScopes, true))
+					return next(ctx)
+				}
 			}
-			return next(ctx)
+			return fmt.Errorf("could not verify admin request: %v", err)
 		}
 	}
 }

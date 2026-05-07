@@ -161,6 +161,66 @@ func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// VerifyAdminRequest provides a mock function for the type PersonalAccessTokenService
+func (_mock *PersonalAccessTokenService) VerifyAdminRequest(req *http.Request) (bool, error) {
+	ret := _mock.Called(req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyAdminRequest")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) (bool, error)); ok {
+		return returnFunc(req)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) bool); ok {
+		r0 = returnFunc(req)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*http.Request) error); ok {
+		r1 = returnFunc(req)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenService_VerifyAdminRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAdminRequest'
+type PersonalAccessTokenService_VerifyAdminRequest_Call struct {
+	*mock.Call
+}
+
+// VerifyAdminRequest is a helper method to define mock.On call
+//   - req *http.Request
+func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req interface{}) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	return &PersonalAccessTokenService_VerifyAdminRequest_Call{Call: _e.mock.On("VerifyAdminRequest", req)}
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) Run(run func(req *http.Request)) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *http.Request
+		if args[0] != nil {
+			arg0 = args[0].(*http.Request)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) Return(b bool, err error) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) RunAndReturn(run func(req *http.Request) (bool, error)) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifyRequestSignature provides a mock function for the type PersonalAccessTokenService
 func (_mock *PersonalAccessTokenService) VerifyRequestSignature(ctx context.Context, req *http.Request) (shared.AuthSession, error) {
 	ret := _mock.Called(ctx, req)

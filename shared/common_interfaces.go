@@ -70,6 +70,7 @@ type ReleaseService interface {
 
 type PersonalAccessTokenService interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAdminRequest(req *http.Request) (bool, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT
 }

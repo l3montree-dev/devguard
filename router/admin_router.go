@@ -16,8 +16,10 @@
 package router
 
 import (
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,9 +27,9 @@ type AdminRouter struct {
 	*echo.Group
 }
 
-func NewAdminRouter(sessionRouter SessionRouter, adminController *controllers.AdminController) AdminRouter {
-	adminRouter := sessionRouter.Group.Group("/admin",
-		middlewares.InstanceAdminMiddleware(),
+func NewAdminRouter(server api.Server, adminController *controllers.AdminController, patService shared.PersonalAccessTokenService) AdminRouter {
+	adminRouter := server.Echo.Group("/admin",
+		middlewares.InstanceAdminMiddleware(patService),
 	)
 
 	adminRouter.GET("/", func(ctx echo.Context) error {

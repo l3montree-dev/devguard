@@ -232,7 +232,7 @@ func (p *PatService) markAsLastUsedNow(ctx context.Context, fingerprint string) 
 	return p.patRepository.MarkAsLastUsedNow(ctx, nil, fingerprint)
 }
 
-func (p *PatService) verifyAdminRequest(req *http.Request) (bool, error) {
+func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 	verifier, _ := httpsign.NewP256Verifier(p.adminPubKey, nil,
 		httpsign.Headers("@method", "content-digest"))
 
@@ -262,7 +262,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 	fingerprint := req.Header.Get("X-Fingerprint")
 	if fingerprint == "" {
 		// check if it's an admin request
-		isAdmin, err := p.verifyAdminRequest(req)
+		isAdmin, err := p.VerifyAdminRequest(req)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify admin request: %v", err)
 		}

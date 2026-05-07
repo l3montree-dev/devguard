@@ -7,6 +7,7 @@ package mocks
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,8 +39,8 @@ func (_m *AdminService) EXPECT() *AdminService_Expecter {
 }
 
 // GetAdminsForOrg provides a mock function for the type AdminService
-func (_mock *AdminService) GetAdminsForOrg(orgID uuid.UUID) ([]dtos.UserDTO, error) {
-	ret := _mock.Called(orgID)
+func (_mock *AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
+	ret := _mock.Called(orgID, adminClient)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAdminsForOrg")
@@ -47,18 +48,18 @@ func (_mock *AdminService) GetAdminsForOrg(orgID uuid.UUID) ([]dtos.UserDTO, err
 
 	var r0 []dtos.UserDTO
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) ([]dtos.UserDTO, error)); ok {
-		return returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, shared.AdminClient) ([]dtos.UserDTO, error)); ok {
+		return returnFunc(orgID, adminClient)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) []dtos.UserDTO); ok {
-		r0 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, shared.AdminClient) []dtos.UserDTO); ok {
+		r0 = returnFunc(orgID, adminClient)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.UserDTO)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(orgID)
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, shared.AdminClient) error); ok {
+		r1 = returnFunc(orgID, adminClient)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,18 +73,24 @@ type AdminService_GetAdminsForOrg_Call struct {
 
 // GetAdminsForOrg is a helper method to define mock.On call
 //   - orgID uuid.UUID
-func (_e *AdminService_Expecter) GetAdminsForOrg(orgID interface{}) *AdminService_GetAdminsForOrg_Call {
-	return &AdminService_GetAdminsForOrg_Call{Call: _e.mock.On("GetAdminsForOrg", orgID)}
+//   - adminClient shared.AdminClient
+func (_e *AdminService_Expecter) GetAdminsForOrg(orgID interface{}, adminClient interface{}) *AdminService_GetAdminsForOrg_Call {
+	return &AdminService_GetAdminsForOrg_Call{Call: _e.mock.On("GetAdminsForOrg", orgID, adminClient)}
 }
 
-func (_c *AdminService_GetAdminsForOrg_Call) Run(run func(orgID uuid.UUID)) *AdminService_GetAdminsForOrg_Call {
+func (_c *AdminService_GetAdminsForOrg_Call) Run(run func(orgID uuid.UUID, adminClient shared.AdminClient)) *AdminService_GetAdminsForOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
 			arg0 = args[0].(uuid.UUID)
 		}
+		var arg1 shared.AdminClient
+		if args[1] != nil {
+			arg1 = args[1].(shared.AdminClient)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -94,7 +101,7 @@ func (_c *AdminService_GetAdminsForOrg_Call) Return(userDTOs []dtos.UserDTO, err
 	return _c
 }
 
-func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(orgID uuid.UUID) ([]dtos.UserDTO, error)) *AdminService_GetAdminsForOrg_Call {
+func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error)) *AdminService_GetAdminsForOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
