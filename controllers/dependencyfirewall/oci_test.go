@@ -218,6 +218,155 @@ func TestSupportedOCIRegistriesDerivations(t *testing.T) {
 	}
 }
 
+// ── OCI path-param regexes ───────────────────────────────────────────────────
+
+func TestOCINameSegmentRegex(t *testing.T) {
+	valid := []string{"nginx", "library", "node-exporter", "my_image", "my.image", "my__image", "a", "abc123"}
+	invalid := []string{
+		"",
+		"NGINX",                   // uppercase
+		"-nginx",                  // leading dash
+		".nginx",                  // leading dot
+		"nginx/",                  // slash
+		"my image",                // space
+		"../etc",                  // traversal
+		"image:tag",               // colon
+		"image@sha256",            // at-sign
+	}
+	for _, s := range valid {
+		if !ociNameSegmentRe.MatchString(s) {
+			t.Errorf("expected %q to match name-segment regex", s)
+		}
+	}
+	for _, s := range invalid {
+		if ociNameSegmentRe.MatchString(s) {
+			t.Errorf("expected %q to NOT match name-segment regex", s)
+		}
+	}
+}
+
+func TestOCITagRegex(t *testing.T) {
+	valid := []string{"latest", "v1.7.0", "1.0_alpha", "stable-2024", "_underscore", "a"}
+	invalid := []string{
+		"",
+		".latest",                          // leading dot
+		"-latest",                          // leading dash
+		"tag with space",
+		"tag/with/slash",
+		strings.Repeat("a", 129),           // > 128 chars
+	}
+	for _, s := range valid {
+		if !ociTagRe.MatchString(s) {
+			t.Errorf("expected %q to match tag regex", s)
+		}
+	}
+	for _, s := range invalid {
+		if ociTagRe.MatchString(s) {
+			t.Errorf("expected %q to NOT match tag regex", s)
+		}
+	}
+}
+
+func TestOCIDigestRegex(t *testing.T) {
+	valid := []string{
+		"sha256:" + strings.Repeat("a", 64),
+		"sha256:" + strings.Repeat("0", 64),
+		"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+	}
+	invalid := []string{
+		"",
+		"sha256:",                                   // empty hex
+		"sha256:abc",                                // too short
+		"sha256:" + strings.Repeat("a", 63),         // 63 chars
+		"sha256:" + strings.Repeat("a", 65),         // 65 chars
+		"sha256:" + strings.Repeat("A", 64),         // uppercase
+		"sha512:" + strings.Repeat("a", 64),         // wrong algorithm
+		"abc",
+	}
+	for _, s := range valid {
+		if !ociDigestRe.MatchString(s) {
+			t.Errorf("expected %q to match digest regex", s)
+		}
+	}
+	for _, s := range invalid {
+		if ociDigestRe.MatchString(s) {
+			t.Errorf("expected %q to NOT match digest regex", s)
+		}
+	}
+}
+
+// ── validateOCIPathParams ────────────────────────────────────────────────────
+
+func TestValidateOCIPathParams(t *testing.T) {
+	validDigest := "sha256:" + strings.Repeat("a", 64)
+	cases := []struct {
+		name    string
+		params  map[string]string
+		wantErr string
+	}{
+		{
+			name:   "valid 2-segment manifest by tag",
+			params: map[string]string{"namespace": "library", "image": "nginx", "reference": "latest"},
+		},
+		{
+			name:   "valid manifest by digest reference",
+			params: map[string]string{"namespace": "library", "image": "nginx", "reference": validDigest},
+		},
+		{
+			name:   "valid blob digest",
+			params: map[string]string{"namespace": "library", "image": "nginx", "digest": validDigest},
+		},
+		{
+			name:    "path traversal in image",
+			params:  map[string]string{"image": "../../../etc/passwd"},
+			wantErr: "invalid image name",
+		},
+		{
+			name:    "uppercase in namespace",
+			params:  map[string]string{"namespace": "Library", "image": "nginx", "reference": "latest"},
+			wantErr: "invalid image name",
+		},
+		{
+			name:    "tag starting with dot",
+			params:  map[string]string{"image": "nginx", "reference": ".hidden"},
+			wantErr: "invalid reference",
+		},
+		{
+			name:    "digest too short",
+			params:  map[string]string{"image": "nginx", "digest": "sha256:abc"},
+			wantErr: "invalid digest",
+		},
+		{
+			name:    "digest wrong algorithm",
+			params:  map[string]string{"image": "nginx", "digest": "sha512:" + strings.Repeat("a", 64)},
+			wantErr: "invalid digest",
+		},
+		{
+			name:    "3-segment ghcr.io with bad ns2",
+			params:  map[string]string{"ns1": "org", "ns2": "../escape", "image": "repo", "reference": "latest"},
+			wantErr: "invalid image name",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newTestEchoContext(tc.params)
+			err := validateOCIPathParams(c)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tc.wantErr)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 // ── upstreamURLForRegistry ────────────────────────────────────────────────────
 
 func TestUpstreamURLForRegistry(t *testing.T) {
