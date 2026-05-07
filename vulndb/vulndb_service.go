@@ -41,7 +41,7 @@ const vulnDBPubKeyFile = "cosign.pub"
 
 // debugImport reuses a previously downloaded archive from the current working directory
 // instead of pulling from the OCI registry. Set to true only for local profiling/benchmarking.
-const debugImport = true
+const debugImport = false
 
 // VulnDBService orchestrates the full vulnerability database export and import,
 // covering OSV, EPSS, CISA KEV, exploits (ExploitDB + GitHub PoC),
@@ -482,7 +482,7 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(ctx, tx, vulndbChan, exploitChan, malPkgChan)
+		return streamToDatabase(ctx, tx, vulndbChan, exploitChan, malPkgChan, lastImportTime)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -996,12 +996,15 @@ func (integrity tableIntegrityInformation) isEqual(compareInformation tableInteg
 
 // streamToDatabase drains all three input channels in a single goroutine and writes
 // the received rows to the database. The caller is responsible for Begin/Commit/Rollback.
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRow) error {
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRow, lastImportTime time.Time) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
-	if err := PrepareBulkInsert(ctx, tx); err != nil {
-		return fmt.Errorf("could not prepare transaction: %w", err)
+	rebuildIndexes := lastImportTime.IsZero() || time.Since(lastImportTime) > 7*24*time.Hour
+	if rebuildIndexes {
+		if err := PrepareBulkInsert(ctx, tx); err != nil {
+			return fmt.Errorf("could not prepare transaction: %w", err)
+		}
 	}
 	if err := createStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)
@@ -1078,8 +1081,10 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		}
 	}
 
-	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
-		return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
+	if rebuildIndexes {
+		if err := AddIndexesAndConstraints(ctx, tx); err != nil {
+			return fmt.Errorf("could not re-add constraints and indexes on table: %w", err)
+		}
 	}
 
 	slog.Info("finished writing rows to database",
