@@ -50,6 +50,12 @@ type MaliciousPackageChecker struct {
 	httpClient *http.Client
 }
 
+type malRow struct {
+	pkgs  []models.MaliciousPackage
+	comps []models.MaliciousAffectedComponent
+}
+
+
 func NewMaliciousPackageChecker(
 	repository *repositories.MaliciousPackageRepository,
 ) (*MaliciousPackageChecker, error) {
@@ -286,15 +292,8 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 
 func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
 	if len(pkgs) > 0 {
-		if _, err := tx.Exec(ctx, `
-			CREATE TEMP TABLE mal_pkgs_stage (
-				id        text,
-				summary   text,
-				details   text,
-				published timestamptz,
-				modified  timestamptz
-			) ON COMMIT DROP`); err != nil {
-			return fmt.Errorf("could not create malicious packages staging table: %w", err)
+		if _, err := tx.Exec(ctx, `TRUNCATE mal_pkgs_stage`); err != nil {
+			return fmt.Errorf("could not truncate malicious packages staging table: %w", err)
 		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
 			[]string{"id", "summary", "details", "published", "modified"},
@@ -317,19 +316,8 @@ func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.M
 	}
 
 	if len(comps) > 0 {
-		if _, err := tx.Exec(ctx, `
-			CREATE TEMP TABLE mal_comps_stage (
-				id                   text,
-				malicious_package_id text,
-				purl                 text,
-				ecosystem            text,
-				version              text,
-				semver_introduced    text,
-				semver_fixed         text,
-				version_introduced   text,
-				version_fixed        text
-			) ON COMMIT DROP`); err != nil {
-			return fmt.Errorf("could not create malicious components staging table: %w", err)
+		if _, err := tx.Exec(ctx, `TRUNCATE mal_comps_stage`); err != nil {
+			return fmt.Errorf("could not truncate malicious components staging table: %w", err)
 		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
 			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
