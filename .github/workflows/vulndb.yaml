@@ -22,7 +22,7 @@ jobs:
       FRONTEND_URL: "doesntmatter"
     services:
       postgres:
-        image: ghcr.io/l3montree-dev/devguard-postgresql:v0.5.3@sha256:a06c9e7c8ee334790cc66d52e89ff5ef05352ab264841d3d9f3659c046732251
+        image: ghcr.io/l3montree-dev/devguard/postgresql:v1.3.1
         env:
           POSTGRES_DB: ${{env.POSTGRES_DB}}
           POSTGRES_USER: ${{env.POSTGRES_USER}}

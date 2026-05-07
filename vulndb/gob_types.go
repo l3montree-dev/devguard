@@ -52,7 +52,7 @@ type GobMaliciousComponent struct {
 // GobMaliciousPackagesExport bundles the full malicious-packages snapshot.
 // models.MaliciousPackage only contains plain types and is gob-safe directly.
 type GobMaliciousPackagesExport struct {
-	Packages   []models.MaliciousPackage
+	Package    models.MaliciousPackage
 	Components []GobMaliciousComponent
 }
 
@@ -120,17 +120,6 @@ func gobExploitToModel(g GobExploit) models.Exploit {
 	}
 }
 
-func gobExploitsToModels(gs []GobExploit, lastImportTime time.Time) []models.Exploit {
-	out := make([]models.Exploit, 0, len(gs))
-	for _, g := range gs {
-		if g.Updated != nil && g.Updated.Before(lastImportTime) {
-			continue
-		}
-		out = append(out, gobExploitToModel(g))
-	}
-	return out
-}
-
 // --- Malicious package conversions ---
 
 func maliciousComponentToGob(c models.MaliciousAffectedComponent) GobMaliciousComponent {
@@ -159,32 +148,4 @@ func gobComponentToModel(g GobMaliciousComponent) models.MaliciousAffectedCompon
 		VersionIntroduced:  g.VersionIntroduced,
 		VersionFixed:       g.VersionFixed,
 	}
-}
-
-func malPackagesExportToGob(packages []models.MaliciousPackage, components []models.MaliciousAffectedComponent) GobMaliciousPackagesExport {
-	gobComps := make([]GobMaliciousComponent, len(components))
-	for i, c := range components {
-		gobComps[i] = maliciousComponentToGob(c)
-	}
-	return GobMaliciousPackagesExport{Packages: packages, Components: gobComps}
-}
-
-func gobMalPackagesExportToModels(g GobMaliciousPackagesExport, lastImportTime time.Time) ([]models.MaliciousPackage, []models.MaliciousAffectedComponent) {
-	// build a map of package ID to last import time for all packages in the export
-	pkgImportTimes := make(map[string]struct{})
-	filteredPkgs := make([]models.MaliciousPackage, 0, len(g.Packages))
-	for _, pkg := range g.Packages {
-		if pkg.Modified.After(lastImportTime) {
-			pkgImportTimes[pkg.ID] = struct{}{}
-			filteredPkgs = append(filteredPkgs, pkg)
-		}
-	}
-	comps := make([]models.MaliciousAffectedComponent, 0, len(g.Components))
-	for _, c := range g.Components {
-		if _, ok := pkgImportTimes[c.MaliciousPackageID]; !ok {
-			continue
-		}
-		comps = append(comps, gobComponentToModel(c))
-	}
-	return filteredPkgs, comps
 }
