@@ -16,6 +16,7 @@
 
 DELETE FROM public.vuln_events
 WHERE user_id = 'system'
+  AND dependency_vuln_id IS NOT NULL
   AND type IN ('fixed', 'reopened');
 
 UPDATE public.dependency_vulns dv
@@ -23,8 +24,9 @@ SET state = CASE last_event.type WHEN 'reopened' THEN 'open' WHEN 'detected' THE
 FROM (
     SELECT DISTINCT ON (dependency_vuln_id) dependency_vuln_id, type
     FROM public.vuln_events
+    WHERE dependency_vuln_id IS NOT NULL
+       AND type IN ('falsePositive', 'accepted', 'reopened', 'fixed', 'detected')
     ORDER BY dependency_vuln_id, created_at DESC
 ) AS last_event
 WHERE dv.id = last_event.dependency_vuln_id
-  AND last_event.type IN ('falsePositive', 'accepted', 'reopened', 'fixed', 'detected');
-
+  AND dv.state != last_event.type;
