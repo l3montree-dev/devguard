@@ -20,8 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -103,6 +105,7 @@ type zipJob struct {
 }
 
 const numberOfZipWorkers = 10
+const debugLocalZip = false // set to true to read the zip files from disk instead of fetching them from the network; useful for debugging and development to speed up the import process
 
 var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 
@@ -287,6 +290,21 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
+	if debugLocalZip {
+		slog.Info("debug mode enabled, reading zip from disk instead of fetching from network", "ecosystem", ecosystem)
+		// check if the file exists on disk and read it if it does, otherwise return an error
+		path := fmt.Sprintf("./%s.zip", ecosystem)
+		if _, err := os.Stat(path); err != nil {
+			// just fall through to download it
+			slog.Warn("could not find local zip file, falling back to network fetch", "path", path)
+		} else {
+			reader, err := zip.OpenReader(path)
+			if err == nil {
+				slog.Info("successfully opened local zip file", "path", path)
+				return &reader.Reader, nil
+			}
+		}
+	}
 	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/"+ecosystem+"/all.zip", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
@@ -295,6 +313,18 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 	res, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download zip")
+	}
+	if debugLocalZip {
+		// use a tee reader to read the response body and write it to a file at the same time for debugging purposes
+		path := fmt.Sprintf("./%s.zip", ecosystem)
+		outFile, err := os.Create(path)
+		if err != nil {
+			slog.Warn("could not create local zip file, skipping writing to disk", "path", path, "err", err)
+		} else {
+			slog.Info("created local zip file for debugging", "path", path)
+			tee := io.TeeReader(res.Body, outFile)
+			res.Body = io.NopCloser(tee)
+		}
 	}
 
 	return utils.ZipReaderFromResponse(res)
