@@ -963,21 +963,6 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 	return results, nil
 }
 
-func writeGobFileStream[T any](object <-chan T, fileName string) error {
-	gobFile, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("could not create gob file: %w", err)
-	}
-	defer gobFile.Close()
-	encoder := gob.NewEncoder(gobFile)
-	for obj := range object {
-		if err := encoder.Encode(obj); err != nil {
-			return fmt.Errorf("could not encode object to gob file: %w", err)
-		}
-	}
-	return nil
-}
-
 func writeGobFileItems[T any](items []T, fileName string) error {
 	gobFile, err := os.Create(fileName)
 	if err != nil {
