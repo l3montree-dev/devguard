@@ -433,14 +433,10 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 		}
 		slog.Info("finished truncating vulndb tables", "took", time.Since(t))
 	}
-	currentAffectedComponents, err := getCurrentAffectedComponents(ctx, tx)
-	if err != nil {
-		return fmt.Errorf("could not get current affected components: %w", err)
-	}
 	group.Go(func() error {
 		defer close(vulndbChan)
 		t := time.Now()
-		if err := readGobFileStream[OSVEntry, vulndbRows](workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(ctx, currentAffectedComponents)); err != nil {
+		if err := readGobFileStream[OSVEntry, vulndbRows](workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(ctx)); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "took", time.Since(t))

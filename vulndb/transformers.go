@@ -23,13 +23,7 @@ func gobExploitStreamingTransformer(lastImportTime time.Time) func([]GobExploit)
 	}
 }
 
-func gobOSVEntryStreamingTransformer(ctx context.Context, currentCVEAffectedComponents []cveAffectedComponentRow) func([]OSVEntry) vulndbRows {
-	isAffectedComponentPresent := make(map[int64]struct{}, len(currentCVEAffectedComponents))
-	isCVEAffectedComponentPresent := make(map[cveAffectedComponentRow]struct{}, len(currentCVEAffectedComponents))
-	for _, cveAffectedComponent := range currentCVEAffectedComponents {
-		isAffectedComponentPresent[cveAffectedComponent.AffectedComponentID] = struct{}{}
-		isCVEAffectedComponentPresent[cveAffectedComponent] = struct{}{}
-	}
+func gobOSVEntryStreamingTransformer(ctx context.Context) func([]OSVEntry) vulndbRows {
 	return func(elements []OSVEntry) vulndbRows {
 		cves := make([]models.CVE, 0, len(elements))
 		cveRelationships := make([]models.CVERelationship, 0, len(elements)*2)
@@ -51,16 +45,8 @@ func gobOSVEntryStreamingTransformer(ctx context.Context, currentCVEAffectedComp
 			for _, affectedComponent := range affectedComponentsForCVE {
 				hash := affectedComponent.CalculateHashFast()
 				affectedComponent.ID = hash
-				row := cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash}
-
-				if _, ok := isAffectedComponentPresent[hash]; !ok {
-					affectedComponents = append(affectedComponents, affectedComponent)
-					isAffectedComponentPresent[hash] = struct{}{}
-				}
-				if _, ok := isCVEAffectedComponentPresent[row]; !ok {
-					cveAffectedComponents = append(cveAffectedComponents, row)
-					isCVEAffectedComponentPresent[row] = struct{}{}
-				}
+				affectedComponents = append(affectedComponents, affectedComponent)
+				cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
 			}
 		}
 		return vulndbRows{

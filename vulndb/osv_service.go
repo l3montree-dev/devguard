@@ -171,8 +171,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := createStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
-	// Tables are freshly truncated so there are no existing affected components to deduplicate against.
-	rows := gobOSVEntryStreamingTransformer(ctx, nil)(allOSVVulns)
+	rows := gobOSVEntryStreamingTransformer(ctx)(allOSVVulns)
 	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cves: %w", err)
 	}
@@ -346,28 +345,6 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
-func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) ([]cveAffectedComponentRow, error) {
-	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
-	if err != nil {
-		return nil, fmt.Errorf("could not get current state of affected components: %w", err)
-	}
-
-	currentCVEAffectedComponents := make([]cveAffectedComponentRow, 0, 200_000)
-	for rows.Next() {
-		var row cveAffectedComponentRow
-		if err := rows.Scan(&row.AffectedComponentID, &row.CveID); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
-		}
-		currentCVEAffectedComponents = append(currentCVEAffectedComponents, row)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
-	}
-	return currentCVEAffectedComponents, nil
-}
-
 // insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
 // this lets us handle on conflicts and updates gracefully, while still having the speed of copy
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
@@ -456,37 +433,49 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
 	}
 
-	// finally merge both tables and cast the semver texts from the staging table to the semver datatype in the real table
-	// no ON CONFLICT needed since we deduplicated in memory
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO affected_components (
 			id, purl, ecosystem,  version,
 			semver_introduced, semver_fixed,
 			version_introduced, version_fixed
 		)
-		SELECT
+		SELECT DISTINCT ON (id)
 			id, purl, ecosystem, version,
 			semver_introduced::semver, semver_fixed::semver,
 			version_introduced, version_fixed
-		FROM affected_components_stage`); err != nil {
+		FROM affected_components_stage
+		ON CONFLICT (id) DO NOTHING`); err != nil {
 		return fmt.Errorf("could not insert from staging into affected_components: %w", err)
 	}
 
 	return nil
 }
 
-// insert into the cve affected components pivot table using COPY
+// insert into the cve affected components pivot table via a staging table
 func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
-	// stream data straight into the table using COPY (bypass query executioner)
-	// no ON CONFLICT needed since we deduplicated in memory
-	columnNames := []string{"affected_component_id", "cve_id"}
+	if len(pivotRows) == 0 {
+		return nil
+	}
 
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
+	if _, err := tx.Exec(ctx, `TRUNCATE cve_affected_component_stage`); err != nil {
+		return fmt.Errorf("could not truncate cve_affected_component staging table: %w", err)
+	}
+
+	columnNames := []string{"affected_component_id", "cve_id"}
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component_stage"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 		row := pivotRows[i]
 		return []any{row.AffectedComponentID, row.CveID}, nil
 	}))
 	if err != nil {
-		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
+		return fmt.Errorf("could not copy cve affected component rows into staging table: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_affected_component (affected_component_id, cve_id)
+		SELECT DISTINCT affected_component_id, cve_id
+		FROM cve_affected_component_stage
+		ON CONFLICT (affected_component_id, cve_id) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not insert from staging into cve_affected_component: %w", err)
 	}
 
 	return nil
@@ -526,6 +515,11 @@ func createStagingTables(ctx context.Context, tx pgx.Tx) error {
 			semver_fixed       text,
 			version_introduced text,
 			version_fixed      text
+		) ON COMMIT DROP;
+
+		CREATE TEMP TABLE IF NOT EXISTS cve_affected_component_stage (
+			affected_component_id bigint,
+			cve_id                bigint
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS exploits_stage (
