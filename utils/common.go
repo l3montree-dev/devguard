@@ -191,7 +191,7 @@ func IsCVE(str string) bool {
 
 func IsEmail(str string) bool {
 	if emailRegex == nil {
-		emailRegex = regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$")
+		emailRegex = regexp.MustCompile(`(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}`)
 	}
 	return emailRegex.MatchString(str)
 }
