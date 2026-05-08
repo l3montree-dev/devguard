@@ -54,16 +54,20 @@ func getMigrator(gormDB shared.DB) (*migrate.Migrate, error) {
 func RunMigrations(db shared.DB) error {
 	// if no shared db is provided, create a new one
 	// only provide a db during testing
-	if db == nil {
-		db = NewGormDB(NewPgxConnPool(GetPoolConfigFromEnv()))
+	ownedPool := db == nil
+	if ownedPool {
+		cfg := GetPoolConfigFromEnv()
+		cfg.MaxOpenConns = 1
+		cfg.MinConns = 0
+		db = NewGormDB(NewPgxConnPool(cfg))
 	}
 	// Get the underlying sql.DB from GORM
 	migrator, err := getMigrator(db)
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	if db == nil {
-		// only close the connetion pool if WE own it.
+	if ownedPool {
+		// only close the connection pool if WE own it.
 		defer migrator.Close()
 	}
 	versionBefore, _, _ := migrator.Version()
@@ -78,7 +82,7 @@ func RunMigrations(db shared.DB) error {
 		sqlDB, dbErr := db.DB()
 		if dbErr == nil {
 			_, err = sqlDB.Exec("UPDATE schema_migrations SET dirty = false, version = $1", versionBefore)
-			if migrateErr != nil {
+			if err != nil {
 				monitoring.Alert("failed to reset migration state after failed migration", err)
 			}
 		}
