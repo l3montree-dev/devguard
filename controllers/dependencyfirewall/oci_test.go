@@ -224,14 +224,14 @@ func TestOCINameSegmentRegex(t *testing.T) {
 	valid := []string{"nginx", "library", "node-exporter", "my_image", "my.image", "my__image", "a", "abc123"}
 	invalid := []string{
 		"",
-		"NGINX",                   // uppercase
-		"-nginx",                  // leading dash
-		".nginx",                  // leading dot
-		"nginx/",                  // slash
-		"my image",                // space
-		"../etc",                  // traversal
-		"image:tag",               // colon
-		"image@sha256",            // at-sign
+		"NGINX",        // uppercase
+		"-nginx",       // leading dash
+		".nginx",       // leading dot
+		"nginx/",       // slash
+		"my image",     // space
+		"../etc",       // traversal
+		"image:tag",    // colon
+		"image@sha256", // at-sign
 	}
 	for _, s := range valid {
 		if !ociNameSegmentRe.MatchString(s) {
@@ -249,11 +249,11 @@ func TestOCITagRegex(t *testing.T) {
 	valid := []string{"latest", "v1.7.0", "1.0_alpha", "stable-2024", "_underscore", "a"}
 	invalid := []string{
 		"",
-		".latest",                          // leading dot
-		"-latest",                          // leading dash
+		".latest", // leading dot
+		"-latest", // leading dash
 		"tag with space",
 		"tag/with/slash",
-		strings.Repeat("a", 129),           // > 128 chars
+		strings.Repeat("a", 129), // > 128 chars
 	}
 	for _, s := range valid {
 		if !ociTagRe.MatchString(s) {
@@ -275,12 +275,12 @@ func TestOCIDigestRegex(t *testing.T) {
 	}
 	invalid := []string{
 		"",
-		"sha256:",                                   // empty hex
-		"sha256:abc",                                // too short
-		"sha256:" + strings.Repeat("a", 63),         // 63 chars
-		"sha256:" + strings.Repeat("a", 65),         // 65 chars
-		"sha256:" + strings.Repeat("A", 64),         // uppercase
-		"sha512:" + strings.Repeat("a", 64),         // wrong algorithm
+		"sha256:",                           // empty hex
+		"sha256:abc",                        // too short
+		"sha256:" + strings.Repeat("a", 63), // 63 chars
+		"sha256:" + strings.Repeat("a", 65), // 65 chars
+		"sha256:" + strings.Repeat("A", 64), // uppercase
+		"sha512:" + strings.Repeat("a", 64), // wrong algorithm
 		"abc",
 	}
 	for _, s := range valid {
@@ -300,57 +300,66 @@ func TestOCIDigestRegex(t *testing.T) {
 func TestValidateOCIPathParams(t *testing.T) {
 	validDigest := "sha256:" + strings.Repeat("a", 64)
 	cases := []struct {
-		name    string
-		params  map[string]string
-		wantErr string
+		name              string
+		upstreamImagePath string
+		reference         string
+		digest            string
+		wantErr           string
 	}{
 		{
-			name:   "valid 2-segment manifest by tag",
-			params: map[string]string{"namespace": "library", "image": "nginx", "reference": "latest"},
+			name:              "valid 2-segment manifest by tag",
+			upstreamImagePath: "library/nginx",
+			reference:         "latest",
 		},
 		{
-			name:   "valid manifest by digest reference",
-			params: map[string]string{"namespace": "library", "image": "nginx", "reference": validDigest},
+			name:              "valid manifest by digest reference",
+			upstreamImagePath: "library/nginx",
+			reference:         validDigest,
 		},
 		{
-			name:   "valid blob digest",
-			params: map[string]string{"namespace": "library", "image": "nginx", "digest": validDigest},
+			name:              "valid blob digest",
+			upstreamImagePath: "library/nginx",
+			digest:            validDigest,
 		},
 		{
-			name:    "path traversal in image",
-			params:  map[string]string{"image": "../../../etc/passwd"},
-			wantErr: "invalid image name",
+			name:              "path traversal in image",
+			upstreamImagePath: "../../../etc/passwd",
+			wantErr:           "invalid image name",
 		},
 		{
-			name:    "uppercase in namespace",
-			params:  map[string]string{"namespace": "Library", "image": "nginx", "reference": "latest"},
-			wantErr: "invalid image name",
+			name:              "uppercase in namespace",
+			upstreamImagePath: "Library/nginx",
+			reference:         "latest",
+			wantErr:           "invalid image name",
 		},
 		{
-			name:    "tag starting with dot",
-			params:  map[string]string{"image": "nginx", "reference": ".hidden"},
-			wantErr: "invalid reference",
+			name:              "tag starting with dot",
+			upstreamImagePath: "nginx",
+			reference:         ".hidden",
+			wantErr:           "invalid reference",
 		},
 		{
-			name:    "digest too short",
-			params:  map[string]string{"image": "nginx", "digest": "sha256:abc"},
-			wantErr: "invalid digest",
+			name:              "digest too short",
+			upstreamImagePath: "nginx",
+			digest:            "sha256:abc",
+			wantErr:           "invalid digest",
 		},
 		{
-			name:    "digest wrong algorithm",
-			params:  map[string]string{"image": "nginx", "digest": "sha512:" + strings.Repeat("a", 64)},
-			wantErr: "invalid digest",
+			name:              "digest wrong algorithm",
+			upstreamImagePath: "nginx",
+			digest:            "sha512:" + strings.Repeat("a", 64),
+			wantErr:           "invalid digest",
 		},
 		{
-			name:    "3-segment ghcr.io with bad ns2",
-			params:  map[string]string{"ns1": "org", "ns2": "../escape", "image": "repo", "reference": "latest"},
-			wantErr: "invalid image name",
+			name:              "3-segment ghcr.io with bad ns2",
+			upstreamImagePath: "org/../escape/repo",
+			reference:         "latest",
+			wantErr:           "invalid image name",
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := newTestEchoContext(tc.params)
-			err := validateOCIPathParams(c)
+			err := validateOCIPathParams(tc.upstreamImagePath, tc.reference, tc.digest)
 			if tc.wantErr == "" {
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)

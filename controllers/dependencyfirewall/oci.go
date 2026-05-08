@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -145,42 +144,30 @@ func ociSafeCachePath(requestPath string) string {
 }
 
 // isAllowedRegistry reports whether requests for the given :registry path
-// segment may proceed. IP literals and host:port forms are rejected outright
-// — they are never legitimate public-registry hostnames and have historically
-// been the SSRF entry point. Otherwise the registry must be one of the
-// supported registries listed in oci_registries.go.
+// segment may proceed. The registry must be one of the supported registries
+// listed in oci_registries.go — that list contains no IP literals or
+// host:port forms, so SSRF inputs (e.g. 169.254.169.254, docker.io:443) are
+// rejected as a side effect.
 func isAllowedRegistry(registry string) bool {
-	if net.ParseIP(registry) != nil {
-		return false
-	}
-	if strings.Contains(registry, ":") {
-		return false
-	}
 	return slices.Contains(allowedOCIRegistries, registry)
 }
 
 // validateOCIPathParams enforces the OCI Distribution Spec format on every
-// path-param Echo gives us. Anything malformed (path traversal, special
-// characters, wrong digest length) is refused before the proxy touches the
-// cache or the upstream registry.
-func validateOCIPathParams(c shared.Context) error {
-	for _, segment := range []string{c.Param("image"), c.Param("namespace"), c.Param("ns1"), c.Param("ns2")} {
-		if segment == "" {
-			continue
-		}
+// path-param the route handler extracted. Anything malformed (path traversal,
+// special characters, wrong digest length) is refused before the proxy
+// touches the cache or the upstream registry. reference and digest may be
+// empty for routes that don't carry them (e.g. /tags/list).
+func validateOCIPathParams(upstreamImagePath, reference, digest string) error {
+	for _, segment := range strings.Split(upstreamImagePath, "/") {
 		if !ociNameSegmentRe.MatchString(segment) {
 			return echo.NewHTTPError(http.StatusBadRequest, "invalid image name")
 		}
 	}
-	if ref := c.Param("reference"); ref != "" {
-		if !ociTagRe.MatchString(ref) && !ociDigestRe.MatchString(ref) {
-			return echo.NewHTTPError(http.StatusBadRequest, "invalid reference")
-		}
+	if reference != "" && !ociTagRe.MatchString(reference) && !ociDigestRe.MatchString(reference) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid reference")
 	}
-	if dig := c.Param("digest"); dig != "" {
-		if !ociDigestRe.MatchString(dig) {
-			return echo.NewHTTPError(http.StatusBadRequest, "invalid digest")
-		}
+	if digest != "" && !ociDigestRe.MatchString(digest) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid digest")
 	}
 	return nil
 }
@@ -411,10 +398,10 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
 	}
-	if err := validateOCIPathParams(c); err != nil {
+	reference := c.Param("reference")
+	if err := validateOCIPathParams(upstreamImagePath, reference, ""); err != nil {
 		return err
 	}
-	reference := c.Param("reference")
 	// Path sent to the upstream (no registry prefix).
 	upstreamPath := fmt.Sprintf("/v2/%s/manifests/%s", upstreamImagePath, reference)
 	// Path used for caching and rule matching (includes registry).
@@ -524,10 +511,10 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
 	}
-	if err := validateOCIPathParams(c); err != nil {
+	digest := c.Param("digest")
+	if err := validateOCIPathParams(upstreamImagePath, "", digest); err != nil {
 		return err
 	}
-	digest := c.Param("digest")
 	upstreamPath := fmt.Sprintf("/v2/%s/blobs/%s", upstreamImagePath, digest)
 	requestPath := fmt.Sprintf("/v2/%s/blobs/%s", fqImageName, digest)
 	method := c.Request().Method
@@ -628,10 +615,10 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
 	}
-	if err := validateOCIPathParams(c); err != nil {
+	digest := c.Param("digest")
+	if err := validateOCIPathParams(upstreamImagePath, "", digest); err != nil {
 		return err
 	}
-	digest := c.Param("digest")
 	upstreamPath := fmt.Sprintf("/v2/%s/referrers/%s", upstreamImagePath, digest)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.oci",
@@ -681,7 +668,7 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
 	}
-	if err := validateOCIPathParams(c); err != nil {
+	if err := validateOCIPathParams(upstreamImagePath, "", ""); err != nil {
 		return err
 	}
 	upstreamPath := fmt.Sprintf("/v2/%s/tags/list", upstreamImagePath)
