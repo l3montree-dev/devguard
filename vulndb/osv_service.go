@@ -184,6 +184,9 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cve affected components: %w", err)
 	}
+	if err := flushStagingTables(ctx, tx); err != nil {
+		return nil, nil, fmt.Errorf("could not flush staging tables: %w", err)
+	}
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not re-add indexes and constraints: %w", err)
 	}
@@ -418,14 +421,14 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 	return nil
 }
 
-// insert into the cve affected components pivot table using direct COPY (deduplication handled in-memory by the transformer)
+// insertCVEAffectedComponentsBulk streams pivot rows into the staging table. Call flushStagingTables once after all batches.
 func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
 	if len(pivotRows) == 0 {
 		return nil
 	}
 
 	columnNames := []string{"affected_component_id", "cve_id"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component_stage"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 		row := pivotRows[i]
 		return []any{row.AffectedComponentID, row.CveID}, nil
 	}))
@@ -476,6 +479,16 @@ func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("could not flush affected_components: %w", err)
 	}
 	slog.Info("flushed affected_components", "took", time.Since(t))
+
+	// cve_affected_component must come after affected_components so the FK is satisfied when AddIndexesAndConstraints validates it
+	t = time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_affected_component (affected_component_id, cve_id)
+		SELECT affected_component_id, cve_id
+		FROM cve_affected_component_stage`); err != nil {
+		return fmt.Errorf("could not flush cve_affected_component: %w", err)
+	}
+	slog.Info("flushed cve_affected_component", "took", time.Since(t))
 
 	t = time.Now()
 	if _, err := tx.Exec(ctx, `
