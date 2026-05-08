@@ -66,7 +66,6 @@ func InitRawDatabaseContainer(initDBSQLPath string) (*pgxpool.Pool, func()) {
 			"/run/postgresql": "rw",
 		}),
 		testcontainers.WithHostConfigModifier(func(hc *container.HostConfig) {
-			hc.ShmSize = 1 << 30 // 1 GiB — matches shm_size in docker-compose.yaml
 			// Bind-mount the init SQL; WithInitScripts uses docker cp which fails on the
 			// read-only Nix filesystem of this image.
 			hc.Binds = append(hc.Binds, absInitSQL+":/docker-entrypoint-initdb.d/init.sql:ro")
