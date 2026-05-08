@@ -39,7 +39,7 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 					return next(ctx)
 				}
 			}
-			return fmt.Errorf("could not verify admin request: %v", err)
+			return fmt.Errorf("could not verify admin request: %w", err)
 		}
 	}
 }

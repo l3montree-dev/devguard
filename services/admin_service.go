@@ -17,7 +17,14 @@ func NewAdminService(casbinRBACProvider shared.RBACProvider) *AdminService {
 
 func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
 	orgRBAC := service.casbinRBACProvider.GetDomainRBAC(orgID.String())
-	adminIDs := orgRBAC.GetAdminsOfOrganization()
+	adminIDs, err := orgRBAC.GetAdminsOfOrganization()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(adminIDs) == 0 {
+		return []dtos.UserDTO{}, nil
+	}
 
 	memberIdentities, err := adminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(adminIDs))
 	if err != nil {

@@ -72,14 +72,20 @@ func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
 	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
 }
 
-func (c *casbinRBAC) GetAdminsOfOrganization() []string {
+func (c *casbinRBAC) GetAdminsOfOrganization() ([]string, error) {
 	concurrencyMutex.Lock()
-	listOfUsers := c.enforcer.GetUsersForRoleInDomain("role::admin", "domain::"+c.domain)
-	concurrencyMutex.Unlock()
-	for i := range listOfUsers {
-		listOfUsers[i] = strings.TrimPrefix(listOfUsers[i], "user::")
+	implicitUsers, err := c.enforcer.GetImplicitUsersForRole("role::admin", "domain::"+c.domain)
+	if err != nil {
+		return nil, err
 	}
-	return listOfUsers
+	concurrencyMutex.Unlock()
+	userIDs := make([]string, 0, len(implicitUsers))
+	for _, user := range implicitUsers {
+		if strings.HasPrefix(user, "user::") {
+			userIDs = append(userIDs, strings.TrimPrefix(user, "user::"))
+		}
+	}
+	return userIDs, nil
 }
 
 func (c *casbinRBAC) GetAllMembersOfOrganization() ([]string, error) {

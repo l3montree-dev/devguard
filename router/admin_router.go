@@ -16,7 +16,6 @@
 package router
 
 import (
-	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
@@ -27,8 +26,8 @@ type AdminRouter struct {
 	*echo.Group
 }
 
-func NewAdminRouter(server api.Server, adminController *controllers.AdminController, patService shared.PersonalAccessTokenService) AdminRouter {
-	adminRouter := server.Echo.Group("/admin",
+func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminController, patService shared.PersonalAccessTokenService) AdminRouter {
+	adminRouter := apiV1Router.Group.Group("/admin",
 		middlewares.InstanceAdminMiddleware(patService),
 	)
 
