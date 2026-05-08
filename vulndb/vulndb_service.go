@@ -452,7 +452,7 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	group.Go(func() error {
 		defer close(vulndbChan)
 		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(groupCtx, existingAffectedComponents)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(groupCtx, lastImportTime, existingAffectedComponents)); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "took", time.Since(t))

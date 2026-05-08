@@ -2,6 +2,7 @@ package vulndb
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -23,7 +24,7 @@ func gobExploitStreamingTransformer(lastImportTime time.Time) func([]GobExploit)
 	}
 }
 
-func gobOSVEntryStreamingTransformer(ctx context.Context, existing map[int64][]int64) func([]OSVEntry) vulndbRows {
+func gobOSVEntryStreamingTransformer(ctx context.Context, lastImportTime time.Time, existing map[int64][]int64) func([]OSVEntry) vulndbRows {
 	if existing == nil {
 		existing = make(map[int64][]int64)
 	}
@@ -34,6 +35,9 @@ func gobOSVEntryStreamingTransformer(ctx context.Context, existing map[int64][]i
 		cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(elements)*55)
 
 		for i := range elements {
+			if !lastImportTime.IsZero() && !elements[i].ModifiedTimestamp.After(lastImportTime) {
+				continue
+			}
 			relationships := transformer.OSVToCVERelationships(elements[i].OSV)
 			affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(elements[i].OSV)
 			if len(affectedComponentsForCVE) == 0 && len(relationships) == 0 {
@@ -54,13 +58,7 @@ func gobOSVEntryStreamingTransformer(ctx context.Context, existing map[int64][]i
 					affectedComponents = append(affectedComponents, affectedComponent)
 				}
 
-				pairExists := false
-				for _, id := range cveIDs {
-					if id == cve.ID {
-						pairExists = true
-						break
-					}
-				}
+				pairExists := slices.Contains(cveIDs, cve.ID)
 				if !pairExists {
 					cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
 					existing[hash] = append(cveIDs, cve.ID)

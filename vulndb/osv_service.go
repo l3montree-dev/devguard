@@ -171,7 +171,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := createStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
-	rows := gobOSVEntryStreamingTransformer(ctx, nil)(allOSVVulns)
+	rows := gobOSVEntryStreamingTransformer(ctx, time.Time{}, nil)(allOSVVulns)
 	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cves: %w", err)
 	}
