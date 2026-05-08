@@ -584,10 +584,10 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 
 	-- then drop all primary key (and unique) constraints
 	-- do not drop cves_pkey since we still need that index to detect and resolve duplicates
-	-- do not drop cve_relationships_pkey since we need that index to detect ON CONFLICT 
+	-- do not drop cve_relationships_pkey since we need that index to detect ON CONFLICT
+	-- do not drop affected_components_pkey since insertAffectedComponentsBulk uses ON CONFLICT (id)
+	-- do not drop cve_affected_component_pkey since insertCVEAffectedComponentsBulk uses ON CONFLICT (affected_component_id, cve_id)
 	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_cve_unique;
-	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
-	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
 	
 	-- lastly drop all indexes (might be redundant but safe)
 	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
@@ -625,14 +625,9 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	SET LOCAL max_parallel_maintenance_workers = 8;
 	SET LOCAL max_parallel_workers = 16;
 	SET LOCAL max_parallel_workers_per_gather = 8;
-         
-	-- First add the primary key constraints
-	-- we did not drop the cves_pkey, so we do not need to add that
-	ALTER TABLE affected_components ADD CONSTRAINT affected_components_pkey PRIMARY KEY (id);
-	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id,cve_id);
 	`)
 	if err != nil {
-		return fmt.Errorf("could not apply primary key constraints: %w", err)
+		return fmt.Errorf("could not apply session tuning: %w", err)
 	}
 	slog.Info("finished adding primary key constraints", "took", time.Since(totalStart))
 

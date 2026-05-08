@@ -539,7 +539,7 @@ func readGobFile(path string, out any) error {
 	return nil
 }
 
-const batchSize = 1_000
+const batchSize = 5_000
 
 func readGobFileStream[T any, Transformed any](path string, out chan<- Transformed, transformer func([]T) Transformed) error {
 	fd, err := os.Open(path)
