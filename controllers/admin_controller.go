@@ -89,6 +89,29 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 	return ctx.JSON(200, orgsWithAdmins)
 }
 
+func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
+	var request dtos.AddAdminRequest
+	err := ctx.Bind(&request)
+	if err != nil {
+		return echo.NewHTTPError(400, "wrongly formatted request")
+	}
+
+	parsedUserID, err := uuid.Parse(request.UserID)
+	if err != nil {
+		return echo.NewHTTPError(400, "missing or invalid user id")
+	}
+
+	parsedOrgID, err := uuid.Parse(request.OrgID)
+	if err != nil {
+		return echo.NewHTTPError(400, "missing or invalid user id")
+	}
+	err = controller.adminService.AddAdminToOrg(context.Background(), parsedOrgID, parsedUserID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not add admin to organization")
+	}
+	return ctx.JSON(200, nil)
+}
+
 // checkCooldown reads the config DB for the last trigger time and returns an
 // error message if the cooldown has not elapsed yet.
 // Because the timestamp lives in the shared config DB table, this correctly

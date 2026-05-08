@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,4 +42,8 @@ func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.
 	}
 
 	return users, nil
+}
+
+func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
+	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).GrantRole(ctx, userID.String(), "admin")
 }

@@ -36,6 +36,7 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 	})
 
 	adminRouter.GET("/external-org-admins/", adminController.GetAdminsForExternalOrgs)
+	adminRouter.POST("/add-admin-to-external-org/", adminController.AddAdminToOrg)
 
 	// Daemon trigger endpoints – each daemon has its own SSE trigger route
 	daemonGroup := adminRouter.Group("/daemons")
