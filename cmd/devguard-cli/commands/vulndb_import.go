@@ -14,6 +14,9 @@ import (
 )
 
 func newImportCommand() *cobra.Command {
+	var full bool
+	var batchSize int
+
 	importCmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import the latest state of the vulnerability database",
@@ -21,6 +24,10 @@ func newImportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			migrateDB()
+			opts := shared.ImportOptions{
+				Full:      full,
+				BatchSize: batchSize,
+			}
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
@@ -29,7 +36,7 @@ func newImportCommand() *cobra.Command {
 				services.ServiceModule,
 				vulndb.Module,
 				fx.Invoke(func(svc shared.VulnDBService) error {
-					return svc.ImportRC(context.Background())
+					return svc.ImportRC(context.Background(), opts)
 				}),
 			)
 
@@ -45,6 +52,9 @@ func newImportCommand() *cobra.Command {
 			return app.Stop(stopCtx)
 		},
 	}
+
+	importCmd.Flags().BoolVar(&full, "full", false, "Force a full import, ignoring the last-import watermark")
+	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
 
 	return importCmd
 }

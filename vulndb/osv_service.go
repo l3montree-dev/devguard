@@ -171,7 +171,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := createStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
-	rows := gobOSVEntryStreamingTransformer(ctx)(allOSVVulns)
+	rows := gobOSVEntryStreamingTransformer(ctx, nil)(allOSVVulns)
 	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cves: %w", err)
 	}
@@ -345,6 +345,30 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
+// getCurrentAffectedComponents returns a map of affectedComponentID → []cveID.
+// A key's presence means the affected_component exists; the slice encodes which CVEs already reference it.
+func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (map[int64][]int64, error) {
+	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
+	if err != nil {
+		return nil, fmt.Errorf("could not get current state of affected components: %w", err)
+	}
+
+	m := make(map[int64][]int64, 200_000)
+	for rows.Next() {
+		var affID, cveID int64
+		if err := rows.Scan(&affID, &cveID); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
+		}
+		m[affID] = append(m[affID], cveID)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
+	}
+	return m, nil
+}
+
 // insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
 // this lets us handle on conflicts and updates gracefully, while still having the speed of copy
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
@@ -439,43 +463,30 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 			semver_introduced, semver_fixed,
 			version_introduced, version_fixed
 		)
-		SELECT DISTINCT ON (id)
+		SELECT
 			id, purl, ecosystem, version,
 			semver_introduced::semver, semver_fixed::semver,
 			version_introduced, version_fixed
-		FROM affected_components_stage
-		ON CONFLICT (id) DO NOTHING`); err != nil {
+		FROM affected_components_stage`); err != nil {
 		return fmt.Errorf("could not insert from staging into affected_components: %w", err)
 	}
 
 	return nil
 }
 
-// insert into the cve affected components pivot table via a staging table
+// insert into the cve affected components pivot table using direct COPY (deduplication handled in-memory by the transformer)
 func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
 	if len(pivotRows) == 0 {
 		return nil
 	}
 
-	if _, err := tx.Exec(ctx, `TRUNCATE cve_affected_component_stage`); err != nil {
-		return fmt.Errorf("could not truncate cve_affected_component staging table: %w", err)
-	}
-
 	columnNames := []string{"affected_component_id", "cve_id"}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component_stage"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_affected_component"}, columnNames, pgx.CopyFromSlice(len(pivotRows), func(i int) ([]any, error) {
 		row := pivotRows[i]
 		return []any{row.AffectedComponentID, row.CveID}, nil
 	}))
 	if err != nil {
-		return fmt.Errorf("could not copy cve affected component rows into staging table: %w", err)
-	}
-
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO cve_affected_component (affected_component_id, cve_id)
-		SELECT DISTINCT affected_component_id, cve_id
-		FROM cve_affected_component_stage
-		ON CONFLICT (affected_component_id, cve_id) DO NOTHING`); err != nil {
-		return fmt.Errorf("could not insert from staging into cve_affected_component: %w", err)
+		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
 	}
 
 	return nil
@@ -585,9 +596,11 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	-- then drop all primary key (and unique) constraints
 	-- do not drop cves_pkey since we still need that index to detect and resolve duplicates
 	-- do not drop cve_relationships_pkey since we need that index to detect ON CONFLICT
-	-- do not drop affected_components_pkey since insertAffectedComponentsBulk uses ON CONFLICT (id)
-	-- do not drop cve_affected_component_pkey since insertCVEAffectedComponentsBulk uses ON CONFLICT (affected_component_id, cve_id)
+	-- affected_components_pkey and cve_affected_component_pkey are dropped here for bulk load
+	-- performance; they are re-added by AddIndexesAndConstraints after all rows are inserted
 	ALTER TABLE public.cves DROP CONSTRAINT IF EXISTS cves_cve_unique;
+	ALTER TABLE affected_components DROP CONSTRAINT IF EXISTS affected_components_pkey;
+	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
 	
 	-- lastly drop all indexes (might be redundant but safe)
 	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
@@ -617,17 +630,16 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	slog.Info("start building indexes and re-adding constraints")
 	totalStart := time.Now()
 	_, err := tx.Exec(ctx, `
-	-- Session tuning: all SET LOCAL — scoped to this transaction, preserves ACID.
-	-- maintenance_work_mem dominates index-build time; raising it avoids on-disk sorts.
-	-- max_parallel_maintenance_workers enables intra-index parallelism for btree builds.
-
 	SET LOCAL maintenance_work_mem = '4GB';
 	SET LOCAL max_parallel_maintenance_workers = 8;
 	SET LOCAL max_parallel_workers = 16;
 	SET LOCAL max_parallel_workers_per_gather = 8;
+
+	ALTER TABLE affected_components ADD CONSTRAINT affected_components_pkey PRIMARY KEY (id);
+	ALTER TABLE cve_affected_component ADD CONSTRAINT cve_affected_component_pkey PRIMARY KEY (affected_component_id, cve_id);
 	`)
 	if err != nil {
-		return fmt.Errorf("could not apply session tuning: %w", err)
+		return fmt.Errorf("could not apply primary key constraints: %w", err)
 	}
 	slog.Info("finished adding primary key constraints", "took", time.Since(totalStart))
 

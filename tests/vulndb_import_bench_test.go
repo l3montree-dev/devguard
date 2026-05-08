@@ -67,7 +67,7 @@ func BenchmarkImportRC(b *testing.B) {
 			}
 		}()
 
-		if err := fixture.App.VulnDBService.ImportRC(ctx); err != nil {
+		if err := fixture.App.VulnDBService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
 			close(done)
 			b.Fatalf("ImportRC failed: %v", err)
 		}

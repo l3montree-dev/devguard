@@ -23,7 +23,10 @@ func gobExploitStreamingTransformer(lastImportTime time.Time) func([]GobExploit)
 	}
 }
 
-func gobOSVEntryStreamingTransformer(ctx context.Context) func([]OSVEntry) vulndbRows {
+func gobOSVEntryStreamingTransformer(ctx context.Context, existing map[int64][]int64) func([]OSVEntry) vulndbRows {
+	if existing == nil {
+		existing = make(map[int64][]int64)
+	}
 	return func(elements []OSVEntry) vulndbRows {
 		cves := make([]models.CVE, 0, len(elements))
 		cveRelationships := make([]models.CVERelationship, 0, len(elements)*2)
@@ -45,8 +48,23 @@ func gobOSVEntryStreamingTransformer(ctx context.Context) func([]OSVEntry) vulnd
 			for _, affectedComponent := range affectedComponentsForCVE {
 				hash := affectedComponent.CalculateHashFast()
 				affectedComponent.ID = hash
-				affectedComponents = append(affectedComponents, affectedComponent)
-				cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
+
+				cveIDs, componentExists := existing[hash]
+				if !componentExists {
+					affectedComponents = append(affectedComponents, affectedComponent)
+				}
+
+				pairExists := false
+				for _, id := range cveIDs {
+					if id == cve.ID {
+						pairExists = true
+						break
+					}
+				}
+				if !pairExists {
+					cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
+					existing[hash] = append(cveIDs, cve.ID)
+				}
 			}
 		}
 		return vulndbRows{

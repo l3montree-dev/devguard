@@ -628,8 +628,13 @@ type LicenseRiskService interface {
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
+type ImportOptions struct {
+	Full      bool
+	BatchSize int
+}
+
 type VulnDBService interface {
-	ImportRC(ctx context.Context) error
+	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
 }
 

@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ const vulnDBPubKeyFile = "cosign.pub"
 
 // debugImport reuses a previously downloaded archive from the current working directory
 // instead of pulling from the OCI registry. Set to true only for local profiling/benchmarking.
-const debugImport = false
+const debugImport = true
 
 // VulnDBService orchestrates the full vulnerability database export and import,
 // covering OSV, EPSS, CISA KEV, exploits (ExploitDB + GitHub PoC),
@@ -322,7 +323,7 @@ func readIntegrityInformation(workingDir string) (integrityInformation, error) {
 // all data sources (OSV, CISA KEV, exploits, malicious packages) to the database.
 // If the integrity check fails after an incremental import, it alerts and retries
 // as a full import (ignoring the last-import watermark).
-func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
+func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
 	ctx, span := vulndbTracer.Start(ctx, "VulnDBService.ImportRC")
 	defer func() {
 		if err != nil {
@@ -331,6 +332,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 		}
 		span.End()
 	}()
+
+	if opts.BatchSize > 0 {
+		batchSize = opts.BatchSize
+	}
 
 	slog.Info("start vulndb import")
 	start := time.Now()
@@ -342,9 +347,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 	defer os.RemoveAll(workingDir)
 
 	var lastImportTime time.Time
-	var lastImportStr string
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
-		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
+	if !opts.Full {
+		var lastImportStr string
+		if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
+			lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
+		}
 	}
 
 	integrity, err := readIntegrityInformation(workingDir)
@@ -415,15 +422,16 @@ func (s *VulnDBService) ImportRC(ctx context.Context) (err error) {
 // lastImportTime is used to filter incremental updates; pass time.Time{} for a full import.
 func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
 	// Decode all gob payloads in parallel before touching the database.
-	group, _ := errgroup.WithContext(ctx)
+	group, groupCtx := errgroup.WithContext(ctx)
+
 	var (
 		epssData   map[string]dtos.EPSS
 		kevEntries []CISAKEVEntry
 	)
 
-	vulndbChan := make(chan vulndbRows)
-	exploitChan := make(chan []models.Exploit)
-	malPkgChan := make(chan malRow)
+	vulndbChan := make(chan vulndbRows, 4)
+	exploitChan := make(chan []models.Exploit, 4)
+	malPkgChan := make(chan malRow, 4)
 
 	if lastImportTime.IsZero() {
 		t := time.Now()
@@ -433,10 +441,18 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 		}
 		slog.Info("finished truncating vulndb tables", "took", time.Since(t))
 	}
+	var existingAffectedComponents map[int64][]int64
+	if !lastImportTime.IsZero() {
+		var loadErr error
+		existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+		if loadErr != nil {
+			return fmt.Errorf("could not get current affected components: %w", loadErr)
+		}
+	}
 	group.Go(func() error {
 		defer close(vulndbChan)
 		t := time.Now()
-		if err := readGobFileStream[OSVEntry, vulndbRows](workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(ctx)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(groupCtx, existingAffectedComponents)); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "took", time.Since(t))
@@ -461,7 +477,7 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	group.Go(func() error {
 		defer close(exploitChan)
 		t := time.Now()
-		if err := readGobFileStream(workingDir+"/exploits.gob", exploitChan, gobExploitStreamingTransformer(lastImportTime)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/exploits.gob", exploitChan, gobExploitStreamingTransformer(lastImportTime)); err != nil {
 			return fmt.Errorf("could not read exploits gob: %w", err)
 		}
 		slog.Info("decoded exploits.gob", "took", time.Since(t))
@@ -470,7 +486,7 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	group.Go(func() error {
 		defer close(malPkgChan)
 		t := time.Now()
-		if err := readGobFileStream(workingDir+"/maliciouspackages.gob", malPkgChan, gobMalPackagesStreamingTransformer(lastImportTime)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/maliciouspackages.gob", malPkgChan, gobMalPackagesStreamingTransformer(lastImportTime)); err != nil {
 			return fmt.Errorf("could not read malicious packages gob: %w", err)
 		}
 		slog.Info("decoded maliciouspackages.gob", "took", time.Since(t))
@@ -478,7 +494,7 @@ func (s *VulnDBService) populateDBFromGobs(ctx context.Context, tx pgx.Tx, worki
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(ctx, tx, vulndbChan, exploitChan, malPkgChan, lastImportTime)
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, lastImportTime)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -539,9 +555,9 @@ func readGobFile(path string, out any) error {
 	return nil
 }
 
-const batchSize = 5_000
+var batchSize = 5_000
 
-func readGobFileStream[T any, Transformed any](path string, out chan<- Transformed, transformer func([]T) Transformed) error {
+func readGobFileStream[T any, Transformed any](ctx context.Context, path string, out chan<- Transformed, transformer func([]T) Transformed) error {
 	fd, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("could not open gob file %s: %w", path, err)
@@ -559,12 +575,20 @@ func readGobFileStream[T any, Transformed any](path string, out chan<- Transform
 		}
 		batch = append(batch, item)
 		if len(batch) == batchSize {
-			out <- transformer(batch)
+			select {
+			case out <- transformer(batch):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 			batch = batch[:0]
 		}
 	}
 	if len(batch) > 0 {
-		out <- transformer(batch)
+		select {
+		case out <- transformer(batch):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 	return nil
 }
@@ -996,6 +1020,10 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
+	if _, err := tx.Exec(ctx, `SET LOCAL session_replication_role = replica`); err != nil {
+		return fmt.Errorf("could not disable FK checks: %w", err)
+	}
+
 	rebuildIndexes := lastImportTime.IsZero() || time.Since(lastImportTime) > 7*24*time.Hour
 	if rebuildIndexes {
 		if err := PrepareBulkInsert(ctx, tx); err != nil {
@@ -1007,6 +1035,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 
 	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount int
+	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
@@ -1020,39 +1049,58 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	if malPkgIn != nil {
 		openChans++
 	}
-	for openChans > 0 {
-		select {
-		case <-ticker.C:
+
+	go func() {
+		var memStats runtime.MemStats
+		for range ticker.C {
+			if openChans == 0 {
+				return
+			}
+			runtime.ReadMemStats(&memStats)
 			slog.Info("streaming to database",
-				"cves", cveCount,
-				"relationships", relationshipCount,
-				"affected_components", affectedComponentCount,
-				"cve_affected_components", cveAffectedComponentCount,
-				"exploits", exploitCount,
-				"malicious_packages", malPkgCount,
+				"cves", cveCount, "cves_insert_time", cvesTime.Round(time.Millisecond),
+				"relationships", relationshipCount, "relationships_insert_time", relationshipsTime.Round(time.Millisecond),
+				"affected_components", affectedComponentCount, "affected_components_insert_time", affectedComponentsTime.Round(time.Millisecond),
+				"cve_affected_components", cveAffectedComponentCount, "cve_affected_components_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
+				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
+				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
+				"heap_alloc_mb", memStats.HeapAlloc/1024/1024,
 				"took", time.Since(start),
 			)
+		}
+	}()
+
+	for openChans > 0 {
+		select {
 		case rows, ok := <-vulnRowsIn:
 			if !ok {
 				vulnRowsIn = nil
 				openChans--
 				continue
 			}
+			t := time.Now()
 			if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 				return fmt.Errorf("could not insert cves: %w", err)
 			}
+			cvesTime += time.Since(t)
+			cveCount += len(rows.CVEs)
+			t = time.Now()
 			if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships); err != nil {
 				return fmt.Errorf("could not insert cve relationships: %w", err)
 			}
+			relationshipsTime += time.Since(t)
+			relationshipCount += len(rows.CVERelationships)
+			t = time.Now()
 			if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents); err != nil {
 				return fmt.Errorf("could not insert affected_components: %w", err)
 			}
+			affectedComponentsTime += time.Since(t)
+			affectedComponentCount += len(rows.AffectedComponents)
+			t = time.Now()
 			if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
 				return fmt.Errorf("could not insert cve_affected_component: %w", err)
 			}
-			cveCount += len(rows.CVEs)
-			relationshipCount += len(rows.CVERelationships)
-			affectedComponentCount += len(rows.AffectedComponents)
+			cveAffectedComponentsTime += time.Since(t)
 			cveAffectedComponentCount += len(rows.CVEAffectedComponents)
 		case exploits, ok := <-exploitsIn:
 			if !ok {
@@ -1060,9 +1108,11 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				openChans--
 				continue
 			}
+			t := time.Now()
 			if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
 				return fmt.Errorf("could not insert exploits: %w", err)
 			}
+			exploitsTime += time.Since(t)
 			exploitCount += len(exploits)
 		case malPkg, ok := <-malPkgIn:
 			if !ok {
@@ -1070,9 +1120,11 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				openChans--
 				continue
 			}
+			t := time.Now()
 			if err := insertMaliciousPackagesBulk(ctx, tx, malPkg.pkgs, malPkg.comps); err != nil {
 				return fmt.Errorf("could not insert malicious packages: %w", err)
 			}
+			malPkgTime += time.Since(t)
 			malPkgCount += len(malPkg.pkgs)
 		}
 	}
