@@ -227,7 +227,7 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	if err := insertMaliciousPackagesBulk(ctx, tx, malPkgs, malComps); err != nil {
 		return fmt.Errorf("could not write malicious packages: %w", err)
 	}
-	if err := flushStagingTables(ctx, tx); err != nil {
+	if err := flushNonOSVStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not flush staging tables: %w", err)
 	}
 	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)

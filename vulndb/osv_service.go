@@ -184,8 +184,8 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cve affected components: %w", err)
 	}
-	if err := flushStagingTables(ctx, tx); err != nil {
-		return nil, nil, fmt.Errorf("could not flush staging tables: %w", err)
+	if err := flushOSVStagingTables(ctx, tx); err != nil {
+		return nil, nil, fmt.Errorf("could not flush osv staging tables: %w", err)
 	}
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not re-add indexes and constraints: %w", err)
@@ -439,10 +439,11 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
-// flushStagingTables runs all INSERT INTO ... SELECT FROM staging statements once.
-// Call this after all per-batch COPY calls are done.
-func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
-	slog.Info("flushing staging tables to live tables")
+// flushOSVStagingTables flushes cves, cve_relationships, affected_components and
+// cve_affected_component from their staging tables into the live tables.
+// Must be called before AddIndexesAndConstraints so the FK from cve_affected_component
+// to affected_components is satisfied.
+func flushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 
 	if _, err := tx.Exec(ctx, `
@@ -490,7 +491,15 @@ func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
 	}
 	slog.Info("flushed cve_affected_component", "took", time.Since(t))
 
-	t = time.Now()
+	slog.Info("finished flushing osv staging tables", "total", time.Since(start))
+	return nil
+}
+
+// flushNonOSVStagingTables flushes exploits and malicious packages from their staging tables.
+func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
+	start := time.Now()
+
+	t := time.Now()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
 		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
@@ -534,8 +543,16 @@ func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
 	}
 	slog.Info("flushed malicious_affected_components", "took", time.Since(t))
 
-	slog.Info("finished flushing staging tables", "total", time.Since(start))
+	slog.Info("finished flushing non-osv staging tables", "total", time.Since(start))
 	return nil
+}
+
+// flushStagingTables flushes all staging tables. Convenience wrapper for callers that handle all data types.
+func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
+	if err := flushOSVStagingTables(ctx, tx); err != nil {
+		return err
+	}
+	return flushNonOSVStagingTables(ctx, tx)
 }
 
 func createStagingTables(ctx context.Context, tx pgx.Tx) error {
