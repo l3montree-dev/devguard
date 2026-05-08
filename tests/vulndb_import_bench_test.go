@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 // BenchmarkImportRC measures the full memory and time cost of VulnDBService.ImportRC,

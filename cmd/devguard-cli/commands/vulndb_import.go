@@ -16,6 +16,7 @@ import (
 func newImportCommand() *cobra.Command {
 	var full bool
 	var batchSize int
+	var bulk bool
 
 	importCmd := &cobra.Command{
 		Use:   "import",
@@ -27,6 +28,7 @@ func newImportCommand() *cobra.Command {
 			opts := shared.ImportOptions{
 				Full:      full,
 				BatchSize: batchSize,
+				Bulk:      bulk,
 			}
 			app := fx.New(
 				fx.NopLogger,
@@ -55,6 +57,7 @@ func newImportCommand() *cobra.Command {
 
 	importCmd.Flags().BoolVar(&full, "full", false, "Force a full import, ignoring the last-import watermark")
 	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
+	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
 
 	return importCmd
 }
