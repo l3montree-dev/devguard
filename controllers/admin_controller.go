@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -96,16 +97,33 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "wrongly formatted request")
 	}
 
-	parsedUserID, err := uuid.Parse(request.UserID)
-	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid user id")
+	if !utils.IsEmail(request.Email) {
+		return echo.NewHTTPError(400, "email is not a valid mail address")
 	}
 
 	parsedOrgID, err := uuid.Parse(request.OrgID)
 	if err != nil {
 		return echo.NewHTTPError(400, "missing or invalid user id")
 	}
-	err = controller.adminService.AddAdminToOrg(context.Background(), parsedOrgID, parsedUserID)
+
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+	if authAdminClient == nil {
+		return echo.NewHTTPError(500, "could not get auth client")
+	}
+
+	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, request.Email)
+	if err != nil {
+		switch err.Error() {
+		case dtos.CouldNotFindUserWithMail:
+			return echo.NewHTTPError(404, "could not find a user associated with this email")
+		case dtos.CouldNotFindDefinitiveUserWithMail:
+			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
+		default:
+			return echo.NewHTTPError(500, "could not determine user based on email")
+		}
+	}
+
+	err = controller.adminService.AddAdminToOrg(context.Background(), parsedOrgID, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not add admin to organization")
 	}

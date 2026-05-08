@@ -2,6 +2,11 @@ package dtos
 
 import "github.com/google/uuid"
 
+const (
+	CouldNotFindUserWithMail           = "could not find user with the provided mail"
+	CouldNotFindDefinitiveUserWithMail = "could not find a definitive user with the provided mail"
+)
+
 type AdminsInOrg struct {
 	ID         uuid.UUID `json:"id"`
 	Slug       string    `json:"slug"`
@@ -10,6 +15,6 @@ type AdminsInOrg struct {
 }
 
 type AddAdminRequest struct {
-	OrgID  string `json:"org_id"`
-	UserID string `json:"user_id"`
+	OrgID string `json:"org_id"`
+	Email string `json:"email"`
 }

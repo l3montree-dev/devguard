@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -42,6 +43,30 @@ func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.
 	}
 
 	return users, nil
+}
+
+func (service AdminService) GetUserIDFromMail(ctx context.Context, adminClient shared.AdminClient, email string) (uuid.UUID, error) {
+	allUsers, err := adminClient.ListUser(client.IdentityAPIListIdentitiesRequest{})
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	usersWithRequestedMail := make([]client.Identity, 0, 1)
+	for _, user := range allUsers {
+		userMail := shared.IdentityEmail(user.Traits)
+		if userMail != "" && userMail == email {
+			usersWithRequestedMail = append(usersWithRequestedMail, user)
+		}
+	}
+
+	switch len(usersWithRequestedMail) {
+	case 0:
+		return uuid.UUID{}, fmt.Errorf(dtos.CouldNotFindUserWithMail)
+	case 1:
+		return uuid.Parse(usersWithRequestedMail[0].Id)
+	default:
+		return uuid.UUID{}, fmt.Errorf(dtos.CouldNotFindDefinitiveUserWithMail)
+	}
 }
 
 func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
