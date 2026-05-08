@@ -614,8 +614,14 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 // writeToDatabase inserts all pre-accumulated rows in a single pass.
 // For full imports (lastImportTime.IsZero()) it drops indexes before inserting and rebuilds
 // them afterwards — no channels, no per-batch overhead.
+func heapMB() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.HeapAlloc / 1024 / 1024
+}
+
 func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRow, epssData map[string]dtos.EPSS, kevEntries []CISAKEVEntry, lastImportTime time.Time) error {
-	slog.Info("start writing rows to database")
+	slog.Info("start writing rows to database", "heap_alloc_mb", heapMB())
 	start := time.Now()
 
 	if _, err := tx.Exec(ctx, `SET LOCAL session_replication_role = replica`); err != nil {
@@ -635,49 +641,49 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
 		return fmt.Errorf("could not insert cves: %w", err)
 	}
-	slog.Info("inserted cves", "count", len(rows.CVEs), "took", time.Since(t))
+	slog.Info("inserted cves", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships); err != nil {
 		return fmt.Errorf("could not insert cve relationships: %w", err)
 	}
-	slog.Info("inserted cve_relationships", "count", len(rows.CVERelationships), "took", time.Since(t))
+	slog.Info("inserted cve_relationships", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents); err != nil {
 		return fmt.Errorf("could not insert affected_components: %w", err)
 	}
-	slog.Info("inserted affected_components", "count", len(rows.AffectedComponents), "took", time.Since(t))
+	slog.Info("inserted affected_components", "count", len(rows.AffectedComponents), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
 		return fmt.Errorf("could not insert cve_affected_component: %w", err)
 	}
-	slog.Info("inserted cve_affected_component", "count", len(rows.CVEAffectedComponents), "took", time.Since(t))
+	slog.Info("inserted cve_affected_component", "count", len(rows.CVEAffectedComponents), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
 		return fmt.Errorf("could not insert exploits: %w", err)
 	}
-	slog.Info("inserted exploits", "count", len(exploits), "took", time.Since(t))
+	slog.Info("inserted exploits", "count", len(exploits), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertMaliciousPackagesBulk(ctx, tx, mal.pkgs, mal.comps); err != nil {
 		return fmt.Errorf("could not insert malicious packages: %w", err)
 	}
-	slog.Info("inserted malicious_packages", "count", len(mal.pkgs), "took", time.Since(t))
+	slog.Info("inserted malicious_packages", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not insert epss: %w", err)
 	}
-	slog.Info("inserted epss", "count", len(epssData), "took", time.Since(t))
+	slog.Info("inserted epss", "count", len(epssData), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not insert cisa kev: %w", err)
 	}
-	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t))
+	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	if lastImportTime.IsZero() {
 		if err := AddIndexesAndConstraints(ctx, tx); err != nil {
@@ -685,7 +691,7 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 		}
 	}
 
-	slog.Info("finished writing rows to database", "took", time.Since(start))
+	slog.Info("finished writing rows to database", "took", time.Since(start), "heap_alloc_mb", heapMB())
 	return nil
 }
 
@@ -1252,12 +1258,10 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 
 	go func() {
-		var memStats runtime.MemStats
 		for range ticker.C {
 			if openChans == 0 {
 				return
 			}
-			runtime.ReadMemStats(&memStats)
 			slog.Info("streaming to database",
 				"cves", cveCount, "cves_insert_time", cvesTime.Round(time.Millisecond),
 				"relationships", relationshipCount, "relationships_insert_time", relationshipsTime.Round(time.Millisecond),
@@ -1265,7 +1269,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				"cve_affected_components", cveAffectedComponentCount, "cve_affected_components_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
 				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
 				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
-				"heap_alloc_mb", memStats.HeapAlloc/1024/1024,
+				"heap_alloc_mb", heapMB(),
 				"took", time.Since(start),
 			)
 		}
