@@ -98,20 +98,6 @@ func InitRawDatabaseContainer(initDBSQLPath string) (*pgxpool.Pool, func()) {
 		panic(err)
 	}
 
-	if logs, lerr := postgresC.Logs(ctx); lerr == nil {
-		buf := make([]byte, 64*1024)
-		for {
-			n, rerr := logs.Read(buf)
-			if n > 0 {
-				log.Printf("=== postgres startup logs ===\n%s", buf[:n])
-			}
-			if rerr != nil {
-				break
-			}
-		}
-		logs.Close()
-	}
-
 	host, _ := postgresC.Host(ctx)
 	port, _ := postgresC.MappedPort(ctx, "5432")
 

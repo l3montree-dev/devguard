@@ -369,18 +369,11 @@ func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (map[int64][]i
 	return m, nil
 }
 
-// insert cves using copy to stream data into a staging table and then merging the staging table with the cves table
-// this lets us handle on conflicts and updates gracefully, while still having the speed of copy
+// insertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if len(cves) == 0 {
 		return nil
 	}
-
-	if _, err := tx.Exec(ctx, `TRUNCATE cves_stage`); err != nil {
-		return fmt.Errorf("could not truncate cves staging table: %w", err)
-	}
-
-	// copy data straight into the staging table
 	columnNames := []string{"id", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
@@ -389,36 +382,14 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
 	}
-
-	// then insert from the staging table and update entries on conflicts (newest first)
-
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO cves (id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
-		SELECT id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
-		FROM cves_stage
-		ON CONFLICT (id) DO UPDATE SET
-			date_published     = EXCLUDED.date_published,
-			date_last_modified = EXCLUDED.date_last_modified,
-			description        = EXCLUDED.description,
-			cvss               = EXCLUDED.cvss,
-			vector             = EXCLUDED.vector`); err != nil {
-		return fmt.Errorf("could not upsert from staging into cves: %w", err)
-	}
-
 	return nil
 }
 
-// insert into cve relationships using copy in combination with a staging table
-// the staging table step is used to able to handle on conflict, effectively resulting in the deduplication of rows before applying the primary key
+// insertCVERelationshipsBulk streams cve relationships into the staging table. Call flushStagingTables once after all batches.
 func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship) error {
 	if len(cveRelationships) == 0 {
 		return nil
 	}
-	if _, err := tx.Exec(ctx, `TRUNCATE cve_relationships_stage`); err != nil {
-		return fmt.Errorf("could not truncate cve_relationships staging table: %w", err)
-	}
-
-	// stream data straight into staging table
 	columnNames := []string{"target_cve", "source_cve", "relationship_type"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cve_relationships_stage"}, columnNames, pgx.CopyFromSlice(len(cveRelationships), func(i int) ([]any, error) {
 		row := cveRelationships[i]
@@ -427,27 +398,15 @@ func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 	if err != nil {
 		return fmt.Errorf("could not copy cve relationship rows into staging table: %w", err)
 	}
-
-	// then merge both tables and ignore duplicate rows
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
-		SELECT target_cve, source_cve, relationship_type
-		FROM cve_relationships_stage
-		ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING`); err != nil {
-		return fmt.Errorf("could not insert from staging into cve_relationships: %w", err)
-	}
-
 	return nil
 }
 
-// inserts into affected components using copy + staging table approach
-// the staging table is needed in this case to be able to transform semver values to the semver datatype since COPY lacks this functionality
+// insertAffectedComponentsBulk streams affected components into the staging table. Call flushStagingTables once after all batches.
+// The semver cast (text → semver type) happens in flushStagingTables, not here.
 func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent) error {
-	if _, err := tx.Exec(ctx, `TRUNCATE affected_components_stage`); err != nil {
-		return fmt.Errorf("could not truncate affected_components staging table: %w", err)
+	if len(components) == 0 {
+		return nil
 	}
-
-	// stream the values into the staging table; all affected components attributes are already default postgresql types
 	columnNames := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"affected_components_stage"}, columnNames, pgx.CopyFromSlice(len(components), func(i int) ([]any, error) {
 		c := components[i]
@@ -456,21 +415,6 @@ func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []m
 	if err != nil {
 		return fmt.Errorf("could not copy affected component rows into staging table: %w", err)
 	}
-
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO affected_components (
-			id, purl, ecosystem,  version,
-			semver_introduced, semver_fixed,
-			version_introduced, version_fixed
-		)
-		SELECT
-			id, purl, ecosystem, version,
-			semver_introduced::semver, semver_fixed::semver,
-			version_introduced, version_fixed
-		FROM affected_components_stage`); err != nil {
-		return fmt.Errorf("could not insert from staging into affected_components: %w", err)
-	}
-
 	return nil
 }
 
@@ -489,6 +433,95 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 		return fmt.Errorf("could not copy cve affected component rows into table: %w", err)
 	}
 
+	return nil
+}
+
+// flushStagingTables runs all INSERT INTO ... SELECT FROM staging statements once.
+// Call this after all per-batch COPY calls are done.
+func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
+	slog.Info("flushing staging tables to live tables")
+	start := time.Now()
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cves (id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+		SELECT id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		FROM cves_stage
+		ON CONFLICT (id) DO UPDATE SET
+			date_published     = EXCLUDED.date_published,
+			date_last_modified = EXCLUDED.date_last_modified,
+			description        = EXCLUDED.description,
+			cvss               = EXCLUDED.cvss,
+			vector             = EXCLUDED.vector`); err != nil {
+		return fmt.Errorf("could not flush cves: %w", err)
+	}
+	slog.Info("flushed cves", "took", time.Since(start))
+
+	t := time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
+		SELECT target_cve, source_cve, relationship_type
+		FROM cve_relationships_stage
+		ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not flush cve_relationships: %w", err)
+	}
+	slog.Info("flushed cve_relationships", "took", time.Since(t))
+
+	t = time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO affected_components (id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
+		SELECT id, purl, ecosystem, version,
+			semver_introduced::semver, semver_fixed::semver,
+			version_introduced, version_fixed
+		FROM affected_components_stage`); err != nil {
+		return fmt.Errorf("could not flush affected_components: %w", err)
+	}
+	slog.Info("flushed affected_components", "took", time.Since(t))
+
+	t = time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
+		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
+		FROM exploits_stage
+		ON CONFLICT (id) DO UPDATE SET
+			published   = EXCLUDED.published,
+			updated     = EXCLUDED.updated,
+			author      = EXCLUDED.author,
+			source_url  = EXCLUDED.source_url,
+			description = EXCLUDED.description,
+			forks       = EXCLUDED.forks,
+			watchers    = EXCLUDED.watchers,
+			subscribers = EXCLUDED.subscribers,
+			stars       = EXCLUDED.stars`); err != nil {
+		return fmt.Errorf("could not flush exploits: %w", err)
+	}
+	slog.Info("flushed exploits", "took", time.Since(t))
+
+	t = time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO malicious_packages (id, summary, details, published, modified)
+		SELECT id, summary, details, published, modified FROM mal_pkgs_stage
+		ON CONFLICT (id) DO UPDATE SET
+			summary   = EXCLUDED.summary,
+			details   = EXCLUDED.details,
+			published = EXCLUDED.published,
+			modified  = EXCLUDED.modified`); err != nil {
+		return fmt.Errorf("could not flush malicious_packages: %w", err)
+	}
+	slog.Info("flushed malicious_packages", "took", time.Since(t))
+
+	t = time.Now()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO malicious_affected_components (id, malicious_package_id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
+		SELECT id, malicious_package_id, purl, ecosystem, version,
+			semver_introduced::semver, semver_fixed::semver,
+			version_introduced, version_fixed
+		FROM mal_comps_stage
+		ON CONFLICT (id) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not flush malicious_affected_components: %w", err)
+	}
+	slog.Info("flushed malicious_affected_components", "took", time.Since(t))
+
+	slog.Info("finished flushing staging tables", "total", time.Since(start))
 	return nil
 }
 

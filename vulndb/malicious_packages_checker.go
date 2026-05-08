@@ -290,11 +290,9 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 	return false, nil, nil
 }
 
+// insertMaliciousPackagesBulk streams malicious packages and components into staging tables. Call flushStagingTables once after all batches.
 func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
 	if len(pkgs) > 0 {
-		if _, err := tx.Exec(ctx, `TRUNCATE mal_pkgs_stage`); err != nil {
-			return fmt.Errorf("could not truncate malicious packages staging table: %w", err)
-		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
 			[]string{"id", "summary", "details", "published", "modified"},
 			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
@@ -303,22 +301,8 @@ func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.M
 			})); err != nil {
 			return fmt.Errorf("could not copy malicious packages into staging table: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO malicious_packages (id, summary, details, published, modified)
-			SELECT id, summary, details, published, modified FROM mal_pkgs_stage
-			ON CONFLICT (id) DO UPDATE SET
-				summary   = EXCLUDED.summary,
-				details   = EXCLUDED.details,
-				published = EXCLUDED.published,
-				modified  = EXCLUDED.modified`); err != nil {
-			return fmt.Errorf("could not upsert malicious packages: %w", err)
-		}
 	}
-
 	if len(comps) > 0 {
-		if _, err := tx.Exec(ctx, `TRUNCATE mal_comps_stage`); err != nil {
-			return fmt.Errorf("could not truncate malicious components staging table: %w", err)
-		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
 			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
 			pgx.CopyFromSlice(len(comps), func(i int) ([]any, error) {
@@ -326,15 +310,6 @@ func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.M
 				return []any{c.ID, c.MaliciousPackageID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
 			})); err != nil {
 			return fmt.Errorf("could not copy malicious components into staging table: %w", err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO malicious_affected_components (id, malicious_package_id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
-			SELECT id, malicious_package_id, purl, ecosystem, version,
-				semver_introduced::semver, semver_fixed::semver,
-				version_introduced, version_fixed
-			FROM mal_comps_stage
-			ON CONFLICT (id) DO NOTHING`); err != nil {
-			return fmt.Errorf("could not upsert malicious components: %w", err)
 		}
 	}
 	return nil

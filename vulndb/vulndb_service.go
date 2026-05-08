@@ -626,21 +626,21 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 
 	t := time.Now()
 	if err := insertCVEsBulk(ctx, tx, rows.CVEs); err != nil {
-		return fmt.Errorf("could not insert cves: %w", err)
+		return fmt.Errorf("could not copy cves to staging: %w", err)
 	}
-	slog.Info("inserted cves", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
+	slog.Info("copied cves to staging", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships); err != nil {
-		return fmt.Errorf("could not insert cve relationships: %w", err)
+		return fmt.Errorf("could not copy cve relationships to staging: %w", err)
 	}
-	slog.Info("inserted cve_relationships", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
+	slog.Info("copied cve_relationships to staging", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents); err != nil {
-		return fmt.Errorf("could not insert affected_components: %w", err)
+		return fmt.Errorf("could not copy affected_components to staging: %w", err)
 	}
-	slog.Info("inserted affected_components", "count", len(rows.AffectedComponents), "took", time.Since(t), "heap_alloc_mb", heapMB())
+	slog.Info("copied affected_components to staging", "count", len(rows.AffectedComponents), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, rows.CVEAffectedComponents); err != nil {
@@ -650,15 +650,15 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 
 	t = time.Now()
 	if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
-		return fmt.Errorf("could not insert exploits: %w", err)
+		return fmt.Errorf("could not copy exploits to staging: %w", err)
 	}
-	slog.Info("inserted exploits", "count", len(exploits), "took", time.Since(t), "heap_alloc_mb", heapMB())
+	slog.Info("copied exploits to staging", "count", len(exploits), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertMaliciousPackagesBulk(ctx, tx, mal.pkgs, mal.comps); err != nil {
-		return fmt.Errorf("could not insert malicious packages: %w", err)
+		return fmt.Errorf("could not copy malicious packages to staging: %w", err)
 	}
-	slog.Info("inserted malicious_packages", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
+	slog.Info("copied malicious_packages to staging", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
@@ -671,6 +671,12 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 		return fmt.Errorf("could not insert cisa kev: %w", err)
 	}
 	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
+	if err := flushStagingTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not flush staging tables: %w", err)
+	}
+	slog.Info("flushed staging tables", "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	if lastImportTime.IsZero() {
 		if err := AddIndexesAndConstraints(ctx, tx); err != nil {
@@ -912,6 +918,10 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			malPkgTime += time.Since(t)
 			malPkgCount += len(malPkg.pkgs)
 		}
+	}
+
+	if err := flushStagingTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not flush staging tables: %w", err)
 	}
 
 	if rebuildIndexes {
