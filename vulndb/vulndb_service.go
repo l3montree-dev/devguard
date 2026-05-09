@@ -390,7 +390,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		}
 	}
 
-	slog.Info("successfully passed integrity validation", "import_timestamp", integrity.ImportTimestamp)
+	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)
 
 	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
@@ -400,7 +400,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
-	slog.Info("finished vulndb import", "total_time", time.Since(start), "timestamp", integrity.ImportTimestamp)
+	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }
 
