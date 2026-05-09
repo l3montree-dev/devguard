@@ -222,7 +222,7 @@ func readGobFile(path string, out any) error {
 
 var batchSize = 5_000
 
-func readGobFileStream[T any, Transformed any](ctx context.Context, path string, out chan<- Transformed, transformer func([]T) Transformed) error {
+func readGobFileStream[T any](ctx context.Context, path string, handleItems func([]T) error) error {
 	fd, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("could not open gob file %s: %w", path, err)
@@ -241,16 +241,19 @@ func readGobFileStream[T any, Transformed any](ctx context.Context, path string,
 		batch = append(batch, item)
 		if len(batch) == batchSize {
 			select {
-			case out <- transformer(batch):
 			case <-ctx.Done():
 				return ctx.Err()
+			default:
+				handleItems(batch)
 			}
 			batch = batch[:0]
 		}
 	}
 	if len(batch) > 0 {
 		select {
-		case out <- transformer(batch):
+		default:
+			handleItems(batch)
+			return nil
 		case <-ctx.Done():
 			return ctx.Err()
 		}

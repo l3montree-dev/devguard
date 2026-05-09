@@ -90,6 +90,10 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		}
 	}()
 
+	if err := truncateVulnDBTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not truncate vulndb tables: %w", err)
+	}
+
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
 	osvEntries, survivingCVEs, err := s.osv.fetchAndImportOSV(ctx, tx, start)
@@ -174,38 +178,6 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		return nil
 	})
 
-	group.Go(func() error {
-		slog.Info("start fetching malicious packages")
-		packages, components, err := s.maliciousPackages.FetchAll(groupCtx)
-		if err != nil {
-			return fmt.Errorf("could not fetch malicious packages: %w", err)
-		}
-		fakePkgs, fakeComps := buildFakePackages()
-
-		// unique pkgs and comps
-		pkgMap := make(map[string]struct{})
-		uniquePkgs := make([]models.MaliciousPackage, 0, len(packages))
-		for _, p := range packages {
-			if _, exists := pkgMap[p.ID]; !exists {
-				pkgMap[p.ID] = struct{}{}
-				uniquePkgs = append(uniquePkgs, p)
-			}
-		}
-
-		compMap := make(map[string]struct{})
-		uniqueComps := make([]models.MaliciousAffectedComponent, 0, len(components))
-		for _, c := range components {
-			if _, exists := compMap[c.ID]; !exists {
-				compMap[c.ID] = struct{}{}
-				uniqueComps = append(uniqueComps, c)
-			}
-		}
-
-		malPkgs = append(uniquePkgs, fakePkgs...)
-		malComps = append(uniqueComps, fakeComps...)
-		return nil
-	})
-
 	if err := group.Wait(); err != nil {
 		return err
 	}
@@ -274,9 +246,6 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 	if err := writeGobFileItems(exploitToGobTransformer(allExploits), "exploits.gob"); err != nil {
 		return fmt.Errorf("could not write exploits gob: %w", err)
 	}
-	if err := writeGobFileItems(malPackagesToGobTransformer(malPkgs, malComps), "maliciouspackages.gob"); err != nil {
-		return fmt.Errorf("could not write malicious packages gob: %w", err)
-	}
 	slog.Info("wrote all gob files")
 
 	// --- Integrity check (covers all tables including exploits + malicious) ---
@@ -286,7 +255,6 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		"epss.gob",
 		"cisakev.gob",
 		"exploits.gob",
-		"maliciouspackages.gob",
 		"integrity_checks.json",
 	}); err != nil {
 		return fmt.Errorf("could not write vulndb tar: %w", err)
@@ -424,7 +392,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
-	malPkgChan := make(chan malRow, 4)
+	malPkgChan := make(chan malRows, 4)
 
 	if lastImportTime.IsZero() {
 		t := time.Now()
@@ -444,8 +412,9 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	}
 	group.Go(func() error {
 		defer close(vulndbChan)
+		defer close(malPkgChan)
 		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", vulndbChan, gobOSVEntryStreamingTransformer(groupCtx, lastImportTime, existingAffectedComponents)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVEntryStreamer(groupCtx, lastImportTime, existingAffectedComponents, vulndbChan, malPkgChan)); err != nil {
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "took", time.Since(t))
@@ -470,22 +439,12 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	group.Go(func() error {
 		defer close(exploitChan)
 		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/exploits.gob", exploitChan, gobExploitStreamingTransformer(lastImportTime)); err != nil {
+		if err := readGobFileStream(groupCtx, workingDir+"/exploits.gob", gobExploitStreamer(groupCtx, lastImportTime, exploitChan)); err != nil {
 			return fmt.Errorf("could not read exploits gob: %w", err)
 		}
 		slog.Info("decoded exploits.gob", "took", time.Since(t))
 		return nil
 	})
-	group.Go(func() error {
-		defer close(malPkgChan)
-		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/maliciouspackages.gob", malPkgChan, gobMalPackagesStreamingTransformer(lastImportTime)); err != nil {
-			return fmt.Errorf("could not read malicious packages gob: %w", err)
-		}
-		slog.Info("decoded maliciouspackages.gob", "took", time.Since(t))
-		return nil
-	})
-
 	group.Go(func() error {
 		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, lastImportTime)
 	})
@@ -591,11 +550,10 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		}
 	}
 
-	rows := gobOSVEntryStreamingTransformer(ctx, lastImportTime, existingAffectedComponents)(osvEntries)
-	exploits := gobExploitStreamingTransformer(lastImportTime)(gobExploit)
-	mal := gobMalPackagesStreamingTransformer(lastImportTime)(gobMalPkgs)
+	vulnRows, malRows := gobOSVToVulnAndMalFilterTransformer(ctx, lastImportTime, existingAffectedComponents)(osvEntries)
+	exploits := gobExploitFilterTransformer(lastImportTime, gobExploit)
 
-	if err := writeToDatabase(ctx, tx, rows, exploits, mal, epssData, kevEntries, lastImportTime); err != nil {
+	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, lastImportTime); err != nil {
 		return err
 	}
 	return nil
@@ -610,7 +568,7 @@ func heapMB() uint64 {
 	return m.HeapAlloc / 1024 / 1024
 }
 
-func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRow, epssData map[string]dtos.EPSS, kevEntries []CISAKEVEntry, lastImportTime time.Time) error {
+func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []CISAKEVEntry, lastImportTime time.Time) error {
 	slog.Info("start writing rows to database", "heap_alloc_mb", heapMB())
 	start := time.Now()
 
@@ -812,7 +770,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, error) {
 
 // streamToDatabase drains all three input channels in a single goroutine and writes
 // the received rows to the database. The caller is responsible for Begin/Commit/Rollback.
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRow, lastImportTime time.Time) error {
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, lastImportTime time.Time) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -832,7 +790,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 
 	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount int
 	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
 
 	openChans := 0

@@ -286,7 +286,7 @@ func affectedComponentsFromGitRange(affected dtos.Affected) []models.AffectedCom
 }
 
 // MaliciousAffectedComponentFromOSV converts OSV data to MaliciousAffectedComponent entries
-func MaliciousAffectedComponentFromOSV(osv dtos.OSV, maliciousPackageID string) []models.MaliciousAffectedComponent {
+func MaliciousAffectedComponentFromOSV(osv *dtos.OSV, maliciousPackageID string) []models.MaliciousAffectedComponent {
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
 	for _, affected := range osv.Affected {
 		for _, c := range affectedComponentsFromAffected(affected) {

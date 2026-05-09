@@ -184,13 +184,13 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 			       md5(string_agg(row_hash, '' ORDER BY id)) AS checksum
 			FROM (
 				SELECT id, md5(coalesce(id, '\0') || '|' || coalesce(modified::text, '\0')) AS row_hash
-				FROM malicious_packages WHERE id NOT LIKE 'FAKE-TEST-%'
+				FROM malicious_packages WHERE id NOT LIKE 'MAL-FAKE-TEST-%'
 			) sub
 		),
 		malicious_affected_components_integrity AS (
 			SELECT 'malicious_affected_components' AS table_name, count(*) AS row_count,
 			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
-			FROM malicious_affected_components WHERE malicious_package_id NOT LIKE 'FAKE-TEST-%'
+			FROM malicious_affected_components WHERE malicious_package_id NOT LIKE 'MAL-FAKE-TEST-%'
 		)
 		SELECT table_name, row_count, checksum FROM cves_integrity
 		UNION ALL SELECT table_name, row_count, checksum FROM cve_relationships_integrity
