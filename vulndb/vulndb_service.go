@@ -296,7 +296,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 			"cves",
 			"affected_components",
 			"cve_relationships",
-			"cve_affected_components",
+			"cve_affected_component",
 			"exploits",
 			"malicious_packages",
 			"malicious_affected_components",
@@ -422,7 +422,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
 
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components", "malicious_packages", "malicious_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components"}) {
 		if lastImportTime.IsZero() {
 			slog.Info("starting full import: truncating affected tables before streaming data")
 			if err := truncateTablesForLimitedImport(ctx, tx, limitedToTables); err != nil {
@@ -431,7 +431,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 		}
 	}
 
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
 		var existingAffectedComponents map[int64][]int64
 		if !lastImportTime.IsZero() {
 			var loadErr error
@@ -525,7 +525,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 }
 
 func truncateTablesForLimitedImport(ctx context.Context, tx pgx.Tx, limitedToTables []string) error {
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
 		if err := truncateCveRelatedTables(ctx, tx); err != nil {
 			return fmt.Errorf("could not truncate CVE-related tables: %w", err)
 		}
@@ -551,7 +551,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		gobExploit []GobExploit
 	)
 
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components", "malicious_packages", "malicious_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components"}) {
 		if lastImportTime.IsZero() {
 			t := time.Now()
 			slog.Info("start truncating vulndb tables")
@@ -619,7 +619,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 
 	var vulnRows vulndbRows
 	var malRows malRows
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
 		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, existingAffectedComponents)(osvEntries)
 	}
 	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
@@ -895,7 +895,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				"cves", cveCount, "cves_insert_time", cvesTime.Round(time.Millisecond),
 				"relationships", relationshipCount, "relationships_insert_time", relationshipsTime.Round(time.Millisecond),
 				"affected_components", affectedComponentCount, "affected_components_insert_time", affectedComponentsTime.Round(time.Millisecond),
-				"cve_affected_components", cveAffectedComponentCount, "cve_affected_components_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
+				"cve_affected_component", cveAffectedComponentCount, "cve_affected_component_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
 				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
 				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
 				"heap_alloc_mb", heapMB(),
@@ -977,7 +977,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"cves", cveCount,
 		"relationships", relationshipCount,
 		"affected_components", affectedComponentCount,
-		"cve_affected_components", cveAffectedComponentCount,
+		"cve_affected_component", cveAffectedComponentCount,
 		"exploits", exploitCount,
 		"malicious_packages", malPkgCount,
 		"took", time.Since(start),
