@@ -128,36 +128,6 @@ func gobExploitToModel(g GobExploit) models.Exploit {
 	}
 }
 
-// --- Malicious package conversions ---
-
-func maliciousComponentToGob(c models.MaliciousAffectedComponent) GobMaliciousComponent {
-	return GobMaliciousComponent{
-		ID:                 c.ID,
-		MaliciousPackageID: c.MaliciousPackageID,
-		PurlWithoutVersion: c.PurlWithoutVersion,
-		Ecosystem:          c.Ecosystem,
-		Version:            c.Version,
-		SemverIntroduced:   c.SemverIntroduced,
-		SemverFixed:        c.SemverFixed,
-		VersionIntroduced:  c.VersionIntroduced,
-		VersionFixed:       c.VersionFixed,
-	}
-}
-
-func gobComponentToModel(g GobMaliciousComponent) models.MaliciousAffectedComponent {
-	return models.MaliciousAffectedComponent{
-		ID:                 g.ID,
-		MaliciousPackageID: g.MaliciousPackageID,
-		PurlWithoutVersion: g.PurlWithoutVersion,
-		Ecosystem:          g.Ecosystem,
-		Version:            g.Version,
-		SemverIntroduced:   g.SemverIntroduced,
-		SemverFixed:        g.SemverFixed,
-		VersionIntroduced:  g.VersionIntroduced,
-		VersionFixed:       g.VersionFixed,
-	}
-}
-
 func writeGobFileItems[T any](items []T, fileName string) error {
 	gobFile, err := os.Create(fileName)
 	if err != nil {
@@ -244,7 +214,9 @@ func readGobFileStream[T any](ctx context.Context, path string, handleItems func
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
-				handleItems(batch)
+				if err := handleItems(batch); err != nil {
+					return fmt.Errorf("could not handle batch of items from gob file %s: %w", path, err)
+				}
 			}
 			batch = batch[:0]
 		}
@@ -252,8 +224,7 @@ func readGobFileStream[T any](ctx context.Context, path string, handleItems func
 	if len(batch) > 0 {
 		select {
 		default:
-			handleItems(batch)
-			return nil
+			return handleItems(batch)
 		case <-ctx.Done():
 			return ctx.Err()
 		}

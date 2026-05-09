@@ -67,7 +67,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 	err := db.Create(&pkg).Error
 	assert.Nil(t, err)
 
-	components := transformer.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
+	components := transformer.MaliciousAffectedComponentFromOSV(&testEntry, testEntry.ID)
 	err = db.Create(&components).Error
 	assert.Nil(t, err)
 
