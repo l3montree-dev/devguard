@@ -1,7 +1,9 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"runtime"
 	"time"
@@ -179,13 +181,18 @@ func NewAPIV1Router(srv api.Server,
 		// Check database connectivity
 		sqlDB, err := db.DB()
 		if err != nil {
+			slog.Info("failed to get database instance", "error", err)
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "failed to get database instance",
 			})
 		}
 
-		if err := sqlDB.Ping(); err != nil {
+		ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 5*time.Second)
+		defer cancel()
+
+		if err := sqlDB.PingContext(ctxWithTimeout); err != nil {
+			slog.Info("database ping failed", "error", err)
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "database ping failed",

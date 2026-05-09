@@ -55,15 +55,8 @@ func osvEntryToMaliciousPackageTransformer(entry *dtos.OSV) (models.MaliciousPac
 	return pkg, components
 }
 
-func gobOSVToVulnAndMalFilterTransformer(ctx context.Context, lastImportTime time.Time, existing map[int64][]int64) func([]OSVEntry) (vulndbRows, malRows) {
-	if existing == nil {
-		existing = make(map[int64][]int64)
-	}
-	return func(elements []OSVEntry) (vulndbRows, malRows) {
-		cves := make([]models.CVE, 0, len(elements))
-		cveRelationships := make([]models.CVERelationship, 0, len(elements)*2)
-		affectedComponents := make([]models.AffectedComponent, 0, len(elements)*12)
-		cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(elements)*55)
+func gobOSVToMalFilterTransformer(lastImportTime time.Time) func([]OSVEntry) malRows {
+	return func(elements []OSVEntry) malRows {
 		malPkgs := make([]models.MaliciousPackage, 0)
 		malComps := make([]models.MaliciousAffectedComponent, 0)
 
@@ -77,6 +70,32 @@ func gobOSVToVulnAndMalFilterTransformer(ctx context.Context, lastImportTime tim
 				pkg, comps := osvEntryToMaliciousPackageTransformer(elements[i].OSV)
 				malPkgs = append(malPkgs, pkg)
 				malComps = append(malComps, comps...)
+				continue
+			}
+		}
+		return malRows{
+			pkgs:  malPkgs,
+			comps: malComps,
+		}
+	}
+}
+func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64][]int64) func([]OSVEntry) vulndbRows {
+	if existing == nil {
+		existing = make(map[int64][]int64)
+	}
+	return func(elements []OSVEntry) vulndbRows {
+		cves := make([]models.CVE, 0, len(elements))
+		cveRelationships := make([]models.CVERelationship, 0, len(elements)*2)
+		affectedComponents := make([]models.AffectedComponent, 0, len(elements)*12)
+		cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(elements)*55)
+
+		for i := range elements {
+			if !lastImportTime.IsZero() && !elements[i].ModifiedTimestamp.After(lastImportTime) {
+				continue
+			}
+
+			// check if malicious package or vulnerability
+			if strings.HasPrefix(elements[i].OSV.ID, "MAL-") {
 				continue
 			}
 			relationships := transformer.OSVToCVERelationships(elements[i].OSV)
@@ -107,28 +126,33 @@ func gobOSVToVulnAndMalFilterTransformer(ctx context.Context, lastImportTime tim
 			}
 		}
 		return vulndbRows{
-				CVEs:                  cves,
-				CVERelationships:      cveRelationships,
-				AffectedComponents:    affectedComponents,
-				CVEAffectedComponents: cveAffectedComponents,
-			}, malRows{
-				pkgs:  malPkgs,
-				comps: malComps,
-			}
+			CVEs:                  cves,
+			CVERelationships:      cveRelationships,
+			AffectedComponents:    affectedComponents,
+			CVEAffectedComponents: cveAffectedComponents,
+		}
 	}
 }
 
-func gobOSVEntryStreamer(ctx context.Context, lastImportTime time.Time, existing map[int64][]int64, vulndbChan chan<- vulndbRows, malPkgsChan chan<- malRows) func([]OSVEntry) error {
-	transform := gobOSVToVulnAndMalFilterTransformer(ctx, lastImportTime, existing)
+func gobOSVStreamer(ctx context.Context, lastImportTime time.Time, existing map[int64][]int64, vulndbChan chan<- vulndbRows) func([]OSVEntry) error {
+	transform := gobOSVToVulnFilterTransformer(lastImportTime, existing)
 	return func(elements []OSVEntry) error {
-		vulndbRows, malRows := transform(elements)
+		vulndbRows := transform(elements)
 		select {
-		case malPkgsChan <- malRows:
+		case vulndbChan <- vulndbRows:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
+		return nil
+	}
+}
+
+func gobOSVMalPkgStreamer(ctx context.Context, lastImportTime time.Time, malPkgsChan chan<- malRows) func([]OSVEntry) error {
+	transform := gobOSVToMalFilterTransformer(lastImportTime)
+	return func(elements []OSVEntry) error {
+		malRows := transform(elements)
 		select {
-		case vulndbChan <- vulndbRows:
+		case malPkgsChan <- malRows:
 		case <-ctx.Done():
 			return ctx.Err()
 		}

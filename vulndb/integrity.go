@@ -103,16 +103,17 @@ type integrityInformation struct {
 	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
-func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) error {
-	didErr := false
+// returns a string slice with failing tables
+// if nil, then all tables are valid
+func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) ([]string, bool) {
+	failingTables := make([]string, 0)
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName, "expectedCount", tableGroundTruth.TotalCount, "actualCount", tableIntegrity.TotalCount, "expectedChecksum", fmt.Sprintf("%x", tableGroundTruth.Checksum), "actualChecksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
-
-					didErr = true
+					failingTables = append(failingTables, tableIntegrity.TableName)
 				} else {
 					found = true
 					break
@@ -120,14 +121,15 @@ func validateIntegrityInformation(workingDir string, groundTruth integrityInform
 			}
 		}
 		if !found {
-			return fmt.Errorf("could not find integrity information for table %s", tableIntegrity.TableName)
+			slog.Error("unexpected table found when importing", "table", tableIntegrity.TableName, "count", tableIntegrity.TotalCount, "checksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
+			failingTables = append(failingTables, tableIntegrity.TableName)
 		}
 	}
-	if didErr {
-		return fmt.Errorf("integrity validation failed for one or more tables when importing from %s", workingDir)
+	if len(failingTables) > 0 {
+		return failingTables, false
 	}
 
-	return nil
+	return nil, true
 }
 
 func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]tableIntegrityInformation, error) {

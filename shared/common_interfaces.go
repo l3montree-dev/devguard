@@ -633,7 +633,8 @@ type ImportOptions struct {
 	BatchSize int
 	// Bulk loads all gob data into RAM before writing — no channels, single DB flush.
 	// Faster than streaming but uses significantly more memory (~2-3 GB).
-	Bulk bool
+	Bulk            bool
+	LimitedToTables []string
 }
 
 type VulnDBService interface {

@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
@@ -90,8 +91,12 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 		}
 	}()
 
-	if err := truncateVulnDBTables(ctx, tx); err != nil {
+	if err := truncateCveRelatedTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not truncate vulndb tables: %w", err)
+	}
+
+	if err := truncateMaliciousPackageRelatedTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not truncate malicious package tables: %w", err)
 	}
 
 	// OSV must run first: it populates the DB (including cleanup) so we know
@@ -285,6 +290,19 @@ func readIntegrityInformation(workingDir string) (integrityInformation, error) {
 // as a full import (ignoring the last-import watermark).
 func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
 	ctx, span := vulndbTracer.Start(ctx, "VulnDBService.ImportRC")
+
+	if len(opts.LimitedToTables) == 0 {
+		opts.LimitedToTables = []string{
+			"cves",
+			"affected_components",
+			"cve_relationships",
+			"cve_affected_components",
+			"exploits",
+			"malicious_packages",
+			"malicious_affected_components",
+		}
+	}
+
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
@@ -297,7 +315,15 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		batchSize = opts.BatchSize
 	}
 
-	slog.Info("start vulndb import")
+	importMode := "incremental"
+	if opts.Full {
+		importMode = "full"
+	}
+	processingMode := "streaming"
+	if opts.Bulk {
+		processingMode = "bulk"
+	}
+	slog.Info("start vulndb import", "mode", importMode, "processing", processingMode, "limitedToTables", opts.LimitedToTables)
 	start := time.Now()
 
 	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
@@ -336,10 +362,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
-	err = s.applyFromWorkingDir(ctx, tx, workingDir, lastImportTime, integrity, opts.Bulk)
+	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, lastImportTime, integrity, opts.Bulk, opts.LimitedToTables)
+
 	if err != nil {
-		slog.Error("could not import vulndb incrementally, attempting full import", "error", err)
-		monitoring.Alert("vulndb integrity check failed, retrying as full import", err)
+		slog.Error("integrity validation failed, attempting fallback retry", "failingTables", failingTables, "error", err)
+		monitoring.Alert("vulndb integrity check failed, retrying with limited table set", err)
 		// we need to create a new transaction for the retry, so we rollback the previous one and start a new one
 		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
 			return fmt.Errorf("could not rollback transaction after failed import: %w (rollback error: %v)", err, rbErr)
@@ -350,7 +377,8 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 			return fmt.Errorf("could not begin transaction for full import retry: %w", err)
 		}
 
-		err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{}, integrity, opts.Bulk)
+		slog.Info("retrying with full import for limited tables", "tables", failingTables)
+		_, err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{}, integrity, opts.Bulk, failingTables)
 		if err != nil {
 			if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
 				monitoring.Alert("could not rollback transaction after failed full import retry", fmt.Errorf("rollback failed: %w", rbErr))
@@ -362,7 +390,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		}
 	}
 
-	slog.Info("successfully validated checksums")
+	slog.Info("successfully passed integrity validation", "import_timestamp", integrity.ImportTimestamp)
 
 	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
@@ -372,7 +400,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
-	slog.Info("finished vulndb import", "time", time.Since(start))
+	slog.Info("finished vulndb import", "total_time", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }
 
@@ -381,7 +409,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 // populateDBFromGobsStream reads all gob files from workingDir and streams them to the
 // database per-batch with live indexes — no table-wide lock is taken.
 // lastImportTime is used to filter incremental updates; pass time.Time{} for a full import.
-func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
+func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time, limitedToTables []string) error {
 	// Decode all gob payloads in parallel before touching the database.
 	group, groupCtx := errgroup.WithContext(ctx)
 
@@ -394,57 +422,85 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
 
-	if lastImportTime.IsZero() {
-		t := time.Now()
-		slog.Info("start truncating vulndb tables")
-		if err := truncateVulnDBTables(ctx, tx); err != nil {
-			return err
-		}
-		slog.Info("finished truncating vulndb tables", "took", time.Since(t))
-	}
-	var existingAffectedComponents map[int64][]int64
-	if !lastImportTime.IsZero() {
-		var loadErr error
-		existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
-		if loadErr != nil {
-			return fmt.Errorf("could not get current affected components: %w", loadErr)
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components", "malicious_packages", "malicious_affected_components"}) {
+		if lastImportTime.IsZero() {
+			slog.Info("starting full import: truncating affected tables before streaming data")
+			if err := truncateTablesForLimitedImport(ctx, tx, limitedToTables); err != nil {
+				return fmt.Errorf("could not truncate tables for full import: %w", err)
+			}
 		}
 	}
-	group.Go(func() error {
-		defer close(vulndbChan)
-		defer close(malPkgChan)
-		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVEntryStreamer(groupCtx, lastImportTime, existingAffectedComponents, vulndbChan, malPkgChan)); err != nil {
-			return fmt.Errorf("could not read OSV gob: %w", err)
+
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+		var existingAffectedComponents map[int64][]int64
+		if !lastImportTime.IsZero() {
+			var loadErr error
+			existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+			if loadErr != nil {
+				return fmt.Errorf("could not get current affected components: %w", loadErr)
+			}
+			slog.Info("loaded existing affected components for deduplication", "count", len(existingAffectedComponents))
 		}
-		slog.Info("decoded osv.gob", "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
-			return fmt.Errorf("could not read EPSS gob: %w", err)
-		}
-		slog.Info("decoded epss.gob", "entries", len(epssData), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
-			return fmt.Errorf("could not read CISA KEV gob: %w", err)
-		}
-		slog.Info("decoded cisakev.gob", "entries", len(kevEntries), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		defer close(exploitChan)
-		t := time.Now()
-		if err := readGobFileStream(groupCtx, workingDir+"/exploits.gob", gobExploitStreamer(groupCtx, lastImportTime, exploitChan)); err != nil {
-			return fmt.Errorf("could not read exploits gob: %w", err)
-		}
-		slog.Info("decoded exploits.gob", "took", time.Since(t))
-		return nil
-	})
+		group.Go(func() error {
+			defer close(vulndbChan)
+			t := time.Now()
+			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVStreamer(groupCtx, lastImportTime, existingAffectedComponents, vulndbChan)); err != nil {
+				return fmt.Errorf("could not read OSV gob: %w", err)
+			}
+			slog.Info("decoded osv.gob (CVE/affected component data)", "took", time.Since(t))
+			return nil
+		})
+	} else {
+		close(vulndbChan)
+	}
+
+	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
+		group.Go(func() error {
+			defer close(malPkgChan)
+			t := time.Now()
+			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVMalPkgStreamer(groupCtx, lastImportTime, malPkgChan)); err != nil {
+				return fmt.Errorf("could not read OSV gob for malicious package data: %w", err)
+			}
+			slog.Info("decoded osv.gob (malicious package data)", "took", time.Since(t))
+			return nil
+		})
+	} else {
+		close(malPkgChan)
+		slog.Debug("skipping malicious package import")
+	}
+
+	if slices.Contains(limitedToTables, "cves") {
+		group.Go(func() error {
+			t := time.Now()
+			if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
+				return fmt.Errorf("could not read EPSS gob: %w", err)
+			}
+			slog.Info("decoded epss.gob", "entries", len(epssData), "took", time.Since(t))
+			return nil
+		})
+		group.Go(func() error {
+			t := time.Now()
+			if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
+				return fmt.Errorf("could not read CISA KEV gob: %w", err)
+			}
+			slog.Info("decoded cisakev.gob", "entries", len(kevEntries), "took", time.Since(t))
+			return nil
+		})
+	}
+	if slices.Contains(limitedToTables, "exploits") {
+		group.Go(func() error {
+			defer close(exploitChan)
+			t := time.Now()
+			if err := readGobFileStream(groupCtx, workingDir+"/exploits.gob", gobExploitStreamer(groupCtx, lastImportTime, exploitChan)); err != nil {
+				return fmt.Errorf("could not read exploits gob: %w", err)
+			}
+			slog.Info("decoded exploits.gob", "took", time.Since(t))
+			return nil
+		})
+	} else {
+		close(exploitChan)
+		slog.Debug("skipping exploits import")
+	}
 	group.Go(func() error {
 		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, lastImportTime)
 	})
@@ -468,10 +524,24 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	return nil
 }
 
+func truncateTablesForLimitedImport(ctx context.Context, tx pgx.Tx, limitedToTables []string) error {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+		if err := truncateCveRelatedTables(ctx, tx); err != nil {
+			return fmt.Errorf("could not truncate CVE-related tables: %w", err)
+		}
+	}
+	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
+		if err := truncateMaliciousPackageRelatedTables(ctx, tx); err != nil {
+			return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
+		}
+	}
+	return nil
+}
+
 // populateDBFromGobsBulk reads all gob files fully into RAM, then writes everything to the
 // database in one shot via writeToDatabase. Faster than streaming for full imports but uses
 // significantly more memory (~2-3 GB).
-func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time) error {
+func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time, limitedToTables []string) error {
 	group, _ := errgroup.WithContext(ctx)
 
 	var (
@@ -479,64 +549,61 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		epssData   map[string]dtos.EPSS
 		kevEntries []CISAKEVEntry
 		gobExploit []GobExploit
-		gobMalPkgs []GobMaliciousPackagesExport
 	)
 
-	if lastImportTime.IsZero() {
-		t := time.Now()
-		slog.Info("start truncating vulndb tables")
-		if err := truncateVulnDBTables(ctx, tx); err != nil {
-			return err
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components", "malicious_packages", "malicious_affected_components"}) {
+		if lastImportTime.IsZero() {
+			t := time.Now()
+			slog.Info("start truncating vulndb tables")
+			if err := truncateTablesForLimitedImport(ctx, tx, limitedToTables); err != nil {
+				return err
+			}
+			slog.Info("finished truncating vulndb tables", "took", time.Since(t))
 		}
-		slog.Info("finished truncating vulndb tables", "took", time.Since(t))
+		group.Go(func() error {
+			t := time.Now()
+			var err error
+			osvEntries, err = readAllGobItems[OSVEntry](workingDir + "/osv.gob")
+			if err != nil {
+				return fmt.Errorf("could not read OSV gob: %w", err)
+			}
+			slog.Info("decoded osv.gob", "entries", len(osvEntries), "took", time.Since(t))
+			return nil
+		})
 	}
 
-	group.Go(func() error {
-		t := time.Now()
-		var err error
-		osvEntries, err = readAllGobItems[OSVEntry](workingDir + "/osv.gob")
-		if err != nil {
-			return fmt.Errorf("could not read OSV gob: %w", err)
-		}
-		slog.Info("decoded osv.gob", "entries", len(osvEntries), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
-			return fmt.Errorf("could not read EPSS gob: %w", err)
-		}
-		slog.Info("decoded epss.gob", "entries", len(epssData), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
-			return fmt.Errorf("could not read CISA KEV gob: %w", err)
-		}
-		slog.Info("decoded cisakev.gob", "entries", len(kevEntries), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		var err error
-		gobExploit, err = readAllGobItems[GobExploit](workingDir + "/exploits.gob")
-		if err != nil {
-			return fmt.Errorf("could not read exploits gob: %w", err)
-		}
-		slog.Info("decoded exploits.gob", "entries", len(gobExploit), "took", time.Since(t))
-		return nil
-	})
-	group.Go(func() error {
-		t := time.Now()
-		var err error
-		gobMalPkgs, err = readAllGobItems[GobMaliciousPackagesExport](workingDir + "/maliciouspackages.gob")
-		if err != nil {
-			return fmt.Errorf("could not read malicious packages gob: %w", err)
-		}
-		slog.Info("decoded maliciouspackages.gob", "entries", len(gobMalPkgs), "took", time.Since(t))
-		return nil
-	})
+	if slices.Contains(limitedToTables, "cves") {
+		group.Go(func() error {
+			t := time.Now()
+			if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
+				return fmt.Errorf("could not read EPSS gob: %w", err)
+			}
+			slog.Info("decoded epss.gob", "entries", len(epssData), "took", time.Since(t))
+			return nil
+		})
+		group.Go(func() error {
+			t := time.Now()
+			if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
+				return fmt.Errorf("could not read CISA KEV gob: %w", err)
+			}
+			slog.Info("decoded cisakev.gob", "entries", len(kevEntries), "took", time.Since(t))
+			return nil
+		})
+	}
+
+	if slices.Contains(limitedToTables, "exploits") {
+		group.Go(func() error {
+			t := time.Now()
+			var err error
+			gobExploit, err = readAllGobItems[GobExploit](workingDir + "/exploits.gob")
+			if err != nil {
+				return fmt.Errorf("could not read exploits gob: %w", err)
+			}
+			slog.Info("decoded exploits.gob", "entries", len(gobExploit), "took", time.Since(t))
+			return nil
+		})
+	}
+
 	if err := group.Wait(); err != nil {
 		return err
 	}
@@ -550,7 +617,15 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		}
 	}
 
-	vulnRows, malRows := gobOSVToVulnAndMalFilterTransformer(ctx, lastImportTime, existingAffectedComponents)(osvEntries)
+	var vulnRows vulndbRows
+	var malRows malRows
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_components"}) {
+		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, existingAffectedComponents)(osvEntries)
+	}
+	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
+		malRows = gobOSVToMalFilterTransformer(lastImportTime)(osvEntries)
+	}
+
 	exploits := gobExploitFilterTransformer(lastImportTime, gobExploit)
 
 	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, lastImportTime); err != nil {
@@ -649,36 +724,43 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	return nil
 }
 
-func truncateVulnDBTables(ctx context.Context, tx pgx.Tx) error {
-	// CASCADE handles the remaining vulndb-internal FKs (exploits, weaknesses, vex_rules, cve_relationships, cve_affected_component).
-	if _, err := tx.Exec(ctx, `TRUNCATE cves, affected_components, malicious_packages, malicious_affected_components CASCADE`); err != nil {
-		return fmt.Errorf("could not truncate vulndb tables: %w", err)
+func truncateCveRelatedTables(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `TRUNCATE cves, affected_components, cve_relationships, cve_affected_component CASCADE`); err != nil {
+		return fmt.Errorf("could not truncate cve-related tables: %w", err)
+	}
+	return nil
+}
+
+func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `TRUNCATE malicious_packages, malicious_affected_components CASCADE`); err != nil {
+		return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
 	}
 	return nil
 }
 
 // Returns the import timestamp from the integrity manifest on success, zero time if integrity fails.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time, integrityGroundTruth integrityInformation, bulk bool) error {
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, lastImportTime time.Time, integrityGroundTruth integrityInformation, bulk bool, limitedToTables []string) ([]string, error) {
 	if bulk {
-		if err := s.populateDBFromGobsBulk(ctx, tx, workingDir, lastImportTime); err != nil {
-			return err
+		if err := s.populateDBFromGobsBulk(ctx, tx, workingDir, lastImportTime, limitedToTables); err != nil {
+			return nil, err
 		}
 	} else {
-		if err := s.populateDBFromGobsStream(ctx, tx, workingDir, lastImportTime); err != nil {
-			return err
+		if err := s.populateDBFromGobsStream(ctx, tx, workingDir, lastImportTime, limitedToTables); err != nil {
+			return nil, err
 		}
 	}
 
-	// --- Integrity validation ---
 	localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("could not calculate integrity information: %w", err)
+		return nil, fmt.Errorf("could not calculate integrity information: %w", err)
 	}
-	err = validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
-	if err != nil {
-		return fmt.Errorf("could not validate integrity: %w", err)
+	failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+	if !success {
+		slog.Warn("integrity validation failed for tables", "failingTables", failingTables)
+		return failingTables, fmt.Errorf("integrity validation failed: %v", failingTables)
 	}
-	return nil
+	slog.Info("integrity validation successful", "tables_checked", len(localIntegrity))
+	return nil, nil
 }
 
 func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {

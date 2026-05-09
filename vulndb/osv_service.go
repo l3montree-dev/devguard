@@ -172,7 +172,8 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := createStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
-	vulnRows, malRows := gobOSVToVulnAndMalFilterTransformer(ctx, time.Time{}, nil)(allOSVVulns)
+	malRows := gobOSVToMalFilterTransformer(time.Time{})(allOSVVulns)
+	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil)(allOSVVulns)
 	fakeRows, fakeComps := buildFakePackages()
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
