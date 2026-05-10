@@ -16,10 +16,20 @@
 package router
 
 import (
+	"os"
+
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/labstack/echo/v4"
 )
+
+// ociPublicProxyEnabled reports whether the unauthenticated /v2/<registry>/...
+// routes should be registered. Defaults to enabled; set
+// DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED=false to lock the proxy down to
+// secret-scoped routes only.
+func ociPublicProxyEnabled() bool {
+	return os.Getenv("DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED") != "false"
+}
 
 // OCIRegistryRouter exposes the OCI Distribution Spec v2 API at the root /v2/ path
 // so that standard Docker clients can pull images without any special configuration.
@@ -56,22 +66,25 @@ func NewOCIRegistryRouter(srv api.Server, ociController *dependencyfirewall.OCID
 	// ── Unauthenticated routes ──────────────────────────────────────────────
 	// No secret in path; GetDependencyProxyConfigs returns empty config (no rules).
 	// Malicious-package and path-traversal checks still run.
+	// Operators can disable these routes entirely via
+	// DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED=false.
+	if ociPublicProxyEnabled() {
+		// 1-segment image: docker.io/nginx
+		v2.GET("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
+		v2.HEAD("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
+		v2.GET("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
+		v2.HEAD("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
+		v2.GET("/:registry/:image/tags/list", ociController.ProxyOCITagsList)
+		v2.GET("/:registry/:image/referrers/:digest", ociController.ProxyOCIReferrers)
 
-	// 1-segment image: docker.io/nginx
-	v2.GET("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.HEAD("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.GET("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.HEAD("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.GET("/:registry/:image/tags/list", ociController.ProxyOCITagsList)
-	v2.GET("/:registry/:image/referrers/:digest", ociController.ProxyOCIReferrers)
-
-	// 2-segment image: docker.io/library/nginx
-	v2.GET("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.HEAD("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.GET("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.HEAD("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.GET("/:registry/:namespace/:image/tags/list", ociController.ProxyOCITagsList)
-	v2.GET("/:registry/:namespace/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+		// 2-segment image: docker.io/library/nginx
+		v2.GET("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
+		v2.HEAD("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
+		v2.GET("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
+		v2.HEAD("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
+		v2.GET("/:registry/:namespace/:image/tags/list", ociController.ProxyOCITagsList)
+		v2.GET("/:registry/:namespace/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+	}
 
 	// ── Secret-scoped routes ────────────────────────────────────────────────
 	// Secret is the first path segment; custom firewall rules are loaded for
