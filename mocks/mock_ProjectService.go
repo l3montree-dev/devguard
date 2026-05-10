@@ -618,3 +618,63 @@ func (_c *ProjectService_RecursivelyGetChildProjects_Call) RunAndReturn(run func
 	_c.Call.Return(run)
 	return _c
 }
+
+// SearchProjectsWithSubProjectsAndAssetsPaged provides a mock function for the type ProjectService
+func (_mock *ProjectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectDTO], error) {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchProjectsWithSubProjectsAndAssetsPaged")
+	}
+
+	var r0 shared.Paged[dtos.ProjectDTO]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) (shared.Paged[dtos.ProjectDTO], error)); ok {
+		return returnFunc(c)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context) shared.Paged[dtos.ProjectDTO]); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[dtos.ProjectDTO])
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context) error); ok {
+		r1 = returnFunc(c)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchProjectsWithSubProjectsAndAssetsPaged'
+type ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call struct {
+	*mock.Call
+}
+
+// SearchProjectsWithSubProjectsAndAssetsPaged is a helper method to define mock.On call
+//   - c shared.Context
+func (_e *ProjectService_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(c interface{}) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	return &ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("SearchProjectsWithSubProjectsAndAssetsPaged", c)}
+}
+
+func (_c *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Run(run func(c shared.Context)) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.ProjectDTO], err error) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(c shared.Context) (shared.Paged[dtos.ProjectDTO], error)) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
