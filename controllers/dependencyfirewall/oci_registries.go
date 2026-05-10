@@ -42,6 +42,7 @@ var supportedOCIRegistries = []supportedOCIRegistry{
 	{pathName: "registry.k8s.io", upstreamHost: "registry.k8s.io"},
 	{pathName: "public.ecr.aws", upstreamHost: "public.ecr.aws"},
 	{pathName: "mcr.microsoft.com", upstreamHost: "mcr.microsoft.com"},
+	{pathName: "registry.gitlab.com", upstreamHost: "registry.gitlab.com", authHosts: []string{"gitlab.com"}},
 }
 
 // Lookup tables derived from supportedOCIRegistries in init().

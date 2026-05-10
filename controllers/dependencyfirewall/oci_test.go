@@ -186,6 +186,7 @@ func TestIsAllowedRegistry(t *testing.T) {
 		"registry.k8s.io":   true,
 		"public.ecr.aws":    true,
 		"mcr.microsoft.com": true,
+		"registry.gitlab.com": true,
 		"evil.com":          false,
 		"unknown.io":        false,
 		"1.2.3.4":           false, // IPv4 literal
