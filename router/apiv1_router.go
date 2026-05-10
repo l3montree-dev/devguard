@@ -192,7 +192,8 @@ func NewAPIV1Router(srv api.Server,
 		defer cancel()
 
 		if err := sqlDB.PingContext(ctxWithTimeout); err != nil {
-			slog.Info("database ping failed", "error", err)
+			stats := sqlDB.Stats() // log stats for diagnostics
+			slog.Info("database ping failed", "error", err, "openConnections", stats.OpenConnections, "inUse", stats.InUse, "idle", stats.Idle)
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "database ping failed",

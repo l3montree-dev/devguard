@@ -348,6 +348,8 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	if integrity.ImportTimestamp.Equal(lastImportTime) {
 		slog.Info("vulndb is up to date, skipping import", "lastImportTime", lastImportTime)
 		return nil
+	} else if !lastImportTime.IsZero() {
+		slog.Info("last import time", "currentState", lastImportTime, "updatingToVersion", integrity.ImportTimestamp)
 	}
 
 	// Open a single pgx connection and transaction for all DB writes.
