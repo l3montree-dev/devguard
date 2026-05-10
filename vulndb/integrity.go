@@ -111,11 +111,11 @@ func validateIntegrityInformation(workingDir string, groundTruth integrityInform
 		found := false
 		for _, tableGroundTruth := range groundTruth.TableIntegrity {
 			if tableGroundTruth.TableName == tableIntegrity.TableName {
+				found = true
 				if !tableIntegrity.isEqual(tableGroundTruth) {
 					slog.Error("invalid checksum when importing", "table", tableIntegrity.TableName, "expectedCount", tableGroundTruth.TotalCount, "actualCount", tableIntegrity.TotalCount, "expectedChecksum", fmt.Sprintf("%x", tableGroundTruth.Checksum), "actualChecksum", fmt.Sprintf("%x", tableIntegrity.Checksum))
 					failingTables = append(failingTables, tableIntegrity.TableName)
 				} else {
-					found = true
 					break
 				}
 			}
