@@ -143,7 +143,11 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 					coalesce(id::text, '\0') || '|' ||
 					coalesce(description, '\0') || '|' ||
 					coalesce(cvss::text, '\0') || '|' ||
-					coalesce(vector, '\0')
+					coalesce(vector, '\0') || '|' ||
+					coalesce(cisa_required_action, '\0') || '|' ||
+					coalesce(cisa_vulnerability_name, '\0') || '|' ||
+					coalesce(epss::text, '\0') || '|' ||
+					coalesce(percentile::text, '\0')
 				) AS row_hash FROM cves
 			) sub
 		),
