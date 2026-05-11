@@ -47,6 +47,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
+	userAgent := ctx.Request().UserAgent()
 	var vulnEvent models.VulnEvent
 	var client shared.GitlabClientFacade
 	var vuln models.Vuln
@@ -115,7 +116,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				return nil
 			}
 
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false, "")
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false, &userAgent)
 
 			err = g.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -128,7 +129,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				return nil
 			}
 
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false, "")
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false, &userAgent)
 
 			err := g.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -228,7 +229,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		})
 
 		// create a new event based on the comment
-		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDsOrArtifactNames())
+		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDsOrArtifactNames(), &userAgent)
 
 		statemachine.Apply(vuln, vulnEvent)
 

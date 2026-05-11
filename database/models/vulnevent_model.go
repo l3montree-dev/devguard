@@ -112,86 +112,86 @@ func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
 
-func NewAcceptedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent string) VulnEvent {
+func NewAcceptedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeAccepted,
 		UserID:           userID,
 		Justification:    &justification,
 		CreatedByVexRule: createdByRule,
-		UserAgent:        &userAgent,
+		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	return ev
 }
 
-func NewReopenedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent string) VulnEvent {
+func NewReopenedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeReopened,
 		UserID:           userID,
 		Justification:    &justification,
 		CreatedByVexRule: createdByRule,
-		UserAgent:        &userAgent,
+		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	return ev
 }
 
-func NewCommentEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent string) VulnEvent {
+func NewCommentEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeComment,
 		UserID:           userID,
 		Justification:    &justification,
 		CreatedByVexRule: createdByRule,
-		UserAgent:        &userAgent,
+		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	return ev
 }
 
-func NewFalsePositiveEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, createdByRule bool, userAgent string) VulnEvent {
+func NewFalsePositiveEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:                    dtos.EventTypeFalsePositive,
 		UserID:                  userID,
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
 		CreatedByVexRule:        createdByRule,
-		UserAgent:               &userAgent,
+		UserAgent:               userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewFixedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, artifactName string, createdByRule bool, userAgent string) VulnEvent {
+func NewFixedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, artifactName string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeFixed,
 		UserID:           userID,
 		CreatedByVexRule: createdByRule,
-		UserAgent:        &userAgent,
+		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification, artifactName string, finalLicenseDecision string, userAgent string) VulnEvent {
+func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification, artifactName string, finalLicenseDecision string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:          dtos.EventTypeLicenseDecision,
 		UserID:        userID,
 		Justification: &justification,
-		UserAgent:     &userAgent,
+		UserAgent:     userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName, "finalLicenseDecision": finalLicenseDecision})
 	return ev
 }
 
-func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, createdByRule bool, userAgent string) VulnEvent {
+func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeDetected,
 		UserID:           userID,
 		CreatedByVexRule: createdByRule,
-		UserAgent:        &userAgent,
+		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 
@@ -203,12 +203,12 @@ func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, r
 	return ev
 }
 
-func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, arbitraryData map[string]any, userAgent string) VulnEvent {
+func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, arbitraryData map[string]any, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:          dtos.EventTypeMitigate,
 		UserID:        userID,
 		Justification: &justification,
-		UserAgent:     &userAgent,
+		UserAgent:     userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	ev.SetArbitraryJSONData(arbitraryData)

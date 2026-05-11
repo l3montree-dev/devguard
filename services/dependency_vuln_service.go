@@ -94,7 +94,7 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, "")
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, nil)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -115,7 +115,7 @@ func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx share
 
 	events := make([]models.VulnEvent, len(dependencyVulns))
 	for i := range dependencyVulns {
-		ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, "", false, "")
+		ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, "", false, nil)
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
 	}
@@ -168,7 +168,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	for i, dependencyVuln := range dependencyVulns {
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		riskReport := vulndb.RawRisk(dependencyVuln.CVE, e, depth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, "system", riskReport, artifactName, false, "")
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, "system", riskReport, artifactName, false, nil)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -309,7 +309,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	return dependencyVulns, nil
 }
 
-func (s *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent string) (models.VulnEvent, error) {
+func (s *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent *string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
@@ -323,7 +323,7 @@ func (s *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx 
 	return s.createVulnEventAndApply(ctx, tx, assetID, userID, dependencyVuln, vulnEventType, justification, mechanicalJustification, userAgent)
 }
 
-func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error) {
+func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch vulnEventType {
 	case dtos.EventTypeAccepted:

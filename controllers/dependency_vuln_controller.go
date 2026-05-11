@@ -405,7 +405,8 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, ctx.Request().UserAgent())
+	userAgent := ctx.Request().UserAgent()
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -469,7 +470,8 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 			continue
 		}
 
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, ctx.Request().UserAgent())
+		userAgent := ctx.Request().UserAgent()
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, &userAgent)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue

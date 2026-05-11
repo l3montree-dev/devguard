@@ -190,7 +190,8 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 
 	mechanicalJustification := status.MechanicalJustification
 
-	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification, ctx.Request().UserAgent())
+	userAgent := ctx.Request().UserAgent()
+	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}

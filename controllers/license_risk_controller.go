@@ -79,7 +79,8 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 		licenseRisk = existingLicenseRisk
 	}
 
-	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision, ctx.Request().UserAgent())
+	userAgent := ctx.Request().UserAgent()
+	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision, &userAgent)
 
 	err = controller.licenseRiskRepository.ApplyAndSave(ctx.Request().Context(), nil, &licenseRisk, &ev)
 	if err != nil {
@@ -217,7 +218,8 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, ctx.Request().UserAgent())
+	userAgent := ctx.Request().UserAgent()
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}
