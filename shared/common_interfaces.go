@@ -95,6 +95,7 @@ type ProjectRepository interface {
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
+	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
 	EnablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
@@ -104,6 +105,7 @@ type ProjectRepository interface {
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
+	All(ctx context.Context, tx DB) ([]models.Project, error)
 }
 
 type Verifier interface {
@@ -306,6 +308,8 @@ type SupplyChainRepository interface {
 
 type VEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
+	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
+	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	FindByAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
@@ -328,6 +332,7 @@ type OrganizationRepository interface {
 	ContentTree(ctx context.Context, tx DB, orgID uuid.UUID, projects []string) []any // returns project dtos as values - including fetched assets
 	GetOrgByID(ctx context.Context, tx DB, id uuid.UUID) (models.Org, error)
 	GetOrgsWithVulnSharingAssets(ctx context.Context, tx DB) ([]models.Org, error)
+	GetOrgByIDs(ctx context.Context, tx DB, ids []uuid.UUID) ([]models.Org, error)
 }
 
 type OrgService interface {
@@ -473,6 +478,10 @@ type VEXRuleService interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
+}
+
+type CrowdSourcedVexingService interface {
+	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (models.VEXRule, error)
 }
 
 type VulnEventRepository interface {
@@ -736,6 +745,8 @@ type TrustedEntityRepository interface {
 	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
 	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
 	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
 }
 
 type Object string

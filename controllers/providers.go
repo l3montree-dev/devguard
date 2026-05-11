@@ -116,4 +116,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(dependencyfirewall.NewGoDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewPythonDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewOCIDependencyProxyController),
+
+	//Crowdsourced Vexing
+	fx.Provide(NewCrowdsourcedVexingController),
 )
