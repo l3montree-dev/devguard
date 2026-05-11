@@ -97,7 +97,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "missing or invalid user id")
 	}
 
-	user := ctx.Param("user")
+	user := ctx.Param("userID")
 
 	if !utils.IsEmail(user) {
 		return echo.NewHTTPError(400, "user is not a valid mail address")
@@ -116,15 +116,15 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		case dtos.CouldNotFindDefinitiveUserWithMail:
 			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
 		default:
-			return echo.NewHTTPError(500, "could not determine user based on email")
+			return echo.NewHTTPError(500, "could not determine user based on email").WithInternal(err)
 		}
 	}
 
 	err = controller.adminService.AddAdminToOrg(context.Background(), parsedOrgID, userID)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not add admin to organization")
+		return echo.NewHTTPError(500, "could not add admin to organization").WithInternal(err)
 	}
-	return ctx.JSON(200, nil)
+	return ctx.JSON(201, nil)
 }
 
 func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
@@ -134,7 +134,7 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "missing or invalid user id")
 	}
 
-	user := ctx.Param("user")
+	user := ctx.Param("userID")
 
 	if !utils.IsEmail(user) {
 		return echo.NewHTTPError(400, "user is not a valid mail address")
@@ -160,7 +160,7 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not revoke admin role from user")
 	}
-	return ctx.JSON(200, nil)
+	return ctx.JSON(204, nil)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
