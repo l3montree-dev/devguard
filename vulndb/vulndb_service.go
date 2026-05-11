@@ -485,7 +485,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 		slog.Debug("skipping malicious package import")
 	}
 
-	if slices.Contains(limitedToTables, "cves") {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
 		group.Go(func() error {
 			t := time.Now()
 			if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
@@ -588,7 +588,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		})
 	}
 
-	if slices.Contains(limitedToTables, "cves") {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
 		group.Go(func() error {
 			t := time.Now()
 			if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
