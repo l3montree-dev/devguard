@@ -72,11 +72,11 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 func (runner *DaemonRunner) SetInstanceSettings(ctx context.Context) error {
 	singleOrganizationMode := os.Getenv("SINGLE_ORGANIZATION_MODE")
 	if singleOrganizationMode == "true" {
-		return runner.configService.SetJSONConfig(ctx, "instance_settings", shared.InstanceSettings{
+		return runner.configService.SetJSONConfig(ctx, "instanceSettings", shared.InstanceSettings{
 			SingleOrganizationMode: true,
 		})
 	} else {
-		return runner.configService.SetJSONConfig(ctx, "instance_settings", shared.InstanceSettings{
+		return runner.configService.SetJSONConfig(ctx, "instanceSettings", shared.InstanceSettings{
 			SingleOrganizationMode: false,
 		})
 	}

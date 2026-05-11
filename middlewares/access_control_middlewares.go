@@ -29,6 +29,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func InstanceSettings(configService shared.ConfigService, disabled func(shared.InstanceSettings) bool) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			var settings shared.InstanceSettings
+			if err := configService.GetJSONConfig(ctx.Request().Context(), "instanceSettings", &settings); err != nil {
+				// settings not found — allow the request
+				return next(ctx)
+			}
+			if disabled(settings) {
+				return echo.NewHTTPError(403, "this endpoint is disabled by the instance configuration")
+			}
+			return next(ctx)
+		}
+	}
+}
+
 func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {

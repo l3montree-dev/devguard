@@ -141,6 +141,10 @@ func NewDaemonRunner(
 
 // Start initiates all background daemons
 func (runner *DaemonRunner) Start(ctx context.Context) {
+	if err := runner.SetInstanceSettings(ctx); err != nil {
+		slog.Error("could not set instance settings", "err", err)
+	}
+
 	go func() {
 		runner.tick()
 		ticker := time.NewTicker(5 * time.Minute)
@@ -152,10 +156,6 @@ func (runner *DaemonRunner) Start(ctx context.Context) {
 }
 
 func (runner *DaemonRunner) tick() {
-	if err := runner.SetInstanceSettings(context.Background()); err != nil {
-		slog.Error("could not set instance settings", "err", err)
-	}
-
 	if runner.leaderElector.IsLeader() {
 		slog.Info("this instance is the leader - running background jobs")
 		runner.runDaemons()

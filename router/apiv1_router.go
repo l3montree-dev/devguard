@@ -272,7 +272,7 @@ func NewAPIV1Router(srv api.Server,
 
 	apiV1Router.GET("/instance-settings/", func(ctx echo.Context) error {
 		var settings shared.InstanceSettings
-		err := configService.GetJSONConfig(ctx.Request().Context(), "instance_settings", &settings)
+		err := configService.GetJSONConfig(ctx.Request().Context(), "instanceSettings", &settings)
 		if err != nil {
 			// If the setting is not found, return empty settings with 200 status
 			return ctx.JSON(200, shared.InstanceSettings{})
