@@ -13,8 +13,3 @@ type AdminsInOrg struct {
 	InstanceID string    `json:"instance_id"`
 	Admins     []UserDTO `json:"admins"`
 }
-
-type AddAdminRequest struct {
-	OrgID string `json:"org_id"`
-	Email string `json:"email"`
-}
