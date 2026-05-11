@@ -374,6 +374,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	if err != nil {
 		slog.Error("integrity validation failed, attempting fallback retry", "failingTables", failingTables, "error", err)
+		if opts.Debug {
+			showImportDebug(ctx, tx, workingDir, failingTables)
+			return fmt.Errorf("integrity validation failed; debug logs printed for failing tables: %v: %w", failingTables, err)
+		}
 		monitoring.Alert("vulndb integrity check failed, retrying with limited table set", err)
 
 		span.SetAttributes(

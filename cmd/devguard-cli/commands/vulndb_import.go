@@ -18,6 +18,7 @@ func newImportCommand() *cobra.Command {
 	var batchSize int
 	var bulk bool
 	var limitedToTables []string
+	var debug bool
 
 	importCmd := &cobra.Command{
 		Use:   "import",
@@ -31,6 +32,7 @@ func newImportCommand() *cobra.Command {
 				BatchSize:       batchSize,
 				Bulk:            bulk,
 				LimitedToTables: limitedToTables,
+				Debug:           debug,
 			}
 			app := fx.New(
 				fx.NopLogger,
@@ -61,6 +63,7 @@ func newImportCommand() *cobra.Command {
 	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
 	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
 	importCmd.Flags().StringSliceVar(&limitedToTables, "limitedToTables", []string{}, "Comma-separated list of tables to limit the import to (e.g. --limitedToTables=cves,exploits,malicious_packages)")
+	importCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
 	return importCmd
 }

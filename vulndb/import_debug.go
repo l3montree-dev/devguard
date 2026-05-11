@@ -12,133 +12,298 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 package vulndb
 
 import (
-	"bytes"
-	"encoding/json"
-	"os"
-	"testing"
+	"context"
+	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/transformer"
 )
 
-/*
-5:47AM ERR vulndb/integrity.go:116 invalid checksum when importing table=exploits expectedCount=8523 actualCount=8531 expectedChecksum=6232333932343434376236666336666535663665393965313334633335303563 actualChecksum=3335373562623638303565326630343838356534663462636435656662633461
-5:47AM ERR vulndb/integrity.go:116 invalid checksum when importing table=cve_relationships expectedCount=215759 actualCount=215788 expectedChecksum=6439313364643532363862326331373839346234343838356536316238643034 actualChecksum=3766303064303736356131643233663934343961316231366364373664376337
-5:47AM ERR vulndb/integrity.go:116 invalid checksum when importing table=affected_components expectedCount=2161081 actualCount=2161314 expectedChecksum=3730363337353037646331346366346436376539383930636664643338393630 actualChecksum=3931396231656432336331393661663066343634613062343638633038376663
-5:47AM ERR vulndb/integrity.go:116 invalid checksum when importing table=cves expectedCount=177924 actualCount=177937 expectedChecksum=3763393961343964323137366431336632653134373566363138373365313061 actualChecksum=3639396336643561346561343866313334656338393461323435343439316636
-5:47AM ERR vulndb/integrity.go:116 invalid checksum when importing table=cve_affected_component expectedCount=9495979 actualCount=9496443 expectedChecksum=3330326465346438323864633837303139656665633963366138316538343535 actualChecksum=6564616333633034393337363539613938633833333666313933303361663438
-
-There are MORE cves in the database after the import than expected expectedCount=177924 actualCount=177937
-*/
-func TestImportRC(t *testing.T) {
-	// extract the vulndb.tar.zst fixture to a temp dir
-	if _, err := os.Stat("vulndb-testdata-new"); os.IsNotExist(err) {
-		if err := untarZstd("vulndb-new.tar.zst", "vulndb-testdata-new"); err != nil {
-			t.Fatalf("could not extract vulndb testdata: %v", err)
-		}
-	}
-	/*lastImportTime, err := time.Parse(time.RFC3339Nano, "2026-05-10T05:10:29.831137845Z")
-	if err != nil {
-		t.Fatalf("could not parse last import time: %v", err)
-	}*/
-	/*
-
-		Okay ich habe keine Ahnung was ich hier tppe
-	*/
-
-	currentStateFile, err := os.ReadFile("prod-db-cves-full.csv")
-	if err != nil {
-		t.Fatalf("could not read current state file: %v", err)
-	}
-	// split into lines
-	lines := bytes.Split(currentStateFile, []byte{'\n'})
-	// remove the first line (header)
-	lines = lines[1:]
-
-	// read the whole osv.go file and check what cves we would insert right now
-	osvEntries, err := readAllGobItems[OSVEntry]("vulndb-testdata-new/osv.gob")
-	if err != nil {
-		t.Fatalf("could not read osv gob file: %v", err)
-	}
-
-	// remove all malicious packages and components from the osvEntries, as they are not part of the RC import
-	filteredOSVEntries := make([]OSVEntry, 0, len(osvEntries))
-	for _, entry := range osvEntries {
-		if !bytes.HasPrefix([]byte(entry.OSV.ID), []byte("MAL-")) {
-			filteredOSVEntries = append(filteredOSVEntries, entry)
-		}
-	}
-	// check what cves we would insert right now
-	cves := gobOSVToVulnFilterTransformer(time.Time{}, nil)(filteredOSVEntries)
-
-	// check which cves we would insert right now are not in the current state file
-	currentStateMap := make(map[string]struct{})
-	for _, line := range lines {
-		// split by comma and get the first column (cve id)
-		columns := bytes.Split(line, []byte{','})
-		if len(columns) > 0 {
-			currentStateMap[string(columns[0])] = struct{}{}
+// showImportDebug logs per-row differences between what was just written to the DB (within tx)
+// and what the gob archive in workingDir would produce. Call this after an integrity failure
+// and before the fallback retry to see exactly which rows diverge.
+//
+// It works by re-populating the (now-empty) staging tables from the gob data, then running
+// SQL comparisons between staging and the live tables — no Go-side hash computation needed.
+// Only the gob files needed by the failing tables are loaded.
+func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingTables []string) {
+	needsOSV := false
+	needsExploits := false
+	for _, t := range failingTables {
+		switch t {
+		case "cves", "cve_relationships", "affected_components", "cve_affected_component",
+			"malicious_packages", "malicious_affected_components":
+			needsOSV = true
+		case "exploits":
+			needsExploits = true
 		}
 	}
 
-	newStateMap := make(map[string]struct{})
-	for _, cve := range cves.CVEs {
-		newStateMap[cve.CVE] = struct{}{}
+	if err := clearStagingTables(ctx, tx); err != nil {
+		slog.Error("show-diff: could not clear staging tables", "err", err)
+		return
 	}
 
-	// check which cves are in the currentStateMap but not in the newStateMap
-	for cve := range currentStateMap {
-		if _, exist := newStateMap[cve]; !exist {
-			t.Logf("CVE in current state but not in new state: %s", cve)
+	if needsOSV {
+		slog.Info("show-diff: loading osv.gob into staging tables")
+		t := time.Now()
+		osvEntries, err := readAllGobItems[OSVEntry](workingDir + "/osv.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read osv.gob", "err", err)
+			return
+		}
+		vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil)(osvEntries)
+		malRows := gobOSVToMalFilterTransformer(time.Time{})(osvEntries)
+		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs); err != nil {
+			slog.Error("show-diff: could not insert CVEs into staging", "err", err)
+			return
+		}
+		if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships); err != nil {
+			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
+			return
+		}
+		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents); err != nil {
+			slog.Error("show-diff: could not insert affected_components into staging", "err", err)
+			return
+		}
+		if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents); err != nil {
+			slog.Error("show-diff: could not insert cve_affected_component into staging", "err", err)
+			return
+		}
+		if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps); err != nil {
+			slog.Error("show-diff: could not insert malicious packages into staging", "err", err)
+			return
+		}
+		slog.Info("show-diff: osv staging ready",
+			"cves", len(vulnRows.CVEs),
+			"relationships", len(vulnRows.CVERelationships),
+			"affected_components", len(vulnRows.AffectedComponents),
+			"cve_affected_component", len(vulnRows.CVEAffectedComponents),
+			"malicious_packages", len(malRows.pkgs),
+			"took", time.Since(t),
+		)
+
+		// Apply EPSS and CISA KEV enrichment so the staging side matches what the
+		// real import writes — without this, every enriched CVE looks like a mismatch.
+		var epssData map[string]dtos.EPSS
+		if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
+			slog.Error("show-diff: could not read epss.gob", "err", err)
+			return
+		}
+		if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+			slog.Error("show-diff: could not apply EPSS to staging", "err", err)
+			return
+		}
+
+		var kevEntries []CISAKEVEntry
+		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
+			slog.Error("show-diff: could not read cisakev.gob", "err", err)
+			return
+		}
+		if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+			slog.Error("show-diff: could not apply CISA KEV to staging", "err", err)
+			return
+		}
+		slog.Info("show-diff: EPSS and CISA KEV enrichment applied to staging", "epss_entries", len(epssData), "kev_entries", len(kevEntries))
+	}
+
+	if needsExploits {
+		slog.Info("show-diff: loading exploits.gob into staging tables")
+		t := time.Now()
+		gobExploits, err := readAllGobItems[GobExploit](workingDir + "/exploits.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read exploits.gob", "err", err)
+			return
+		}
+		exploits := gobExploitFilterTransformer(time.Time{}, gobExploits)
+		if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
+			slog.Error("show-diff: could not insert exploits into staging", "err", err)
+			return
+		}
+		slog.Info("show-diff: exploits staging ready", "exploits", len(exploits), "took", time.Since(t))
+	}
+
+	for _, table := range failingTables {
+		slog.Info("show-diff: analysing failing table", "table", table)
+		var err error
+		switch table {
+		case "cves":
+			err = diffTable(ctx, tx, diffSpec{
+				live:        "cves",
+				stage:       "cves_stage",
+				liveID:      "cve",
+				stageID:     "cve",
+				joinCond:    "db.cve = gob.cve",
+				contentCols: []string{"description", "cvss", "vector", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile"},
+			})
+		case "cve_relationships":
+			err = diffTable(ctx, tx, diffSpec{
+				live:     "cve_relationships",
+				stage:    "cve_relationships_stage",
+				liveID:   "source_cve || '|' || target_cve || '|' || relationship_type",
+				stageID:  "source_cve || '|' || target_cve || '|' || relationship_type",
+				joinCond: "db.source_cve = gob.source_cve AND db.target_cve = gob.target_cve AND db.relationship_type = gob.relationship_type",
+			})
+		case "affected_components":
+			err = diffTable(ctx, tx, diffSpec{
+				live:     "affected_components",
+				stage:    "affected_components_stage",
+				liveID:   "id::text",
+				stageID:  "id::text",
+				joinCond: "db.id = gob.id",
+			})
+		case "cve_affected_component":
+			err = diffTable(ctx, tx, diffSpec{
+				live:     "cve_affected_component",
+				stage:    "cve_affected_component_stage",
+				liveID:   "cve_id::text || '|' || affected_component_id::text",
+				stageID:  "cve_id::text || '|' || affected_component_id::text",
+				joinCond: "db.cve_id = gob.cve_id AND db.affected_component_id = gob.affected_component_id",
+			})
+		case "exploits":
+			err = diffTable(ctx, tx, diffSpec{
+				live:        "exploits",
+				stage:       "exploits_stage",
+				liveID:      "id",
+				stageID:     "id",
+				joinCond:    "db.id = gob.id",
+				contentCols: []string{"cve_id", "source_url"},
+			})
+		case "malicious_packages":
+			err = diffTable(ctx, tx, diffSpec{
+				live:        "malicious_packages",
+				stage:       "mal_pkgs_stage",
+				liveID:      "id",
+				stageID:     "id",
+				joinCond:    "db.id = gob.id",
+				contentCols: []string{"modified"},
+				liveFilter:   "id NOT LIKE 'MAL-FAKE-TEST-%'",
+				joinFilter:   "db.id NOT LIKE 'MAL-FAKE-TEST-%'",
+			})
+		case "malicious_affected_components":
+			err = diffTable(ctx, tx, diffSpec{
+				live:       "malicious_affected_components",
+				stage:      "mal_comps_stage",
+				liveID:     "id",
+				stageID:    "id",
+				joinCond:   "db.id = gob.id",
+				liveFilter: "malicious_package_id NOT LIKE 'MAL-FAKE-TEST-%'",
+			})
+		default:
+			slog.Info("show-diff: no diff handler for table", "table", table)
+		}
+		if err != nil {
+			slog.Error("show-diff: diff failed", "table", table, "err", err)
 		}
 	}
-	t.Fail()
 }
 
-/*
---- FAIL: TestImportRC (3.85s)
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-579f-8639-173e
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-e780-297e-3c37
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-01ac-8821-274a
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-f04c-582a-df62
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-1dc5-af13-00c1
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-7627-a361-b4d3
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-5818-1fba-950a
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-de02-7575-4370
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-37cc-2ae7-e3c8
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-34c7-ca18-1a8c
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-435f-9eb9-99cb
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-f4ca-f938-4210
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-7f2f-e83a-5508
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-879a-fe35-cf61
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state: ECHO-c9a3-95ec-f0d8
-    /Users/timbastin/Desktop/l3montree/devguard/vulndb/import_test.go:88: CVE in current state but not in new state:
-*/
+type diffSpec struct {
+	live        string
+	stage       string
+	liveID      string   // unaliased key expression (used in EXCEPT queries — no JOIN, no ambiguity)
+	stageID     string   // unaliased key expression for the stage side
+	joinCond    string   // fully aliased ON condition for content-diff JOIN: "db.x = gob.x"
+	contentCols []string // columns to compare for content mismatches (unqualified; db./gob. added automatically)
+	liveFilter  string   // WHERE fragment for single-table queries (no alias needed)
+	joinFilter  string   // WHERE fragment for the JOIN query (must use db. alias, e.g. "db.id NOT LIKE '...'")
+}
 
-func TestWouldBeDeleted(t *testing.T) {
-	b, err := os.ReadFile("test.osv.json")
+// diffTable runs a SQL-level diff between a live table and its freshly-populated staging
+// counterpart, logging extra/missing/changed rows.
+func diffTable(ctx context.Context, tx pgx.Tx, spec diffSpec) error {
+	liveWhere := ""
+	if spec.liveFilter != "" {
+		liveWhere = "WHERE " + spec.liveFilter
+	}
+
+	var liveCount, stageCount int
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, spec.live, liveWhere)).Scan(&liveCount); err != nil {
+		return fmt.Errorf("could not count live rows: %w", err)
+	}
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT COUNT(*) FROM %s`, spec.stage)).Scan(&stageCount); err != nil {
+		return fmt.Errorf("could not count stage rows: %w", err)
+	}
+	slog.Info("show-diff: row counts", "table", spec.live, "in_db", liveCount, "in_gob", stageCount)
+
+	// Rows present in DB but missing from gob
+	onlyInDBRows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT %s FROM %s %s
+		EXCEPT
+		SELECT %s FROM %s
+		LIMIT 20
+	`, spec.liveID, spec.live, liveWhere, spec.stageID, spec.stage))
 	if err != nil {
-		t.Fatalf("could not read test osv file: %v", err)
+		return fmt.Errorf("could not query DB-only rows: %w", err)
 	}
+	defer onlyInDBRows.Close()
+	for onlyInDBRows.Next() {
+		var key string
+		if err := onlyInDBRows.Scan(&key); err != nil {
+			break
+		}
+		slog.Warn("show-diff: row in DB but not in gob", "table", spec.live, "key", key)
+	}
+	onlyInDBRows.Close()
 
-	// parse as osv entry
-	var entry dtos.OSV
-	if err := json.Unmarshal(b, &entry); err != nil {
-		t.Fatalf("could not parse test osv file: %v", err)
+	// Rows present in gob but missing from DB
+	onlyInGobRows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT %s FROM %s
+		EXCEPT
+		SELECT %s FROM %s %s
+		LIMIT 20
+	`, spec.stageID, spec.stage, spec.liveID, spec.live, liveWhere))
+	if err != nil {
+		return fmt.Errorf("could not query gob-only rows: %w", err)
 	}
+	defer onlyInGobRows.Close()
+	for onlyInGobRows.Next() {
+		var key string
+		if err := onlyInGobRows.Scan(&key); err != nil {
+			break
+		}
+		slog.Warn("show-diff: row in gob but not in DB", "table", spec.live, "key", key)
+	}
+	onlyInGobRows.Close()
 
-	relationships := transformer.OSVToCVERelationships(&entry)
-	affectedComponentsForCVE := transformer.AffectedComponentsFromOSV(&entry)
-	if len(affectedComponentsForCVE) == 0 && len(relationships) == 0 {
-		t.Logf("no relationships or affected components for CVE %s", entry.ID)
+	// Rows present on both sides but with different content
+	if len(spec.contentCols) > 0 {
+		contentConditions := ""
+		for i, col := range spec.contentCols {
+			if i > 0 {
+				contentConditions += " OR "
+			}
+			contentConditions += fmt.Sprintf("db.%s IS DISTINCT FROM gob.%s", col, col)
+		}
+		joinWhere := contentConditions
+		if spec.joinFilter != "" {
+			joinWhere = spec.joinFilter + " AND (" + contentConditions + ")"
+		}
+		mismatchRows, err := tx.Query(ctx, fmt.Sprintf(`
+			SELECT db.%s, row_to_json(db)::text, row_to_json(gob)::text
+			FROM %s db
+			JOIN %s gob ON %s
+			WHERE %s
+			LIMIT 20
+		`, spec.liveID, spec.live, spec.stage, spec.joinCond, joinWhere))
+		if err != nil {
+			return fmt.Errorf("could not query content mismatches: %w", err)
+		}
+		defer mismatchRows.Close()
+		for mismatchRows.Next() {
+			var key, dbJSON, gobJSON string
+			if err := mismatchRows.Scan(&key, &dbJSON, &gobJSON); err != nil {
+				break
+			}
+			slog.Warn("show-diff: content mismatch", "table", spec.live, "key", key, "db_row", dbJSON, "gob_row", gobJSON)
+		}
+		mismatchRows.Close()
 	}
-
-	cve := transformer.OSVToCVE(&entry)
-	if cve.CVE == "" {
-		t.Logf("could not transform OSV to CVE: %s", entry.ID)
-	}
+	return nil
 }

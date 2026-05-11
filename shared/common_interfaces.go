@@ -646,6 +646,9 @@ type ImportOptions struct {
 	// Faster than streaming but uses significantly more memory (~2-3 GB).
 	Bulk            bool
 	LimitedToTables []string
+	// Debug logs per-row differences between the imported DB state and the gob archive
+	// when an integrity check fails, before the fallback retry wipes the state.
+	Debug bool
 }
 
 type VulnDBService interface {
