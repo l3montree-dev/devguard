@@ -94,12 +94,11 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid user id")
+		return echo.NewHTTPError(400, "missing or invalid org id")
 	}
 
-	user := ctx.Param("userID")
-
-	if !utils.IsEmail(user) {
+	user, err := extractMailFromRequest(ctx)
+	if err != nil {
 		return echo.NewHTTPError(400, "user is not a valid mail address")
 	}
 
@@ -124,43 +123,32 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not add admin to organization").WithInternal(err)
 	}
-	return ctx.JSON(201, nil)
+	return ctx.NoContent(201)
 }
 
 func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid user id")
+		return echo.NewHTTPError(400, "missing or invalid org id")
 	}
 
-	user := ctx.Param("userID")
-
-	if !utils.IsEmail(user) {
-		return echo.NewHTTPError(400, "user is not a valid mail address")
+	userID := ctx.Param("userID")
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return echo.NewHTTPError(400, "missing or invalid user id")
 	}
 
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 	if authAdminClient == nil {
 		return echo.NewHTTPError(500, "could not get auth client")
 	}
-	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
-	if err != nil {
-		switch err.Error() {
-		case dtos.CouldNotFindUserWithMail:
-			return echo.NewHTTPError(404, "could not find a user associated with this email")
-		case dtos.CouldNotFindDefinitiveUserWithMail:
-			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
-		default:
-			return echo.NewHTTPError(500, "could not determine user based on email")
-		}
-	}
 
-	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, userID)
+	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, parsedUserID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not revoke admin role from user")
 	}
-	return ctx.JSON(204, nil)
+	return ctx.NoContent(204)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
@@ -419,4 +407,16 @@ func (controller *AdminController) runDaemonSSE(
 	// The response is already committed (SSE headers + body sent).
 	// Return nil so Echo does not try to write again.
 	return nil
+}
+
+func extractMailFromRequest(ctx shared.Context) (string, error) {
+	userID, err := shared.GetURLDecodedParam(ctx, "userMail")
+	if err != nil {
+		return "", err
+	}
+
+	if !utils.IsEmail(userID) {
+		return "", fmt.Errorf("mail is invalid")
+	}
+	return userID, nil
 }
