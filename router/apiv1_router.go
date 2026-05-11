@@ -1,9 +1,12 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -52,7 +55,38 @@ func NewAPIV1Router(srv api.Server,
 	assetVersionRepository shared.AssetVersionRepository,
 	artifactRepository shared.ArtifactRepository,
 ) APIV1Router {
+	if pool == nil {
+		panic("NewAPIV1Router: pool must not be nil")
+	}
+
 	apiV1Router := srv.Echo.Group("/api/v1")
+
+	var healthConn *pgxpool.Conn
+	var healthConnMu sync.Mutex
+	pingDedicatedHealthConn := func(ctx context.Context) error {
+		healthConnMu.Lock()
+		defer healthConnMu.Unlock()
+
+		if healthConn == nil {
+			conn, err := pool.Acquire(ctx)
+			if err != nil {
+				return err
+			}
+			healthConn = conn
+			slog.Info("reserved dedicated health-check database connection")
+		}
+
+		if err := healthConn.Ping(ctx); err != nil {
+			// If the context was not canceled, drop the connection and force a fresh acquire next time.
+			if ctx.Err() == nil {
+				healthConn.Release()
+				healthConn = nil
+			}
+			return err
+		}
+
+		return nil
+	}
 	// this makes the third party integrations available to all controllers
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
@@ -68,6 +102,12 @@ func NewAPIV1Router(srv api.Server,
 			return next(ctx)
 		}
 	})
+
+	initCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := pingDedicatedHealthConn(initCtx); err != nil {
+		panic("NewAPIV1Router: could not initialize dedicated health-check connection: " + err.Error())
+	}
 
 	apiV1Router.GET("/info/", func(c echo.Context) error {
 		var mem runtime.MemStats
@@ -127,23 +167,18 @@ func NewAPIV1Router(srv api.Server,
 				dbInfo.Status = "healthy"
 
 				// Prefer runtime stats from the underlying pgx pool which backs the sql.DB
-				if pool != nil {
-					stats := pool.Stat()
-					// Map pgx pool stats to the DBStats fields
-					dbInfo.OpenConnections = int(stats.TotalConns())
-					dbInfo.InUse = int(stats.AcquiredConns())
-					dbInfo.Idle = int(stats.IdleConns())
-					dbInfo.MaxOpenConnections = int(stats.MaxConns())
+				stats := pool.Stat()
+				// Map pgx pool stats to the DBStats fields
+				dbInfo.OpenConnections = int(stats.TotalConns())
+				dbInfo.InUse = int(stats.AcquiredConns())
+				dbInfo.Idle = int(stats.IdleConns())
+				dbInfo.MaxOpenConnections = int(stats.MaxConns())
 
-					// Expose the same values in the Pool info structure below
-					poolInfo.TotalConns = int(stats.TotalConns())
-					poolInfo.IdleConns = int(stats.IdleConns())
-					poolInfo.AcquiredConns = int(stats.AcquiredConns())
-					poolInfo.MaxConns = int(stats.MaxConns())
-				} else {
-					// Fallback to sql DB stats if pool isn't available
-					dbInfo.DBStats = sqlDB.Stats()
-				}
+				// Expose the same values in the Pool info structure below
+				poolInfo.TotalConns = int(stats.TotalConns())
+				poolInfo.IdleConns = int(stats.IdleConns())
+				poolInfo.AcquiredConns = int(stats.AcquiredConns())
+				poolInfo.MaxConns = int(stats.MaxConns())
 
 				if ver, dirty, err := database.GetMigrationVersionWithDB(); err == nil {
 					v := ver
@@ -179,13 +214,45 @@ func NewAPIV1Router(srv api.Server,
 		// Check database connectivity
 		sqlDB, err := db.DB()
 		if err != nil {
+			slog.Info("failed to get database instance", "error", err)
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "failed to get database instance",
 			})
 		}
 
-		if err := sqlDB.Ping(); err != nil {
+		ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 5*time.Second)
+		defer cancel()
+		pingStart := time.Now()
+
+		pingErr := pingDedicatedHealthConn(ctxWithTimeout)
+
+		if pingErr != nil {
+			sqlStats := sqlDB.Stats()
+			logArgs := []any{
+				"error", pingErr,
+				"usingDedicatedHealthConn", true,
+				"pingDuration", time.Since(pingStart),
+				"requestContextErr", ctx.Request().Context().Err(),
+				"pingContextErr", ctxWithTimeout.Err(),
+				"sqlOpenConnections", sqlStats.OpenConnections,
+				"sqlInUse", sqlStats.InUse,
+				"sqlIdle", sqlStats.Idle,
+				"sqlWaitCount", sqlStats.WaitCount,
+				"sqlWaitDuration", sqlStats.WaitDuration,
+			}
+
+			pgxStats := pool.Stat()
+			logArgs = append(logArgs,
+				"pgxTotalConns", pgxStats.TotalConns(),
+				"pgxAcquiredConns", pgxStats.AcquiredConns(),
+				"pgxIdleConns", pgxStats.IdleConns(),
+				"pgxMaxConns", pgxStats.MaxConns(),
+				"pgxAcquireCount", pgxStats.AcquireCount(),
+				"pgxAcquireDuration", pgxStats.AcquireDuration(),
+			)
+
+			slog.Info("database ping failed", logArgs...)
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "database ping failed",

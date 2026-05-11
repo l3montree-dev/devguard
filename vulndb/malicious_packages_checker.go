@@ -16,25 +16,20 @@
 package vulndb
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
-	"gorm.io/gorm"
 )
 
 const (
@@ -50,6 +45,11 @@ type MaliciousPackageChecker struct {
 	httpClient *http.Client
 }
 
+type malRows struct {
+	pkgs  []models.MaliciousPackage
+	comps []models.MaliciousAffectedComponent
+}
+
 func NewMaliciousPackageChecker(
 	repository *repositories.MaliciousPackageRepository,
 ) (*MaliciousPackageChecker, error) {
@@ -60,233 +60,9 @@ func NewMaliciousPackageChecker(
 	}, nil
 }
 
-// DownloadAndProcessDB downloads the repository archive and processes it directly to the database
-func (c *MaliciousPackageChecker) DownloadAndProcessDB(ctx context.Context) (outError error) {
-	tx := c.repository.GetDB(ctx, nil).Begin() // nosemgrep: tx-begin-without-commit
-	defer tx.Rollback()
-	if err := tx.Error; err != nil {
-		return fmt.Errorf("failed to start transaction for clearing tables: %w", err)
-	}
-
-	// make sure both tables are empty before loading
-	err := clearMaliciousPackagesDB(tx)
-	if err != nil {
-		return fmt.Errorf("could not delete malicious package database: %w", err)
-	}
-
-	slog.Info("Downloading and processing repository archive", "url", c.repoURL)
-	// Download the archive
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.repoURL, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create download request: %w", err)
-	}
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to download archive: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download archive: HTTP %d", resp.StatusCode)
-	}
-
-	// Decompress gzip
-	gzr, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-
-	// Process tar archive directly in memory
-	tr := tar.NewReader(gzr)
-
-	ecosystems := []string{"npm", "go", "maven", "pypi", "crates.io"}
-	// need 2 different wait groups to handle the completion of the process functions independently of the completion of the db function
-	processWaitGroup := &sync.WaitGroup{}
-	dbWaitGroup := &sync.WaitGroup{}
-
-	// channel to pass the file contents from the main routine to the processing Worker functions
-	fileJobs := make(chan []byte, malPkgNumOfGoRoutines*20)
-	// channel to pass the results of the processing functions to the database writer function
-	dbJobs := make(chan processingResults, BatchSize*2)
-
-	// start the processing worker functions
-	for range malPkgNumOfGoRoutines {
-		processWaitGroup.Add(1)
-		go processMaliciousPackageFile(processWaitGroup, fileJobs, dbJobs)
-	}
-
-	// start the function which writes the malicious packages/components to the database when the batch SIze is reached
-	dbWaitGroup.Add(1)
-	go c.dbWriterFunction(ctx, dbWaitGroup, dbJobs)
-
-	slog.Info("start working...")
-	// feed the jobs into the worker functions
-	for {
-		// read the next file and determine if we want to process it
-		header, err := tr.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return fmt.Errorf("failed to read tar: %w", err)
-		}
-		// is this a file? is this a json file?
-		if !strings.HasSuffix(header.Name, ".json") || header.Typeflag != tar.TypeReg {
-			continue
-		}
-
-		// filter out ecosystems which we don't process
-		isTargetEcosystem := false
-		for _, eco := range ecosystems {
-			if strings.Contains(header.Name, "/osv/malicious/"+eco+"/") {
-				isTargetEcosystem = true
-				break
-			}
-		}
-		if !isTargetEcosystem {
-			continue
-		}
-
-		data, err := io.ReadAll(tr)
-		if err != nil {
-			slog.Debug("Failed to read file from tar", "name", header.Name, "error", err)
-			continue
-		}
-		// pass the data to processing functions
-		fileJobs <- data
-	}
-	// there are no more jobs to give so we close the channel and wait for the processing workers to finish
-	close(fileJobs)
-	processWaitGroup.Wait()
-	// when the processing workers are finished we can close the channel for the db jobs and wait for db to finish writing
-	close(dbJobs)
-	dbWaitGroup.Wait()
-
-	// Add fake test packages
-	if err := c.loadFakePackages(ctx); err != nil {
-		slog.Warn("Failed to load fake packages", "error", err)
-	}
-
-	slog.Info("Processed malicious packages from archive")
-
-	// Log ecosystem counts
-	counts, err := c.repository.CountByEcosystem(ctx, nil)
-	if err == nil {
-		slog.Info("Malicious package database loaded",
-			"npm", counts["npm"],
-			"go", counts["go"],
-			"pypi", counts["pypi"],
-			"maven", counts["maven"],
-			"crates.io", counts["crates.io"],
-		)
-	}
-	return nil
-}
-
-type processingResults struct {
-	Package            models.MaliciousPackage
-	AffectedComponents []models.MaliciousAffectedComponent
-}
-
-// this function grabs json file contents from the jobs channel and builds the package as well as the affected components from it. These are then sent to the db worker function
-func processMaliciousPackageFile(waitGroup *sync.WaitGroup, jobs chan []byte, results chan processingResults) {
-	defer waitGroup.Done()
-	for data := range jobs {
-		var entry dtos.OSV
-		if err := json.Unmarshal(data, &entry); err != nil {
-			slog.Debug("Failed to unmarshal JSON", "error", err)
-			continue
-		}
-
-		if entry.ID == "" {
-			slog.Warn("Skipping malicious package with empty ID", "summary", entry.Summary)
-			continue
-		}
-
-		if len(entry.Affected) == 0 {
-			continue
-		}
-
-		// Create malicious package record
-		pkg := models.MaliciousPackage{
-			ID:        entry.ID,
-			Summary:   entry.Summary,
-			Details:   entry.Details,
-			Published: entry.Published,
-			Modified:  entry.Modified,
-		}
-
-		// Create affected components
-		components := transformer.MaliciousAffectedComponentFromOSV(entry, entry.ID)
-		// send both as a job to the db writer function
-		results <- processingResults{
-			Package:            pkg,
-			AffectedComponents: components,
-		}
-	}
-}
-
-// this function runs in the background and grabs the processed malicious packages and affected components from the results channel, if the batch size is reached we write all packages and affected components to the db.
-func (c *MaliciousPackageChecker) dbWriterFunction(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan processingResults) {
-	defer waitGroup.Done()
-	// stash the received results until the batch size threshold is reached
-	packagesBatch := make([]models.MaliciousPackage, 0, BatchSize)
-	affectedComponentsBatch := make([]models.MaliciousAffectedComponent, 0, BatchSize*4)
-
-	total := 0
-	for job := range jobs {
-		packagesBatch = append(packagesBatch, job.Package)
-		affectedComponentsBatch = append(affectedComponentsBatch, job.AffectedComponents...)
-		if len(packagesBatch) >= BatchSize {
-			// if we reached the threshold save all to the db
-			if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
-				slog.Error("Failed to upsert packages batch", "error", err)
-			}
-			packagesBatch = packagesBatch[:0] // Reset slice
-
-			if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
-				slog.Error("Failed to upsert affected components batch", "error", err)
-			}
-			affectedComponentsBatch = affectedComponentsBatch[:0] // Reset slice
-			total += 1
-			if total*BatchSize%50000 == 0 {
-				slog.Info(fmt.Sprintf("processed %d Packages", total*BatchSize))
-			}
-		}
-	}
-
-	// Insert remaining batches
-	if len(packagesBatch) > 0 {
-		if err := c.repository.UpsertPackages(ctx, nil, packagesBatch); err != nil {
-			slog.Error("Failed to upsert final packages batch", "error", err)
-		}
-	}
-	if len(affectedComponentsBatch) > 0 {
-		if err := c.repository.UpsertAffectedComponents(ctx, nil, affectedComponentsBatch); err != nil {
-			slog.Error("Failed to upsert final affected components batch", "error", err)
-		}
-	}
-}
-
-// deletes all entries from the malicious packages/affected_components table, in a single transaction
-func clearMaliciousPackagesDB(tx *gorm.DB) error {
-	if err := tx.Exec("DELETE FROM malicious_affected_components").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to clear affected components table: %w", err)
-	}
-	if err := tx.Exec("DELETE FROM malicious_packages").Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to clear packages table: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction for clearing tables: %w", err)
-	}
-	return nil
-}
-
-func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
+// FetchAll downloads the malicious packages archive and returns all parsed packages
+// and affected components without touching the database.
+func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent) {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -301,8 +77,9 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 
 	for ecosystem, pkgNames := range testPackages {
 		for _, pkgName := range pkgNames {
-			fakeID := fmt.Sprintf("FAKE-TEST-%s-001", strings.ToUpper(ecosystem))
-			fakeEntry := dtos.OSV{
+			normalizedPkgName := strings.NewReplacer("/", "-", "@", "-", ":", "-", ".", "-").Replace(pkgName)
+			fakeID := fmt.Sprintf("MAL-FAKE-TEST-%s-%s", strings.ToUpper(ecosystem), strings.ToUpper(normalizedPkgName))
+			fakeEntry := &dtos.OSV{
 				ID:      fakeID,
 				Summary: fmt.Sprintf("Fake malicious %s package for testing", ecosystem),
 				Details: "This is a fake malicious package entry used for testing the dependency proxy",
@@ -313,30 +90,22 @@ func (c *MaliciousPackageChecker) loadFakePackages(ctx context.Context) error {
 							Name:      pkgName,
 							Purl:      fmt.Sprintf("pkg:%s/%s", ecosystem, pkgName),
 						},
-						Versions: []string{}, // All versions affected
+						Versions: []string{},
 					},
 				},
 				Published: time.Now(),
 			}
-
-			pkg := models.MaliciousPackage{
+			packages = append(packages, models.MaliciousPackage{
 				ID:        fakeID,
 				Summary:   fakeEntry.Summary,
 				Details:   fakeEntry.Details,
 				Published: fakeEntry.Published,
 				Modified:  fakeEntry.Published,
-			}
-			packages = append(packages, pkg)
-
-			components := transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)
-			affectedComponents = append(affectedComponents, components...)
+			})
+			affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
 		}
 	}
-
-	if err := c.repository.UpsertPackages(ctx, nil, packages); err != nil {
-		return err
-	}
-	return c.repository.UpsertAffectedComponents(ctx, nil, affectedComponents)
+	return packages, affectedComponents
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
@@ -365,9 +134,38 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 	// If we got results from the query, the database already filtered by version ranges
 	if len(components) > 0 {
 		// Take the first match (database already did the version filtering)
-		osv := components[0].MaliciousPackage.ToOSV()
+		maliciousPackage, err := c.repository.GetMaliciousPackageByID(ctx, nil, components[0].MaliciousPackageID)
+		if err != nil {
+			return false, nil, fmt.Errorf("failed to load malicious package metadata: %w", err)
+		}
+		osv := maliciousPackage.ToOSV()
 		return true, &osv, nil
 	}
 
 	return false, nil, nil
+}
+
+// insertMaliciousPackagesBulk streams malicious packages and components into staging tables. Call flushStagingTables once after all batches.
+func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
+	if len(pkgs) > 0 {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
+			[]string{"id", "summary", "details", "published", "modified"},
+			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
+				p := pkgs[i]
+				return []any{p.ID, p.Summary, p.Details, p.Published, p.Modified}, nil
+			})); err != nil {
+			return fmt.Errorf("could not copy malicious packages into staging table: %w", err)
+		}
+	}
+	if len(comps) > 0 {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
+			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
+			pgx.CopyFromSlice(len(comps), func(i int) ([]any, error) {
+				c := comps[i]
+				return []any{c.ID, c.MaliciousPackageID, c.PurlWithoutVersion, c.Ecosystem, c.Version, c.SemverIntroduced, c.SemverFixed, c.VersionIntroduced, c.VersionFixed}, nil
+			})); err != nil {
+			return fmt.Errorf("could not copy malicious components into staging table: %w", err)
+		}
+	}
+	return nil
 }

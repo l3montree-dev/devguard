@@ -17,10 +17,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
@@ -29,12 +27,12 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 3
+	CurrentHashVersion = 4
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
 
-func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) error {
+func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner, vulndbService shared.VulnDBService, configService shared.ConfigService) error {
 	// Check current version from config table
 	var config models.Config
 	db := database.NewGormDB(pool)
@@ -43,7 +41,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		config = models.Config{
 			Key: HashMigrationVersionKey,
-			Val: "3",
+			Val: "4",
 		}
 		// save initial version - no migration needed if empty
 		if err := db.Create(&config).Error; err != nil {
@@ -86,43 +84,22 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
+		if currentVersion < 4 {
+			// Clear the last import timestamp so ImportRC runs as a full import.
+			ctx := context.Background()
+			if err := configService.SetJSONConfig(ctx, "vulndb.lastRCImport", ""); err != nil {
+				slog.Warn("could not clear vulndb.lastRCImport config", "err", err)
+			}
+			slog.Info("triggering full vulndb import after hash migration")
+			if err := vulndbService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
+				return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
+			}
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
 	return nil
-}
-
-func manuallyLoadNewVulnDB(db shared.DB, pool *pgxpool.Pool) error {
-	// Drop all foreign key constraints that reference cves table before deleting
-	err := db.Exec(`
-		ALTER TABLE public.dependency_vulns DROP CONSTRAINT IF EXISTS fk_dependency_vulns_cve;
-		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_cve;
-		ALTER TABLE public.cve_affected_component DROP CONSTRAINT IF EXISTS fk_cve_affected_component_affected_component;
-	`).Error
-	if err != nil {
-		slog.Error("could not drop foreign key constraints", "err", err)
-		return err
-	}
-
-	// import the new VulnDB state, containing the (new) CVEs from the OSV database
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-	configService := services.NewConfigService(db)
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository, configService, pool)
-
-	err = configService.RemoveConfig(context.Background(), "vulndb.lastIncrementalImport")
-	if err != nil {
-		slog.Error("could not remove last incremental import config", "err", err)
-		return err
-	}
-	// the import will create foreign keys we need to disable temporarily
-	vulndb.DisableForeignKeyFix = true
-	// slog.Info("Step 1: Importing new vulnDB state")
-	err = v.ImportFromDiff(context.Background(), nil)
-	vulndb.DisableForeignKeyFix = false
-	return err
 }
 
 // this function handles the migration for importing new CVEs from the OSV.
@@ -164,12 +141,6 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			},
 		),
 	})
-
-	slog.Info("Syncing vulndb")
-	if err := manuallyLoadNewVulnDB(db, pool); err != nil {
-		slog.Error("could not initialize database for migration", "err", err)
-		panic(err)
-	}
 
 	slog.Info("start running cve migration...")
 	// Load all vulns with artifacts and events
@@ -434,7 +405,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 			DELETE FROM public.cve_affected_component
 			WHERE NOT EXISTS (
-				SELECT 1 FROM public.cves WHERE cves.cve = cve_affected_component.cvecve
+				SELECT 1 FROM public.cves WHERE cves.id = cve_affected_component.cve_id
 			);
 
 			DELETE FROM public.cve_affected_component
@@ -460,7 +431,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 
 			ALTER TABLE public.cve_affected_component
 			ADD CONSTRAINT fk_cve_affected_component_cve
-			FOREIGN KEY (cvecve) REFERENCES public.cves(cve)
+			FOREIGN KEY (cve_id) REFERENCES public.cves(id)
 			ON DELETE CASCADE ON UPDATE CASCADE;
 
 			ALTER TABLE ONLY public.cve_affected_component
@@ -513,7 +484,7 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 			},
 			CVEID:             foundVuln.CVEID,
 			ComponentPurl:     firstOld.ComponentPurl,
-			CVE:               foundVuln.CVE,
+			CVE:               &foundVuln.CVE,
 			VulnerabilityPath: nil, // Will be populated by v3 migration
 		}
 

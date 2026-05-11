@@ -49,16 +49,17 @@ func ConvertVulnEventsToDtos(events []models.VulnEventDetail) []dtos.VulnEventDT
 
 func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
 	return dtos.VulnEventDTO{
-		ID:                      event.ID,
-		Type:                    event.Type,
-		VulnID:                  event.GetVulnID(),
-		VulnType:                event.GetVulnType(),
-		UserID:                  event.UserID,
-		Justification:           event.Justification,
-		MechanicalJustification: event.MechanicalJustification,
-		ArbitraryJSONData:       event.GetArbitraryJSONData(),
-		CreatedAt:               event.CreatedAt,
-		CreatedByVexRule:        event.CreatedByVexRule,
-		UserAgent:               event.GetUserAgent(),
+		ID:                       event.ID,
+		Type:                     event.Type,
+		VulnID:                   event.GetVulnID(),
+		VulnType:                 event.GetVulnType(),
+		UserID:                   event.UserID,
+		Justification:            event.Justification,
+		MechanicalJustification:  event.MechanicalJustification,
+		ArbitraryJSONData:        event.GetArbitraryJSONData(),
+		CreatedAt:                event.CreatedAt,
+		CreatedByVexRule:         event.CreatedByVexRule,
+		OriginalAssetVersionName: event.OriginalAssetVersionName,
+		UserAgent:                event.GetUserAgent(),
 	}
 }

@@ -186,8 +186,8 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 				maxRisk = *f.RawRiskAssessment
 			}
 
-			if float64(f.CVE.CVSS) > maxCvss {
-				maxCvss = float64(f.CVE.CVSS)
+			if float64(f.GetCVE().CVSS) > maxCvss {
+				maxCvss = float64(f.GetCVE().CVSS)
 			}
 		}
 		v.AvgRisk = totalRisk / float64(len(v.DependencyVulns))
@@ -275,8 +275,10 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 	}
 
 	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
-	dependencyVuln.CVE.Risk = risk
-	dependencyVuln.CVE.Vector = vector
+	if dependencyVuln.CVE != nil {
+		dependencyVuln.CVE.Risk = risk
+		dependencyVuln.CVE.Vector = vector
+	}
 
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }

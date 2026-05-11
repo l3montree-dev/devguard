@@ -93,7 +93,7 @@ func (c ComponentDependencyNode) GetID() string {
 func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
 	// a component dependency represents an edge in the dependency tree
 	// thus we can represent it as two nodes
-	return []ComponentDependencyNode{ComponentDependencyNode{ID: utils.SafeDereference(c.ComponentID)}, ComponentDependencyNode{ID: c.DependencyID}}
+	return []ComponentDependencyNode{{ID: utils.SafeDereference(c.ComponentID)}, {ID: c.DependencyID}}
 }
 
 func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {
@@ -245,19 +245,6 @@ func (c ComponentDependency) GetID() string {
 func (c ComponentDependency) GetDependentID() *string {
 	return c.ComponentID
 }
-
-func BuildDepMap(deps []ComponentDependency) map[string][]string {
-	depMap := make(map[string][]string)
-	for _, dep := range deps {
-		if _, ok := depMap[utils.SafeDereference(dep.ComponentID)]; !ok {
-			depMap[utils.SafeDereference(dep.ComponentID)] = []string{}
-		}
-		depMap[utils.SafeDereference(dep.ComponentID)] = append(depMap[utils.SafeDereference(dep.ComponentID)], dep.DependencyID)
-	}
-	return depMap
-}
-
-const NoVersion = "0.0.0"
 
 func (c Component) TableName() string {
 	return "components"

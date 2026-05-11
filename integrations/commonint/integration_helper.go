@@ -583,8 +583,8 @@ func GetLabels(vuln models.Vuln) []string {
 		labels = append(labels, "risk:"+strings.ToLower(riskSeverity))
 	}
 
-	if v, ok := vuln.(*models.DependencyVuln); ok {
-		cvssSeverity, err := vulndb.RiskToSeverity(float64(v.CVE.CVSS))
+	if v, ok := vuln.(*models.DependencyVuln); ok && v.CVE != nil {
+		cvssSeverity, err := vulndb.RiskToSeverity(float64(v.GetCVE().CVSS))
 		if err == nil {
 			labels = append(labels, "cvss-severity:"+strings.ToLower(cvssSeverity))
 		}

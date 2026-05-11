@@ -103,6 +103,7 @@ type ProjectRepository interface {
 	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
+	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 }
 
 type Verifier interface {
@@ -182,7 +183,7 @@ type CveRepository interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.CVE, error)
 	GetLastModDate(ctx context.Context, tx DB) (time.Time, error)
 	GetAllCVEsID(ctx context.Context, tx DB) ([]string, error)
-	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []int64) error
 	FindCVE(ctx context.Context, tx DB, id string) (models.CVE, error)
 	FindCVEs(ctx context.Context, tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(ctx context.Context, tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
@@ -190,6 +191,10 @@ type CveRepository interface {
 	CreateCVEAffectedComponentsEntries(ctx context.Context, tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(ctx context.Context, tx DB, batch []models.CVE) error
 	UpdateCISAKEVBatch(ctx context.Context, tx DB, batch []models.CVE) error
+}
+
+type EPSService interface {
+	Fetch(ctx context.Context) (map[string]dtos.EPSS, error)
 }
 
 type CweRepository interface {
@@ -200,17 +205,15 @@ type CweRepository interface {
 type ExploitRepository interface {
 	GetAllExploitsID(ctx context.Context, tx DB) ([]string, error)
 	SaveBatch(ctx context.Context, tx DB, exploits []models.Exploit) error
+	Begin(ctx context.Context) DB
 }
 
 type AffectedComponentRepository interface {
 	utils.Repository[string, models.AffectedComponent, DB]
-	GetAllAffectedComponentsID(ctx context.Context, tx DB) ([]string, error)
-	DeleteAll(ctx context.Context, tx DB, ecosystem string) error
 	CreateAffectedComponentsUsingUnnest(ctx context.Context, tx DB, components []models.AffectedComponent) error
 }
 
 type MaliciousPackageChecker interface {
-	DownloadAndProcessDB(ctx context.Context) error
 	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
 }
 
@@ -360,6 +363,7 @@ type ProjectService interface {
 	GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
+	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
 }
 
 type InTotoVerifierService interface {
@@ -371,7 +375,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
-	GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string
+	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 }
@@ -572,6 +576,8 @@ type StatisticsRepository interface {
 type ArtifactRiskHistoryRepository interface {
 	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
 	GetRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
+	GetLatestRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
@@ -615,10 +621,7 @@ type ComponentService interface {
 
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
-	GetAllRelationsForCVE(ctx context.Context, tx DB, targetCVEID string) ([]models.CVERelationship, error)
-	GetAllRelationshipsForCVEBatch(ctx context.Context, tx DB, sourceCVEIDs []string) ([]models.CVERelationship, error)
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
-	FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx DB) error
 }
 
 type LicenseRiskService interface {
@@ -627,11 +630,18 @@ type LicenseRiskService interface {
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
-type VulnDBImportService interface {
-	ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error
-	CleanupOrphanedTables(ctx context.Context) error
-	CreateTablesWithSuffix(ctx context.Context, suffix string) error
-	ExportDiffs(ctx context.Context, extraTableNameSuffix string) error
+type ImportOptions struct {
+	Full      bool
+	BatchSize int
+	// Bulk loads all gob data into RAM before writing — no channels, single DB flush.
+	// Faster than streaming but uses significantly more memory (~2-3 GB).
+	Bulk            bool
+	LimitedToTables []string
+}
+
+type VulnDBService interface {
+	ImportRC(ctx context.Context, opts ImportOptions) error
+	ExportRC(ctx context.Context) error
 }
 
 type AccessControl interface {

@@ -79,11 +79,13 @@ func runMigrations() error {
 		fx.Invoke(func(
 			pool *pgxpool.Pool,
 			daemonRunner shared.DaemonRunner,
+			vulndbService shared.VulnDBService,
+			configService shared.ConfigService,
 		) {
 			slog.Info("checking if hash migrations are needed...")
 			start := time.Now()
 
-			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner); err != nil {
+			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner, vulndbService, configService); err != nil {
 				slog.Error("hash migration failed", "err", err)
 				migrationErr = err
 				return

@@ -31,7 +31,7 @@ import (
 
 // TestFixture provides a complete test environment with database and FX app
 type TestFixture struct {
-	T   *testing.T
+	T   testing.TB
 	App *TestApp
 	DB  shared.DB
 	// pool is the underlying pgx connection pool
@@ -40,7 +40,7 @@ type TestFixture struct {
 }
 
 // NewTestFixture creates a complete test environment with database container and FX app
-func NewTestFixture(t *testing.T, sqlInitFile string, options *TestAppOptions) *TestFixture {
+func NewTestFixture(t testing.TB, sqlInitFile string, options *TestAppOptions) *TestFixture {
 	t.Helper()
 
 	// Initialize database container
@@ -172,7 +172,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.ScanService,
 		&testLeaderElector{}, // Use simple test leader elector
 		f.App.MaliciousPackageChecker,
-		f.App.VulnDBImportService,
+		f.App.VulnDBService,
 		f.App.VexRuleService,
 		f.App.FixedVersionResolver,
 	)

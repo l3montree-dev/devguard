@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	cosignclean "github.com/sigstore/cosign/v2/cmd/cosign/cli"
 	cosignoptions "github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
@@ -100,7 +101,7 @@ func TestCleanImageCleanTypeAllRemovesAllTags(t *testing.T) {
 		t.Fatal("signature tag should exist before clean")
 	}
 
-	if err := cleanImage(context.Background(), regOpts, cosignoptions.CleanTypeAll, imageRef); err != nil {
+	if err := cosignclean.CleanCmd(context.Background(), regOpts, cosignoptions.CleanTypeAll, imageRef, true); err != nil {
 		t.Fatalf("cleanImage: %v", err)
 	}
 
@@ -130,7 +131,7 @@ func TestCleanImageCleanTypeAttestationLeavesSignatureTag(t *testing.T) {
 	pushDummyImage(t, attTag, remoteOpts)
 	pushDummyImage(t, sigTag, remoteOpts)
 
-	if err := cleanImage(context.Background(), regOpts, cosignoptions.CleanTypeAttestation, imageRef); err != nil {
+	if err := cosignclean.CleanCmd(context.Background(), regOpts, cosignoptions.CleanTypeAttestation, imageRef, true); err != nil {
 		t.Fatalf("cleanImage: %v", err)
 	}
 
@@ -160,7 +161,7 @@ func TestCleanImageCleanTypeSignatureLeavesAttestationTag(t *testing.T) {
 	pushDummyImage(t, attTag, remoteOpts)
 	pushDummyImage(t, sigTag, remoteOpts)
 
-	if err := cleanImage(context.Background(), regOpts, cosignoptions.CleanTypeSignature, imageRef); err != nil {
+	if err := cosignclean.CleanCmd(context.Background(), regOpts, cosignoptions.CleanTypeSignature, imageRef, true); err != nil {
 		t.Fatalf("cleanImage: %v", err)
 	}
 
@@ -179,7 +180,7 @@ func TestCleanImageNoTagsDoesNotError(t *testing.T) {
 	pushBaseImage(t, imageRef, remoteOpts)
 
 	// no attestation/signature tags present — clean should still succeed
-	if err := cleanImage(context.Background(), regOpts, cosignoptions.CleanTypeAll, imageRef); err != nil {
+	if err := cosignclean.CleanCmd(context.Background(), regOpts, cosignoptions.CleanTypeAll, imageRef, true); err != nil {
 		t.Fatalf("cleanImage on image with no sig/att tags failed: %v", err)
 	}
 }

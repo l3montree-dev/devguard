@@ -91,7 +91,7 @@ type DependencyVulnDTO struct {
 	AssetVersionName             string        `json:"assetVersionId"`
 	AssetID                      string        `json:"assetId"`
 	State                        VulnState     `json:"state"`
-	CVE                          CVEDTO        `json:"cve"`
+	CVE                          *CVEDTO       `json:"cve"`
 	CVEID                        string        `json:"cveID"`
 	ComponentPurl                string        `json:"componentPurl"`
 	ComponentFixedVersion        *string       `json:"componentFixedVersion"`
@@ -110,6 +110,13 @@ type DependencyVulnDTO struct {
 	Exploits                     []ExploitDTO  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
+}
+
+func (d DependencyVulnDTO) GetCVE() CVEDTO {
+	if d.CVE == nil {
+		return CVEDTO{}
+	}
+	return *d.CVE
 }
 
 type DetailedDependencyVulnDTO struct {

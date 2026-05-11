@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"os"
+
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 func (runner *DaemonRunner) UpdateVulnDB(ctx context.Context) error {
@@ -14,7 +16,7 @@ func (runner *DaemonRunner) UpdateVulnDB(ctx context.Context) error {
 
 	slog.Info("updating vulndb")
 
-	err := runner.vulnDBImportService.ImportFromDiff(ctx, nil)
+	err := runner.vulnDBImportService.ImportRC(ctx, shared.ImportOptions{})
 	if err != nil {
 		slog.Error("failed to update vulndb", "error", err)
 		return err

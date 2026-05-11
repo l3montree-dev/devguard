@@ -24,12 +24,6 @@ func NewExternalReferenceRepository(db *gorm.DB) shared.ExternalReferenceReposit
 	}
 }
 
-func (r *externalReferenceRepository) FindByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error) {
-	var refs []models.ExternalReference
-	err := r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&refs).Error
-	return refs, err
-}
-
 func (r *externalReferenceRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error) {
 	var refs []models.ExternalReference
 	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&refs).Error

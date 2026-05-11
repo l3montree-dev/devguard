@@ -70,8 +70,8 @@ func (c VulnDBController) ListPaged(ctx shared.Context) error {
 
 	env := shared.GetEnvironmental(ctx)
 
-	for i, cve := range pagedResp.Data {
-		risk, vector := vulndb.RiskCalculation(cve, env)
+	for i := range pagedResp.Data {
+		risk, vector := vulndb.RiskCalculation(&pagedResp.Data[i], env)
 		pagedResp.Data[i].Vector = vector
 		pagedResp.Data[i].Risk = risk
 	}
@@ -103,7 +103,7 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 
 	e := shared.GetEnvironmental(ctx)
 
-	risk, vector := vulndb.RiskCalculation(cve, e)
+	risk, vector := vulndb.RiskCalculation(&cve, e)
 	cve.Risk = risk
 	cve.Vector = vector
 

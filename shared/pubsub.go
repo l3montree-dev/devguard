@@ -36,19 +36,3 @@ type SimpleMessage struct {
 	Channel PubSubChannel
 	Payload map[string]any
 }
-
-func (m SimpleMessage) GetChannel() PubSubChannel {
-	return m.Channel
-}
-
-func (m SimpleMessage) GetPayload() map[string]any {
-	return m.Payload
-}
-
-// NewSimplePubSubMessage creates a new SimpleMessage instance.
-func NewSimplePubSubMessage(channel PubSubChannel, payload map[string]any) *SimpleMessage {
-	return &SimpleMessage{
-		Channel: channel,
-		Payload: payload,
-	}
-}

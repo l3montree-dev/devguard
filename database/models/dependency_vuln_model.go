@@ -18,9 +18,8 @@ type DependencyVuln struct {
 
 	Events []VulnEvent `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
-	CVE   CVE    `json:"cve"`
-	CVEID string `json:"cveId" gorm:"type:text;"`
-
+	CVE                   *CVE    `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
+	CVEID                 string  `json:"cveId" gorm:"type:text;"`
 	ComponentPurl         string  `json:"componentPurl" gorm:"type:text;"`
 	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
 
@@ -107,6 +106,14 @@ type DependencyVulnRisk struct {
 
 func (vuln DependencyVuln) TableName() string {
 	return "dependency_vulns"
+}
+
+// GetCVE returns the CVE or a zero-value CVE if not loaded, preventing nil dereferences.
+func (vuln DependencyVuln) GetCVE() CVE {
+	if vuln.CVE == nil {
+		return CVE{}
+	}
+	return *vuln.CVE
 }
 
 func (vuln *DependencyVuln) CalculateHash() uuid.UUID {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -55,7 +56,7 @@ type cisaKEVEntry struct {
 
 const kevBatchSize int = 50_000
 
-func (s *cisaKEVService) fetchJSON(ctx context.Context) ([]models.CVE, error) {
+func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, CisaKEVURL, nil)
 	if err != nil {
 		return nil, err
@@ -112,19 +113,10 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-func (s cisaKEVService) Mirror(ctx context.Context) error {
-	fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	cves, err := s.fetchJSON(fetchCtx)
-	cancel()
-	if err != nil {
-		slog.Error("could not fetch CISA KEV data", "error", err)
-		return err
-	}
-
-	tx := s.cveRepository.Begin(ctx)
-	defer tx.Rollback()
-
-	// build a map of CVE ID -> KEV data for quick lookup
+// Apply writes pre-fetched CISA KEV entries to the database using the provided transaction,
+// expanding KEV data to alias CVEs via the relationship table.
+// The caller is responsible for committing or rolling back the transaction.
+func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.CVE) error {
 	kevMap := make(map[string]models.CVE, len(cves))
 	cveIDs := make([]string, len(cves))
 	for i, cve := range cves {
@@ -132,9 +124,6 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 		cveIDs[i] = cve.CVE
 	}
 
-	// query relationships where target_cve matches any of our CVE IDs
-	// this allows us to propagate KEV data to related CVEs (e.g., GHSA -> CVE aliases)
-	// process in batches to avoid PostgreSQL parameter limit
 	var relationships []models.CVERelationship
 	for i := 0; i < len(cveIDs); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cveIDs))
@@ -146,10 +135,8 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 		relationships = append(relationships, batch...)
 	}
 
-	// expand CVE list with related source CVEs that should inherit KEV data
 	for _, rel := range relationships {
 		if kevData, ok := kevMap[rel.TargetCVE]; ok {
-			// only add if not already in the map to avoid duplicates
 			if _, exists := kevMap[rel.SourceCVE]; !exists {
 				relatedCVE := models.CVE{
 					CVE:                   rel.SourceCVE,
@@ -164,17 +151,60 @@ func (s cisaKEVService) Mirror(ctx context.Context) error {
 		}
 	}
 
-	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "via_relationships", len(cves)-len(cveIDs))
+	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "viaRelationships", len(cves)-len(cveIDs))
 
-	// process the CVEs in batches
 	for i := 0; i < len(cves); i += kevBatchSize {
 		end := min(i+kevBatchSize, len(cves))
-		err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end])
-		if err != nil {
+		if err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end]); err != nil {
 			slog.Error("error when trying to save CISA KEV information batch")
 			return err
 		}
 	}
 
-	return tx.Commit().Error
+	return nil
+}
+
+func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE kev_stage (
+			cve                     text,
+			cisa_exploit_add        date,
+			cisa_action_due         date,
+			cisa_required_action    text,
+			cisa_vulnerability_name text
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create kev staging table: %w", err)
+	}
+
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
+			e := entries[i]
+			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+		})); err != nil {
+		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
+	}
+
+	// Update direct CVEs and alias CVEs (linked via cve_relationships) in one statement.
+	if _, err := tx.Exec(ctx, `
+		UPDATE cves SET
+			cisa_exploit_add        = ks.cisa_exploit_add,
+			cisa_action_due         = ks.cisa_action_due,
+			cisa_required_action    = ks.cisa_required_action,
+			cisa_vulnerability_name = ks.cisa_vulnerability_name
+		FROM (
+			SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			FROM kev_stage
+			UNION
+			SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+			FROM kev_stage ks
+			JOIN cve_relationships cr ON cr.target_cve = ks.cve
+		) ks
+		WHERE cves.cve = ks.cve`); err != nil {
+		return fmt.Errorf("could not update cves with kev data: %w", err)
+	}
+	return nil
 }

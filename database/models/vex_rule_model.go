@@ -45,7 +45,7 @@ type VEXRule struct {
 
 	// Relationships
 	Asset        Asset        `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	CVE          CVE          `json:"cve" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;"`
+	CVE          *CVE         `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
 	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	// Rule data
@@ -79,6 +79,14 @@ func CalculateVEXRuleID(assetID uuid.UUID, cveID string, pathPattern []string, v
 func (r *VEXRule) SetPathPattern(pattern []string) {
 	r.PathPattern = pattern
 	r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, pattern, r.VexSource)
+}
+
+// GetCVE returns the CVE or a zero-value CVE if not loaded, preventing nil dereferences.
+func (r VEXRule) GetCVE() CVE {
+	if r.CVE == nil {
+		return CVE{}
+	}
+	return *r.CVE
 }
 
 // EnsureID calculates the ID if it hasn't been set yet.

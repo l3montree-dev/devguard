@@ -1262,6 +1262,120 @@ func (_c *ProjectRepository_RecursivelyGetChildProjects_Call) RunAndReturn(run f
 	return _c
 }
 
+// SearchProjectsWithSubProjectsAndAssetsPaged provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
+	ret := _mock.Called(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchProjectsWithSubProjectsAndAssetsPaged")
+	}
+
+	var r0 shared.Paged[dtos.ProjectDTO]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error)); ok {
+		return returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ProjectDTO]); ok {
+		r0 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[dtos.ProjectDTO])
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchProjectsWithSubProjectsAndAssetsPaged'
+type ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call struct {
+	*mock.Call
+}
+
+// SearchProjectsWithSubProjectsAndAssetsPaged is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - allowedAssetIDs []string
+//   - allowedProjectIDs []string
+//   - parentID *uuid.UUID
+//   - orgID uuid.UUID
+//   - pageInfo shared.PageInfo
+//   - search string
+//   - filter []shared.FilterQuery
+//   - sort []shared.SortQuery
+func (_e *ProjectRepository_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(ctx interface{}, tx interface{}, allowedAssetIDs interface{}, allowedProjectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	return &ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("SearchProjectsWithSubProjectsAndAssetsPaged", ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)}
+}
+
+func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Run(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(uuid.UUID)
+		}
+		var arg6 shared.PageInfo
+		if args[6] != nil {
+			arg6 = args[6].(shared.PageInfo)
+		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
+		var arg8 []shared.FilterQuery
+		if args[8] != nil {
+			arg8 = args[8].([]shared.FilterQuery)
+		}
+		var arg9 []shared.SortQuery
+		if args[9] != nil {
+			arg9 = args[9].([]shared.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+			arg9,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.ProjectDTO], err error) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error)) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) Update(ctx context.Context, tx shared.DB, project *models.Project) error {
 	ret := _mock.Called(ctx, tx, project)

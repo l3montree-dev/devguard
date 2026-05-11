@@ -29,8 +29,6 @@ import (
 func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 	return dtos.CVEDTO{
 		CVE:                   cve.CVE,
-		CreatedAt:             cve.CreatedAt,
-		UpdatedAt:             cve.UpdatedAt,
 		DatePublished:         cve.DatePublished,
 		DateLastModified:      cve.DateLastModified,
 		Description:           cve.Description,
@@ -62,7 +60,7 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		AssetVersionName:             f.AssetVersionName,
 		AssetID:                      f.AssetID.String(),
 		State:                        dtos.VulnState(f.State),
-		CVE:                          CVEToDTO(f.CVE),
+		CVE:                          utils.PtrMap(f.CVE, CVEToDTO),
 		CVEID:                        f.CVEID,
 		ComponentPurl:                f.ComponentPurl,
 		ComponentFixedVersion:        f.ComponentFixedVersion,
@@ -90,7 +88,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			AssetVersionName:             dependencyVuln.AssetVersionName,
 			AssetID:                      dependencyVuln.AssetID.String(),
 			State:                        dependencyVuln.State,
-			CVE:                          CVEToDTO(dependencyVuln.CVE),
+			CVE:                          utils.PtrMap(dependencyVuln.CVE, CVEToDTO),
 			CVEID:                        dependencyVuln.CVEID,
 			ComponentPurl:                dependencyVuln.ComponentPurl,
 			ComponentFixedVersion:        dependencyVuln.ComponentFixedVersion,
@@ -122,13 +120,8 @@ func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
 func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
 	return dtos.AffectedComponentDTO{
 		ID:                 ac.ID,
-		Source:             ac.Source,
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,
-		Scheme:             ac.Scheme,
-		Type:               ac.Type,
-		Name:               ac.Name,
-		Namespace:          ac.Namespace,
 		Version:            ac.Version,
 		SemverIntroduced:   ac.SemverIntroduced,
 		SemverFixed:        ac.SemverFixed,
@@ -186,7 +179,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 				CVEID:                 v.CVEID,
 				ComponentPurl:         stringPurl,
 				ComponentFixedVersion: fixedVersion,
-				CVE:                   v.CVE,
+				CVE:                   &v.CVE,
 				VulnerabilityPath:     []string{},
 			},
 		}
@@ -214,7 +207,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 			CVEID:                 v.CVEID,
 			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,
-			CVE:                   v.CVE,
+			CVE:                   &v.CVE,
 			VulnerabilityPath:     componentPath,
 		}
 		result = append(result, dependencyVuln)

@@ -119,12 +119,7 @@ func CompareSlices[T any, K comparable](a, b []T, serializer func(T) K) CompareR
 }
 
 func Any[T any](s []T, f func(T) bool) bool {
-	for _, v := range s {
-		if f(v) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(s, f)
 }
 
 func All[T any](s []T, f func(T) bool) bool {
@@ -134,10 +129,6 @@ func All[T any](s []T, f func(T) bool) bool {
 		}
 	}
 	return true
-}
-
-func Some[T any](s []T, f func(T) bool) bool {
-	return Any(s, f)
 }
 
 func UniqBy[T any, K comparable](s []T, f func(T) K) []T {
@@ -158,6 +149,12 @@ func Contains[T comparable](s []T, el T) bool {
 
 func ContainsAll[T comparable](s []T, needed []T) bool {
 	return All(needed, func(n T) bool {
+		return Contains(s, n)
+	})
+}
+
+func ContainsAny[T comparable](s []T, needed []T) bool {
+	return Any(needed, func(n T) bool {
 		return Contains(s, n)
 	})
 }

@@ -1636,12 +1636,6 @@ func TestTicketHandling(t *testing.T) {
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
 
-			cve := models.CVE{
-				CVE:  "CVE-2025-46569",
-				CVSS: 8.0,
-			}
-			err = f.DB.Save(&cve).Error
-			assert.Nil(t, err)
 			// scan the sbom with the vulnerability again
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
@@ -1737,6 +1731,7 @@ func TestTicketHandling(t *testing.T) {
 				CVE:  "CVE-2025-46569",
 				CVSS: 8.0,
 			}
+			cve.ID = cve.CalculateHash()
 			err = f.DB.Save(&cve).Error
 			assert.Nil(t, err)
 			if err := f.DB.Exec("DELETE FROM artifact_dependency_vulns adv USING dependency_vulns dv WHERE adv.dependency_vuln_id = dv.id AND dv.cve_id = ?;", "CVE-2025-46569").Error; err != nil {
@@ -1786,6 +1781,12 @@ func TestTicketHandling(t *testing.T) {
 			assert.Len(t, response.DependencyVulns, 1) // we expect the accepted vulnerability to be returned
 		})
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
+			// Ensure asset has thresholds and integration set for ticket creation
+			asset.CVSSAutomaticTicketThreshold = utils.Ptr(7.0)
+			asset.RepositoryID = utils.Ptr(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
+			err = f.DB.Save(&asset).Error
+			assert.Nil(t, err)
+
 			// create a vulnerability with an accepted state
 			vuln := models.DependencyVuln{
 				CVEID:         "CVE-2025-46569",
@@ -1805,6 +1806,10 @@ func TestTicketHandling(t *testing.T) {
 				UpdateAll: true,
 			}).Create(&vuln).Error
 
+			// Ensure the CVE has CVSS set so ShouldCreateThisIssue passes the threshold check.
+			// When this subtest runs in isolation the CVE was created without a CVSS score.
+			f.DB.Exec("UPDATE cves SET cvss = 8.0 WHERE cve = 'CVE-2025-46569'")
+
 			recorder := httptest.NewRecorder()
 			sbomFile := sbomWithVulnerability()
 			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
@@ -1814,7 +1819,8 @@ func TestTicketHandling(t *testing.T) {
 			ctx := app.NewContext(req, recorder)
 			setupContext(ctx)
 
-			gitlabClientFacade.Calls = nil // reset the calls to the mock
+			gitlabClientFacade.Calls = nil         // reset recorded calls
+			gitlabClientFacade.ExpectedCalls = nil // clear all prior expectations so they don't shadow new .Once() expectations
 			gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{
 				IID: 789,
 			}, nil, nil).Once()
@@ -1852,11 +1858,6 @@ func createCVE2025_46569(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
-		Scheme:             "pkg",
-		Type:               "golang",
-		Name:               "github.com/open-policy-agent/opa",
-		Namespace:          utils.Ptr(""),
-		Qualifiers:         nil,
 		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 
@@ -2109,12 +2110,8 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		// Create AffectedComponent to link the CVE to the package
 		// This ensures the SBOM scan will find this vulnerability for the package
 		affectedComp := models.AffectedComponent{
-			ID:                 "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
 			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
 			Ecosystem:          "golang",
-			Scheme:             "pkg",
-			Type:               "golang",
-			Name:               "github.com/jinzhu/inflection",
 			Version:            utils.Ptr("1.0.0"),
 			CVE:                []models.CVE{newCVE},
 		}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -24,19 +23,10 @@ func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.Affe
 	}
 
 	purlWithoutVersion := normalize.ToPurlWithoutVersion(purl)
-	namespace := purl.Namespace
-	subpath := purl.Subpath
 
 	return models.AffectedComponent{
-		Source:             "test",
 		PurlWithoutVersion: purlWithoutVersion,
 		Ecosystem:          purl.Type,
-		Scheme:             "pkg",
-		Type:               purl.Type,
-		Name:               purl.Name,
-		Namespace:          &namespace,
-		Qualifiers:         databasetypes.MustJSONBFromStruct(purl.Qualifiers.Map()),
-		Subpath:            &subpath,
 		Version:            &purl.Version,
 		CVE:                cves,
 	}, nil

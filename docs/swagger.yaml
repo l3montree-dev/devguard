@@ -981,11 +981,6 @@ components:
           type: string
         updatedAt:
           type: string
-        webhooks:
-          items:
-            $ref: '#/components/schemas/dtos.WebhookIntegrationDTO'
-          type: array
-          uniqueItems: false
       type: object
     dtos.OrgOverview:
       properties:
@@ -1130,6 +1125,78 @@ components:
           type: integer
         mediumCvss:
           type: integer
+      type: object
+    dtos.OrgSettingsDTO:
+      properties:
+        configFiles:
+          additionalProperties: {}
+          type: object
+        contactPhoneNumber:
+          type: string
+        country:
+          type: string
+        createdAt:
+          type: string
+        criticalInfrastructure:
+          type: boolean
+        description:
+          type: string
+        externalEntityProviderId:
+          type: string
+        gitLabIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.GitlabIntegrationDTO'
+          type: array
+          uniqueItems: false
+        githubAppInstallations:
+          items:
+            $ref: '#/components/schemas/dtos.GithubAppInstallationDTO'
+          type: array
+          uniqueItems: false
+        grundschutz:
+          type: boolean
+        id:
+          type: string
+        industry:
+          type: string
+        isPublic:
+          type: boolean
+        iso27001:
+          type: boolean
+        jiraIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.JiraIntegrationDTO'
+          type: array
+          uniqueItems: false
+        language:
+          type: string
+        members:
+          items:
+            $ref: '#/components/schemas/dtos.UserDTO'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        nist:
+          type: boolean
+        numberOfEmployees:
+          type: integer
+        projects:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectDTO'
+          type: array
+          uniqueItems: false
+        sharesVulnInformation:
+          type: boolean
+        slug:
+          type: string
+        updatedAt:
+          type: string
+        webhooks:
+          items:
+            $ref: '#/components/schemas/dtos.WebhookIntegrationDTO'
+          type: array
+          uniqueItems: false
       type: object
     dtos.OrgStructureDistribution:
       properties:
@@ -6024,6 +6091,28 @@ paths:
       summary: List first-party vulnerabilities by project
       tags:
       - Vulnerabilities
+  /organizations/{organization}/settings:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.OrgSettingsDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Get organization admin settings
+      tags:
+      - Organizations
   /organizations/{organization}/stats/vuln-statistics/:
     get:
       description: Returns aggregated security statistics for an organization, including

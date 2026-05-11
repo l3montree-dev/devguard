@@ -256,7 +256,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 			AssetID:               "asset-12345",
 			State:                 dtos.VulnStateOpen,
 			CVEID:                 cve,
-			CVE:                   transformer.CVEToDTO(cveData),
+			CVE:                   utils.PtrMap(&cveData, transformer.CVEToDTO),
 			ComponentPurl:         purl,
 			ComponentFixedVersion: &fixedVersion,
 			Effort:                &effort,

@@ -849,7 +849,7 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		for _, dv := range dependencyVulns {
 			vulnDTOs = append(vulnDTOs, dtos.DependencyVulnDTO{
 				CVEID:                 dv.CVEID,
-				CVE:                   transformer.CVEToDTO(dv.CVE),
+				CVE:                   utils.PtrMap(dv.CVE, transformer.CVEToDTO),
 				ComponentPurl:         dv.ComponentPurl,
 				ComponentFixedVersion: dv.ComponentFixedVersion,
 				VulnerabilityPath:     dv.VulnerabilityPath,

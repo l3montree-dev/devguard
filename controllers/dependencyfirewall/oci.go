@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,6 +38,18 @@ import (
 )
 
 var ociProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?oci(?:/|$)`)
+
+// OCI Distribution Spec path-param formats. Anything outside these is
+// rejected at the edge so that path traversal, NUL injection, or other
+// surprises never reach the cache layer or the upstream registry.
+var (
+	// One image-name segment (e.g. "library", "nginx").
+	ociNameSegmentRe = regexp.MustCompile(`^[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*$`)
+	// Tag: 1-128 chars, alphanumeric/_/./-, must not start with . or -.
+	ociTagRe = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$`)
+	// Digest: only sha256 supported by the proxy today.
+	ociDigestRe = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+)
 
 // OCIDependencyProxyController handles OCI registry proxy requests.
 // Image references must be fully qualified: <registry>/<image> (e.g. docker.io/library/nginx).
@@ -130,11 +143,41 @@ func ociSafeCachePath(requestPath string) string {
 	return strings.ReplaceAll(requestPath, ":", "_")
 }
 
-// upstreamURLForRegistry returns the upstream base URL for a given registry hostname.
-// docker.io is a special case: its actual API endpoint differs from the pull hostname.
+// isAllowedRegistry reports whether requests for the given :registry path
+// segment may proceed. The registry must be one of the supported registries
+// listed in oci_registries.go — that list contains no IP literals or
+// host:port forms, so SSRF inputs (e.g. 169.254.169.254, docker.io:443) are
+// rejected as a side effect.
+func isAllowedRegistry(registry string) bool {
+	return slices.Contains(allowedOCIRegistries, registry)
+}
+
+// validateOCIPathParams enforces the OCI Distribution Spec format on every
+// path-param the route handler extracted. Anything malformed (path traversal,
+// special characters, wrong digest length) is refused before the proxy
+// touches the cache or the upstream registry. reference and digest may be
+// empty for routes that don't carry them (e.g. /tags/list).
+func validateOCIPathParams(upstreamImagePath, reference, digest string) error {
+	for _, segment := range strings.Split(upstreamImagePath, "/") {
+		if !ociNameSegmentRe.MatchString(segment) {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid image name")
+		}
+	}
+	if reference != "" && !ociTagRe.MatchString(reference) && !ociDigestRe.MatchString(reference) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid reference")
+	}
+	if digest != "" && !ociDigestRe.MatchString(digest) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid digest")
+	}
+	return nil
+}
+
+// upstreamURLForRegistry returns the upstream base URL for a given registry
+// hostname, consulting the registry table in oci_registries.go (which is
+// where the docker.io → registry-1.docker.io rewrite lives).
 func upstreamURLForRegistry(registry string) string {
-	if registry == "docker.io" {
-		return "https://registry-1.docker.io"
+	if host, ok := registryUpstreamHosts[registry]; ok {
+		return "https://" + host
 	}
 	return "https://" + registry
 }
@@ -173,6 +216,28 @@ type dockerTokenResponse struct {
 	Token string `json:"token"`
 }
 
+// validateRealmHost rejects realm URLs that aren't HTTPS or that point to a
+// host the upstream registry isn't allowed to delegate to. Without this, a
+// malicious upstream could advertise realm="http://169.254.169.254/..." in
+// its 401 and DevGuard would issue a request to that internal address (SSRF,
+// issue #1921).
+func validateRealmHost(realm, upstreamHost string) error {
+	parsed, err := url.Parse(realm)
+	if err != nil {
+		return fmt.Errorf("realm is not a valid URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("realm must use https, got %q", parsed.Scheme)
+	}
+	if parsed.Host == upstreamHost {
+		return nil
+	}
+	if slices.Contains(registryAuthHosts[upstreamHost], parsed.Host) {
+		return nil
+	}
+	return fmt.Errorf("realm host %q not allowed for registry %q", parsed.Host, upstreamHost)
+}
+
 // parseBearerChallenge extracts the realm, service and scope fields from a
 // WWW-Authenticate: Bearer header value so token fetching works for any
 // OCI-compliant registry without hardcoding auth URLs.
@@ -200,10 +265,14 @@ func parseBearerChallenge(header string) (realm, service, scope string) {
 // challenge advertised in the upstream 401 response.
 // The realm URL is validated against the upstream registry host to prevent SSRF:
 // a malicious registry could advertise realm="http://internal-host/" in its 401.
-func (d *OCIDependencyProxyController) fetchRegistryToken(ctx context.Context, wwwAuthenticate string) (string, error) {
+func (d *OCIDependencyProxyController) fetchRegistryToken(ctx context.Context, upstreamHost, wwwAuthenticate string) (string, error) {
 	realm, service, scope := parseBearerChallenge(wwwAuthenticate)
 	if realm == "" {
 		return "", fmt.Errorf("no realm in WWW-Authenticate header: %q", wwwAuthenticate)
+	}
+
+	if err := validateRealmHost(realm, upstreamHost); err != nil {
+		return "", err
 	}
 
 	params := url.Values{}
@@ -244,6 +313,12 @@ func (d *OCIDependencyProxyController) fetchRegistryToken(ctx context.Context, w
 func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context, method, upstreamBase, requestPath string) ([]byte, http.Header, int, error) {
 	fullURL := upstreamBase + requestPath
 
+	parsedBase, err := url.Parse(upstreamBase)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("invalid upstream base URL: %w", err)
+	}
+	upstreamHost := parsedBase.Host
+
 	doRequest := func(token string) (*http.Response, error) {
 		req, err := http.NewRequestWithContext(ctx, method, fullURL, nil)
 		if err != nil {
@@ -271,7 +346,7 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 		wwwAuth := resp.Header.Get("Www-Authenticate")
 		resp.Body.Close()
 
-		token, err := d.fetchRegistryToken(ctx, wwwAuth)
+		token, err := d.fetchRegistryToken(ctx, upstreamHost, wwwAuth)
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("failed to get registry token: %w", err)
 		}
@@ -320,7 +395,13 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
+	if !isAllowedRegistry(registry) {
+		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
+	}
 	reference := c.Param("reference")
+	if err := validateOCIPathParams(upstreamImagePath, reference, ""); err != nil {
+		return err
+	}
 	// Path sent to the upstream (no registry prefix).
 	upstreamPath := fmt.Sprintf("/v2/%s/manifests/%s", upstreamImagePath, reference)
 	// Path used for caching and rule matching (includes registry).
@@ -427,7 +508,13 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	}
 
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
+	if !isAllowedRegistry(registry) {
+		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
+	}
 	digest := c.Param("digest")
+	if err := validateOCIPathParams(upstreamImagePath, "", digest); err != nil {
+		return err
+	}
 	upstreamPath := fmt.Sprintf("/v2/%s/blobs/%s", upstreamImagePath, digest)
 	requestPath := fmt.Sprintf("/v2/%s/blobs/%s", fqImageName, digest)
 	method := c.Request().Method
@@ -497,7 +584,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		// digest is of the form "sha256:<hex>"; skip verification for other algorithms.
 		if algo, expected, ok := strings.Cut(digest, ":"); ok && algo == "sha256" {
 			actual := fmt.Sprintf("%x", sha256.Sum256(data))
-			if actual != expected {
+			if actual != strings.TrimSuffix(expected, "/") {
 				slog.Error("OCI blob digest mismatch", "proxy", "oci", "image", fqImageName, "expected", expected, "actual", actual)
 				return echo.NewHTTPError(http.StatusBadGateway, "upstream blob digest mismatch")
 			}
@@ -525,7 +612,13 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 	}
 
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
+	if !isAllowedRegistry(registry) {
+		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
+	}
 	digest := c.Param("digest")
+	if err := validateOCIPathParams(upstreamImagePath, "", digest); err != nil {
+		return err
+	}
 	upstreamPath := fmt.Sprintf("/v2/%s/referrers/%s", upstreamImagePath, digest)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.oci",
@@ -572,6 +665,12 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 	}
 
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
+	if !isAllowedRegistry(registry) {
+		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
+	}
+	if err := validateOCIPathParams(upstreamImagePath, "", ""); err != nil {
+		return err
+	}
 	upstreamPath := fmt.Sprintf("/v2/%s/tags/list", upstreamImagePath)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.oci",

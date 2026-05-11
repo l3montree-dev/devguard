@@ -134,20 +134,18 @@ func (s *assetService) UpdateAssetRequirements(ctx context.Context, asset models
 	return nil
 }
 
-func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, results []models.ArtifactRiskHistory) string {
+func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string {
 
-	if len(results) == 0 {
+	if latest == nil {
 		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{
 			{Key: "unknown", Value: 0, Color: "#808080"},
 		})
 	}
-	var CVSS models.Distribution
-
-	for _, result := range results {
-		CVSS.Critical += result.CVEPurlCriticalCVSS
-		CVSS.High += result.CVEPurlHighCVSS
-		CVSS.Medium += result.CVEPurlMediumCVSS
-		CVSS.Low += result.CVEPurlLowCVSS
+	CVSS := models.Distribution{
+		Critical: latest.CVEPurlCriticalCVSS,
+		High:     latest.CVEPurlHighCVSS,
+		Medium:   latest.CVEPurlMediumCVSS,
+		Low:      latest.CVEPurlLowCVSS,
 	}
 
 	if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {

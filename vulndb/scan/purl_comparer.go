@@ -184,7 +184,12 @@ func filterMatchingComponentsByVersion(components []models.AffectedComponent, lo
 	matchingComponents := make([]models.AffectedComponent, 0, len(components))
 
 	for _, component := range components {
-		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, lookingForVersion, component.Type)
+		purl, err := packageurl.FromString(component.PurlWithoutVersion)
+		if err != nil {
+			slog.Warn("invalid purl, skipping affected component")
+			continue
+		}
+		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, lookingForVersion, purl.Type)
 		if err != nil {
 			slog.Warn("could not check version for affected component", "error", err, "lookingForVersion", lookingForVersion, "purl", component.PurlWithoutVersion, "introduced", utils.OrDefault(component.VersionIntroduced, "<nil>"), "fixed", utils.OrDefault(component.VersionFixed, "<nil>"))
 			continue
