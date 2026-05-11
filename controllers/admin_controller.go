@@ -91,19 +91,16 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 }
 
 func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
-	var request dtos.AddAdminRequest
-	err := ctx.Bind(&request)
-	if err != nil {
-		return echo.NewHTTPError(400, "wrongly formatted request")
-	}
-
-	if !utils.IsEmail(request.Email) {
-		return echo.NewHTTPError(400, "email is not a valid mail address")
-	}
-
-	parsedOrgID, err := uuid.Parse(request.OrgID)
+	orgID := ctx.Param("orgID")
+	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
 		return echo.NewHTTPError(400, "missing or invalid user id")
+	}
+
+	user := ctx.Param("user")
+
+	if !utils.IsEmail(user) {
+		return echo.NewHTTPError(400, "user is not a valid mail address")
 	}
 
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -111,7 +108,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get auth client")
 	}
 
-	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, request.Email)
+	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
 	if err != nil {
 		switch err.Error() {
 		case dtos.CouldNotFindUserWithMail:
@@ -128,6 +125,10 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not add admin to organization")
 	}
 	return ctx.JSON(200, nil)
+}
+
+func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
+	return nil
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
