@@ -343,9 +343,6 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 			continue
 		}
 		readCloser.Close()
-		if osvEntry.ID == "ECHO-7f2f-e83a-5508" {
-			slog.Info("found test entry, skipping", "id", osvEntry.ID)
-		}
 
 		if shouldIgnoreVulnerabilityID(osvEntry.ID) {
 			continue

@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
@@ -323,6 +324,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	if opts.Bulk {
 		processingMode = "bulk"
 	}
+	span.SetAttributes(
+		attribute.String("vulndb.mode", importMode),
+		attribute.String("vulndb.processing", processingMode),
+		attribute.Bool("vulndb.retried", false),
+	)
 	slog.Info("start vulndb import", "mode", importMode, "processing", processingMode, "limitedToTables", opts.LimitedToTables)
 	start := time.Now()
 
@@ -370,6 +376,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		slog.Error("integrity validation failed, attempting fallback retry", "failingTables", failingTables, "error", err)
 		monitoring.Alert("vulndb integrity check failed, retrying with limited table set", err)
 
+		span.SetAttributes(
+			attribute.Bool("vulndb.retried", true),
+			attribute.StringSlice("vulndb.retry.failing_tables", failingTables),
+		)
 		slog.Info("retrying with full import for limited tables", "tables", failingTables)
 
 		// since we did not commit anything until now, the staging tables still contain some data
@@ -385,9 +395,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 				return fmt.Errorf("could not rollback transaction after failed full import retry: %w (rollback error: %v)", err, rbErr)
 			}
 
+			span.SetAttributes(attribute.String("vulndb.retry.outcome", "failure"))
 			monitoring.Alert("vulndb integrity check failed after full import fallback", err)
 			return fmt.Errorf("integrity validation failed after full import fallback: %w", err)
 		}
+		span.SetAttributes(attribute.String("vulndb.retry.outcome", "success"))
 	}
 
 	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)

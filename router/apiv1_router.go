@@ -191,7 +191,7 @@ func NewAPIV1Router(srv api.Server,
 
 				// vulndb last imported version from config
 				var cfg models.Config
-				if err := db.Where("key = ?", "vulndb.lastIncrementalImport").First(&cfg).Error; err == nil {
+				if err := db.Where("key = ?", "vulndb.lastRCImport").First(&cfg).Error; err == nil {
 					var last string
 					if err := json.Unmarshal([]byte(cfg.Val), &last); err == nil {
 						dbInfo.VulnDBVersion = &last
