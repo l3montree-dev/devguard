@@ -410,11 +410,6 @@ type AssetVersionService interface {
 	LoadFullSBOMGraph(ctx context.Context, tx DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
-type AssetVersionPair struct {
-	AssetID uuid.UUID `db:"asset_id"`
-	Name    string    `db:"name"`
-}
-
 type AssetVersionRepository interface {
 	All(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 	Read(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
