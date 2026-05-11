@@ -56,7 +56,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		Modified:  time.Now(),
 	}
 
-	// Insert test data into database
+	// Insert test data directly via GORM
 	pkg := models.MaliciousPackage{
 		ID:        testEntry.ID,
 		Summary:   testEntry.Summary,
@@ -64,11 +64,11 @@ func TestMaliciousPackageChecker(t *testing.T) {
 		Published: testEntry.Published,
 		Modified:  testEntry.Modified,
 	}
-	err := maliciousPackageRepository.UpsertPackages(context.Background(), nil, []models.MaliciousPackage{pkg})
+	err := db.Create(&pkg).Error
 	assert.Nil(t, err)
 
-	components := transformer.MaliciousAffectedComponentFromOSV(testEntry, testEntry.ID)
-	err = maliciousPackageRepository.UpsertAffectedComponents(context.Background(), nil, components)
+	components := transformer.MaliciousAffectedComponentFromOSV(&testEntry, testEntry.ID)
+	err = db.Create(&components).Error
 	assert.Nil(t, err)
 
 	// Create the checker

@@ -20,40 +20,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-func parseGitIgnore(path string) ([]string, error) {
-	// read .gitignore if exists
-	content, err := os.ReadFile(path)
-	if err == nil {
-		ignorePaths := strings.Split(string(content), "\n")
-
-		// make sure to remove new lines and empty strings
-		ignorePaths = utils.Filter(
-			utils.Map(utils.Map(ignorePaths, strings.TrimSpace), func(e string) string {
-				// nextjs products a gitignore which contains /node_modules but we need to ignore /node_modules/
-				if e == "/node_modules" {
-					return e + "/"
-				}
-				return e
-			}),
-			func(e string) bool {
-				return e != "" && e != "\n" && !strings.HasPrefix(strings.TrimSpace(e), "#")
-			})
-
-		return ignorePaths, nil
-	}
-
-	return nil, err
-}
 
 func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 	if config.RuntimeInTotoConfig.Disabled {

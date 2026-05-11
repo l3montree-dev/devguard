@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,7 +41,15 @@ func registerMiddlewares(e *echo.Echo) {
 	// Expose the trace ID to the client so it can be referenced in Jaeger / GlitchTip.
 	e.Use(traceID())
 
-	e.Pre(middleware.AddTrailingSlash())
+	// AddTrailingSlash normalises REST endpoints, but it must be skipped for
+	// the OCI Distribution Spec routes — /v2/<name>/manifests/<reference> and
+	// friends are defined without trailing slashes, and adding one causes
+	// every registry (ghcr.io, quay.io, ...) to return 404.
+	e.Pre(middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+		Skipper: func(c echo.Context) bool {
+			return strings.HasPrefix(c.Request().URL.Path, "/v2/")
+		},
+	}))
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
 			AllowOrigins:     []string{"http://localhost:3000"},

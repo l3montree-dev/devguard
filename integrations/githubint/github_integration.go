@@ -1016,11 +1016,11 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 		}
 	}
 
-	cvssSeverity, err := vulndb.RiskToSeverity(float64(dependencyVuln.CVE.CVSS))
+	cvssSeverity, err := vulndb.RiskToSeverity(float64(dependencyVuln.GetCVE().CVSS))
 	if err == nil {
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "cvss-severity:"+strings.ToLower(cvssSeverity), &github.Label{
 			Description: github.String("CVSS severity of the vulnerability"),
-			Color:       github.String(vulndb.RiskToColor(float64(dependencyVuln.CVE.CVSS))),
+			Color:       github.String(vulndb.RiskToColor(float64(dependencyVuln.GetCVE().CVSS))),
 		})
 
 		if err != nil {

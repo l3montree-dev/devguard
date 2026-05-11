@@ -106,12 +106,13 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 	affectedComponents := make([]models.AffectedComponent, 0, len(osv.Affected)*3)
 
 	for _, affected := range osv.Affected {
-		if affected.EcosystemSpecific != nil {
+		// we should not remove affected components - otherwise it might happen, that we remove a vulnerability from the database (check runCleanupJobs) and therefore lose the append only property of this database - which makes it so fast and simple currently.
+		/*if affected.EcosystemSpecific != nil {
 			// debian defines urgency: https://security-team.debian.org/security_tracker.html#severity-levels
-			if affected.EcosystemSpecific.Urgency == "unimportant" {
-				continue
+			affected.EcosystemSpecific.Urgency == "unimportant" {
+				// continue
 			}
-		}
+		}*/
 
 		if affected.Package.Purl != "" {
 			affectedComponents = append(affectedComponents, affectedComponentsFromAffected(affected)...)
@@ -285,7 +286,7 @@ func affectedComponentsFromGitRange(affected dtos.Affected) []models.AffectedCom
 }
 
 // MaliciousAffectedComponentFromOSV converts OSV data to MaliciousAffectedComponent entries
-func MaliciousAffectedComponentFromOSV(osv dtos.OSV, maliciousPackageID string) []models.MaliciousAffectedComponent {
+func MaliciousAffectedComponentFromOSV(osv *dtos.OSV, maliciousPackageID string) []models.MaliciousAffectedComponent {
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
 	for _, affected := range osv.Affected {
 		for _, c := range affectedComponentsFromAffected(affected) {

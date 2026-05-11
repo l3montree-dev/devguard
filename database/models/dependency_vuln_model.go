@@ -108,6 +108,14 @@ func (vuln DependencyVuln) TableName() string {
 	return "dependency_vulns"
 }
 
+// GetCVE returns the CVE or a zero-value CVE if not loaded, preventing nil dereferences.
+func (vuln DependencyVuln) GetCVE() CVE {
+	if vuln.CVE == nil {
+		return CVE{}
+	}
+	return *vuln.CVE
+}
+
 func (vuln *DependencyVuln) CalculateHash() uuid.UUID {
 	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
 }

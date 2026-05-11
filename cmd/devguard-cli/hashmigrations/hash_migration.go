@@ -91,7 +91,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 				slog.Warn("could not clear vulndb.lastRCImport config", "err", err)
 			}
 			slog.Info("triggering full vulndb import after hash migration")
-			if err := vulndbService.ImportRC(ctx); err != nil {
+			if err := vulndbService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
 				return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
 			}
 		}

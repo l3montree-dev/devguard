@@ -14,6 +14,11 @@ import (
 )
 
 func newImportCommand() *cobra.Command {
+	var full bool
+	var batchSize int
+	var bulk bool
+	var limitedToTables []string
+
 	importCmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import the latest state of the vulnerability database",
@@ -21,6 +26,12 @@ func newImportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			migrateDB()
+			opts := shared.ImportOptions{
+				Full:            full,
+				BatchSize:       batchSize,
+				Bulk:            bulk,
+				LimitedToTables: limitedToTables,
+			}
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
@@ -29,7 +40,7 @@ func newImportCommand() *cobra.Command {
 				services.ServiceModule,
 				vulndb.Module,
 				fx.Invoke(func(svc shared.VulnDBService) error {
-					return svc.ImportRC(context.Background())
+					return svc.ImportRC(context.Background(), opts)
 				}),
 			)
 
@@ -45,6 +56,11 @@ func newImportCommand() *cobra.Command {
 			return app.Stop(stopCtx)
 		},
 	}
+
+	importCmd.Flags().BoolVar(&full, "full", false, "Force a full import, ignoring the last-import watermark")
+	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
+	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
+	importCmd.Flags().StringSliceVar(&limitedToTables, "limitedToTables", []string{}, "Comma-separated list of tables to limit the import to (e.g. --limitedToTables=cves,exploits,malicious_packages)")
 
 	return importCmd
 }

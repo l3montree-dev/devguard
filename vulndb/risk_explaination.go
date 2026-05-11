@@ -63,22 +63,22 @@ func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string)
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.GetCVE().Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 
-		for _, exploit := range dependencyVuln.CVE.Exploits {
+		for _, exploit := range dependencyVuln.GetCVE().Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
 	case "F":
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
 		// sort the exploits to avoid random order and thus flaky tests and inconsistent output
-		slices.SortStableFunc(dependencyVuln.CVE.Exploits, func(a models.Exploit, b models.Exploit) int {
+		slices.SortStableFunc(dependencyVuln.GetCVE().Exploits, func(a models.Exploit, b models.Exploit) int {
 			return strings.Compare(a.SourceURL, b.SourceURL)
 		})
 
-		for _, exploit := range dependencyVuln.CVE.Exploits {
+		for _, exploit := range dependencyVuln.GetCVE().Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
 	case "A":
@@ -311,19 +311,19 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 			Short: shortMsg,
 			Long:  longMsg,
 		},
-		EPSSMessage:           epssMessage(utils.OrDefault(dependencyVuln.CVE.EPSS, 0)),
+		EPSSMessage:           epssMessage(utils.OrDefault(dependencyVuln.GetCVE().EPSS, 0)),
 		CVSSBEMessage:         cvssBE(asset, cvss),
 		ComponentDepthMessage: componentDepthMessages(max(len(dependencyVuln.VulnerabilityPath), 1)),
 		CVSSMessage:           describeCVSS(cvss),
 		DependencyVulnID:      dependencyVuln.ID,
 
 		Risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
-		EPSS:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),
+		EPSS:  utils.OrDefault(dependencyVuln.GetCVE().EPSS, 0),
 		Depth: max(len(dependencyVuln.VulnerabilityPath), 1),
 
 		RiskMetrics:    riskMetrics,
 		CVEID:          dependencyVuln.CVEID,
-		CVEDescription: dependencyVuln.CVE.Description,
+		CVEDescription: dependencyVuln.GetCVE().Description,
 
 		ComponentPurl: dependencyVuln.ComponentPurl,
 		ArtifactNames: dependencyVuln.GetScannerIDsOrArtifactNames(),

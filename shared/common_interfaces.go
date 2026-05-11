@@ -103,6 +103,7 @@ type ProjectRepository interface {
 	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
+	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 }
 
 type Verifier interface {
@@ -362,6 +363,7 @@ type ProjectService interface {
 	GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
+	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
 }
 
 type InTotoVerifierService interface {
@@ -628,8 +630,17 @@ type LicenseRiskService interface {
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
+type ImportOptions struct {
+	Full      bool
+	BatchSize int
+	// Bulk loads all gob data into RAM before writing — no channels, single DB flush.
+	// Faster than streaming but uses significantly more memory (~2-3 GB).
+	Bulk            bool
+	LimitedToTables []string
+}
+
 type VulnDBService interface {
-	ImportRC(ctx context.Context) error
+	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
 }
 
