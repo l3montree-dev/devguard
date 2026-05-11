@@ -72,3 +72,7 @@ func (service AdminService) GetUserIDFromMail(ctx context.Context, adminClient s
 func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
 	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).GrantRole(ctx, userID.String(), "admin")
 }
+
+func (service AdminService) RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
+	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).RevokeRole(ctx, userID.String(), "admin")
+}

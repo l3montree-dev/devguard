@@ -128,7 +128,39 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 }
 
 func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
-	return nil
+	orgID := ctx.Param("orgID")
+	parsedOrgID, err := uuid.Parse(orgID)
+	if err != nil {
+		return echo.NewHTTPError(400, "missing or invalid user id")
+	}
+
+	user := ctx.Param("user")
+
+	if !utils.IsEmail(user) {
+		return echo.NewHTTPError(400, "user is not a valid mail address")
+	}
+
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+	if authAdminClient == nil {
+		return echo.NewHTTPError(500, "could not get auth client")
+	}
+	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
+	if err != nil {
+		switch err.Error() {
+		case dtos.CouldNotFindUserWithMail:
+			return echo.NewHTTPError(404, "could not find a user associated with this email")
+		case dtos.CouldNotFindDefinitiveUserWithMail:
+			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
+		default:
+			return echo.NewHTTPError(500, "could not determine user based on email")
+		}
+	}
+
+	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, userID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not revoke admin role from user")
+	}
+	return ctx.JSON(200, nil)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
