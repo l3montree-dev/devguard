@@ -36,6 +36,7 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
 		PackageName:              e.ComponentPurl,
 		URI:                      e.URI,
 		CreatedByVexRule:         e.CreatedByVexRule,
+		UserAgent:                e.GetUserAgent(),
 	}
 }
 

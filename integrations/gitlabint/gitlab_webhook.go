@@ -129,7 +129,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				return nil
 			}
 
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name), false, &userAgent)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as reopened by %s, due to reopening of the gitlab ticket.", event.User.Name), false, &userAgent)
 
 			err := g.aggregatedVulnRepository.ApplyAndSave(reqCtx, nil, vuln, &vulnEvent)
 			if err != nil {
