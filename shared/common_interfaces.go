@@ -423,8 +423,6 @@ type AssetVersionRepository interface {
 	Delete(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	Save(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
-	GetAssetVersionsByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindByAssetVersionNameAndAssetIDList(ctx context.Context, tx DB, assetPairs []AssetVersionPair) ([]models.AssetVersion, error)
 	GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error)

@@ -236,47 +236,6 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetID(ctx context.
 	return assets, err
 }
 
-func (repository *assetVersionRepository) GetAssetVersionsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error) {
-	var assets []models.AssetVersion
-	err := repository.GetDB(ctx, tx).Preload("Asset").Where("asset_id IN ?", assetIDs).Find(&assets).Error
-	return assets, err
-}
-
-func (repository *assetVersionRepository) FindByAssetVersionNameAndAssetIDList(
-	ctx context.Context,
-	tx *gorm.DB,
-	assetPairs []shared.AssetVersionPair,
-) ([]models.AssetVersion, error) {
-
-	var assets []models.AssetVersion
-
-	if len(assetPairs) == 0 {
-		return assets, nil
-	}
-
-	db := repository.GetDB(ctx, tx)
-
-	placeholders := make([]string, 0, len(assetPairs))
-	args := make([]interface{}, 0, len(assetPairs)*2)
-
-	for _, p := range assetPairs {
-		placeholders = append(placeholders, "(?, ?)")
-		args = append(args, p.AssetID, p.Name)
-	}
-
-	query := fmt.Sprintf(
-		"(asset_id, name) IN (%s)",
-		strings.Join(placeholders, ","),
-	)
-
-	err := db.
-		Preload("Asset").
-		Where(query, args...).
-		Find(&assets).Error
-
-	return assets, err
-}
-
 func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assetVersion []models.AssetVersion
 	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
