@@ -198,7 +198,7 @@ func (_c *FirstPartyVulnService_SyncIssues_Call) RunAndReturn(run func(ctx conte
 }
 
 // UpdateFirstPartyVulnState provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error) {
+func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	ret := _mock.Called(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 
 	if len(ret) == 0 {
@@ -207,15 +207,15 @@ func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Contex
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, string) (models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, *string) (models.VulnEvent, error)); ok {
 		return returnFunc(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, string) models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, *string) models.VulnEvent); ok {
 		r0 = returnFunc(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *models.FirstPartyVuln, string, string, dtos.MechanicalJustificationType, *string) error); ok {
 		r1 = returnFunc(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 	} else {
 		r1 = ret.Error(1)
@@ -236,12 +236,12 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 //   - statusType string
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
-//   - userAgent string
+//   - userAgent *string
 func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(ctx interface{}, tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)}
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -271,9 +271,9 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(ctx
 		if args[6] != nil {
 			arg6 = args[6].(dtos.MechanicalJustificationType)
 		}
-		var arg7 string
+		var arg7 *string
 		if args[7] != nil {
-			arg7 = args[7].(string)
+			arg7 = args[7].(*string)
 		}
 		run(
 			arg0,
@@ -294,7 +294,7 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Return(vulnEvent
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent string) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -43,7 +43,7 @@ func (_m *DependencyVulnService) EXPECT() *DependencyVulnService_Expecter {
 }
 
 // CreateVulnEventAndApply provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent string) (models.VulnEvent, error) {
+func (_mock *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent *string) (models.VulnEvent, error) {
 	ret := _mock.Called(ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)
 
 	if len(ret) == 0 {
@@ -52,15 +52,15 @@ func (_mock *DependencyVulnService) CreateVulnEventAndApply(ctx context.Context,
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, string) (models.VulnEvent, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, *string) (models.VulnEvent, error)); ok {
 		return returnFunc(ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, string) models.VulnEvent); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, *string) models.VulnEvent); ok {
 		r0 = returnFunc(ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, *models.DependencyVuln, dtos.VulnEventType, string, dtos.MechanicalJustificationType, string, *string) error); ok {
 		r1 = returnFunc(ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)
 	} else {
 		r1 = ret.Error(1)
@@ -83,12 +83,12 @@ type DependencyVulnService_CreateVulnEventAndApply_Call struct {
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - assetVersionName string
-//   - userAgent string
+//   - userAgent *string
 func (_e *DependencyVulnService_Expecter) CreateVulnEventAndApply(ctx interface{}, tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, status interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}, userAgent interface{}) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	return &DependencyVulnService_CreateVulnEventAndApply_Call{Call: _e.mock.On("CreateVulnEventAndApply", ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)}
 }
 
-func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent string)) *DependencyVulnService_CreateVulnEventAndApply_Call {
+func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent *string)) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -126,9 +126,9 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Run(run func(ctx c
 		if args[8] != nil {
 			arg8 = args[8].(string)
 		}
-		var arg9 string
+		var arg9 *string
 		if args[9] != nil {
-			arg9 = args[9].(string)
+			arg9 = args[9].(*string)
 		}
 		run(
 			arg0,
@@ -151,7 +151,7 @@ func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) Return(vulnEvent m
 	return _c
 }
 
-func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent string) (models.VulnEvent, error)) *DependencyVulnService_CreateVulnEventAndApply_Call {
+func (_c *DependencyVulnService_CreateVulnEventAndApply_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent *string) (models.VulnEvent, error)) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	_c.Call.Return(run)
 	return _c
 }

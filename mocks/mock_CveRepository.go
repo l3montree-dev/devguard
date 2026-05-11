@@ -1491,7 +1491,7 @@ func (_c *CveRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx cont
 }
 
 // SaveCveAffectedComponents provides a mock function for the type CveRepository
-func (_mock *CveRepository) SaveCveAffectedComponents(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []string) error {
+func (_mock *CveRepository) SaveCveAffectedComponents(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []int64) error {
 	ret := _mock.Called(ctx, tx, cveID, affectedComponentHashes)
 
 	if len(ret) == 0 {
@@ -1499,7 +1499,7 @@ func (_mock *CveRepository) SaveCveAffectedComponents(ctx context.Context, tx sh
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []string) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []int64) error); ok {
 		r0 = returnFunc(ctx, tx, cveID, affectedComponentHashes)
 	} else {
 		r0 = ret.Error(0)
@@ -1516,12 +1516,12 @@ type CveRepository_SaveCveAffectedComponents_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - cveID string
-//   - affectedComponentHashes []string
+//   - affectedComponentHashes []int64
 func (_e *CveRepository_Expecter) SaveCveAffectedComponents(ctx interface{}, tx interface{}, cveID interface{}, affectedComponentHashes interface{}) *CveRepository_SaveCveAffectedComponents_Call {
 	return &CveRepository_SaveCveAffectedComponents_Call{Call: _e.mock.On("SaveCveAffectedComponents", ctx, tx, cveID, affectedComponentHashes)}
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []string)) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []int64)) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1535,9 +1535,9 @@ func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(ctx context
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 []string
+		var arg3 []int64
 		if args[3] != nil {
-			arg3 = args[3].([]string)
+			arg3 = args[3].([]int64)
 		}
 		run(
 			arg0,
@@ -1554,7 +1554,7 @@ func (_c *CveRepository_SaveCveAffectedComponents_Call) Return(err error) *CveRe
 	return _c
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []string) error) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string, affectedComponentHashes []int64) error) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }

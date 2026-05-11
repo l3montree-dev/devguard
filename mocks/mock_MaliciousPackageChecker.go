@@ -38,57 +38,6 @@ func (_m *MaliciousPackageChecker) EXPECT() *MaliciousPackageChecker_Expecter {
 	return &MaliciousPackageChecker_Expecter{mock: &_m.Mock}
 }
 
-// DownloadAndProcessDB provides a mock function for the type MaliciousPackageChecker
-func (_mock *MaliciousPackageChecker) DownloadAndProcessDB(ctx context.Context) error {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DownloadAndProcessDB")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MaliciousPackageChecker_DownloadAndProcessDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DownloadAndProcessDB'
-type MaliciousPackageChecker_DownloadAndProcessDB_Call struct {
-	*mock.Call
-}
-
-// DownloadAndProcessDB is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MaliciousPackageChecker_Expecter) DownloadAndProcessDB(ctx interface{}) *MaliciousPackageChecker_DownloadAndProcessDB_Call {
-	return &MaliciousPackageChecker_DownloadAndProcessDB_Call{Call: _e.mock.On("DownloadAndProcessDB", ctx)}
-}
-
-func (_c *MaliciousPackageChecker_DownloadAndProcessDB_Call) Run(run func(ctx context.Context)) *MaliciousPackageChecker_DownloadAndProcessDB_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MaliciousPackageChecker_DownloadAndProcessDB_Call) Return(err error) *MaliciousPackageChecker_DownloadAndProcessDB_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MaliciousPackageChecker_DownloadAndProcessDB_Call) RunAndReturn(run func(ctx context.Context) error) *MaliciousPackageChecker_DownloadAndProcessDB_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // IsMalicious provides a mock function for the type MaliciousPackageChecker
 func (_mock *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem string, packageName string, version string) (bool, *dtos.OSV, error) {
 	ret := _mock.Called(ctx, ecosystem, packageName, version)
