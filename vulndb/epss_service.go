@@ -92,7 +92,7 @@ func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPS
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		CREATE TEMP TABLE epss_stage (
+		CREATE TEMP TABLE IF NOT EXISTS epss_stage (
 			cve_id     text,
 			epss       numeric(6,5),
 			percentile numeric(6,5)

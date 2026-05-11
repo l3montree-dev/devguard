@@ -169,7 +169,7 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		CREATE TEMP TABLE kev_stage (
+		CREATE TEMP TABLE IF NOT EXISTS kev_stage (
 			cve                     text,
 			cisa_exploit_add        date,
 			cisa_action_due         date,

@@ -233,7 +233,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 			kept = append(kept, e)
 		}
 	}
-	slog.Info("filtered OSV entries after cleanup", "before", len(vulnRows.CVEs), "after", len(kept))
+	slog.Info("filtered OSV entries after cleanup", "before", len(vulnRows.CVEs), "after", len(surviving))
 	return kept, surviving, nil
 }
 
@@ -343,6 +343,9 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 			continue
 		}
 		readCloser.Close()
+		if osvEntry.ID == "ECHO-7f2f-e83a-5508" {
+			slog.Info("found test entry, skipping", "id", osvEntry.ID)
+		}
 
 		if shouldIgnoreVulnerabilityID(osvEntry.ID) {
 			continue
@@ -649,6 +652,24 @@ func createStagingTables(ctx context.Context, tx pgx.Tx) error {
 		) ON COMMIT DROP;`)
 	if err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)
+	}
+	return nil
+}
+
+func clearStagingTables(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `
+		TRUNCATE TABLE cves_stage;
+		TRUNCATE TABLE cve_relationships_stage;
+		TRUNCATE TABLE affected_components_stage;
+		TRUNCATE TABLE cve_affected_component_stage;
+		TRUNCATE TABLE exploits_stage;
+		TRUNCATE TABLE mal_pkgs_stage;
+		TRUNCATE TABLE mal_comps_stage;
+		TRUNCATE TABLE epss_stage;
+		TRUNCATE TABLE kev_stage;
+		`)
+	if err != nil {
+		return fmt.Errorf("could not clear staging tables: %w", err)
 	}
 	return nil
 }

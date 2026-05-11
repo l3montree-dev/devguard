@@ -369,17 +369,15 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	if err != nil {
 		slog.Error("integrity validation failed, attempting fallback retry", "failingTables", failingTables, "error", err)
 		monitoring.Alert("vulndb integrity check failed, retrying with limited table set", err)
-		// we need to create a new transaction for the retry, so we rollback the previous one and start a new one
-		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
-			return fmt.Errorf("could not rollback transaction after failed import: %w (rollback error: %v)", err, rbErr)
-		}
-
-		tx, err = conn.Begin(ctx) //nolint:errcheck
-		if err != nil {
-			return fmt.Errorf("could not begin transaction for full import retry: %w", err)
-		}
 
 		slog.Info("retrying with full import for limited tables", "tables", failingTables)
+
+		// since we did not commit anything until now, the staging tables still contain some data
+		// for the import, we just need to make sure to clean them up before re-applying the data from the working directory
+		if err := clearStagingTables(ctx, tx); err != nil {
+			return fmt.Errorf("could not clear staging tables for retry: %w", err)
+		}
+
 		_, err = s.applyFromWorkingDir(ctx, tx, workingDir, time.Time{}, integrity, opts.Bulk, failingTables)
 		if err != nil {
 			if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
@@ -872,7 +870,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
-	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount int
+	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
 	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
@@ -962,6 +960,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			}
 			malPkgTime += time.Since(t)
 			malPkgCount += len(malPkg.pkgs)
+			malAffectedComponentCount += len(malPkg.comps)
 		}
 	}
 
@@ -982,6 +981,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"cve_affected_component", cveAffectedComponentCount,
 		"exploits", exploitCount,
 		"malicious_packages", malPkgCount,
+		"malicious_affected_components", malAffectedComponentCount,
 		"took", time.Since(start),
 	)
 	return nil
