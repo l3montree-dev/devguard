@@ -12,10 +12,11 @@ import (
 
 type AdminService struct {
 	casbinRBACProvider shared.RBACProvider
+	orgRepository      shared.OrganizationRepository
 }
 
-func NewAdminService(casbinRBACProvider shared.RBACProvider) *AdminService {
-	return &AdminService{casbinRBACProvider: casbinRBACProvider}
+func NewAdminService(casbinRBACProvider shared.RBACProvider, orgRepository shared.OrganizationRepository) *AdminService {
+	return &AdminService{casbinRBACProvider: casbinRBACProvider, orgRepository: orgRepository}
 }
 
 func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
@@ -61,12 +62,24 @@ func (service AdminService) GetUserIDFromMail(ctx context.Context, adminClient s
 
 	switch len(usersWithRequestedMail) {
 	case 0:
-		return uuid.UUID{}, fmt.Errorf(dtos.CouldNotFindUserWithMail)
+		return uuid.UUID{}, fmt.Errorf(dtos.ErrorCouldNotFindUserWithMail)
 	case 1:
 		return uuid.Parse(usersWithRequestedMail[0].Id)
 	default:
-		return uuid.UUID{}, fmt.Errorf(dtos.CouldNotFindDefinitiveUserWithMail)
+		return uuid.UUID{}, fmt.Errorf(dtos.ErrorCouldNotFindDefinitiveUserWithMail)
 	}
+}
+
+func (service AdminService) GetMailFromUserID(ctx context.Context, authClient shared.AdminClient, userID uuid.UUID) (string, error) {
+	userIdentity, err := authClient.GetIdentity(ctx, userID.String())
+	if err != nil {
+		return "", err
+	}
+	email := shared.IdentityEmail(userIdentity.Traits)
+	if email == "" {
+		return "", fmt.Errorf("could not find mail for user")
+	}
+	return email, nil
 }
 
 func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
@@ -75,4 +88,17 @@ func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, 
 
 func (service AdminService) RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
 	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).RevokeRole(ctx, userID.String(), "admin")
+}
+
+func (service AdminService) CheckIfOrgExists(ctx context.Context, orgID uuid.UUID) error {
+	_, err := service.orgRepository.Read(ctx, nil, orgID)
+	return err
+}
+
+func (service AdminService) GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error) {
+	owner, err := service.casbinRBACProvider.GetDomainRBAC(orgID.String()).GetOwnerOfOrganization()
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return uuid.Parse(owner)
 }

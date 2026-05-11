@@ -642,6 +642,9 @@ type AdminService interface {
 	AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
 	RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
 	GetUserIDFromMail(ctx context.Context, adminClient AdminClient, email string) (uuid.UUID, error)
+	CheckIfOrgExists(ctx context.Context, orgID uuid.UUID) error
+	GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error)
+	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
 }
 
 type AdminRepository interface {

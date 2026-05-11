@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // daemonCooldown is the minimum interval between two manual triggers of the same daemon.
@@ -94,7 +95,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid org id")
+		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
 	}
 
 	user, err := extractMailFromRequest(ctx)
@@ -110,9 +111,9 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
 	if err != nil {
 		switch err.Error() {
-		case dtos.CouldNotFindUserWithMail:
+		case dtos.ErrorCouldNotFindUserWithMail:
 			return echo.NewHTTPError(404, "could not find a user associated with this email")
-		case dtos.CouldNotFindDefinitiveUserWithMail:
+		case dtos.ErrorCouldNotFindDefinitiveUserWithMail:
 			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
 		default:
 			return echo.NewHTTPError(500, "could not determine user based on email").WithInternal(err)
@@ -130,7 +131,7 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid org id")
+		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
 	}
 
 	userID := ctx.Param("userID")
@@ -149,6 +150,39 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not revoke admin role from user")
 	}
 	return ctx.NoContent(204)
+}
+
+func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
+	orgID := ctx.Param("orgID")
+	orgIDParsed, err := uuid.Parse(orgID)
+	if err != nil {
+		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
+	}
+
+	err = controller.adminService.CheckIfOrgExists(context.Background(), orgIDParsed)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return echo.NewHTTPError(404, "organization does not exist")
+		}
+		return echo.NewHTTPError(500, "could not get organization information")
+	}
+
+	ownerID, err := controller.adminService.GetOwnerForOrg(context.Background(), orgIDParsed)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get owner of organization")
+	}
+
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+	if authAdminClient == nil {
+		return echo.NewHTTPError(500, "could not get auth client")
+	}
+
+	email, err := controller.adminService.GetMailFromUserID(context.Background(), authAdminClient, ownerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get email of the owner")
+	}
+
+	return ctx.JSON(200, dtos.OrgInformation{OwnerEmail: email})
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
