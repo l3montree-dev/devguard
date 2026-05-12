@@ -33,7 +33,7 @@ var _ shared.VulnDBService = (*VulnDBService)(nil)
 
 // debugImport reuses a previously downloaded archive from the current working directory
 // instead of pulling from the OCI registry. Set to true only for local profiling/benchmarking.
-const debugImport = true
+const debugImport = false
 
 // VulnDBService orchestrates the full vulnerability database export and import,
 // covering OSV, EPSS, CISA KEV, exploits (ExploitDB + GitHub PoC),
