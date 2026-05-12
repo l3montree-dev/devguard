@@ -905,6 +905,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
+	var allDeletedPivotRows []cveAffectedComponentRow
 	var cveCount, relationshipCount, deleteCveAffectedComponentCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
 	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, deleteCveAffectedComponentTime, malPkgTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
@@ -979,6 +980,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			}
 			deleteCveAffectedComponentTime += time.Since(t)
 			deleteCveAffectedComponentCount += len(rows.DeleteCVEAffectedComponents)
+			allDeletedPivotRows = append(allDeletedPivotRows, rows.DeleteCVEAffectedComponents...)
 		case exploits, ok := <-exploitsIn:
 			if !ok {
 				exploitsIn = nil
@@ -1018,9 +1020,9 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 
 	if deleteCveAffectedComponentCount > 0 {
-		slog.Info("running cleanup jobs")
+		slog.Info("running scoped cleanup jobs", "deleted_pivot_rows", deleteCveAffectedComponentCount)
 		t := time.Now()
-		runCleanUpJobs(ctx, tx)
+		runScopedCleanUpJobs(ctx, tx, allDeletedPivotRows)
 		slog.Info("finished cleanup jobs", "took", time.Since(t))
 	}
 

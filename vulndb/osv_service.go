@@ -809,6 +809,52 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 }
 
 // after importing check if the database state is consistent
+// runScopedCleanUpJobs removes orphaned affected_components and CVEs that resulted
+// from deleting the given pivot rows. Only checks the specific IDs involved rather
+// than scanning the full tables.
+func runScopedCleanUpJobs(ctx context.Context, tx pgx.Tx, deleted []cveAffectedComponentRow) {
+	if len(deleted) == 0 {
+		return
+	}
+
+	affIDs := make([]int64, 0, len(deleted))
+	cveIDs := make([]int64, 0, len(deleted))
+	for _, r := range deleted {
+		affIDs = append(affIDs, r.AffectedComponentID)
+		cveIDs = append(cveIDs, r.CveID)
+	}
+
+	start := time.Now()
+	_, err := tx.Exec(ctx, `
+		DELETE FROM affected_components
+		WHERE id = ANY($1)
+		AND NOT EXISTS (
+			SELECT 1 FROM cve_affected_component WHERE affected_component_id = id
+		)`, affIDs)
+	if err != nil {
+		slog.Error("could not clean up orphan affected components, continuing...", "error", err)
+	} else {
+		slog.Info("cleaned up orphan affected components", "took", time.Since(start))
+	}
+
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+		DELETE FROM cves
+		WHERE id = ANY($1)
+		AND NOT EXISTS (SELECT 1 FROM cve_affected_component WHERE cve_id = id)
+		AND NOT EXISTS (
+			SELECT 1 FROM cve_relationships cr
+			JOIN cves tc ON tc.cve = cr.target_cve
+			JOIN cve_affected_component cac ON cac.cve_id = tc.id
+			WHERE cr.source_cve = cves.cve
+		)`, cveIDs)
+	if err != nil {
+		slog.Error("could not clean up orphan cves, continuing...", "error", err)
+	} else {
+		slog.Info("cleaned up orphan cves", "took", time.Since(start))
+	}
+}
+
 func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	slog.Info("start running sanity checks")
 	// first delete all cves which have no affected components and also none of their relationships does
