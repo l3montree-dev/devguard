@@ -134,7 +134,7 @@ func findVexRuleFromPath(vexRulePath string, vexRules []VexRule) (VexRule, bool)
 // Some more requirements to consider:
 // Application / Creation of vex rules counts as a vote
 
-var NoRecommendationErr = fmt.Errorf("no recommendation")
+var ErrNoRecommendation = fmt.Errorf("no recommendation")
 
 func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, organizations []Organization, projects []Project, assets []Asset) (VexRule, error) {
 	var adjustedDiminishmentFactor = baseDiminishmentFactor
@@ -269,7 +269,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	// [Mitigation 15] Require a minimum number of voters for a decision; disabling the recommendation when too few voters remain
 	if validVotesCount < minVoterThreshold {
 		slog.Info("not enough valid votes to create a crowdsourced VEX rule", "validVotesCount", validVotesCount)
-		return VexRule{}, NoRecommendationErr
+		return VexRule{}, ErrNoRecommendation
 	}
 
 	var crowdsourcedVexRule VexRule
@@ -285,14 +285,14 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	// [Mitigation 31] Use standardized cutoff; test with extreme values; define deterministictie-breaking rules
 	// After the sorting, the VexRule with the highest confidence will be at the end of the sortableVotes slice, so we can compare it with the second to last to check for a tie
 	if len(sortableVotes) == 0 {
-		return VexRule{}, NoRecommendationErr
+		return VexRule{}, ErrNoRecommendation
 	}
 	if len(sortableVotes) > 1 {
 		if votes[sortableVotes[len(sortableVotes)-1]].Value == votes[sortableVotes[len(sortableVotes)-2]].Value {
 			// Inconclusive result, no clear winner
 			// In this case we don't recommend any VexRule to the user, to encourage manual assessment by the user
 			// to generate more data for a better recommendation in the future
-			return VexRule{}, NoRecommendationErr
+			return VexRule{}, ErrNoRecommendation
 		} else {
 			// At this point we have a recommendation for a VexRule and want to return the datastructure of the VexRule to the user
 			// For that take any fitting VexRule from the database, since they should all be the same

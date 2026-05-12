@@ -34,7 +34,7 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	rule, err := c.crowdsourcedVexingService.Recommend(ctx, nil, dependencyVulnIDParsed)
 
 	if err != nil {
-		if errors.Is(err, crowdsourcevexing.NoRecommendationErr) {
+		if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
 			return ctx.NoContent(204)
 		}
 		return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
