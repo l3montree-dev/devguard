@@ -741,7 +741,13 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 }
 
 func truncateCveRelatedTables(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `TRUNCATE cves, affected_components, cve_relationships, cve_affected_component CASCADE`); err != nil {
+	// Drop the FK from exploits before truncating so that CASCADE does not silently
+	// wipe exploit rows — exploits may not be part of the current import batch.
+	// AddIndexesAndConstraints re-adds the constraint after CVE rows are flushed.
+	if _, err := tx.Exec(ctx, `
+		ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
+		TRUNCATE cves, affected_components, cve_relationships, cve_affected_component CASCADE;
+	`); err != nil {
 		return fmt.Errorf("could not truncate cve-related tables: %w", err)
 	}
 	return nil
