@@ -70,6 +70,7 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 
 func (runner *DaemonRunner) runDaemons() {
 	ctx := context.Background()
+
 	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {

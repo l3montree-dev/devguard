@@ -56,7 +56,6 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 // @Success 200 {object} models.Org
 // @Router /organizations [post]
 func (controller *OrgController) Create(ctx shared.Context) error {
-
 	var req dtos.OrgCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
@@ -71,8 +70,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "slug is required")
 	}
 
-	err := controller.orgService.CreateOrganization(ctx, &organization)
-	if err != nil {
+	if err := controller.orgService.CreateOrganization(ctx, &organization); err != nil {
 		return err
 	}
 

@@ -839,13 +839,9 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 	return result
 }
 
-// ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs or have VEX/CSAF.
+// ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs.
 // These cannot be automatically marked as "fixed".
 func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
-	// we need to reset the scope
-	oldScope := g.CurrentScopeID()
-	g.ClearScope()
-
 	counts := g.CountInfoSourcesPerComponent()
 	var result []string
 
@@ -853,10 +849,6 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 		if typeCounts[InfoSourceSBOM] > 1 {
 			result = append(result, id)
 		}
-	}
-	err := g.Scope(oldScope)
-	if err != nil {
-		panic("failed to restore scope after counting info sources: " + err.Error())
 	}
 
 	return result
@@ -917,7 +909,6 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 
 		// Get parents of the last node
 		parents := reverseEdges[lastNode]
-		foundTermination := false
 
 		for _, parentID := range parents {
 			// Cycle detection
@@ -925,12 +916,27 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				continue
 			}
 
-			// Check if parent is NOT a component (termination condition)
+			// Check if parent is an info source node
 			// Use node type from graph instead of ID format, because BOMRef
 			// may not be a PURL even though the component has a valid PackageURL.
 			parentNode := g.Nodes[parentID]
-			if parentNode == nil || parentNode.Type != GraphNodeTypeComponent {
-				foundTermination = true
+			if parentNode.Type == GraphNodeTypeInfoSource {
+				// we found an info source node, but we cannot be sure
+				// if this info source node belongs to our scoped artifact
+				// if we scoped to an artifact at all.
+				if g.IsScoped() {
+					// check if the info source nodes parent is the artifact we scoped to
+					// if not, just discard this path, as it does not belong to the scoped artifact
+					parentArtifact := reverseEdges[parentID]
+					if len(parentArtifact) > 1 {
+						panic("more than one parent, makes no sense")
+					}
+
+					if parentArtifact[0] != g.ScopeID {
+						// this info source does not belong to the scoped artifact, discard path
+						continue
+					}
+				}
 				// Build path in correct order (root to target)
 				result := make([]string, len(current.path))
 				for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
@@ -953,25 +959,24 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			break
 		}
 
-		// If no termination found, continue extending path through component parents
-		if !foundTermination || len(parents) > 0 {
-			for _, parentID := range parents {
-				if current.onPath[parentID] {
-					continue
-				}
-				pNode := g.Nodes[parentID]
-				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
-					continue // Skip non-components for path extension
-				}
-				// Extend path
-				newPath := make([]string, len(current.path)+1)
-				copy(newPath, current.path)
-				newPath[len(current.path)] = parentID
-				newOnPath := make(map[string]bool, len(current.onPath)+1)
-				maps.Copy(newOnPath, current.onPath)
-				newOnPath[parentID] = true
-				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
+		// Always extend path through component parents, even if we found a termination,
+		// because a node can be reachable both directly from an info source and via other components.
+		for _, parentID := range parents {
+			if current.onPath[parentID] {
+				continue
 			}
+			pNode := g.Nodes[parentID]
+			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
+				continue // Skip non-components for path extension
+			}
+			// Extend path
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = parentID
+			newOnPath := make(map[string]bool, len(current.onPath)+1)
+			maps.Copy(newOnPath, current.onPath)
+			newOnPath[parentID] = true
+			queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 		}
 	}
 	// translate each path and path entry to the package purl of that component
