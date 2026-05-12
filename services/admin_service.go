@@ -9,15 +9,17 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/ory/client-go"
+	"gorm.io/gorm"
 )
 
 type AdminService struct {
-	casbinRBACProvider shared.RBACProvider
-	orgRepository      shared.OrganizationRepository
+	casbinRBACProvider   shared.RBACProvider
+	orgRepository        shared.OrganizationRepository
+	statisticsRepository shared.StatisticsRepository
 }
 
-func NewAdminService(casbinRBACProvider shared.RBACProvider, orgRepository shared.OrganizationRepository) *AdminService {
-	return &AdminService{casbinRBACProvider: casbinRBACProvider, orgRepository: orgRepository}
+func NewAdminService(casbinRBACProvider shared.RBACProvider, orgRepository shared.OrganizationRepository, statisticsRepository shared.StatisticsRepository) *AdminService {
+	return &AdminService{casbinRBACProvider: casbinRBACProvider, orgRepository: orgRepository, statisticsRepository: statisticsRepository}
 }
 
 func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
@@ -125,4 +127,18 @@ func (service AdminService) GetOrgsWhereUserIsOwner(ctx context.Context, userID 
 	}
 
 	return orgs, nil
+}
+
+func (service AdminService) GetInstanceUsageStatistics(ctx context.Context, tx *gorm.DB, authClient shared.AdminClient) (dtos.InstanceUsageStatistics, error) {
+	instanceStatistics, err := service.statisticsRepository.GetInstanceUsageStatistics(ctx, tx)
+	if err != nil {
+		return dtos.InstanceUsageStatistics{}, fmt.Errorf("could not calculate usage statistics from database: %w", err)
+	}
+
+	users, err := authClient.ListUser(client.IdentityAPIListIdentitiesRequest{})
+	if err != nil {
+		return dtos.InstanceUsageStatistics{}, fmt.Errorf("could not list users from oras: %w", err)
+	}
+	instanceStatistics.NumberOfUsers = len(users)
+	return instanceStatistics, nil
 }

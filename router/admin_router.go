@@ -44,11 +44,13 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 	adminRouter.GET("/users/:userID/", adminController.GetUserInformation)
 
 	adminRouter.PATCH("/assets/:assetID/", adminController.UpdateAsset)
+
+	adminRouter.GET("/statistics/usage/", adminController.GetInstanceUsageStatistics)
+
 	// Daemon trigger endpoints – each daemon has its own SSE trigger route
 	daemonGroup := adminRouter.Group("/daemons")
 	daemonGroup.POST("/open-source-insights/trigger/", adminController.TriggerOpenSourceInsights)
 	daemonGroup.POST("/vulndb/trigger/", adminController.TriggerVulnDB)
-	daemonGroup.POST("/vulndb-cleanup/trigger/", adminController.TriggerVulnDBCleanup)
 	daemonGroup.POST("/fixed-versions/trigger/", adminController.TriggerFixedVersions)
 	daemonGroup.POST("/asset-pipeline-all/trigger/", adminController.TriggerAssetPipelineAll)
 	daemonGroup.POST("/asset-pipeline-single/trigger/", adminController.TriggerAssetPipelineSingle)

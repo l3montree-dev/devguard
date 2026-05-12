@@ -44,28 +44,29 @@ type daemonTriggerTimestamp struct {
 type AdminController struct {
 	adminService    shared.AdminService
 	adminRepository shared.AdminRepository
-	assetService    shared.AssetService
 
-	daemonRunner        shared.DaemonRunner
-	vulnDBImportService shared.VulnDBImportService
-	configService       shared.ConfigService
+	assetService      shared.AssetService
+	statisticsService shared.StatisticsService
+
+	daemonRunner  shared.DaemonRunner
+	configService shared.ConfigService
 }
 
 func NewAdminController(
 	daemonRunner shared.DaemonRunner,
 	adminService shared.AdminService,
 	adminRepository shared.AdminRepository,
+	statisticsService shared.StatisticsService,
 	assetService shared.AssetService,
-	vulnDBImportService shared.VulnDBImportService,
 	configService shared.ConfigService,
 ) *AdminController {
 	return &AdminController{
-		daemonRunner:        daemonRunner,
-		adminService:        adminService,
-		adminRepository:     adminRepository,
-		assetService:        assetService,
-		vulnDBImportService: vulnDBImportService,
-		configService:       configService,
+		daemonRunner:      daemonRunner,
+		adminService:      adminService,
+		adminRepository:   adminRepository,
+		assetService:      assetService,
+		statisticsService: statisticsService,
+		configService:     configService,
 	}
 }
 
@@ -231,6 +232,19 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context) error {
+	authAdminClient := shared.GetAuthAdminClient(ctx)
+	if authAdminClient == nil {
+		return echo.NewHTTPError(500, "could not get auth client")
+	}
+
+	usageStatistics, err := controller.adminService.GetInstanceUsageStatistics(context.Background(), nil, authAdminClient)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not calculate instance statistics").WithInternal(err)
+	}
+	return ctx.JSON(200, usageStatistics)
+}
+
 // checkCooldown reads the config DB for the last trigger time and returns an
 // error message if the cooldown has not elapsed yet.
 // Because the timestamp lives in the shared config DB table, this correctly
@@ -342,22 +356,6 @@ func (controller *AdminController) TriggerVulnDB(ctx shared.Context) error {
 	return controller.runDaemonSSE(ctx, "vulndb.vulndb", "VulnDB Import", func(sse *sseWriter) error {
 		sse.sendLog("Running VulnDB import…")
 		return controller.daemonRunner.UpdateVulnDB(ctx.Request().Context())
-	})
-}
-
-// TriggerVulnDBCleanup removes orphaned tables from failed VulnDB imports.
-//
-// @Summary Trigger VulnDB cleanup
-// @Description Removes orphaned database tables left over from failed VulnDB imports. Returns an SSE stream with log, done, and error events. Subject to a 5-minute cooldown.
-// @Tags Admin Daemons
-// @Security AdminSignedAuth
-// @Produce text/event-stream
-// @Success 200 {string} string "SSE stream (event: log | done | error)"
-// @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
-// @Router /admin/daemons/vulndb-cleanup/trigger [post]
-func (controller *AdminController) TriggerVulnDBCleanup(ctx shared.Context) error {
-	return controller.runDaemonSSE(ctx, "daemon.vulndbCleanup", "VulnDB Cleanup", func(sse *sseWriter) error {
-		return controller.vulnDBImportService.CleanupOrphanedTables(ctx.Request().Context())
 	})
 }
 

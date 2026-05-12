@@ -217,3 +217,12 @@ type OrgOverview struct {
 
 	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`
 }
+
+type InstanceUsageStatistics struct {
+	NumberOfUsers                         int
+	NumberOfOrganizations                 int
+	NumberOfProjects                      int
+	NumberOfAssetVersions                 int
+	NumberOfTicketSyncedProjects          int
+	NumberOfProjectsWithGitlabIntegration int
+}

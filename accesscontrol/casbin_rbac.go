@@ -434,6 +434,13 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	return domains, nil
 }
 
+func (c casbinRBACProvider) GetAllUsers() ([]string, error) {
+	concurrencyMutex.RLock()
+	users, err := c.enforcer.GetAllUsers()
+	concurrencyMutex.RUnlock()
+	return users, err
+}
+
 // get all organizations where the given user has the owner role
 func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error) {
 	concurrencyMutex.RLock()

@@ -583,6 +583,8 @@ type StatisticsRepository interface {
 	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
 	GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)
 	CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx DB, assetVersion models.AssetVersion) ([]models.CVE, error)
+
+	GetInstanceUsageStatistics(ctx context.Context, tx DB) (dtos.InstanceUsageStatistics, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
@@ -663,6 +665,7 @@ type AdminService interface {
 	GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error)
 	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
 	GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error)
+	GetInstanceUsageStatistics(ctx context.Context, tx DB, authClient AdminClient) (dtos.InstanceUsageStatistics, error)
 }
 
 type AdminRepository interface {
@@ -727,6 +730,7 @@ type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
 	GetOwnerDomainsOfUser(user string) ([]string, error)
+	GetAllUsers() ([]string, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
