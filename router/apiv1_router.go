@@ -44,6 +44,7 @@ func NewAPIV1Router(srv api.Server,
 	pool *pgxpool.Pool,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin shared.AdminClient,
+	configService shared.ConfigService,
 	assetController *controllers.AssetController,
 	intotoController *controllers.InToToController,
 	csafController *controllers.CSAFController,
@@ -268,6 +269,15 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
 	apiV1Router.GET("/renovate/recommendation/", dependencyVulnController.GetRecommendation)
+
+	apiV1Router.GET("/instance-settings/", func(ctx echo.Context) error {
+		settings, err := configService.GetInstanceSettings(ctx.Request().Context())
+		if err != nil {
+			// If the setting is not found, return empty settings with 200 status
+			return ctx.JSON(200, shared.InstanceSettings{})
+		}
+		return ctx.JSON(200, settings)
+	})
 
 	// csaf routes
 	apiV1Router.GET("/.well-known/csaf-aggregator/aggregator.json/", csafController.GetAggregatorJSON)

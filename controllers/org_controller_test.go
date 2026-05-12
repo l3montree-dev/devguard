@@ -258,7 +258,6 @@ func TestCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		h := NewOrganizationController(nil, nil, nil, nil, nil)
-
 		err := h.Create(ctx)
 		if err == nil {
 			t.Fail()

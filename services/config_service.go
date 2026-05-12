@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"os"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -48,4 +49,23 @@ func (service ConfigService) SetJSONConfig(ctx context.Context, key string, v an
 
 func (service ConfigService) RemoveConfig(ctx context.Context, key string) error {
 	return service.repository.GetDB(ctx, nil).Where("key = ?", key).Delete(&models.Config{}).Error
+}
+
+func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
+	var settings shared.InstanceSettings
+	err := service.GetJSONConfig(ctx, "instanceSettings", &settings)
+	//if there is an error, we return default settings from environment variables
+	if err != nil {
+		singleOrganizationMode := os.Getenv("SINGLE_ORGANIZATION_MODE")
+		if singleOrganizationMode == "true" {
+			settings.SingleOrganizationMode = true
+		} else {
+			settings.SingleOrganizationMode = false
+		}
+		err = service.SetJSONConfig(ctx, "instanceSettings", settings)
+		if err != nil {
+			return shared.InstanceSettings{}, err
+		}
+	}
+	return settings, nil
 }
