@@ -43,7 +43,7 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 	adminRouter.GET("/organizations/:orgID/", adminController.GetOrgInformation)
 	adminRouter.GET("/users/:userID/", adminController.GetUserInformation)
 
-	adminRouter.PATCH("/assets/:assetID", adminController.UpdateAsset)
+	adminRouter.PATCH("/assets/:assetID/", adminController.UpdateAsset)
 	// Daemon trigger endpoints – each daemon has its own SSE trigger route
 	daemonGroup := adminRouter.Group("/daemons")
 	daemonGroup.POST("/open-source-insights/trigger/", adminController.TriggerOpenSourceInsights)

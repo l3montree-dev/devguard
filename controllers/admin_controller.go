@@ -213,7 +213,7 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 
 	var updateRequest dtos.UpdateAssetRequest
 	err = ctx.Bind(&updateRequest)
-	if err != nil {
+	if err != nil || updateRequest.NewSlug == "" {
 		return echo.NewHTTPError(400, "could not parse request body")
 	}
 
