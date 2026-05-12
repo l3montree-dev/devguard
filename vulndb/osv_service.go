@@ -79,6 +79,7 @@ var importEcosystems = []string{
 var ignoreVulnerabilityEcosystems = []string{
 	"CGA",
 	"GSD",
+	"OSV",
 }
 
 type cveAffectedComponentRow struct {
@@ -947,5 +948,6 @@ func shouldIgnoreVulnerabilityID(id string) bool {
 		// false negatives are ok
 		return false
 	}
+
 	return slices.Contains(ignoreVulnerabilityEcosystems, prefix)
 }

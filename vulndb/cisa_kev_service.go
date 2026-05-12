@@ -188,6 +188,11 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
 	}
 
+	// Reset all CISA KEV fields before re-applying so CVEs that fell off the catalog are cleared.
+	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = '', cisa_vulnerability_name = ''`); err != nil {
+		return fmt.Errorf("could not reset cisa kev fields: %w", err)
+	}
+
 	// Update direct CVEs and alias CVEs (linked via cve_relationships) in one statement.
 	if _, err := tx.Exec(ctx, `
 		UPDATE cves SET
