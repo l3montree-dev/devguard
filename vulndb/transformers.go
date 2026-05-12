@@ -79,7 +79,7 @@ func gobOSVToMalFilterTransformer(lastImportTime time.Time) func([]OSVEntry) mal
 		}
 	}
 }
-func gobOSVToVulnFilterTransformer(lastImportTime time.Time, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64) func([]OSVEntry) vulndbRows {
+func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existingCVEIDs map[int64]struct{}, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64) func([]OSVEntry) vulndbRows {
 	if componentToCVEs == nil {
 		componentToCVEs = make(map[int64][]int64)
 	}
@@ -94,8 +94,13 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, componentToCVEs map
 		deleteCveAffectedComponents := make([]cveAffectedComponentRow, 0)
 
 		for i := range elements {
-			if !lastImportTime.IsZero() && !elements[i].ModifiedTimestamp.After(lastImportTime) {
-				continue
+			if !lastImportTime.IsZero() {
+				cveID := models.CalculateHashForCVE(elements[i].OSV.ID)
+				_, alreadyInDB := existingCVEIDs[cveID]
+				if alreadyInDB && !elements[i].ModifiedTimestamp.After(lastImportTime) {
+					continue
+				}
+				// new entry (not yet in DB): always import regardless of modified timestamp
 			}
 
 			// check if malicious package or vulnerability
@@ -151,8 +156,8 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, componentToCVEs map
 	}
 }
 
-func gobOSVStreamer(ctx context.Context, lastImportTime time.Time, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, vulndbChan chan<- vulndbRows) func([]OSVEntry) error {
-	transform := gobOSVToVulnFilterTransformer(lastImportTime, componentToCVEs, cveToComponents)
+func gobOSVStreamer(ctx context.Context, lastImportTime time.Time, existingCVEIDs map[int64]struct{}, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, vulndbChan chan<- vulndbRows) func([]OSVEntry) error {
+	transform := gobOSVToVulnFilterTransformer(lastImportTime, existingCVEIDs, componentToCVEs, cveToComponents)
 	return func(elements []OSVEntry) error {
 		vulndbRows := transform(elements)
 		select {

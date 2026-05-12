@@ -18,7 +18,6 @@ package vulndb
 import (
 	"archive/zip"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -101,9 +100,8 @@ type OSVEntry struct {
 }
 
 type zipJob struct {
-	File          *zip.File
-	Ecosystem     string
-	ModifiedTimes map[string]time.Time // parsed from modified_id.csv in the ecosystem zip
+	File      *zip.File
+	Ecosystem string
 }
 
 const numberOfZipWorkers = 10
@@ -175,7 +173,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
 	malRows := gobOSVToMalFilterTransformer(time.Time{})(allOSVVulns)
-	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil)(allOSVVulns)
+	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil, nil)(allOSVVulns)
 	fakeRows, fakeComps := buildFakePackages()
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
@@ -265,9 +263,6 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 		return
 	}
 
-	// Parse modified_id.csv if present to get authoritative modification timestamps.
-	modifiedTimes := parseModifiedIDCSV(zipReader)
-
 	// filter and push all jobs to the zip worker functions
 	for i := range zipReader.File {
 		// first check if we want to even include this vuln based on the file name
@@ -281,7 +276,7 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 			continue
 		}
 
-		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem, ModifiedTimes: modifiedTimes}
+		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem}
 	}
 	slog.Info("finished extracting zip file", "ecosystem", ecosystem, "took", time.Since(start))
 }
@@ -350,19 +345,34 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 			continue
 		}
 
-		// Use the timestamp from modified_id.csv if present; fall back to the JSON field.
-		modifiedAt := osvEntry.Modified
-		if ts, ok := job.ModifiedTimes[osvEntry.ID]; ok {
-			modifiedAt = ts
-		}
-
 		// cut all vulns which are newer than our import start
-		if modifiedAt.After(importStart) {
+		if osvEntry.Modified.After(importStart) {
 			slog.Warn("ran into race condition on import, skipping vuln with newer information")
 			continue
 		}
-		output <- OSVEntry{OSV: &osvEntry, ModifiedTimestamp: modifiedAt}
+		output <- OSVEntry{OSV: &osvEntry, ModifiedTimestamp: osvEntry.Modified}
 	}
+}
+
+func getExistingCVEIDs(ctx context.Context, tx pgx.Tx) (map[int64]struct{}, error) {
+	rows, err := tx.Query(ctx, `SELECT id FROM cves`)
+	if err != nil {
+		return nil, fmt.Errorf("could not query existing CVE IDs: %w", err)
+	}
+	m := make(map[int64]struct{}, 200_000)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("could not scan CVE ID: %w", err)
+		}
+		m[id] = struct{}{}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating CVE IDs: %w", err)
+	}
+	return m, nil
 }
 
 // getCurrentAffectedComponents returns two maps built from cve_affected_component:
@@ -902,45 +912,6 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	}
 }
 
-// parseModifiedIDCSV reads the modified_id.csv file from an ecosystem zip and returns
-// a map of vulnerability ID → last-modified time. If the file is absent or unparseable,
-// an empty (non-nil) map is returned so callers can always do a safe map lookup.
-func parseModifiedIDCSV(zipReader *zip.Reader) map[string]time.Time {
-	result := make(map[string]time.Time)
-	for _, f := range zipReader.File {
-		if f.Name != "modified_id.csv" {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			slog.Warn("could not open modified_id.csv", "err", err)
-			return result
-		}
-		defer rc.Close()
-		r := csv.NewReader(rc)
-		r.ReuseRecord = true
-		// skip header row
-		if _, err := r.Read(); err != nil {
-			return result
-		}
-		for {
-			record, err := r.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil || len(record) < 2 {
-				continue
-			}
-			ts, err := time.Parse(time.RFC3339, record[1])
-			if err != nil {
-				continue
-			}
-			result[record[0]] = ts
-		}
-		return result
-	}
-	return result
-}
 
 func shouldIgnoreVulnerabilityID(id string) bool {
 	prefix, _, ok := strings.Cut(id, "-")
