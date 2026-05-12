@@ -150,3 +150,65 @@ func (_c *RBACProvider_GetDomainRBAC_Call) RunAndReturn(run func(domain string) 
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetOwnerDomainsOfUser provides a mock function for the type RBACProvider
+func (_mock *RBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error) {
+	ret := _mock.Called(user)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOwnerDomainsOfUser")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
+		return returnFunc(user)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
+		r0 = returnFunc(user)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(user)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// RBACProvider_GetOwnerDomainsOfUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOwnerDomainsOfUser'
+type RBACProvider_GetOwnerDomainsOfUser_Call struct {
+	*mock.Call
+}
+
+// GetOwnerDomainsOfUser is a helper method to define mock.On call
+//   - user string
+func (_e *RBACProvider_Expecter) GetOwnerDomainsOfUser(user interface{}) *RBACProvider_GetOwnerDomainsOfUser_Call {
+	return &RBACProvider_GetOwnerDomainsOfUser_Call{Call: _e.mock.On("GetOwnerDomainsOfUser", user)}
+}
+
+func (_c *RBACProvider_GetOwnerDomainsOfUser_Call) Run(run func(user string)) *RBACProvider_GetOwnerDomainsOfUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *RBACProvider_GetOwnerDomainsOfUser_Call) Return(strings []string, err error) *RBACProvider_GetOwnerDomainsOfUser_Call {
+	_c.Call.Return(strings, err)
+	return _c
+}
+
+func (_c *RBACProvider_GetOwnerDomainsOfUser_Call) RunAndReturn(run func(user string) ([]string, error)) *RBACProvider_GetOwnerDomainsOfUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
