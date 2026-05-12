@@ -1393,6 +1393,60 @@ func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 	})
 }
 
+func TestFindAllComponentOnlyPathsToPURL_ScopeIsolation(t *testing.T) {
+	// Regression: when two artifacts both have the same vulnerable dependency,
+	// FindAllComponentOnlyPathsToPURL without a scope returned paths from both
+	// artifacts. With a scope set to one artifact, only paths reachable through
+	// that artifact's info source must be returned.
+	t.Run("two artifacts share same vuln purl - scoped to first returns only its path", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Artifact 1: app1 -> sbom1 -> lodash (vulnerable)
+		artifact1ID := g.AddArtifact("app1")
+		infoSource1 := g.AddInfoSource(artifact1ID, "app1/sbom.json", InfoSourceSBOM)
+
+		// Artifact 2: app2 -> sbom2 -> dep -> lodash (vulnerable, deeper path)
+		artifact2ID := g.AddArtifact("app2")
+		infoSource2 := g.AddInfoSource(artifact2ID, "app2/sbom.json", InfoSourceSBOM)
+
+		lodash := cdx.Component{BOMRef: "pkg:npm/lodash@4.17.20", PackageURL: "pkg:npm/lodash@4.17.20"}
+		lodashID := g.AddComponent(lodash)
+
+		dep := cdx.Component{BOMRef: "pkg:npm/some-dep@1.0.0", PackageURL: "pkg:npm/some-dep@1.0.0"}
+		depID := g.AddComponent(dep)
+
+		// app1: direct edge to lodash
+		g.AddEdge(infoSource1, lodashID)
+
+		// app2: edge through an intermediate dep
+		g.AddEdge(infoSource2, depID)
+		g.AddEdge(depID, lodashID)
+
+		// Without scope: both paths must be visible
+		allPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, allPaths, 2, "unscoped graph should return paths from both artifacts")
+
+		// Scope to artifact1: only the direct path through app1 must be returned
+		err := g.ScopeToArtifact("app1")
+		assert.NoError(t, err)
+		scopedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, scopedPaths, 1, "scoped to app1 should return exactly one path")
+		assert.Equal(t, Path([]string{"pkg:npm/lodash@4.17.20"}), scopedPaths[0])
+
+		// Scope to artifact2: only the path through dep must be returned
+		g.ClearScope()
+		err = g.ScopeToArtifact("app2")
+		assert.NoError(t, err)
+		scopedPaths2 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, scopedPaths2, 1, "scoped to app2 should return exactly one path")
+		assert.Equal(t, Path([]string{"pkg:npm/some-dep@1.0.0", "pkg:npm/lodash@4.17.20"}), scopedPaths2[0])
+
+		// Sanity: artifact IDs must differ so they are really separate subgraphs
+		assert.NotEqual(t, artifact1ID, artifact2ID)
+		assert.NotEqual(t, infoSource1, infoSource2)
+	})
+}
+
 func TestVulnerabilities(t *testing.T) {
 	t.Run("empty graph returns no vulnerabilities", func(t *testing.T) {
 		g := NewSBOMGraph()

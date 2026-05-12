@@ -2853,3 +2853,89 @@ func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 		})
 	})
 }
+
+func TestScanScopedToArtifact(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("each scan is scoped to its own artifact and returns only vulns reachable within that artifact", func(t *testing.T) {
+			// Scan 1: artifact1 mit infosource "oci"
+			// Graph: root -> [A, B, X(vulnerabel)] — X ist direkte Abhängigkeit
+			sbomFile1, err := os.Open("testdata/sbom-oci-flat.json")
+			assert.Nil(t, err)
+			defer sbomFile1.Close()
+
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile1)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "oci")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var response1 dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response1)
+			assert.Nil(t, err)
+			assert.Equal(t, 1, response1.AmountOpened)
+			assert.Equal(t, 0, response1.AmountClosed)
+			assert.Len(t, response1.DependencyVulns, 1)
+			assert.Equal(t, "CVE-2025-46569", response1.DependencyVulns[0].CVEID)
+			// X ist direkte Abhängigkeit → Pfad enthält nur X
+			assert.Equal(t, []string{
+				"pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+			}, response1.DependencyVulns[0].VulnerabilityPath)
+
+			// Scan 2: artifact2 mit infosource "source"
+			// Graph: root -> A -> B -> X(vulnerabel) — transitive Kette
+			sbomFile2, err := os.Open("testdata/sbom-source-chain.json")
+			assert.Nil(t, err)
+			defer sbomFile2.Close()
+
+			recorder = httptest.NewRecorder()
+			req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile2)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact2")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-Origin", "source")
+			ctx = app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err = controller.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var response2 dtos.ScanResponse
+			err = json.Unmarshal(recorder.Body.Bytes(), &response2)
+			assert.Nil(t, err)
+			assert.Equal(t, 1, response2.AmountOpened)
+			assert.Equal(t, 0, response2.AmountClosed)
+			assert.Len(t, response2.DependencyVulns, 1)
+			assert.Equal(t, "CVE-2025-46569", response2.DependencyVulns[0].CVEID)
+			// X ist transitiv über A -> B erreichbar → Pfad ist A, B, X
+			assert.Equal(t, []string{
+				"pkg:golang/github.com/test/comp-a@v1.0.0",
+				"pkg:golang/github.com/test/comp-b@v1.0.0",
+				"pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
+			}, response2.DependencyVulns[0].VulnerabilityPath)
+		})
+	})
+}
