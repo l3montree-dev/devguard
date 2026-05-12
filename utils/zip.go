@@ -20,18 +20,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 )
-
-func ReadZipFile(zf *zip.File) ([]byte, error) {
-	f, err := zf.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return io.ReadAll(f)
-}
 
 func ZipReaderFromResponse(resp *http.Response) (*zip.Reader, error) {
 	body, err := io.ReadAll(resp.Body)
@@ -40,57 +29,4 @@ func ZipReaderFromResponse(resp *http.Response) (*zip.Reader, error) {
 	}
 
 	return zip.NewReader(bytes.NewReader(body), int64(len(body)))
-}
-
-func Unzip(src, dest string) error {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
-		// Store filename/path for returning and using later on
-		fpath := dest + f.Name
-
-		if f.FileInfo().IsDir() {
-			// Make Folder
-			err = os.MkdirAll(fpath, os.ModePerm)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Make File
-			if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-				return err
-			}
-
-			outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				return err
-			}
-
-			// Define a maximum size for the decompressed data
-			const maxSize = (1000 << 20) * 10 // 10 GB
-
-			// Create a LimitedReader to cap the size of the decompressed data
-			lr := &io.LimitedReader{R: rc, N: maxSize}
-
-			_, err = io.Copy(outFile, lr)
-
-			// Close the file without defer to close before next iteration of loop
-			outFile.Close()
-
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

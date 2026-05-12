@@ -53,11 +53,11 @@ func (g *cveRepository) FindAll(ctx context.Context, tx *gorm.DB, cveIDs []strin
 	return cves, err
 }
 
-func (g *cveRepository) SaveCveAffectedComponents(ctx context.Context, tx *gorm.DB, cveID string, affectedComponentHashes []string) error {
+func (g *cveRepository) SaveCveAffectedComponents(ctx context.Context, tx *gorm.DB, cveID string, affectedComponentHashes []int64) error {
 
-	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c string) string {
+	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c int64) int64 {
 		return c
-	}), func(c string) models.AffectedComponent {
+	}), func(c int64) models.AffectedComponent {
 		return models.AffectedComponent{
 			ID: c,
 		}
@@ -200,14 +200,14 @@ func (g *cveRepository) CreateCVEWithConflictHandling(ctx context.Context, tx *g
 
 func (g *cveRepository) CreateCVEAffectedComponentsEntries(ctx context.Context, tx *gorm.DB, cve *models.CVE, components []models.AffectedComponent) error {
 	cves := make([]string, len(components))
-	affectedComponents := make([]string, len(components))
+	affectedComponents := make([]int64, len(components))
 
 	for i := range components {
 		cves[i] = cve.CVE
 		affectedComponents[i] = components[i].CalculateHash()
 	}
 
-	query := `INSERT INTO cve_affected_component (affected_component_id,cvecve) 
+	query := `INSERT INTO cve_affected_component (affected_component_id,cve_id) 
 	SELECT 
 	unnest($1::text[]),
 	unnest($2::text[])
@@ -232,6 +232,11 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 		if percentileValue != nil {
 			percentiles[i] = *percentileValue
 		}
+	}
+
+	// reset the epss and percentile values for all cves that are in the batch but have no epss or percentile value. This is necessary because the FIRST might remove the epss or percentile value for a cve and we need to reflect this in our database.
+	if err := g.GetDB(ctx, tx).Exec("UPDATE cves SET epss = NULL, percentile = NULL").Error; err != nil {
+		return err
 	}
 
 	sql := `UPDATE cves SET epss = new.epss, percentile = new.percentile

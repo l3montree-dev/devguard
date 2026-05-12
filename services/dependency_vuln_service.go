@@ -85,7 +85,8 @@ func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error
 }
 
 func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
-	if len(dependencyVulns) == 0 {
+	// we are not creating fixed or reopened events, if the user is "system", because this can only happen if there is a problem with the scanner or the database.
+	if len(dependencyVulns) == 0 || userID == "system" {
 		return nil
 	}
 
@@ -107,7 +108,8 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 }
 
 func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln) error {
-	if len(dependencyVulns) == 0 {
+	// we are not creating fixed or reopened events, if the user is "system", because this can only happen if there is a problem with the scanner or the database.
+	if len(dependencyVulns) == 0 || userID == "system" {
 		return nil
 	}
 

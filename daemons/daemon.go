@@ -34,7 +34,7 @@ func shouldMirror(configService shared.ConfigService, key string) bool {
 		return false
 	}
 
-	return time.Since(lastTime) > 12*time.Hour
+	return time.Since(lastTime) > 1*time.Hour
 }
 
 func markMirrored(configService shared.ConfigService, key string) error {
@@ -70,6 +70,7 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 
 func (runner *DaemonRunner) runDaemons() {
 	ctx := context.Background()
+
 	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {

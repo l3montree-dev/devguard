@@ -839,13 +839,9 @@ func (g *SBOMGraph) CountInfoSourcesPerComponent() map[string]map[InfoSourceType
 	return result
 }
 
-// ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs or have VEX/CSAF.
+// ComponentsWithMultipleSources returns component IDs that appear in multiple SBOMs.
 // These cannot be automatically marked as "fixed".
 func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
-	// we need to reset the scope
-	oldScope := g.CurrentScopeID()
-	g.ClearScope()
-
 	counts := g.CountInfoSourcesPerComponent()
 	var result []string
 
@@ -853,10 +849,6 @@ func (g *SBOMGraph) ComponentsWithMultipleSources() []string {
 		if typeCounts[InfoSourceSBOM] > 1 {
 			result = append(result, id)
 		}
-	}
-	err := g.Scope(oldScope)
-	if err != nil {
-		panic("failed to restore scope after counting info sources: " + err.Error())
 	}
 
 	return result
@@ -917,7 +909,6 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 
 		// Get parents of the last node
 		parents := reverseEdges[lastNode]
-		foundTermination := false
 
 		for _, parentID := range parents {
 			// Cycle detection
@@ -925,12 +916,27 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 				continue
 			}
 
-			// Check if parent is NOT a component (termination condition)
+			// Check if parent is an info source node
 			// Use node type from graph instead of ID format, because BOMRef
 			// may not be a PURL even though the component has a valid PackageURL.
 			parentNode := g.Nodes[parentID]
-			if parentNode == nil || parentNode.Type != GraphNodeTypeComponent {
-				foundTermination = true
+			if parentNode.Type == GraphNodeTypeInfoSource {
+				// we found an info source node, but we cannot be sure
+				// if this info source node belongs to our scoped artifact
+				// if we scoped to an artifact at all.
+				if g.IsScoped() {
+					// check if the info source nodes parent is the artifact we scoped to
+					// if not, just discard this path, as it does not belong to the scoped artifact
+					parentArtifact := reverseEdges[parentID]
+					if len(parentArtifact) > 1 {
+						panic("more than one parent, makes no sense")
+					}
+
+					if parentArtifact[0] != g.ScopeID {
+						// this info source does not belong to the scoped artifact, discard path
+						continue
+					}
+				}
 				// Build path in correct order (root to target)
 				result := make([]string, len(current.path))
 				for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
@@ -953,25 +959,24 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			break
 		}
 
-		// If no termination found, continue extending path through component parents
-		if !foundTermination || len(parents) > 0 {
-			for _, parentID := range parents {
-				if current.onPath[parentID] {
-					continue
-				}
-				pNode := g.Nodes[parentID]
-				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
-					continue // Skip non-components for path extension
-				}
-				// Extend path
-				newPath := make([]string, len(current.path)+1)
-				copy(newPath, current.path)
-				newPath[len(current.path)] = parentID
-				newOnPath := make(map[string]bool, len(current.onPath)+1)
-				maps.Copy(newOnPath, current.onPath)
-				newOnPath[parentID] = true
-				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
+		// Always extend path through component parents, even if we found a termination,
+		// because a node can be reachable both directly from an info source and via other components.
+		for _, parentID := range parents {
+			if current.onPath[parentID] {
+				continue
 			}
+			pNode := g.Nodes[parentID]
+			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
+				continue // Skip non-components for path extension
+			}
+			// Extend path
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = parentID
+			newOnPath := make(map[string]bool, len(current.onPath)+1)
+			maps.Copy(newOnPath, current.onPath)
+			newOnPath[parentID] = true
+			queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 		}
 	}
 	// translate each path and path entry to the package purl of that component
@@ -1334,69 +1339,6 @@ func RemoveInformationSourcePrefixIfExists(origin string) (InfoSourceType, strin
 	}
 
 	return "", origin
-}
-
-func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
-	// check root ref is the same
-	if a.Metadata == nil || b.Metadata == nil || a.Metadata.Component == nil || b.Metadata.Component == nil {
-		return fmt.Errorf("one of the boms has no metadata or component")
-	}
-	if a.Metadata.Component.BOMRef != b.Metadata.Component.BOMRef {
-		return fmt.Errorf("root bom refs do not match: %s != %s", a.Metadata.Component.BOMRef, b.Metadata.Component.BOMRef)
-	}
-	// check components count is the same
-	if a.Components == nil || b.Components == nil {
-		return fmt.Errorf("one of the boms has no components")
-	}
-	if len(*a.Components) != len(*b.Components) {
-		return fmt.Errorf("component counts do not match: %d != %d", len(*a.Components), len(*b.Components))
-	}
-	// check dependencies count is the same
-	if a.Dependencies == nil || b.Dependencies == nil {
-		return fmt.Errorf("one of the boms has no dependencies")
-	}
-	if len(*a.Dependencies) != len(*b.Dependencies) {
-		return fmt.Errorf("dependency counts do not match: %d != %d", len(*a.Dependencies), len(*b.Dependencies))
-	}
-
-	// check the component refs
-	componentRefsA := make(map[string]bool)
-	for _, comp := range *a.Components {
-		componentRefsA[comp.BOMRef] = true
-	}
-	for _, comp := range *b.Components {
-		if _, exists := componentRefsA[comp.BOMRef]; !exists {
-			return fmt.Errorf("component ref %s not found in both boms", comp.BOMRef)
-		}
-	}
-
-	// check the dependency refs
-	dependencyRefsA := make(map[string][]string)
-	for _, dep := range *a.Dependencies {
-		dependencyRefsA[dep.Ref] = *dep.Dependencies
-	}
-	for _, dep := range *b.Dependencies {
-		if _, exists := dependencyRefsA[dep.Ref]; !exists {
-			return fmt.Errorf("dependency ref %s not found in both boms", dep.Ref)
-		}
-		// check the dependencies are the same
-		depsA := dependencyRefsA[dep.Ref]
-		depsB := *dep.Dependencies
-		if len(depsA) != len(depsB) {
-			return fmt.Errorf("dependency counts for ref %s do not match: %d != %d", dep.Ref, len(depsA), len(depsB))
-		}
-		depMap := make(map[string]bool)
-		for _, d := range depsA {
-			depMap[d] = true
-		}
-		for _, d := range depsB {
-			if _, exists := depMap[d]; !exists {
-				return fmt.Errorf("dependency %s for ref %s not found in both boms", d, dep.Ref)
-			}
-		}
-	}
-
-	return nil
 }
 
 // =============================================================================

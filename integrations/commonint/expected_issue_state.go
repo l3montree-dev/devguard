@@ -62,7 +62,7 @@ func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *
 }
 
 func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln) ExpectedIssueState {
-	cvssThresholdExceeded := asset.CVSSAutomaticTicketThreshold != nil && float64(dependencyVuln.CVE.CVSS) >= *asset.CVSSAutomaticTicketThreshold
+	cvssThresholdExceeded := asset.CVSSAutomaticTicketThreshold != nil && float64(dependencyVuln.GetCVE().CVSS) >= *asset.CVSSAutomaticTicketThreshold
 	riskThresholdExceeded := asset.RiskAutomaticTicketThreshold != nil && utils.OrDefault(dependencyVuln.RawRiskAssessment, 0) >= *asset.RiskAutomaticTicketThreshold
 
 	// keep the ticket open if the state is open AND

@@ -20,10 +20,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func VEXRuleToDTO(rule models.VEXRule) dtos.VEXRuleDTO {
-	return VEXRuleToDTOWithCount(rule, 0)
-}
-
 func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRuleDTO {
 	return dtos.VEXRuleDTO{
 		// Primary key
@@ -45,5 +41,15 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 
 		// Metrics
 		AppliesToAmountOfDependencyVulns: appliesToCount,
+	}
+}
+
+func VEXRuleToRecommendationDTO(rule models.VEXRule) dtos.VexRuleRecommendation {
+	return dtos.VexRuleRecommendation{
+		CVEID:                   rule.CVEID,
+		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		Justification:           rule.Justification,
+		MechanicalJustification: rule.MechanicalJustification,
+		EventType:               rule.EventType,
 	}
 }

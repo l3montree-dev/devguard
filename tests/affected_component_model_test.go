@@ -106,18 +106,6 @@ func TestFromOSV(t *testing.T) {
 		if affectedComponents[0].Ecosystem != "" {
 			t.Errorf("Expected ecosystem to be ecosystem, got %s", affectedComponents[0].Ecosystem)
 		}
-		if affectedComponents[0].Scheme != "pkg" {
-			t.Errorf("Expected scheme to be pkg, got %s", affectedComponents[0].Scheme)
-		}
-		if affectedComponents[0].Type != "golang" {
-			t.Errorf("Expected type to be golang, got %s", affectedComponents[0].Type)
-		}
-		if affectedComponents[0].Name != "toolchain" {
-			t.Errorf("Expected name to be toolchain, got %s", affectedComponents[0].Name)
-		}
-		if *affectedComponents[0].Namespace != "" {
-			t.Errorf("Expected namespace to be '', got %s", *affectedComponents[0].Namespace)
-		}
 
 		// check the semver range
 		if affectedComponents[0].SemverIntroduced != nil {
@@ -131,9 +119,11 @@ func TestFromOSV(t *testing.T) {
 		// check the hash
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
-		if affectedComponents[0].ID != "cd146d09f2bf86c4" { // nolint:all
-			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
+		if affectedComponents[0].ID != affectedComponents[0].CalculateHash() { // nolint:all
+			t.Errorf("Expected ID to be set, got %d", affectedComponents[0].ID)
 		}
+
+		assert.Equal(t, affectedComponents[0].CalculateHash(), affectedComponents[0].CalculateHashFast(), "expect all hashes to be identical")
 	})
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
@@ -290,9 +280,6 @@ func TestFromOSV(t *testing.T) {
 		affectedComponents := transformer.AffectedComponentsFromOSV(&osv)
 		for _, ac := range affectedComponents {
 			assert.Equal(t, "pkg:github.com/nextcloud/server", ac.PurlWithoutVersion)
-			assert.Equal(t, ac.Type, "github.com")
-			assert.Equal(t, ac.Name, "server")
-			assert.Equal(t, *ac.Namespace, "nextcloud")
 			assert.Nil(t, ac.SemverIntroduced)
 			assert.Nil(t, ac.SemverFixed)
 			assert.Nil(t, ac.VersionIntroduced)
@@ -301,15 +288,10 @@ func TestFromOSV(t *testing.T) {
 	})
 }
 
-func ptr[T any](t T) *T {
-	return &t
-}
-
 func TestSetIdHash(t *testing.T) {
 	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
 		affectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
-			Namespace:          ptr("golang"),
 			CVE: []models.CVE{
 				{},
 			},
@@ -318,13 +300,12 @@ func TestSetIdHash(t *testing.T) {
 
 		otherAffectedComponent := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/toolchain",
-			Namespace:          ptr("golang"),
 			CVE:                make([]models.CVE, 0),
 		}
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck
 		if affectedComponent.ID != otherAffectedComponent.ID {
-			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
+			t.Errorf("Expected the same hash, got %d and %d", affectedComponent.ID, otherAffectedComponent.ID)
 		}
 	})
 }

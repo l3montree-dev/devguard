@@ -20,4 +20,5 @@ var RouterModule = fx.Options(
 	fx.Provide(NewOCIRegistryRouter),
 	fx.Provide(NewVEXRuleRouter),
 	fx.Provide(NewExternalReferenceRouter),
+	fx.Provide(NewCrowdsourcedVexingRouter),
 )

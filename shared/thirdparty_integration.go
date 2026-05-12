@@ -3,7 +3,6 @@ package shared
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -43,45 +42,16 @@ type IntegrationAggregate interface {
 
 type ExternalEntitySlug string
 
-func (e ExternalEntitySlug) String() string {
-	return string(e)
-}
-
-func (e ExternalEntitySlug) IsValid() bool {
-	// needs to contain @
-	return len(e) > 0 && strings.Contains(string(e), "@")
-}
-
-func (e ExternalEntitySlug) ProviderID() string {
-	// everything after the @ is the provider ID
-	parts := strings.SplitN(string(e), "@", 2)
-	if len(parts) != 2 {
-		return ""
+func MaybeGetArtifact(ctx Context) (models.Artifact, error) {
+	val := ctx.Get("artifact")
+	if val == nil {
+		return models.Artifact{}, fmt.Errorf("artifact not found in context")
 	}
-	return parts[1]
-}
-
-func (e ExternalEntitySlug) Slug() string {
-	// everything before the @ is the entity ID
-	parts := strings.SplitN(string(e), "@", 2)
-	if len(parts) != 2 {
-		return ""
+	if artifact, ok := val.(*models.Artifact); ok {
+		return *artifact, nil
 	}
-	return parts[0]
-}
-
-func (e ExternalEntitySlug) SameAs(slug string) bool {
-	// convert
-	otherSlug, err := FromStringToExternalEntitySlug(slug)
-	if err != nil {
-		return false
+	if artifact, ok := val.(models.Artifact); ok {
+		return artifact, nil
 	}
-	return e.Slug() == otherSlug.Slug() && e.ProviderID() == otherSlug.ProviderID()
-}
-
-func FromStringToExternalEntitySlug(s string) (ExternalEntitySlug, error) {
-	if !strings.Contains(s, "@") {
-		return "", fmt.Errorf("invalid external entity slug: %s", s)
-	}
-	return ExternalEntitySlug(s), nil
+	return models.Artifact{}, fmt.Errorf("artifact context value has unexpected type %T", val)
 }

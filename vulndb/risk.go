@@ -16,7 +16,10 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
+func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
+	if cve == nil {
+		return dtos.RiskCalculationReport{}
+	}
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
@@ -59,8 +62,8 @@ func RawRisk(cve models.CVE, env shared.Environmental, affectedComponentDepth in
 	}
 }
 
-func RiskCalculation(cve models.CVE, env shared.Environmental) (dtos.RiskMetrics, string) {
-	if cve.Vector == "" {
+func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetrics, string) {
+	if cve == nil || cve.Vector == "" {
 		return dtos.RiskMetrics{}, ""
 	}
 

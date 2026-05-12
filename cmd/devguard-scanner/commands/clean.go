@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -11,10 +10,6 @@ import (
 	cosignoptions "github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
 )
-
-func cleanImage(ctx context.Context, regOpts cosignoptions.RegistryOptions, cleanType cosignoptions.CleanType, imageRef string) error {
-	return cosignclean.CleanCmd(ctx, regOpts, cleanType, imageRef, true)
-}
 
 // NewCleanCommand returns a command that removes attestations/signatures from an OCI image.
 func NewCleanCommand() *cobra.Command {

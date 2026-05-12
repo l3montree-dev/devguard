@@ -59,7 +59,7 @@ type DaemonRunner struct {
 	scanService                  shared.ScanService
 	leaderElector                shared.LeaderElector
 	maliciousPackageChecker      shared.MaliciousPackageChecker
-	vulnDBImportService          shared.VulnDBImportService
+	vulnDBImportService          shared.VulnDBService
 	vexRuleService               shared.VEXRuleService
 
 	debugOptions         DebugOptions
@@ -102,7 +102,7 @@ func NewDaemonRunner(
 	scanService shared.ScanService,
 	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
-	vulnDBImportService shared.VulnDBImportService,
+	vulnDBImportService shared.VulnDBService,
 	vexRuleService shared.VEXRuleService,
 	fixedVersionResolver shared.FixedVersionResolver,
 ) *DaemonRunner {

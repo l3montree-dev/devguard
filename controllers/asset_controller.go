@@ -19,14 +19,14 @@ import (
 )
 
 type AssetController struct {
-	assetRepository              shared.AssetRepository
-	assetVersionRepository       shared.AssetVersionRepository
+	assetRepository               shared.AssetRepository
+	assetVersionRepository        shared.AssetVersionRepository
 	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
-	assetService                 shared.AssetService
-	dependencyVulnService        shared.DependencyVulnService
-	statisticsService            shared.StatisticsService
-	thirdPartyIntegration        shared.IntegrationAggregate
-	daemonRunner                 shared.DaemonRunner
+	assetService                  shared.AssetService
+	dependencyVulnService         shared.DependencyVulnService
+	statisticsService             shared.StatisticsService
+	thirdPartyIntegration         shared.IntegrationAggregate
+	daemonRunner                  shared.DaemonRunner
 
 	utils.FireAndForgetSynchronizer
 }

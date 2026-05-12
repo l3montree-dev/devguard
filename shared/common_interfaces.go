@@ -96,6 +96,7 @@ type ProjectRepository interface {
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
+	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
 	EnablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
@@ -104,6 +105,8 @@ type ProjectRepository interface {
 	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
+	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
+	All(ctx context.Context, tx DB) ([]models.Project, error)
 }
 
 type Verifier interface {
@@ -183,7 +186,7 @@ type CveRepository interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.CVE, error)
 	GetLastModDate(ctx context.Context, tx DB) (time.Time, error)
 	GetAllCVEsID(ctx context.Context, tx DB) ([]string, error)
-	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(ctx context.Context, tx DB, cveID string, affectedComponentHashes []int64) error
 	FindCVE(ctx context.Context, tx DB, id string) (models.CVE, error)
 	FindCVEs(ctx context.Context, tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(ctx context.Context, tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
@@ -191,6 +194,10 @@ type CveRepository interface {
 	CreateCVEAffectedComponentsEntries(ctx context.Context, tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(ctx context.Context, tx DB, batch []models.CVE) error
 	UpdateCISAKEVBatch(ctx context.Context, tx DB, batch []models.CVE) error
+}
+
+type EPSService interface {
+	Fetch(ctx context.Context) (map[string]dtos.EPSS, error)
 }
 
 type CweRepository interface {
@@ -201,17 +208,15 @@ type CweRepository interface {
 type ExploitRepository interface {
 	GetAllExploitsID(ctx context.Context, tx DB) ([]string, error)
 	SaveBatch(ctx context.Context, tx DB, exploits []models.Exploit) error
+	Begin(ctx context.Context) DB
 }
 
 type AffectedComponentRepository interface {
 	utils.Repository[string, models.AffectedComponent, DB]
-	GetAllAffectedComponentsID(ctx context.Context, tx DB) ([]string, error)
-	DeleteAll(ctx context.Context, tx DB, ecosystem string) error
 	CreateAffectedComponentsUsingUnnest(ctx context.Context, tx DB, components []models.AffectedComponent) error
 }
 
 type MaliciousPackageChecker interface {
-	DownloadAndProcessDB(ctx context.Context) error
 	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
 }
 
@@ -304,6 +309,8 @@ type SupplyChainRepository interface {
 
 type VEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
+	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
+	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	FindByAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
@@ -326,6 +333,7 @@ type OrganizationRepository interface {
 	ContentTree(ctx context.Context, tx DB, orgID uuid.UUID, projects []string) []any // returns project dtos as values - including fetched assets
 	GetOrgByID(ctx context.Context, tx DB, id uuid.UUID) (models.Org, error)
 	GetOrgsWithVulnSharingAssets(ctx context.Context, tx DB) ([]models.Org, error)
+	GetOrgByIDs(ctx context.Context, tx DB, ids []uuid.UUID) ([]models.Org, error)
 }
 
 type OrgService interface {
@@ -361,6 +369,7 @@ type ProjectService interface {
 	GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
+	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
 }
 
 type InTotoVerifierService interface {
@@ -473,6 +482,10 @@ type VEXRuleService interface {
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
 }
 
+type CrowdSourcedVexingService interface {
+	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (models.VEXRule, error)
+}
+
 type VulnEventRepository interface {
 	SaveBatch(ctx context.Context, tx DB, events []models.VulnEvent) error
 	SaveBatchBestEffort(ctx context.Context, tx DB, events []models.VulnEvent) error
@@ -543,6 +556,7 @@ type ConfigService interface {
 	// retrieves the value for the given key and marshals it into v
 	GetJSONConfig(ctx context.Context, key string, v any) error
 	SetJSONConfig(ctx context.Context, key string, v any) error
+	GetInstanceSettings(ctx context.Context) (InstanceSettings, error)
 }
 
 type StatisticsRepository interface {
@@ -582,11 +596,6 @@ type ArtifactRiskHistoryRepository interface {
 	UpdateRiskAggregation(ctx context.Context, tx DB, assetRisk *models.ArtifactRiskHistory) error
 }
 
-type ProjectRiskHistoryRepository interface {
-	GetRiskHistory(ctx context.Context, tx DB, projectID uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
-	UpdateRiskAggregation(ctx context.Context, tx DB, projectRisk *models.ProjectRiskHistory) error
-}
-
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
@@ -619,10 +628,7 @@ type ComponentService interface {
 
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
-	GetAllRelationsForCVE(ctx context.Context, tx DB, targetCVEID string) ([]models.CVERelationship, error)
-	GetAllRelationshipsForCVEBatch(ctx context.Context, tx DB, sourceCVEIDs []string) ([]models.CVERelationship, error)
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
-	FilterOutRelationsWithInvalidTargetCVE(ctx context.Context, tx DB) error
 }
 
 type LicenseRiskService interface {
@@ -631,11 +637,21 @@ type LicenseRiskService interface {
 	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
 }
 
-type VulnDBImportService interface {
-	ImportFromDiff(ctx context.Context, extraTableNameSuffix *string) error
-	CleanupOrphanedTables(ctx context.Context) error
-	CreateTablesWithSuffix(ctx context.Context, suffix string) error
-	ExportDiffs(ctx context.Context, extraTableNameSuffix string) error
+type ImportOptions struct {
+	Full      bool
+	BatchSize int
+	// Bulk loads all gob data into RAM before writing — no channels, single DB flush.
+	// Faster than streaming but uses significantly more memory (~2-3 GB).
+	Bulk            bool
+	LimitedToTables []string
+	// Debug logs per-row differences between the imported DB state and the gob archive
+	// when an integrity check fails, before the fallback retry wipes the state.
+	Debug bool
+}
+
+type VulnDBService interface {
+	ImportRC(ctx context.Context, opts ImportOptions) error
+	ExportRC(ctx context.Context) error
 }
 
 type AdminService interface {
@@ -747,6 +763,8 @@ type TrustedEntityRepository interface {
 	DeleteOrganizationTrust(ctx context.Context, tx DB, organizationID uuid.UUID) error
 	DeleteProjectTrust(ctx context.Context, tx DB, projectID uuid.UUID) error
 	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)
+	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
 }
 
 type Object string
@@ -771,3 +789,7 @@ const (
 	ContainerScan ScannerType = "container-scan"
 	TestScanner   ScannerType = "test-scanner"
 )
+
+type InstanceSettings struct {
+	SingleOrganizationMode bool `json:"singleOrganizationMode"`
+}

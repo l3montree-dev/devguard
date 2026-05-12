@@ -165,13 +165,13 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
 	for _, dependencyVuln := range dependencyVulns {
 		statement := vex.Statement{
-			ID:              dependencyVuln.CVE.CVE,
+			ID:              dependencyVuln.GetCVE().CVE,
 			Status:          dependencyVulnToOpenVexStatus(dependencyVuln),
 			ImpactStatement: utils.OrDefault(getJustification(dependencyVuln), ""),
 			Vulnerability: vex.Vulnerability{
-				ID:          fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.CVE.CVE),
-				Name:        vex.VulnerabilityID(dependencyVuln.CVE.CVE),
-				Description: dependencyVuln.CVE.Description,
+				ID:          fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.GetCVE().CVE),
+				Name:        vex.VulnerabilityID(dependencyVuln.GetCVE().CVE),
+				Description: dependencyVuln.GetCVE().Description,
 			},
 			Products: []vex.Product{{
 				Component: vex.Component{

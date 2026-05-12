@@ -14,14 +14,26 @@ import (
 )
 
 func newImportCommand() *cobra.Command {
+	var full bool
+	var batchSize int
+	var bulk bool
+	var limitedToTables []string
+	var debug bool
+
 	importCmd := &cobra.Command{
 		Use:   "import",
-		Short: "Import vulnerability database from differential updates",
-		Long:  "Imports the vulnerability database using differential CSV files. This applies incremental updates to the database rather than doing a full rebuild, making it faster for regular updates.",
+		Short: "Import the latest state of the vulnerability database",
+		Long:  "Pulls the pre-built vulndb artifact from the OCI registry and applies all changes to the local database",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-
 			migrateDB()
+			opts := shared.ImportOptions{
+				Full:            full,
+				BatchSize:       batchSize,
+				Bulk:            bulk,
+				LimitedToTables: limitedToTables,
+				Debug:           debug,
+			}
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,
@@ -29,10 +41,8 @@ func newImportCommand() *cobra.Command {
 				repositories.Module,
 				services.ServiceModule,
 				vulndb.Module,
-				fx.Invoke(func(
-					importService shared.VulnDBImportService,
-				) error {
-					return importService.ImportFromDiff(context.Background(), nil)
+				fx.Invoke(func(svc shared.VulnDBService) error {
+					return svc.ImportRC(context.Background(), opts)
 				}),
 			)
 
@@ -49,5 +59,47 @@ func newImportCommand() *cobra.Command {
 		},
 	}
 
+	importCmd.Flags().BoolVar(&full, "full", false, "Force a full import, ignoring the last-import watermark")
+	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
+	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
+	importCmd.Flags().StringSliceVar(&limitedToTables, "limitedToTables", []string{}, "Comma-separated list of tables to limit the import to (e.g. --limitedToTables=cves,exploits,malicious_packages)")
+	importCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
+
 	return importCmd
+}
+
+func newExportCommand() *cobra.Command {
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export the vulnerability database to an OCI artifact",
+		Long:  "Fetches all vulnerability data sources, writes gob files, and produces an integrity manifest",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shared.LoadConfig() // nolint
+			migrateDB()
+			app := fx.New(
+				fx.NopLogger,
+				database.Module,
+				fx.Supply(database.GetPoolConfigFromEnv()),
+				repositories.Module,
+				services.ServiceModule,
+				vulndb.Module,
+				fx.Invoke(func(svc shared.VulnDBService) error {
+					return svc.ExportRC(context.Background())
+				}),
+			)
+
+			ctx := context.Background()
+			startCtx, cancel := context.WithTimeout(ctx, 120*time.Minute)
+			defer cancel()
+			if err := app.Start(startCtx); err != nil {
+				return err
+			}
+
+			stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+			return app.Stop(stopCtx)
+		},
+	}
+
+	return exportCmd
 }

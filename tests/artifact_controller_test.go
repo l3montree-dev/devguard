@@ -566,7 +566,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     "pkg:npm/next@14.2.13",
-		CVE:               cve,
+		CVE:               &cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(4.83),
 		Artifacts:         []models.Artifact{artifact},
@@ -579,7 +579,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		Vulnerability: models.Vulnerability{
 			AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
-		CVE:               cve,
+		CVE:               &cve,
 		CVEID:             cve.CVE,
 		RawRiskAssessment: utils.Ptr(8.89),
 		Artifacts:         []models.Artifact{artifact},

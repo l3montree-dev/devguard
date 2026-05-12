@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"fmt"
 	"os"
 	"slices"
 	"testing"
@@ -14,6 +15,63 @@ var GraphRootNodeIDMetadata = &cdx.Metadata{
 		BOMRef: GraphRootNodeID,
 		Name:   "test-artifact",
 	},
+}
+
+func StructuralCompareCdxBoms(a, b *cdx.BOM) error {
+	if a.Metadata == nil || b.Metadata == nil || a.Metadata.Component == nil || b.Metadata.Component == nil {
+		return fmt.Errorf("one of the boms has no metadata or component")
+	}
+	if a.Metadata.Component.BOMRef != b.Metadata.Component.BOMRef {
+		return fmt.Errorf("root bom refs do not match: %s != %s", a.Metadata.Component.BOMRef, b.Metadata.Component.BOMRef)
+	}
+	if a.Components == nil || b.Components == nil {
+		return fmt.Errorf("one of the boms has no components")
+	}
+	if len(*a.Components) != len(*b.Components) {
+		return fmt.Errorf("component counts do not match: %d != %d", len(*a.Components), len(*b.Components))
+	}
+	if a.Dependencies == nil || b.Dependencies == nil {
+		return fmt.Errorf("one of the boms has no dependencies")
+	}
+	if len(*a.Dependencies) != len(*b.Dependencies) {
+		return fmt.Errorf("dependency counts do not match: %d != %d", len(*a.Dependencies), len(*b.Dependencies))
+	}
+
+	componentRefsA := make(map[string]bool)
+	for _, comp := range *a.Components {
+		componentRefsA[comp.BOMRef] = true
+	}
+	for _, comp := range *b.Components {
+		if _, exists := componentRefsA[comp.BOMRef]; !exists {
+			return fmt.Errorf("component ref %s not found in both boms", comp.BOMRef)
+		}
+	}
+
+	dependencyRefsA := make(map[string][]string)
+	for _, dep := range *a.Dependencies {
+		dependencyRefsA[dep.Ref] = *dep.Dependencies
+	}
+	for _, dep := range *b.Dependencies {
+		if _, exists := dependencyRefsA[dep.Ref]; !exists {
+			return fmt.Errorf("dependency ref %s not found in both boms", dep.Ref)
+		}
+		depsA := dependencyRefsA[dep.Ref]
+		depsB := *dep.Dependencies
+		if len(depsA) != len(depsB) {
+			return fmt.Errorf("dependency counts for ref %s do not match: %d != %d", dep.Ref, len(depsA), len(depsB))
+		}
+		depMap := make(map[string]bool)
+		for _, d := range depsA {
+			depMap[d] = true
+		}
+		for _, d := range depsB {
+			if _, exists := depMap[d]; !exists {
+				return fmt.Errorf("dependency %s for ref %s not found in both boms", d, dep.Ref)
+			}
+		}
+	}
+
+	return nil
 }
 
 func TestSBOMGraphFromCycloneDX(t *testing.T) {
@@ -1332,6 +1390,60 @@ func TestFindAllComponentOnlyPathsToPURL(t *testing.T) {
 		// Path should include the root component even though its BOMRef is not a PURL
 		assert.Equal(t, Path{"pkg:npm/my-app@1.0.0", "pkg:npm/express@4.18.0", "pkg:npm/qs@6.5.0"}, paths[0],
 			"Root component with non-PURL BOMRef must still appear in the vulnerability path")
+	})
+}
+
+func TestFindAllComponentOnlyPathsToPURL_ScopeIsolation(t *testing.T) {
+	// Regression: when two artifacts both have the same vulnerable dependency,
+	// FindAllComponentOnlyPathsToPURL without a scope returned paths from both
+	// artifacts. With a scope set to one artifact, only paths reachable through
+	// that artifact's info source must be returned.
+	t.Run("two artifacts share same vuln purl - scoped to first returns only its path", func(t *testing.T) {
+		g := NewSBOMGraph()
+
+		// Artifact 1: app1 -> sbom1 -> lodash (vulnerable)
+		artifact1ID := g.AddArtifact("app1")
+		infoSource1 := g.AddInfoSource(artifact1ID, "app1/sbom.json", InfoSourceSBOM)
+
+		// Artifact 2: app2 -> sbom2 -> dep -> lodash (vulnerable, deeper path)
+		artifact2ID := g.AddArtifact("app2")
+		infoSource2 := g.AddInfoSource(artifact2ID, "app2/sbom.json", InfoSourceSBOM)
+
+		lodash := cdx.Component{BOMRef: "pkg:npm/lodash@4.17.20", PackageURL: "pkg:npm/lodash@4.17.20"}
+		lodashID := g.AddComponent(lodash)
+
+		dep := cdx.Component{BOMRef: "pkg:npm/some-dep@1.0.0", PackageURL: "pkg:npm/some-dep@1.0.0"}
+		depID := g.AddComponent(dep)
+
+		// app1: direct edge to lodash
+		g.AddEdge(infoSource1, lodashID)
+
+		// app2: edge through an intermediate dep
+		g.AddEdge(infoSource2, depID)
+		g.AddEdge(depID, lodashID)
+
+		// Without scope: both paths must be visible
+		allPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, allPaths, 2, "unscoped graph should return paths from both artifacts")
+
+		// Scope to artifact1: only the direct path through app1 must be returned
+		err := g.ScopeToArtifact("app1")
+		assert.NoError(t, err)
+		scopedPaths := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, scopedPaths, 1, "scoped to app1 should return exactly one path")
+		assert.Equal(t, Path([]string{"pkg:npm/lodash@4.17.20"}), scopedPaths[0])
+
+		// Scope to artifact2: only the path through dep must be returned
+		g.ClearScope()
+		err = g.ScopeToArtifact("app2")
+		assert.NoError(t, err)
+		scopedPaths2 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, scopedPaths2, 1, "scoped to app2 should return exactly one path")
+		assert.Equal(t, Path([]string{"pkg:npm/some-dep@1.0.0", "pkg:npm/lodash@4.17.20"}), scopedPaths2[0])
+
+		// Sanity: artifact IDs must differ so they are really separate subgraphs
+		assert.NotEqual(t, artifact1ID, artifact2ID)
+		assert.NotEqual(t, infoSource1, infoSource2)
 	})
 }
 

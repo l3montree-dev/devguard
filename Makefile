@@ -63,3 +63,6 @@ nix-cache-push::
 		$$(nix path-info -r .#deps-amd64) \
 		$$(nix path-info -r .#deps-arm64) \
 		--to 's3://$(NIX_CACHE_BUCKET)?endpoint=$(NIX_CACHE_ENDPOINT)&region=$(NIX_CACHE_REGION)&scheme=https&profile=garage&secret-key=$(NIX_CACHE_SECRET_KEY)'
+
+migrate:
+	go run ./cmd/devguard-cli migrate

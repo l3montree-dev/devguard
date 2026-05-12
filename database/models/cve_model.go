@@ -1,11 +1,14 @@
 package models
 
 import (
+	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type Severity string
@@ -24,12 +27,11 @@ type cveReference struct {
 	Tags   []string `json:"tags"`
 }
 type CVE struct {
-	CVE                   string              `json:"cve" gorm:"primaryKey;not null;type:text;"`
-	CreatedAt             time.Time           `json:"createdAt" cve:"createdAt"`
-	UpdatedAt             time.Time           `json:"updatedAt" cve:"updatedAt"`
+	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
+	CVE                   string              `json:"cve" gorm:"type:text;"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
 	DateLastModified      time.Time           `json:"dateLastModified" cve:"dateLastModified"`
-	Weaknesses            []Weakness          `json:"weaknesses" gorm:"foreignKey:CVEID;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
+	Weaknesses            []Weakness          `json:"weaknesses" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
 	Description           string              `json:"description" gorm:"type:text;" cve:"description"`
 	CVSS                  float32             `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
 	References            string              `json:"references" gorm:"type:text;" cve:"references"`
@@ -42,15 +44,15 @@ type CVE struct {
 	AffectedComponents    []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
 	Vector                string              `json:"vector" gorm:"type:text;" cve:"vector"`
 	Risk                  dtos.RiskMetrics    `json:"risk" gorm:"-" cve:"risk"`
-	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;"`
-	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
+	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;references:CVE;"`
+	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;references:CVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
 }
 
 type Weakness struct {
 	Source string `json:"source" gorm:"type:text;"`
 	Type   string `json:"type" gorm:"type:text;"`
 	CVEID  string `json:"cve" gorm:"primaryKey;not null;type:text;"`
-	CVE    CVE
+	CVE    CVE    `gorm:"foreignKey:CVEID;references:CVE;"`
 	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:text;"`
 }
 
@@ -58,14 +60,32 @@ func (m Weakness) TableName() string {
 	return "weaknesses"
 }
 
-func (m CVE) TableName() string {
+func (cve CVE) TableName() string {
 	return "cves"
 }
 
-func (m CVE) GetReferences() ([]cveReference, error) {
+// calculate the hash for the cve solely based on the cve-id using md5 for compatibility with the postgresql database
+func (cve CVE) CalculateHash() int64 {
+	return CalculateHashForCVE(cve.CVE)
+}
+
+func CalculateHashForCVE(cveID string) int64 {
+	sum := md5.Sum([]byte(cveID))
+	u := binary.BigEndian.Uint64(sum[:8])
+	return int64(u & 0x7fffffffffffffff)
+}
+
+func (cve CVE) GetReferences() ([]cveReference, error) {
 	var refs []cveReference
-	if err := json.Unmarshal([]byte(m.References), &refs); err != nil {
+	if err := json.Unmarshal([]byte(cve.References), &refs); err != nil {
 		return nil, err
 	}
 	return refs, nil
+}
+
+func (cve *CVE) BeforeSave(tx *gorm.DB) error {
+	if cve.ID == 0 {
+		cve.ID = cve.CalculateHash()
+	}
+	return nil
 }

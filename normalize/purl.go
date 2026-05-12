@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"slices"
 	"strings"
 
 	"github.com/package-url/packageurl-go"
@@ -77,20 +76,6 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 		Qualifiers:                  qualifier,
 		Namespace:                   purl.Namespace,
 		HowToInterpretVersionString: versionInterpretation,
-	}
-}
-
-// function to make purl look more visually appealing
-func BeautifyPURL(pURL string) (string, error) {
-	p, err := packageurl.FromString(pURL)
-	if err != nil {
-		return pURL, err
-	}
-	//if the namespace is empty we don't want any leading slashes
-	if p.Namespace == "" {
-		return p.Name, nil
-	} else {
-		return p.Namespace + "/" + p.Name, nil
 	}
 }
 
@@ -181,20 +166,6 @@ func Purlify(artifactName string, assetVersionName string) string {
 	}
 
 	return base + "@" + version + qualifiers
-}
-
-func QualifiersMapToString(qualifiers map[string]string) string {
-	// create an URL string out of the qualifiers and sort them by key to ensure consistent hashing
-	qualifiersStr := ""
-	if len(qualifiers) > 0 {
-		var qualifierPairs []string
-		for key, value := range qualifiers {
-			qualifierPairs = append(qualifierPairs, fmt.Sprintf("%s=%s", key, value))
-		}
-		slices.Sort(qualifierPairs)
-		qualifiersStr = strings.Join(qualifierPairs, "&")
-	}
-	return qualifiersStr
 }
 
 func PURLToString(purl packageurl.PackageURL) (string, error) {

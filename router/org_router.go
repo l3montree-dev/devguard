@@ -30,6 +30,7 @@ type OrgRouter struct {
 
 func NewOrgRouter(
 	sessionGroup SessionRouter,
+	configService shared.ConfigService,
 	orgController *controllers.OrgController,
 	projectController *controllers.ProjectController,
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
@@ -49,7 +50,7 @@ func NewOrgRouter(
 	*/
 	orgRouter := sessionGroup.Group.Group("/organizations")
 	orgRouter.GET("/", orgController.List)
-	orgRouter.POST("/", orgController.Create, middlewares.NeededScope([]string{"manage"}))
+	orgRouter.POST("/", orgController.Create, middlewares.InstanceSettings(configService, func(s shared.InstanceSettings) bool { return s.SingleOrganizationMode }), middlewares.NeededScope([]string{"manage"}))
 
 	/**
 	Organization scoped router
@@ -79,6 +80,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
+	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
