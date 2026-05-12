@@ -452,14 +452,11 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 		var componentToCVEs, cveToComponents map[int64][]int64
 		if !lastImportTime.IsZero() {
 			var loadErr error
-			existingCVEIDs, loadErr = getExistingCVEIDs(ctx, tx)
-			if loadErr != nil {
-				return fmt.Errorf("could not get existing CVE IDs: %w", loadErr)
-			}
 			componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 			if loadErr != nil {
 				return fmt.Errorf("could not get current affected components: %w", loadErr)
 			}
+			existingCVEIDs = cveIDsFromComponentMap(componentToCVEs)
 			slog.Info("loaded existing state for incremental import", "cves", len(existingCVEIDs), "affected_components", len(componentToCVEs))
 		}
 		group.Go(func() error {
@@ -639,14 +636,11 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	var componentToCVEs, cveToComponents map[int64][]int64
 	if !lastImportTime.IsZero() {
 		var loadErr error
-		existingCVEIDs, loadErr = getExistingCVEIDs(ctx, tx)
-		if loadErr != nil {
-			return fmt.Errorf("could not get existing CVE IDs: %w", loadErr)
-		}
 		componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 		if loadErr != nil {
 			return fmt.Errorf("could not get current affected components: %w", loadErr)
 		}
+		existingCVEIDs = cveIDsFromComponentMap(componentToCVEs)
 	}
 
 	var vulnRows vulndbRows

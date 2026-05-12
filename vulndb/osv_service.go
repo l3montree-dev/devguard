@@ -354,25 +354,17 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
-func getExistingCVEIDs(ctx context.Context, tx pgx.Tx) (map[int64]struct{}, error) {
-	rows, err := tx.Query(ctx, `SELECT id FROM cves`)
-	if err != nil {
-		return nil, fmt.Errorf("could not query existing CVE IDs: %w", err)
-	}
-	m := make(map[int64]struct{}, 200_000)
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("could not scan CVE ID: %w", err)
+// cveIDsFromComponentMap derives the set of known CVE IDs from the componentToCVEs map,
+// avoiding a separate SELECT on the cves table. CVEs without affected components are
+// excluded, but the cleanup jobs ensure those do not exist in a consistent database.
+func cveIDsFromComponentMap(componentToCVEs map[int64][]int64) map[int64]struct{} {
+	m := make(map[int64]struct{}, len(componentToCVEs))
+	for _, cveIDs := range componentToCVEs {
+		for _, id := range cveIDs {
+			m[id] = struct{}{}
 		}
-		m[id] = struct{}{}
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating CVE IDs: %w", err)
-	}
-	return m, nil
+	return m
 }
 
 // getCurrentAffectedComponents returns two maps built from cve_affected_component:
