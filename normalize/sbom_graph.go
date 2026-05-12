@@ -920,7 +920,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			// Use node type from graph instead of ID format, because BOMRef
 			// may not be a PURL even though the component has a valid PackageURL.
 			parentNode := g.Nodes[parentID]
-			if parentNode.Type == GraphNodeTypeInfoSource {
+			if parentNode != nil && parentNode.Type == GraphNodeTypeInfoSource {
 				// we found an info source node, but we cannot be sure
 				// if this info source node belongs to our scoped artifact
 				// if we scoped to an artifact at all.
