@@ -448,9 +448,13 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 
 	t.Run("should render single node path", func(t *testing.T) {
-		// Simulate a single node path (e.g., only root component)
+		// Simulate a single node path (direct dependency with no transitive deps).
+		// The graph requires an artifact and sbom info-source node above the component
+		// so that FindAllComponentOnlyPathsToPURL can terminate the BFS correctly.
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
+			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},
+			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
+			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
