@@ -78,6 +78,10 @@ func RunMigrations(db shared.DB) error {
 			slog.Info("no pending migrations")
 			return nil
 		}
+		// Release the migrator's connection (advisory lock + any open tx) before
+		// touching schema_migrations on the same pool — with MaxOpenConns=1 this
+		// would otherwise deadlock.
+		migrator.Close()
 		// clear dirty flag and restore version so the migration can be retried — safe in postgres since DDL is transactional
 		sqlDB, dbErr := db.DB()
 		if dbErr == nil {

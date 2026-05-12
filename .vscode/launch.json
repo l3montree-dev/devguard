@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Launch Daemon Pipeline",
             "type": "go",
@@ -115,6 +116,17 @@
             "args": [
                 "vulndb",
                 "import"
+            ]
+        },
+                {
+            "name": "Migrate",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "migrate"
             ]
         },
          {
