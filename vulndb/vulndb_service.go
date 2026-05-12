@@ -448,19 +448,19 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	}
 
 	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
-		var existingAffectedComponents map[int64][]int64
+		var componentToCVEs, cveToComponents map[int64][]int64
 		if !lastImportTime.IsZero() {
 			var loadErr error
-			existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+			componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 			if loadErr != nil {
 				return fmt.Errorf("could not get current affected components: %w", loadErr)
 			}
-			slog.Info("loaded existing affected components for deduplication", "count", len(existingAffectedComponents))
+			slog.Info("loaded existing affected components for deduplication", "count", len(componentToCVEs))
 		}
 		group.Go(func() error {
 			defer close(vulndbChan)
 			t := time.Now()
-			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVStreamer(groupCtx, lastImportTime, existingAffectedComponents, vulndbChan)); err != nil {
+			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVStreamer(groupCtx, lastImportTime, componentToCVEs, cveToComponents, vulndbChan)); err != nil {
 				return fmt.Errorf("could not read OSV gob: %w", err)
 			}
 			slog.Info("decoded osv.gob (CVE/affected component data)", "took", time.Since(t))
@@ -630,10 +630,10 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		return err
 	}
 
-	existingAffectedComponents := make(map[int64][]int64)
+	var componentToCVEs, cveToComponents map[int64][]int64
 	if !lastImportTime.IsZero() {
 		var loadErr error
-		existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+		componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 		if loadErr != nil {
 			return fmt.Errorf("could not get current affected components: %w", loadErr)
 		}
@@ -642,7 +642,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	var vulnRows vulndbRows
 	var malRows malRows
 	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
-		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, existingAffectedComponents)(osvEntries)
+		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, componentToCVEs, cveToComponents)(osvEntries)
 	}
 	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
 		malRows = gobOSVToMalFilterTransformer(lastImportTime)(osvEntries)

@@ -174,7 +174,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
 	malRows := gobOSVToMalFilterTransformer(time.Time{})(allOSVVulns)
-	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil)(allOSVVulns)
+	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil)(allOSVVulns)
 	fakeRows, fakeComps := buildFakePackages()
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
@@ -364,28 +364,31 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
-// getCurrentAffectedComponents returns a map of affectedComponentID → []cveID.
-// A key's presence means the affected_component exists; the slice encodes which CVEs already reference it.
-func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (map[int64][]int64, error) {
+// getCurrentAffectedComponents returns two maps built from cve_affected_component:
+//   - componentToCVEs: affectedComponentID → []cveID
+//   - cveToComponents: cveID → []affectedComponentID
+func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, err error) {
 	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current state of affected components: %w", err)
+		return nil, nil, fmt.Errorf("could not get current state of affected components: %w", err)
 	}
 
-	m := make(map[int64][]int64, 200_000)
+	componentToCVEs = make(map[int64][]int64, 200_000)
+	cveToComponents = make(map[int64][]int64, 200_000)
 	for rows.Next() {
 		var affID, cveID int64
 		if err := rows.Scan(&affID, &cveID); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
+			return nil, nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
 		}
-		m[affID] = append(m[affID], cveID)
+		componentToCVEs[affID] = append(componentToCVEs[affID], cveID)
+		cveToComponents[cveID] = append(cveToComponents[cveID], affID)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
+		return nil, nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
 	}
-	return m, nil
+	return componentToCVEs, cveToComponents, nil
 }
 
 // insertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
