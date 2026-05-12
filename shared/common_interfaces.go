@@ -545,6 +545,7 @@ type ConfigService interface {
 	// retrieves the value for the given key and marshals it into v
 	GetJSONConfig(ctx context.Context, key string, v any) error
 	SetJSONConfig(ctx context.Context, key string, v any) error
+	GetInstanceSettings(ctx context.Context) (InstanceSettings, error)
 }
 
 type StatisticsRepository interface {

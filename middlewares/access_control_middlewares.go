@@ -32,9 +32,11 @@ import (
 func InstanceSettings(configService shared.ConfigService, disabled func(shared.InstanceSettings) bool) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			var settings shared.InstanceSettings
-			if err := configService.GetJSONConfig(ctx.Request().Context(), "instanceSettings", &settings); err != nil {
-				// settings not found — allow the request
+
+			settings, err := configService.GetInstanceSettings(ctx.Request().Context())
+			if err != nil {
+				slog.Error("could not get instance settings", "err", err)
+				// if we can't get the settings, we allow the request to avoid blocking access in case of database issues
 				return next(ctx)
 			}
 			if disabled(settings) {
