@@ -1,0 +1,24 @@
+-- Copyright (C) 2026 l3montree GmbH
+-- 
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+-- 
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU Affero General Public License for more details.
+-- 
+-- You should have received a copy of the GNU Affero General Public License
+-- along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ALTER TABLE public.artifact_risk_history
+ADD COLUMN IF NOT EXISTS fixable_low_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS fixable_medium_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS fixable_high_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS fixable_critical_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS cve_purl_fixable_low_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS cve_purl_fixable_medium_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS cve_purl_fixable_high_cvss INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS cve_purl_fixable_critical_cvss INTEGER DEFAULT 0;
+

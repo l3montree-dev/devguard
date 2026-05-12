@@ -180,11 +180,15 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 		// Calculate severity counts
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		fixableLowRisk, fixableMediumRisk, fixableHighRisk, fixableCriticalRisk := calculateFixableSeverityCountsByRisk(openVulns)
+
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
+		fixableLowCvss, fixableMediumCvss, fixableHighCvss, fixableCriticalCvss := calculateFixableSeverityCountsByCvss(openVulns)
 
 		lowUniqueRisk, mediumUniqueRisk, highUniqueRisk, criticalUniqueRisk := calculateUniqueCVEPurlCountsByRisk(openVulns)
 		fixableLowUniqueRisk, fixableMediumUniqueRisk, fixableHighUniqueRisk, fixableCriticalUniqueRisk := calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
+
 		lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss := calculateUniqueCVEPurlCountsByCvss(openVulns)
+		fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss := calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
 
 		result := models.ArtifactRiskHistory{
 			ArtifactName:     artifact.ArtifactName,
@@ -220,20 +224,30 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 					HighCVSS:     highCvss,
 					CriticalCVSS: criticalCvss,
 
+					FixableLowCVSS:      fixableLowCvss,
+					FixableMediumCVSS:   fixableMediumCvss,
+					FixableHighCVSS:     fixableHighCvss,
+					FixableCriticalCVSS: fixableCriticalCvss,
+
 					CVEPurlLow:      lowUniqueRisk,
 					CVEPurlMedium:   mediumUniqueRisk,
 					CVEPurlHigh:     highUniqueRisk,
 					CVEPurlCritical: criticalUniqueRisk,
+
+					CVEPurlFixableLow:      fixableLowUniqueRisk,
+					CVEPurlFixableMedium:   fixableMediumUniqueRisk,
+					CVEPurlFixableHigh:     fixableHighUniqueRisk,
+					CVEPurlFixableCritical: fixableCriticalUniqueRisk,
 
 					CVEPurlLowCVSS:      lowUniqueCvss,
 					CVEPurlMediumCVSS:   mediumUniqueCvss,
 					CVEPurlHighCVSS:     highUniqueCvss,
 					CVEPurlCriticalCVSS: criticalUniqueCvss,
 
-					CVEPurlFixableLow:      fixableLowUniqueRisk,
-					CVEPurlFixableMedium:   fixableMediumUniqueRisk,
-					CVEPurlFixableHigh:     fixableHighUniqueRisk,
-					CVEPurlFixableCritical: fixableCriticalUniqueRisk,
+					CVEPurlFixableLowCVSS:      fixableLowUniqueCvss,
+					CVEPurlFixableMediumCVSS:   fixableMediumUniqueCvss,
+					CVEPurlFixableHighCVSS:     fixableHighUniqueCvss,
+					CVEPurlFixableCriticalCVSS: fixableCriticalUniqueCvss,
 				},
 			},
 		}
@@ -252,11 +266,6 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, a
 	}
 
 	return nil
-}
-
-func (s *statisticsService) GetProjectRiskHistory(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
-	// project-level risk history storage was removed; return empty result for compatibility.
-	return []models.ProjectRiskHistory{}, nil
 }
 
 // GetReleaseRiskHistory aggregates artifact risk histories for all artifacts included in the release tree
@@ -309,48 +318,42 @@ func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVul
 	return
 }
 
-func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
-	uniqueCombinations := make(map[string]struct{})
-
-	for _, vuln := range dependencyVulns {
-		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
-		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
-
-		if _, exists := uniqueCombinations[combinationKey]; exists {
-			continue // already counted this CVE+PURL combination
-		}
-
-		switch {
-		case risk >= 0.0 && risk < 4.0:
-			low++
-		case risk >= 4.0 && risk < 7.0:
-			medium++
-		case risk >= 7.0 && risk < 9.0:
-			high++
-		case risk >= 9.0 && risk <= 10.0:
-			critical++
-		}
-
-		uniqueCombinations[combinationKey] = struct{}{}
-	}
-	return
-}
-
-func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
-	uniqueCombinations := make(map[string]struct{})
-
+func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
 		}
 
+		cvss := float64(vuln.GetCVE().CVSS)
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	uniqueCombinations := make(map[string]float64)
+
+	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
+	for _, vuln := range dependencyVulns {
 		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
-		if _, exists := uniqueCombinations[combinationKey]; exists {
-			continue // already counted this CVE+PURL combination
+		existingRisk, exists := uniqueCombinations[combinationKey]
+		if !exists || risk > existingRisk {
+			uniqueCombinations[combinationKey] = risk
 		}
+	}
 
+	for _, risk := range uniqueCombinations {
 		switch {
 		case risk >= 0.0 && risk < 4.0:
 			low++
@@ -361,8 +364,38 @@ func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.Dependen
 		case risk >= 9.0 && risk <= 10.0:
 			critical++
 		}
+	}
+	return
+}
 
-		uniqueCombinations[combinationKey] = struct{}{}
+func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	uniqueCombinations := make(map[string]float64)
+
+	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
+	for _, vuln := range dependencyVulns {
+		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
+			continue
+		}
+		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
+
+		existingRisk, exists := uniqueCombinations[combinationKey]
+		if !exists || risk > existingRisk {
+			uniqueCombinations[combinationKey] = risk
+		}
+	}
+
+	for _, risk := range uniqueCombinations {
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			low++
+		case risk >= 4.0 && risk < 7.0:
+			medium++
+		case risk >= 7.0 && risk < 9.0:
+			high++
+		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
 	}
 	return
 }

@@ -33,20 +33,30 @@ type Distribution struct {
 	HighCVSS     int `json:"highCvss"`
 	CriticalCVSS int `json:"criticalCvss"`
 
+	FixableLowCVSS      int `json:"fixableLowCvss"`
+	FixableMediumCVSS   int `json:"fixableMediumCvss"`
+	FixableHighCVSS     int `json:"fixableHighCvss"`
+	FixableCriticalCVSS int `json:"fixableCriticalCvss"`
+
 	CVEPurlLow      int `json:"cvePurlLow"`
 	CVEPurlMedium   int `json:"cvePurlMedium"`
 	CVEPurlHigh     int `json:"cvePurlHigh"`
 	CVEPurlCritical int `json:"cvePurlCritical"`
+
+	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
+	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
+	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
+	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
 
 	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
 	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
 	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
 	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
 
-	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
-	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
-	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
-	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
+	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCVSS"`
+	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCVSS"`
+	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCVSS"`
+	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCVSS"`
 }
 
 type History struct {
@@ -65,14 +75,4 @@ type History struct {
 
 	OpenDependencyVulns  int `json:"openDependencyVulns"`
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`
-}
-
-type ProjectRiskHistory struct {
-	Distribution
-	History
-	ProjectID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
-}
-
-func (m ProjectRiskHistory) TableName() string {
-	return "project_risk_history"
 }

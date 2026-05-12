@@ -593,11 +593,6 @@ type ArtifactRiskHistoryRepository interface {
 	UpdateRiskAggregation(ctx context.Context, tx DB, assetRisk *models.ArtifactRiskHistory) error
 }
 
-type ProjectRiskHistoryRepository interface {
-	GetRiskHistory(ctx context.Context, tx DB, projectID uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
-	UpdateRiskAggregation(ctx context.Context, tx DB, projectRisk *models.ProjectRiskHistory) error
-}
-
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
