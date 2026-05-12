@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
@@ -41,8 +42,10 @@ type daemonTriggerTimestamp struct {
 }
 
 type AdminController struct {
-	adminService        shared.AdminService
-	adminRepository     shared.AdminRepository
+	adminService    shared.AdminService
+	adminRepository shared.AdminRepository
+	assetService    shared.AssetService
+
 	daemonRunner        shared.DaemonRunner
 	vulnDBImportService shared.VulnDBImportService
 	configService       shared.ConfigService
@@ -52,6 +55,7 @@ func NewAdminController(
 	daemonRunner shared.DaemonRunner,
 	adminService shared.AdminService,
 	adminRepository shared.AdminRepository,
+	assetService shared.AssetService,
 	vulnDBImportService shared.VulnDBImportService,
 	configService shared.ConfigService,
 ) *AdminController {
@@ -59,6 +63,7 @@ func NewAdminController(
 		daemonRunner:        daemonRunner,
 		adminService:        adminService,
 		adminRepository:     adminRepository,
+		assetService:        assetService,
 		vulnDBImportService: vulnDBImportService,
 		configService:       configService,
 	}
@@ -197,6 +202,33 @@ func (controller *AdminController) GetUserInformation(ctx shared.Context) error 
 		return echo.NewHTTPError(500, "could not get organizations for user").WithInternal(err)
 	}
 	return ctx.JSON(200, orgs)
+}
+
+func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
+	assetID := ctx.Param("assetID")
+	parsedAssetID, err := uuid.Parse(assetID)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid or missing assetID url parameter")
+	}
+
+	var updateRequest dtos.UpdateAssetRequest
+	err = ctx.Bind(&updateRequest)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not parse request body")
+	}
+
+	if !slug.IsSlug(updateRequest.NewSlug) {
+		return echo.NewHTTPError(400, "slug contains invalid characters")
+	}
+
+	err = controller.assetService.UpdateAssetSlug(context.Background(), parsedAssetID, updateRequest.NewSlug)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return echo.NewHTTPError(404, "asset does not exist")
+		}
+		return echo.NewHTTPError(500, "could not update asset slug").WithInternal(err)
+	}
+	return ctx.NoContent(200)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an

@@ -19,3 +19,7 @@ type AdminsInOrg struct {
 type OrgInformation struct {
 	OwnerEmail string `json:"owner_mail"`
 }
+
+type UpdateAssetRequest struct {
+	NewSlug string `json:"new_slug"`
+}
