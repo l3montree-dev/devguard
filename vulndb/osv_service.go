@@ -87,10 +87,11 @@ type cveAffectedComponentRow struct {
 }
 
 type vulndbRows struct {
-	CVEs                  []models.CVE
-	CVERelationships      []models.CVERelationship
-	AffectedComponents    []models.AffectedComponent
-	CVEAffectedComponents []cveAffectedComponentRow
+	CVEs                        []models.CVE
+	CVERelationships            []models.CVERelationship
+	AffectedComponents          []models.AffectedComponent
+	CVEAffectedComponents       []cveAffectedComponentRow
+	DeleteCVEAffectedComponents []cveAffectedComponentRow
 }
 
 type OSVEntry struct {
@@ -454,6 +455,23 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
+func deleteCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
+	if len(pivotRows) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	for _, row := range pivotRows {
+		batch.Queue(`DELETE FROM cve_affected_component WHERE affected_component_id = $1 AND cve_id = $2`, row.AffectedComponentID, row.CveID)
+	}
+	br := tx.SendBatch(ctx, batch)
+	if err := br.Close(); err != nil {
+		return fmt.Errorf("could not execute batch delete for cve affected component rows: %w", err)
+	}
+
+	return nil
+}
+
 // flushOSVStagingTables flushes cves, cve_relationships, affected_components and
 // cve_affected_component from their staging tables into the live tables.
 // Must be called before AddIndexesAndConstraints so the FK from cve_affected_component
@@ -788,11 +806,11 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 }
 
 // after importing check if the database state is consistent
-func runCleanUpJobs(ctx context.Context, conn pgx.Tx) {
+func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	slog.Info("start running sanity checks")
 	// first delete all cves which have no affected components and also none of their relationships does
 	start := time.Now()
-	_, err := conn.Exec(ctx, `
+	_, err := tx.Exec(ctx, `
 	DELETE FROM cves 
 	WHERE id IN (
 	SELECT 
@@ -818,7 +836,7 @@ func runCleanUpJobs(ctx context.Context, conn pgx.Tx) {
 	}
 
 	start = time.Now()
-	_, err = conn.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 	DELETE FROM 
 		affected_components
 	WHERE NOT EXISTS 

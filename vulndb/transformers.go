@@ -88,6 +88,7 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 		cveRelationships := make([]models.CVERelationship, 0, len(elements)*2)
 		affectedComponents := make([]models.AffectedComponent, 0, len(elements)*12)
 		cveAffectedComponents := make([]cveAffectedComponentRow, 0, len(elements)*55)
+		deleteCveAffectedComponents := make([]cveAffectedComponentRow, 0)
 
 		for i := range elements {
 			if !lastImportTime.IsZero() && !elements[i].ModifiedTimestamp.After(lastImportTime) {
@@ -109,6 +110,8 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 			cves = append(cves, cve)
 			cveRelationships = append(cveRelationships, relationships...)
 
+			newAffectedComponentHashes := make(map[int64]struct{})
+
 			for _, affectedComponent := range affectedComponentsForCVE {
 				hash := affectedComponent.CalculateHashFast()
 				affectedComponent.ID = hash
@@ -123,13 +126,24 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 					cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
 					existing[hash] = append(cveIDs, cve.ID)
 				}
+				newAffectedComponentHashes[hash] = struct{}{}
+			}
+			// check for all affected components this cve is part of - maybe we need to delete some cve affected component entries
+			for affectedComponentHash, cves := range existing {
+				if slices.Contains(cves, cve.ID) {
+					// check if this affected component is still part of the cve, if not we need to delete the cve affected component entry
+					if _, exist := newAffectedComponentHashes[affectedComponentHash]; !exist {
+						deleteCveAffectedComponents = append(deleteCveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: affectedComponentHash})
+					}
+				}
 			}
 		}
 		return vulndbRows{
-			CVEs:                  cves,
-			CVERelationships:      cveRelationships,
-			AffectedComponents:    affectedComponents,
-			CVEAffectedComponents: cveAffectedComponents,
+			CVEs:                        cves,
+			CVERelationships:            cveRelationships,
+			AffectedComponents:          affectedComponents,
+			CVEAffectedComponents:       cveAffectedComponents,
+			DeleteCVEAffectedComponents: deleteCveAffectedComponents,
 		}
 	}
 }

@@ -33,7 +33,7 @@ var _ shared.VulnDBService = (*VulnDBService)(nil)
 
 // debugImport reuses a previously downloaded archive from the current working directory
 // instead of pulling from the OCI registry. Set to true only for local profiling/benchmarking.
-const debugImport = false
+const debugImport = true
 
 // VulnDBService orchestrates the full vulnerability database export and import,
 // covering OSV, EPSS, CISA KEV, exploits (ExploitDB + GitHub PoC),
@@ -438,7 +438,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
 
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components", "exploits"}) {
 		if lastImportTime.IsZero() {
 			slog.Info("starting full import: truncating affected tables before streaming data")
 			if err := truncateTablesForLimitedImport(ctx, tx, limitedToTables); err != nil {
@@ -551,6 +551,12 @@ func truncateTablesForLimitedImport(ctx context.Context, tx pgx.Tx, limitedToTab
 			return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
 		}
 	}
+	if slices.Contains(limitedToTables, "exploits") {
+		if err := truncateExploitTable(ctx, tx); err != nil {
+			return fmt.Errorf("could not truncate exploit tables: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -567,7 +573,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		gobExploit []GobExploit
 	)
 
-	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components"}) {
+	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component", "malicious_packages", "malicious_affected_components", "exploits"}) {
 		if lastImportTime.IsZero() {
 			t := time.Now()
 			slog.Info("start truncating vulndb tables")
@@ -753,6 +759,13 @@ func truncateCveRelatedTables(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
+func truncateExploitTable(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `TRUNCATE exploits CASCADE`); err != nil {
+		return fmt.Errorf("could not truncate exploit-related tables: %w", err)
+	}
+	return nil
+}
+
 func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `TRUNCATE malicious_packages, malicious_affected_components CASCADE`); err != nil {
 		return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
@@ -892,8 +905,8 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
-	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
-	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
+	var cveCount, relationshipCount, deleteCveAffectedComponentCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
+	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, deleteCveAffectedComponentTime, malPkgTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
 
@@ -920,6 +933,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				"cve_affected_component", cveAffectedComponentCount, "cve_affected_component_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
 				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
 				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
+				"delete_cve_affected_component", deleteCveAffectedComponentCount, "delete_cve_affected_component_time", deleteCveAffectedComponentTime.Round(time.Millisecond),
 				"heap_alloc_mb", heapMB(),
 				"took", time.Since(start),
 			)
@@ -958,6 +972,13 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			}
 			cveAffectedComponentsTime += time.Since(t)
 			cveAffectedComponentCount += len(rows.CVEAffectedComponents)
+
+			t = time.Now()
+			if err := deleteCVEAffectedComponentsBulk(ctx, tx, rows.DeleteCVEAffectedComponents); err != nil {
+				return fmt.Errorf("could not delete old cve_affected_component relationships: %w", err)
+			}
+			deleteCveAffectedComponentTime += time.Since(t)
+			deleteCveAffectedComponentCount += len(rows.DeleteCVEAffectedComponents)
 		case exploits, ok := <-exploitsIn:
 			if !ok {
 				exploitsIn = nil
@@ -996,6 +1017,13 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		}
 	}
 
+	if deleteCveAffectedComponentCount > 0 {
+		slog.Info("running cleanup jobs")
+		t := time.Now()
+		runCleanUpJobs(ctx, tx)
+		slog.Info("finished cleanup jobs", "took", time.Since(t))
+	}
+
 	slog.Info("finished writing rows to database",
 		"cves", cveCount,
 		"relationships", relationshipCount,
@@ -1004,6 +1032,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"exploits", exploitCount,
 		"malicious_packages", malPkgCount,
 		"malicious_affected_components", malAffectedComponentCount,
+		"delete_cve_affected_component", deleteCveAffectedComponentCount,
 		"took", time.Since(start),
 	)
 	return nil
