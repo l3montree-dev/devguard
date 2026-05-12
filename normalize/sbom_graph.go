@@ -909,7 +909,6 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 
 		// Get parents of the last node
 		parents := reverseEdges[lastNode]
-		foundTermination := false
 
 		for _, parentID := range parents {
 			// Cycle detection
@@ -938,7 +937,6 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 						continue
 					}
 				}
-				foundTermination = true
 				// Build path in correct order (root to target)
 				result := make([]string, len(current.path))
 				for i, j := 0, len(current.path)-1; j >= 0; i, j = i+1, j-1 {
@@ -961,25 +959,24 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 			break
 		}
 
-		// If no termination found, continue extending path through component parents
-		if !foundTermination {
-			for _, parentID := range parents {
-				if current.onPath[parentID] {
-					continue
-				}
-				pNode := g.Nodes[parentID]
-				if pNode == nil || pNode.Type != GraphNodeTypeComponent {
-					continue // Skip non-components for path extension
-				}
-				// Extend path
-				newPath := make([]string, len(current.path)+1)
-				copy(newPath, current.path)
-				newPath[len(current.path)] = parentID
-				newOnPath := make(map[string]bool, len(current.onPath)+1)
-				maps.Copy(newOnPath, current.onPath)
-				newOnPath[parentID] = true
-				queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
+		// Always extend path through component parents, even if we found a termination,
+		// because a node can be reachable both directly from an info source and via other components.
+		for _, parentID := range parents {
+			if current.onPath[parentID] {
+				continue
 			}
+			pNode := g.Nodes[parentID]
+			if pNode == nil || pNode.Type != GraphNodeTypeComponent {
+				continue // Skip non-components for path extension
+			}
+			// Extend path
+			newPath := make([]string, len(current.path)+1)
+			copy(newPath, current.path)
+			newPath[len(current.path)] = parentID
+			newOnPath := make(map[string]bool, len(current.onPath)+1)
+			maps.Copy(newOnPath, current.onPath)
+			newOnPath[parentID] = true
+			queue = append(queue, queueItem{path: newPath, onPath: newOnPath})
 		}
 	}
 	// translate each path and path entry to the package purl of that component
