@@ -137,7 +137,7 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
-		return echo.NewHTTPError(400, "missing or invalid user id")
+		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingUserID)
 	}
 
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -183,6 +183,20 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, dtos.OrgInformation{OwnerEmail: email})
+}
+
+func (controller *AdminController) GetUserInformation(ctx shared.Context) error {
+	userID := ctx.Param("userID")
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingUserID)
+	}
+
+	orgs, err := controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get organizations for user").WithInternal(err)
+	}
+	return ctx.JSON(200, orgs)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an

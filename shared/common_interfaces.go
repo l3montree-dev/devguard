@@ -645,6 +645,7 @@ type AdminService interface {
 	CheckIfOrgExists(ctx context.Context, orgID uuid.UUID) error
 	GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error)
 	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
+	GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error)
 }
 
 type AdminRepository interface {
@@ -708,6 +709,7 @@ type AccessControl interface {
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
+	GetOwnerDomainsOfUser(user string) ([]string, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

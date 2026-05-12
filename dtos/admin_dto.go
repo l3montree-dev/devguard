@@ -6,6 +6,7 @@ const (
 	ErrorCouldNotFindUserWithMail           = "could not find user with the provided mail"
 	ErrorCouldNotFindDefinitiveUserWithMail = "could not find a definitive user with the provided mail"
 	ErrorInvalidOrMissingOrgID              = "invalid or missing organization id in path parameters"
+	ErrorInvalidOrMissingUserID             = "invalid or missing user id in path parameters"
 )
 
 type AdminsInOrg struct {

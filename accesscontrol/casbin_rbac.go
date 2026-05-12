@@ -434,6 +434,27 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	return domains, nil
 }
 
+// get all organizations where the given user has the owner role
+func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error) {
+	concurrencyMutex.RLock()
+	policies, err := c.enforcer.GetFilteredGroupingPolicy(0, "user::"+user, "role::"+string(shared.RoleOwner))
+	concurrencyMutex.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+
+	domains := make([]string, 0, len(policies))
+	for _, p := range policies {
+		if len(p) < 3 {
+			// if we have less than 3 columns the output is malformed
+			continue
+		}
+		// the domain is specified in the 3rd column with the domain:: prefix
+		domains = append(domains, strings.TrimPrefix(p[2], "domain::"))
+	}
+	return domains, nil
+}
+
 // the provider can be used to create domain specific RBAC instances
 func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker) (casbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db, broker)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/ory/client-go"
@@ -101,4 +102,27 @@ func (service AdminService) GetOwnerForOrg(ctx context.Context, orgID uuid.UUID)
 		return uuid.UUID{}, err
 	}
 	return uuid.Parse(owner)
+}
+
+func (service AdminService) GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error) {
+	domains, err := service.casbinRBACProvider.GetOwnerDomainsOfUser(userID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	parsedOrgIDs := make([]uuid.UUID, 0, len(domains))
+	for _, domain := range domains {
+		parsedDomainID, err := uuid.Parse(domain)
+		if err != nil {
+			return nil, err
+		}
+		parsedOrgIDs = append(parsedOrgIDs, parsedDomainID)
+	}
+
+	orgs, err := service.orgRepository.List(ctx, nil, parsedOrgIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return orgs, nil
 }
