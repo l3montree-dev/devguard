@@ -408,6 +408,20 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	}
 
 	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
+	if err == errQuickDiffFailed {
+		// Quickdiff path was tried but failed or didn't pass integrity. Roll back the
+		// current transaction (which may have polluted temp tables) and retry with a
+		// fresh transaction using the full streaming sync.
+		slog.Info("retrying import as full stream sync after quick-diff failure")
+		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
+			return fmt.Errorf("could not rollback after quick-diff failure: %w", rbErr)
+		}
+		tx, err = conn.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("could not begin retry transaction: %w", err)
+		}
+		failingTables, err = s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, false)
+	}
 	if err != nil {
 		if opts.Debug {
 			showImportDebug(ctx, tx, workingDir, failingTables)
@@ -740,29 +754,43 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 	return true, nil
 }
 
+// errQuickDiffFailed is returned by applyFromWorkingDir when the quickdiff path was
+// attempted but either failed to apply or did not pass the integrity check. The caller
+// must rollback the current transaction and retry with a fresh transaction without quickdiff.
+var errQuickDiffFailed = fmt.Errorf("quick-diff failed, needs full sync in a new transaction")
+
 // applyFromWorkingDir populates the database from gob files then verifies integrity.
 // bulk=true uses a full truncate+copy approach (faster for initial empty-DB imports);
 // bulk=false uses streaming with EXCEPT-based sync (correct for incremental updates).
+// When tryQuickDiff=true the quickdiff path is attempted first; on failure it returns
+// errQuickDiffFailed so the caller can rollback and retry with tryQuickDiff=false.
 func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth integrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
 	if tryQuickDiff {
 		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
-			slog.Warn("quick-diff apply failed, falling back to full stream sync", "err", err)
-		} else if !ok {
+			slog.Warn("quick-diff apply failed, will retry as full sync", "err", err)
+			return nil, errQuickDiffFailed
+		}
+		if !ok {
+			// Not applicable (no quickdiff in archive, or version mismatch) — fall through
+			// to full sync in the same transaction; no temp tables were created yet.
 			slog.Info("quick-diff not applicable, falling back to full stream sync")
-			return s.applyFromWorkingDir(ctx, tx, workingDir, integrityGroundTruth, false, false) // retry with full streaming import
-		}
-
-		localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
-		if err != nil {
-			return nil, fmt.Errorf("could not calculate integrity information: %w", err)
-		}
-		failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
-		if !success {
-			slog.Warn("integrity validation failed for tables", "failingTables", failingTables)
-			return s.applyFromWorkingDir(ctx, tx, workingDir, integrityGroundTruth, false, false) // retry with full streaming import
+		} else {
+			// Quickdiff applied — verify integrity before committing.
+			localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+			if err != nil {
+				return nil, fmt.Errorf("could not calculate integrity information: %w", err)
+			}
+			failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+			if !success {
+				slog.Warn("quick-diff integrity check failed, will retry as full sync", "failingTables", failingTables)
+				return failingTables, errQuickDiffFailed
+			}
+			slog.Info("integrity validation successful", "tables_checked", len(localIntegrity))
+			return nil, nil
 		}
 	}
+
 	slog.Info("populating database from gob files")
 	var err error
 	if bulk {
