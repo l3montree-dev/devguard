@@ -205,14 +205,14 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 		FROM (
 			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, 0 AS source_priority
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, 1 AS source_priority
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC
+			ORDER BY cve, source_priority, cisa_exploit_add ASC
 		) ks
 		WHERE cves.cve = ks.cve`); err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
@@ -251,14 +251,14 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 		FROM (
 			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, 0 AS source_priority
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, 1 AS source_priority
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC
+			ORDER BY cve, source_priority, cisa_exploit_add ASC
 		) ks
 		WHERE cves_stage.cve = ks.cve`); err != nil {
 		return fmt.Errorf("could not update cves_stage with kev data: %w", err)
