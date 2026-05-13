@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -153,9 +154,14 @@ func (runner *DaemonRunner) Start(ctx context.Context) {
 
 func (runner *DaemonRunner) tick() {
 	if runner.leaderElector.IsLeader() {
-		slog.Info("this instance is the leader - running background jobs")
-		runner.runDaemons()
-		runner.RunAssetPipeline(context.Background(), false)
+		slog.Info("this instance is the leader - running background jobs with a timeout of 2 hours")
+		tickCtx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		runner.runDaemons(tickCtx)
+		runner.RunAssetPipeline(tickCtx, false)
+		if err := tickCtx.Err(); err != nil {
+			monitoring.Alert("asset pipeline timed out after 2 hours", err)
+		}
+		cancel()
 	} else {
 		slog.Info("not the leader - skipping background jobs")
 	}

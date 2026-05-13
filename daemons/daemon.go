@@ -10,12 +10,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func getLastMirrorTime(configService shared.ConfigService, key string) (time.Time, error) {
+func getLastMirrorTime(ctx context.Context, configService shared.ConfigService, key string) (time.Time, error) {
 	var lastMirror struct {
 		Time time.Time `json:"time"`
 	}
 
-	err := configService.GetJSONConfig(context.Background(), key, &lastMirror)
+	err := configService.GetJSONConfig(ctx, key, &lastMirror)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Error("could not get last mirror time", "err", err, "key", key)
@@ -28,8 +28,8 @@ func getLastMirrorTime(configService shared.ConfigService, key string) (time.Tim
 	return lastMirror.Time, nil
 }
 
-func shouldMirror(configService shared.ConfigService, key string) bool {
-	lastTime, err := getLastMirrorTime(configService, key)
+func shouldMirror(ctx context.Context, configService shared.ConfigService, key string) bool {
+	lastTime, err := getLastMirrorTime(ctx, configService, key)
 	if err != nil {
 		return false
 	}
@@ -37,19 +37,22 @@ func shouldMirror(configService shared.ConfigService, key string) bool {
 	return time.Since(lastTime) > 1*time.Hour
 }
 
-func markMirrored(configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(context.Background(), key, struct {
+func markMirrored(ctx context.Context, configService shared.ConfigService, key string) error {
+	return configService.SetJSONConfig(ctx, key, struct {
 		Time time.Time `json:"time"`
 	}{
 		Time: time.Now(),
 	})
 }
 
-func (runner *DaemonRunner) maybeRunAndMark(key string, fn func() error) error {
-	if shouldMirror(runner.configService, key) {
+func (runner *DaemonRunner) maybeRunAndMark(ctx context.Context, key string, fn func() error) error {
+	if shouldMirror(ctx, runner.configService, key) {
+		t := time.Now()
+		slog.Info("starting daemon", "key", key)
 		// always mark as mirrored - even in case of error to avoid endless loops
-		err1 := markMirrored(runner.configService, key)
+		err1 := markMirrored(ctx, runner.configService, key)
 		err := fn()
+		slog.Info("finished daemon", "key", key, "duration", time.Since(t))
 		if err != nil {
 			return err
 		}
@@ -68,35 +71,33 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
-func (runner *DaemonRunner) runDaemons() {
-	ctx := context.Background()
-
-	if err := runner.maybeRunAndMark("maintain.cleanup", func() error {
+func (runner *DaemonRunner) runDaemons(ctx context.Context) {
+	if err := runner.maybeRunAndMark(ctx, "maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
 		slog.Error("could not clean up orphaned records", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.opensourceinsights", func() error {
+	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {
 		return runner.UpdateOpenSourceInsightInformation(ctx)
 	}); err != nil {
 		slog.Error("could not update deps dev information", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.vulndb", func() error {
+	if err := runner.maybeRunAndMark(ctx, "vulndb.vulndb", func() error {
 		return runner.UpdateVulnDB(ctx)
 	}); err != nil {
 		slog.Error("could not update vuln db", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.fixedVersions", func() error {
+	if err := runner.maybeRunAndMark(ctx, "vulndb.fixedVersions", func() error {
 		return runner.UpdateFixedVersions(ctx)
 	}); err != nil {
 		slog.Error("could not update fixed versions", "err", err)
 	}
 
-	if err := runner.maybeRunAndMark("vulndb.directDependencyFixedVersion", func() error {
-		return runner.RunResolveFixedVersionsPipeline(context.Background(), false)
+	if err := runner.maybeRunAndMark(ctx, "vulndb.directDependencyFixedVersion", func() error {
+		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
 		slog.Error("could not resolve direct depend	ency fixed versions", "err", err)
 	}
