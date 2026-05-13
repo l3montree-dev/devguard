@@ -636,13 +636,6 @@ func truncateCveRelatedTables(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-func truncateExploitTable(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `TRUNCATE exploits CASCADE`); err != nil {
-		return fmt.Errorf("could not truncate exploit-related tables: %w", err)
-	}
-	return nil
-}
-
 func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `TRUNCATE malicious_packages, malicious_affected_components CASCADE`); err != nil {
 		return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
