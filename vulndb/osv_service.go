@@ -233,8 +233,44 @@ func applyDiff(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted
 	return deleted, inserted, updated, lockHeld, nil
 }
 
+func liveTableIsEmpty(ctx context.Context, tx pgx.Tx, live string) (bool, error) {
+	var exists bool
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s LIMIT 1)`, live)).Scan(&exists); err != nil {
+		return false, fmt.Errorf("could not check whether %s is empty: %w", live, err)
+	}
+	return !exists, nil
+}
+
+func insertStageIntoLive(ctx context.Context, tx pgx.Tx, spec syncSpec) (inserted int64, lockHeld time.Duration, err error) {
+	t := time.Now()
+	tag, err := tx.Exec(ctx, fmt.Sprintf(`INSERT INTO %s (%s) SELECT %s FROM %s`,
+		spec.live,
+		strings.Join(spec.insertCols, ", "),
+		strings.Join(spec.insertSelectExprs, ", "),
+		spec.stage,
+	))
+	if err != nil {
+		return 0, 0, fmt.Errorf("insertStageIntoLive (%s): %w", spec.live, err)
+	}
+	inserted = tag.RowsAffected()
+	lockHeld = time.Since(t)
+	slog.Info("syncTable: fast path insert", "table", spec.live, "inserted", inserted, "took", lockHeld)
+	return inserted, lockHeld, nil
+}
+
 // syncTable is the thin wrapper used by syncAllTables: compute diff from staging, then apply.
 func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted, updated int64, lockHeld time.Duration, err error) {
+	empty, err := liveTableIsEmpty(ctx, tx, spec.live)
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("syncTable live check (%s): %w", spec.live, err)
+	}
+	if empty {
+		inserted, lockHeld, err = insertStageIntoLive(ctx, tx, spec)
+		if err != nil {
+			return 0, 0, 0, 0, err
+		}
+		return 0, inserted, 0, lockHeld, nil
+	}
 	if err = computeDiffFromStage(ctx, tx, spec); err != nil {
 		return
 	}
