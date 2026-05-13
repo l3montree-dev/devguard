@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -243,6 +245,38 @@ func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context
 		return echo.NewHTTPError(500, "could not calculate instance statistics").WithInternal(err)
 	}
 	return ctx.JSON(200, usageStatistics)
+}
+
+func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) error {
+	var updateRequest dtos.UpdateInstanceSettingsRequest
+	err := ctx.Bind(&updateRequest)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not parse update request parameters")
+	}
+
+	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get current instance settings state from config").WithInternal(err)
+	}
+
+	if updateRequest.DisableOrgCreation != nil {
+		updateInstanceSettings := instanceSettings
+		updateInstanceSettings.SingleOrganizationMode = *updateRequest.DisableOrgCreation
+		err = controller.configService.SetJSONConfig(context.Background(), "instanceSettings", updateInstanceSettings)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not update instance settings config").WithInternal(err)
+		}
+
+		err = os.Setenv("SINGLE_ORGANIZATION_MODE", strconv.FormatBool(*updateRequest.DisableOrgCreation))
+		if err != nil {
+			err = controller.configService.SetJSONConfig(context.Background(), "instanceSettings", instanceSettings)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not revert instance settings config, possible inconsistent state!").WithInternal(err)
+			}
+			return echo.NewHTTPError(500, "could not update env variable, reverted instance settings config").WithInternal(err)
+		}
+	}
+	return ctx.NoContent(200)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an

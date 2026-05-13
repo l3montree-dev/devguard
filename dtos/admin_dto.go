@@ -23,3 +23,7 @@ type OrgInformation struct {
 type UpdateAssetRequest struct {
 	NewSlug string `json:"new_slug"`
 }
+
+type UpdateInstanceSettingsRequest struct {
+	DisableOrgCreation *bool `json:"disable_org_creation"` // pointer makes it nil-able so we can distinguish a missing/ incorrectly parsed value (rather than the default value = false)
+}
