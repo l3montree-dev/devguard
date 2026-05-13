@@ -195,7 +195,7 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 
 	// Update direct CVEs and alias CVEs. DISTINCT ON with ORDER BY cisa_exploit_add ASC gives a
 	// deterministic winner when an alias maps to multiple KEV canonical CVEs.
-	if _, err := tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE cves SET
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
@@ -211,11 +211,13 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC
+			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
-		WHERE cves.cve = ks.cve`); err != nil {
+		WHERE cves.cve = ks.cve`)
+	if err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
 	}
+	slog.Debug("insertCISAKEVBulk: update complete", "rows_updated", tag.RowsAffected())
 	return nil
 }
 
@@ -241,7 +243,8 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into kev staging table: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
+
+	tag, err := tx.Exec(ctx, `
 		UPDATE cves_stage SET
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
@@ -257,10 +260,12 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC
+			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
-		WHERE cves_stage.cve = ks.cve`); err != nil {
+		WHERE cves_stage.cve = ks.cve`)
+	if err != nil {
 		return fmt.Errorf("could not update cves_stage with kev data: %w", err)
 	}
+	slog.Debug("applyCISAKEVToStage: update complete", "rows_updated", tag.RowsAffected())
 	return nil
 }
