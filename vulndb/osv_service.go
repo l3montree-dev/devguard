@@ -77,6 +77,14 @@ func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted
 	// --- Phase 1: compute diffs (read-only on live, no RowExclusiveLock) ---
 	t := time.Now()
 
+	// Index the staging table on its key columns so the EXCEPT diff can use
+	// hash lookups instead of a full sequential scan on both sides.
+	if _, err = tx.Exec(ctx, fmt.Sprintf(
+		`CREATE INDEX ON %s (%s)`, spec.stage, keysCSV,
+	)); err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("syncTable stage-index (%s): %w", spec.live, err)
+	}
+
 	if _, err = tx.Exec(ctx, fmt.Sprintf(`
 		CREATE TEMP TABLE %s ON COMMIT DROP AS
 		SELECT %s FROM %s
