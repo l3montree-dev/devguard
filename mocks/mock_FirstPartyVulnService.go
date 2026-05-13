@@ -42,16 +42,16 @@ func (_m *FirstPartyVulnService) EXPECT() *FirstPartyVulnService_Expecter {
 }
 
 // SyncAllIssues provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
-	ret := _mock.Called(ctx, org, project, asset, assetVersion)
+func (_mock *FirstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
+	ret := _mock.Called(ctx, org, project, asset, assetVersion, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncAllIssues")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Org, models.Project, models.Asset, models.AssetVersion) error); ok {
-		r0 = returnFunc(ctx, org, project, asset, assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Org, models.Project, models.Asset, models.AssetVersion, *string) error); ok {
+		r0 = returnFunc(ctx, org, project, asset, assetVersion, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -69,11 +69,12 @@ type FirstPartyVulnService_SyncAllIssues_Call struct {
 //   - project models.Project
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
-func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}) *FirstPartyVulnService_SyncAllIssues_Call {
-	return &FirstPartyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", ctx, org, project, asset, assetVersion)}
+//   - userAgent *string
+func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, userAgent interface{}) *FirstPartyVulnService_SyncAllIssues_Call {
+	return &FirstPartyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", ctx, org, project, asset, assetVersion, userAgent)}
 }
 
-func (_c *FirstPartyVulnService_SyncAllIssues_Call) Run(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion)) *FirstPartyVulnService_SyncAllIssues_Call {
+func (_c *FirstPartyVulnService_SyncAllIssues_Call) Run(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string)) *FirstPartyVulnService_SyncAllIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -95,12 +96,17 @@ func (_c *FirstPartyVulnService_SyncAllIssues_Call) Run(run func(ctx context.Con
 		if args[4] != nil {
 			arg4 = args[4].(models.AssetVersion)
 		}
+		var arg5 *string
+		if args[5] != nil {
+			arg5 = args[5].(*string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -111,22 +117,22 @@ func (_c *FirstPartyVulnService_SyncAllIssues_Call) Return(err error) *FirstPart
 	return _c
 }
 
-func (_c *FirstPartyVulnService_SyncAllIssues_Call) RunAndReturn(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error) *FirstPartyVulnService_SyncAllIssues_Call {
+func (_c *FirstPartyVulnService_SyncAllIssues_Call) RunAndReturn(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error) *FirstPartyVulnService_SyncAllIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SyncIssues provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
-	ret := _mock.Called(ctx, org, project, asset, assetVersion, vulnList)
+func (_mock *FirstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string) error {
+	ret := _mock.Called(ctx, org, project, asset, assetVersion, vulnList, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncIssues")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Org, models.Project, models.Asset, models.AssetVersion, []models.FirstPartyVuln) error); ok {
-		r0 = returnFunc(ctx, org, project, asset, assetVersion, vulnList)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Org, models.Project, models.Asset, models.AssetVersion, []models.FirstPartyVuln, *string) error); ok {
+		r0 = returnFunc(ctx, org, project, asset, assetVersion, vulnList, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -145,11 +151,12 @@ type FirstPartyVulnService_SyncIssues_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - vulnList []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) SyncIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}) *FirstPartyVulnService_SyncIssues_Call {
-	return &FirstPartyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", ctx, org, project, asset, assetVersion, vulnList)}
+//   - userAgent *string
+func (_e *FirstPartyVulnService_Expecter) SyncIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}, userAgent interface{}) *FirstPartyVulnService_SyncIssues_Call {
+	return &FirstPartyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", ctx, org, project, asset, assetVersion, vulnList, userAgent)}
 }
 
-func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln)) *FirstPartyVulnService_SyncIssues_Call {
+func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string)) *FirstPartyVulnService_SyncIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -175,6 +182,10 @@ func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(ctx context.Contex
 		if args[5] != nil {
 			arg5 = args[5].([]models.FirstPartyVuln)
 		}
+		var arg6 *string
+		if args[6] != nil {
+			arg6 = args[6].(*string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -182,6 +193,7 @@ func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(ctx context.Contex
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -192,7 +204,7 @@ func (_c *FirstPartyVulnService_SyncIssues_Call) Return(err error) *FirstPartyVu
 	return _c
 }
 
-func (_c *FirstPartyVulnService_SyncIssues_Call) RunAndReturn(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error) *FirstPartyVulnService_SyncIssues_Call {
+func (_c *FirstPartyVulnService_SyncIssues_Call) RunAndReturn(run func(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string) error) *FirstPartyVulnService_SyncIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -381,16 +393,16 @@ func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBra
 }
 
 // UserDetectedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
-	ret := _mock.Called(ctx, tx, userID, scannerID, firstPartyVulns)
+func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+	ret := _mock.Called(ctx, tx, userID, userAgent, scannerID, firstPartyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedFirstPartyVulns")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, []models.FirstPartyVuln) error); ok {
-		r0 = returnFunc(ctx, tx, userID, scannerID, firstPartyVulns)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, string, []models.FirstPartyVuln) error); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, scannerID, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -406,13 +418,14 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - userID string
+//   - userAgent *string
 //   - scannerID string
 //   - firstPartyVulns []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, scannerID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
-	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", ctx, tx, userID, scannerID, firstPartyVulns)}
+func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, scannerID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", ctx, tx, userID, userAgent, scannerID, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -426,9 +439,89 @@ func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(c
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
+		var arg3 *string
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(*string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 []models.FirstPartyVuln
+		if args[5] != nil {
+			arg5 = args[5].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Return(err error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UserFixedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
+func (_mock *FirstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, firstPartyVulns []models.FirstPartyVuln) error {
+	ret := _mock.Called(ctx, tx, userID, userAgent, firstPartyVulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UserFixedFirstPartyVulns")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, []models.FirstPartyVuln) error); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, firstPartyVulns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnService_UserFixedFirstPartyVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserFixedFirstPartyVulns'
+type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
+	*mock.Call
+}
+
+// UserFixedFirstPartyVulns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - userID string
+//   - userAgent *string
+//   - firstPartyVulns []models.FirstPartyVuln
+func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", ctx, tx, userID, userAgent, firstPartyVulns)}
+}
+
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *string
+		if args[3] != nil {
+			arg3 = args[3].(*string)
 		}
 		var arg4 []models.FirstPartyVuln
 		if args[4] != nil {
@@ -445,81 +538,12 @@ func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(c
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Return(err error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UserFixedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
-	ret := _mock.Called(ctx, tx, userID, firstPartyVulns)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UserFixedFirstPartyVulns")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []models.FirstPartyVuln) error); ok {
-		r0 = returnFunc(ctx, tx, userID, firstPartyVulns)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// FirstPartyVulnService_UserFixedFirstPartyVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserFixedFirstPartyVulns'
-type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
-	*mock.Call
-}
-
-// UserFixedFirstPartyVulns is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - userID string
-//   - firstPartyVulns []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
-	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", ctx, tx, userID, firstPartyVulns)}
-}
-
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []models.FirstPartyVuln
-		if args[3] != nil {
-			arg3 = args[3].([]models.FirstPartyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
 func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Return(err error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

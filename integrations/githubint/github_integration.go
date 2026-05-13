@@ -620,7 +620,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 
 		session := shared.GetSession(event.Ctx)
 
-		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
+		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID(), userAgent)
 	case shared.VulnEvent:
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event
@@ -838,7 +838,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 	return err
 }
 
-func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	ctx, span := githubTracer.Start(ctx, "GithubIntegration.CreateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -895,7 +895,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
 		"ticketId":  vuln.GetTicketID(),
 		"ticketUrl": vuln.GetTicketURL(),
-	}, nil)
+	}, userAgent)
 	// save the dependencyVuln and the event in a transaction
 	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	// if an error did happen, delete the issue from github

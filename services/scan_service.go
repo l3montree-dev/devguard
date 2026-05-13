@@ -371,12 +371,12 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 		}
 
 		// Process new vulnerabilities that don't exist on other branches
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(ctx, tx, userID, scannerID, utils.DereferenceSlice(branchDiff.NewToAllBranches)); err != nil {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(ctx, tx, userID, userAgent, scannerID, utils.DereferenceSlice(branchDiff.NewToAllBranches)); err != nil {
 			return err
 		}
 
 		// Process fixed vulnerabilities
-		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(ctx, tx, userID, fixedVulns); err != nil {
+		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(ctx, tx, userID, userAgent, fixedVulns); err != nil {
 			return err
 		}
 
@@ -453,7 +453,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, artifactName, assetVersion, sbom, dependencyVulns, asset)
+	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, userAgent, artifactName, assetVersion, sbom, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -500,7 +500,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -545,7 +545,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// We can create the newly found one without checking anything
-	if err := s.dependencyVulnService.UserDetectedDependencyVulns(ctx, tx, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
+	if err := s.dependencyVulnService.UserDetectedDependencyVulns(ctx, tx, userID, userAgent, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
@@ -561,7 +561,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	if err := s.dependencyVulnService.UserFixedDependencyVulns(ctx, tx, userID, fixedVulns, *assetVersion, asset); err != nil {
+	if err := s.dependencyVulnService.UserFixedDependencyVulns(ctx, tx, userID, userAgent, fixedVulns, *assetVersion, asset); err != nil {
 		slog.Error("error when trying to add fix event")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -571,7 +571,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	vulnsToReopen := utils.Filter(diff.Unchanged, func(dv models.DependencyVuln) bool {
 		return dv.State == dtos.VulnStateFixed
 	})
-	if err := s.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, vulnsToReopen); err != nil {
+	if err := s.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, userAgent, vulnsToReopen); err != nil {
 		slog.Error("error when trying to reopen previously fixed vulnerability")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}

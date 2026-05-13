@@ -84,7 +84,7 @@ func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error
 	).Error
 }
 
-func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	// we are not creating fixed or reopened events, if the user is "system", because this can only happen if there is a problem with the scanner or the database.
 	if len(dependencyVulns) == 0 || userID == "system" {
 		return nil
@@ -94,7 +94,7 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, nil)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -107,7 +107,7 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events)
 }
 
-func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln) error {
+func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx shared.DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln) error {
 	// we are not creating fixed or reopened events, if the user is "system", because this can only happen if there is a problem with the scanner or the database.
 	if len(dependencyVulns) == 0 || userID == "system" {
 		return nil
@@ -115,7 +115,7 @@ func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx share
 
 	events := make([]models.VulnEvent, len(dependencyVulns))
 	for i := range dependencyVulns {
-		ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, "", false, nil)
+		ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, "", false, userAgent)
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
 	}
@@ -152,7 +152,7 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx co
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
-func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -168,7 +168,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	for i, dependencyVuln := range dependencyVulns {
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		riskReport := vulndb.RawRisk(dependencyVuln.CVE, e, depth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, "system", riskReport, artifactName, false, nil)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, riskReport, artifactName, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -398,7 +398,7 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 				continue
 			}
 			errgroup.Go(func() (any, error) {
-				err := s.createIssue(ctx, vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
+				err := s.createIssue(ctx, vulnerability, asset, assetVersion.Slug, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system", userAgent)
 				return nil, err
 			})
 		} else {
@@ -414,11 +414,11 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string) error {
+func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability models.DependencyVuln, asset models.Asset, assetVersionSlug string, orgSlug string, projectSlug string, justification string, userID string, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID, userAgent)
 }
 
 func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln, userAgent *string) error {

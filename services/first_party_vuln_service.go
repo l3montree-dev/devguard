@@ -32,7 +32,7 @@ func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepo
 
 var _ shared.FirstPartyVulnService = (*firstPartyVulnService)(nil)
 
-func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, firstPartyVulns []models.FirstPartyVuln) error {
 
 	if len(firstPartyVulns) == 0 {
 		return nil
@@ -40,7 +40,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false, nil)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false, userAgent)
 
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -54,14 +54,14 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false, nil)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev

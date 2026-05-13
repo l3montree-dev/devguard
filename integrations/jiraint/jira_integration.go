@@ -447,7 +447,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 	return createdIssue, nil
 }
 
-func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
 		return nil

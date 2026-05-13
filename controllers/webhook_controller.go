@@ -406,7 +406,7 @@ func (w *WebhookController) GetRoleInProject(ctx context.Context, userID string,
 	return "", nil
 }
 
-func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	// Logic to create an issue
 	return nil
 }

@@ -41,6 +41,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		mock.Anything, // orgSlug
 		mock.Anything, // justification
 		mock.Anything, // userID
+		mock.Anything, // userAgent
 	).Run(func(args mock.Arguments) {
 		createIssueCallCount++
 	}).Return(nil).Maybe()
@@ -107,7 +108,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion, nil)
 			assert.NoError(t, err)
 
 			// Verify CreateIssue was called only once, not twice
@@ -189,7 +190,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion2)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion2, nil)
 			assert.NoError(t, err)
 
 			// Verify CreateIssue was called twice (once for each different vulnerability)
@@ -213,6 +214,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
+		mock.Anything, // userAgent
 	).Run(func(args mock.Arguments) {
 		createIssueCallCount++
 	}).Return(nil).Maybe()
@@ -222,6 +224,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 		mock.Anything, // asset
 		mock.Anything, // assetVersionSlug
 		mock.Anything, // vuln
+		mock.Anything, // userAgent
 	).Run(func(args mock.Arguments) {
 		updateIssueCallCount++
 	}).Return(nil).Maybe()
@@ -281,7 +284,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
 			// Call SyncAllIssues with FX-injected service
-			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion)
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, assetVersion, nil)
 			assert.NoError(t, err)
 
 			// Verify UpdateIssue was called once and CreateIssue was not called

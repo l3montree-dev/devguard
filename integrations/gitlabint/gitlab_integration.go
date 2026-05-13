@@ -1375,7 +1375,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 	return nil, 0, notConnectedError
 }
 
-func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.CreateIssue")
 	defer span.End()
 	span.SetAttributes(
