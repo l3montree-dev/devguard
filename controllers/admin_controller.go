@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -265,15 +263,6 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 		err = controller.configService.SetJSONConfig(context.Background(), "instanceSettings", updateInstanceSettings)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not update instance settings config").WithInternal(err)
-		}
-
-		err = os.Setenv("SINGLE_ORGANIZATION_MODE", strconv.FormatBool(*updateRequest.DisableOrgCreation))
-		if err != nil {
-			err = controller.configService.SetJSONConfig(context.Background(), "instanceSettings", instanceSettings)
-			if err != nil {
-				return echo.NewHTTPError(500, "could not revert instance settings config, possible inconsistent state!").WithInternal(err)
-			}
-			return echo.NewHTTPError(500, "could not update env variable, reverted instance settings config").WithInternal(err)
 		}
 	}
 	return ctx.NoContent(200)
