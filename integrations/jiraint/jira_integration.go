@@ -563,7 +563,7 @@ func getOpenAndDoneStatusIDs(transitions []Transition) (openStatusID, doneStatus
 
 }
 
-func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
 		return nil

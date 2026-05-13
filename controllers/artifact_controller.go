@@ -109,6 +109,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	var body requestBody
 
+	userAgent := ctx.Request().UserAgent()
+
 	if err := ctx.Bind(&body); err != nil {
 		return err
 	}
@@ -150,7 +152,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 	currentUserID := shared.GetSession(ctx).GetUserID()
 
-	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentUserID)
+	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentUserID, &userAgent)
 
 	if err != nil {
 		tx.Rollback()
@@ -190,7 +192,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 					ArtifactName: artifact.ArtifactName,
 				},
 				SBOM: exportedBOM,
-			}); err != nil {
+			}, &userAgent); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
@@ -199,7 +201,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState)
+		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState, &userAgent)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -238,6 +240,8 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 
+	userAgent := ctx.Request().UserAgent()
+
 	// we need to sync the vulnerabilities after deleting the artifact
 	// maybe we need to close some: https://github.com/l3montree-dev/devguard/issues/1496
 	// fetch all vulnerabilities which ONLY belong to this artifact
@@ -258,7 +262,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	if len(syncVulns) > 0 {
 		c.FireAndForget(func() {
-			err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, syncVulns)
+			err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, syncVulns, &userAgent)
 			if err != nil {
 				slog.Error("could not sync issues for vulnerabilities after artifact deletion", "err", err)
 			}
@@ -299,6 +303,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	reqCtx := ctx.Request().Context()
+	userAgent := ctx.Request().UserAgent()
 
 	artifact, err := c.artifactService.ReadArtifact(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
 	if err != nil {
@@ -360,7 +365,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
 
-	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID())
+	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID(), &userAgent)
 	if err != nil {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
@@ -395,7 +400,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 					ArtifactName: artifactName,
 				},
 				SBOM: exportedBOM,
-			}); err != nil {
+			}, &userAgent); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
@@ -404,7 +409,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	}
 
 	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns)
+		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}

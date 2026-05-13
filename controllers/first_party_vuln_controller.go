@@ -105,6 +105,8 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
+	userAgent := ctx.Request().UserAgent()
+
 	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
 
 	var j struct {
@@ -119,7 +121,7 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Justification: j.Justification,
 		Ctx:           ctx,
-	}); err != nil {
+	}, &userAgent); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate firstPartyVuln").WithInternal(err)
 	}
 
@@ -199,7 +201,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
-	})
+	}, &userAgent)
 	// we do not want the transaction to be rolled back if the third party integration fails
 	if err != nil {
 		// just log the error

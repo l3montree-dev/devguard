@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any) error {
+func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.HandleEvent")
 	defer span.End()
 	switch event := event.(type) {
@@ -185,7 +185,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any) error {
 				return err
 			}
 		}
-		return g.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
+		return g.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 }

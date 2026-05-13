@@ -101,7 +101,7 @@ func NewScanService(
 
 var _ shared.ScanService = &scanService{}
 
-func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.ScanNormalizedSBOM")
 	defer span.End()
 
@@ -140,7 +140,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 
 	// handle the scan result
 	resultCtx, resultSpan := servicesTracer.Start(ctx, "scanService.HandleScanResult")
-	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID)
+	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, userAgent)
 	resultSpan.End()
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
@@ -175,7 +175,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.HandleFirstPartyVulnResult")
 	defer span.End()
 
@@ -299,7 +299,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
 	}
 
-	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, nil, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
+	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, nil, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project, userAgent)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -320,7 +320,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.DB, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.DB, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database, which are not fixed yet - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, tx, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -403,7 +403,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 				Project:      shared.ToProjectObject(project),
 				Org:          shared.ToOrgObject(org),
 				Vulns:        utils.Map(utils.DereferenceSlice(branchDiff.NewToAllBranches), transformer.FirstPartyVulnToDto),
-			}); err != nil {
+			}, userAgent); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
 		})
@@ -418,7 +418,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.HandleScanResult")
 	defer span.End()
 	span.SetAttributes(
@@ -492,7 +492,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 				Artifact: shared.ArtifactObject{
 					ArtifactName: artifactName,
 				},
-			}); err != nil {
+			}, userAgent); err != nil {
 				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
 			}
 		})
@@ -766,6 +766,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	assetVersion models.AssetVersion,
 	artifact models.Artifact,
 	userID string,
+	userAgent *string,
 ) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error) {
 	// Fetch information sources (SBOM URLs) from the artifact
 	rootNodes, err := s.componentService.FetchInformationSources(ctx, nil, &artifact)
@@ -817,7 +818,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Scan the normalized SBOM for vulnerabilities
-	_, _, dependencyVulns, err := s.ScanNormalizedSBOM(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID)
+	_, _, dependencyVulns, err := s.ScanNormalizedSBOM(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
 	if err != nil {
 		slog.Error("failed to scan normalized sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
 		return nil, nil, nil, fmt.Errorf("failed to scan normalized sbom: %w", err)

@@ -154,7 +154,7 @@ func (s *firstPartyVulnService) applyAndSave(ctx context.Context, tx shared.DB, 
 	return *ev, nil
 }
 
-func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
 	// get all first-party for the assetVersion
 	vulnList, err := s.firstPartyVulnRepository.ListByScanner(ctx, nil, assetVersion.Name, asset.ID, "")
 	if err != nil {
@@ -166,10 +166,10 @@ func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 		return nil
 	}
 
-	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList)
+	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList, userAgent)
 }
 
-func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string) error {
 	if len(vulnList) == 0 {
 		return nil
 	}
@@ -177,7 +177,7 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability), nil
+				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability, userAgent), nil
 			})
 		}
 	}
@@ -186,11 +186,11 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability, userAgent)
 	if err != nil {
 		return err
 	}

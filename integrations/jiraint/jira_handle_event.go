@@ -16,7 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
+func (i *JiraIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	switch event := event.(type) {
 	case shared.ManualMitigateEvent:
 		asset := shared.GetAsset(event.Ctx)
@@ -213,7 +213,7 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 			}
 
 		}
-		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
+		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 

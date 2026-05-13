@@ -351,7 +351,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 	return ev, nil
 }
 
-func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
 	// get all dependencyVulns for the assetVersion
 	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.Name, asset.ID, nil)
 	if err != nil {
@@ -374,10 +374,10 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 		}
 	}
 
-	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList)
+	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList, userAgent)
 }
 
-func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln, userAgent *string) error {
 	if os.Getenv("DISABLE_TICKET_SYNC") == "true" {
 		slog.Info("ticket sync is disabled via DISABLE_TICKET_SYNC environment variable")
 		return nil
@@ -403,7 +403,7 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				err := s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability)
+				err := s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability, userAgent)
 				return nil, err
 			})
 		}
@@ -421,11 +421,11 @@ func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability m
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
-func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln) error {
+func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability, userAgent)
 	if err != nil {
 		return err
 	}

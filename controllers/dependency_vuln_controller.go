@@ -233,11 +233,11 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	}
 
 	thirdPartyIntegrations := shared.GetThirdPartyIntegration(ctx)
-
+	userAgent := ctx.Request().UserAgent()
 	if err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: j.Comment,
-	}); err != nil {
+	}, &userAgent); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
 
@@ -309,6 +309,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
+	userAgent := ctx.Request().UserAgent()
 
 	type vulnReq struct {
 		VulnID uuid.UUID         `json:"vulnId"`
@@ -355,7 +356,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 
 	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 	controller.FireAndForget(func() {
-		err := controller.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns)
+		err := controller.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -425,7 +426,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: ev,
-	})
+	}, &userAgent)
 	// we do not want the transaction to be rolled back if the third party integration fails
 	if err != nil {
 		// just log the error
@@ -488,7 +489,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 		if err := thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 			Ctx:   ctx,
 			Event: ev,
-		}); err != nil {
+		}, &userAgent); err != nil {
 			slog.Error("could not handle event", "err", err)
 		}
 

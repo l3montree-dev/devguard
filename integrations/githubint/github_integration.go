@@ -397,7 +397,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			doUpdateArtifactRiskHistory = true
 		}
 
-		err = githubIntegration.UpdateIssue(reqCtx, asset, assetVersion.Slug, vuln)
+		err = githubIntegration.UpdateIssue(reqCtx, asset, assetVersion.Slug, vuln, &userAgent)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)
@@ -558,7 +558,7 @@ func githubTicketIDToIDAndNumber(id string) (int, int) {
 	return ticketID, ticketNumber
 }
 
-func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, event any) error {
+func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	ctx, span := githubTracer.Start(ctx, "GithubIntegration.HandleEvent")
 	defer span.End()
 	switch event := event.(type) {
@@ -726,12 +726,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 			})
 			return err
 		}
-		return githubIntegration.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
+		return githubIntegration.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 }
 
-func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := githubTracer.Start(ctx, "GithubIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -777,7 +777,7 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, nil)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, userAgent)
 			// save the event
 			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {

@@ -168,6 +168,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not bind the request to a justification")
 	}
+	userAgent := ctx.Request().UserAgent()
 
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -179,7 +180,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: justification.Comment,
-	})
+	}, &userAgent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not mitigate licenseRisk").WithInternal(err)
 	}
@@ -226,7 +227,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: event,
-	})
+	}, &userAgent)
 	// we do not want the transaction to be rolled back if the third party integration fails
 	if err != nil {
 		// just log the error

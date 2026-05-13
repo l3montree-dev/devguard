@@ -1233,7 +1233,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(

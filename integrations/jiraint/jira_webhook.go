@@ -161,7 +161,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			doUpdateArtifactRiskHistory = true
 		}
 
-		err = i.UpdateIssue(ctx.Request().Context(), asset, assetVersion.Slug, vuln)
+		err = i.UpdateIssue(ctx.Request().Context(), asset, assetVersion.Slug, vuln, &userAgent)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)

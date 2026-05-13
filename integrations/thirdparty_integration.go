@@ -216,11 +216,11 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
 	})
 }
 
-func (t *thirdPartyIntegrations) HandleEvent(ctx context.Context, event any) error {
+func (t *thirdPartyIntegrations) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.HandleEvent(ctx, event)
+			return struct{}{}, i.HandleEvent(ctx, event, userAgent)
 		})
 	}
 
@@ -228,11 +228,11 @@ func (t *thirdPartyIntegrations) HandleEvent(ctx context.Context, event any) err
 	return err
 }
 
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
+			return struct{}{}, i.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
 		})
 	}
 	_, err := wg.WaitAndCollect()

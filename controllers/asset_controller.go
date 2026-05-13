@@ -353,7 +353,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 				return
 			}
 
-			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion); err != nil {
+			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, nil); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		})

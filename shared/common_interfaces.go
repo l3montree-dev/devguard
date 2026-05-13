@@ -396,8 +396,8 @@ type DependencyVulnService interface {
 	UserReopenedToOpen(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifactName string) error
 	CreateVulnEventAndApply(ctx context.Context, tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, status dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, assetVersionName string, userAgent *string) (models.VulnEvent, error)
-	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
-	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
+	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln, userAgent *string) error
+	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error
 	GetAllUniqueCVEsForAsset(ctx context.Context, assetID uuid.UUID, compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool) ([]models.DependencyVuln, error)
 }
 
@@ -435,17 +435,17 @@ type FirstPartyVulnService interface {
 	UserDetectedFirstPartyVulns(ctx context.Context, tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx context.Context, tx DB, scannerID string, firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UpdateFirstPartyVulnState(ctx context.Context, tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
-	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
-	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
+	SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string) error
+	SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error
 }
 
 type ScanService interface {
-	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
-	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
-	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
+	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
+	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)
-	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
+	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 }
 
