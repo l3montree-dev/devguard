@@ -254,7 +254,8 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 	}
 
 	userID := shared.GetSession(ctx).GetUserID()
-	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID)
+	userAgent := ctx.Request().UserAgent()
+	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID, &userAgent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not make final license decision").WithInternal(err)
 	}

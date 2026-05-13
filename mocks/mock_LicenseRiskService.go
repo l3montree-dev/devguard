@@ -129,16 +129,16 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run
 }
 
 // MakeFinalLicenseDecision provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string) error {
-	ret := _mock.Called(ctx, tx, vulnID, finalLicense, justification, userID)
+func (_mock *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string) error {
+	ret := _mock.Called(ctx, tx, vulnID, finalLicense, justification, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MakeFinalLicenseDecision")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, vulnID, finalLicense, justification, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string, *string) error); ok {
+		r0 = returnFunc(ctx, tx, vulnID, finalLicense, justification, userID, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -157,11 +157,12 @@ type LicenseRiskService_MakeFinalLicenseDecision_Call struct {
 //   - finalLicense string
 //   - justification string
 //   - userID string
-func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx interface{}, tx interface{}, vulnID interface{}, finalLicense interface{}, justification interface{}, userID interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
-	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", ctx, tx, vulnID, finalLicense, justification, userID)}
+//   - userAgent *string
+func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx interface{}, tx interface{}, vulnID interface{}, finalLicense interface{}, justification interface{}, userID interface{}, userAgent interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", ctx, tx, vulnID, finalLicense, justification, userID, userAgent)}
 }
 
-func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string)) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string)) *LicenseRiskService_MakeFinalLicenseDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -187,6 +188,10 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx con
 		if args[5] != nil {
 			arg5 = args[5].(string)
 		}
+		var arg6 *string
+		if args[6] != nil {
+			arg6 = args[6].(*string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -194,6 +199,7 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx con
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -204,7 +210,7 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Return(err error) *L
 	return _c
 }
 
-func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string) error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string) error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }

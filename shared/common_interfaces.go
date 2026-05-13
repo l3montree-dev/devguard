@@ -627,7 +627,7 @@ type CVERelationshipRepository interface {
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error
 	UpdateLicenseRiskState(ctx context.Context, tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
-	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string) error
+	MakeFinalLicenseDecision(ctx context.Context, tx DB, vulnID uuid.UUID, finalLicense, justification, userID string, userAgent *string) error
 }
 
 type ImportOptions struct {

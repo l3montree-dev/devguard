@@ -409,7 +409,7 @@ func (s *LicenseRiskService) updateLicenseRiskState(ctx context.Context, tx shar
 	return ev, err
 }
 
-func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID, finalLicense, justification, userID string) error {
+func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID, finalLicense, justification, userID string, userAgent *string) error {
 	licenseRisk, err := s.licenseRiskRepository.Read(ctx, tx, vulnID)
 	if err != nil {
 		return err
@@ -420,6 +420,6 @@ func (s *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx *g
 		return nil
 	}
 
-	ev := models.NewLicenseDecisionEvent(vulnID, dtos.VulnTypeLicenseRisk, userID, justification, licenseRisk.GetArtifactNames(), finalLicense, nil)
+	ev := models.NewLicenseDecisionEvent(vulnID, dtos.VulnTypeLicenseRisk, userID, justification, licenseRisk.GetArtifactNames(), finalLicense, userAgent)
 	return s.licenseRiskRepository.ApplyAndSave(ctx, nil, &licenseRisk, &ev)
 }
