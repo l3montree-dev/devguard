@@ -80,9 +80,9 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 // on exactly the previous version can skip staging tables and apply the patch directly.
 // It first imports the current artifact to establish a known baseline in the DB, then
 // exports fresh data and computes the diff — making it self-contained in CI.
-func (s *VulnDBService) ExportRCWithDiff(ctx context.Context) error {
+func (s *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
 	slog.Info("quick-diff: importing previous artifact to establish baseline")
-	if err := s.ImportRC(ctx, shared.ImportOptions{}); err != nil {
+	if err := s.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
 		slog.Info("quick-diff: failed to import previous artifact, proceeding with export without diff", "error", err)
 		return s.exportRC(ctx, false)
 	}
@@ -366,7 +366,12 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	slog.Info("start vulndb import", "processing", processingMode, "limitedToTables", opts.LimitedToTables)
 	start := time.Now()
 
-	workingDir, err := pullVulnDBFromPackageRegistry(ctx)
+	var workingDir string
+	if opts.LocalArchive {
+		workingDir, err = pullVulnDBDebug(ctx)
+	} else {
+		workingDir, err = pullVulnDBFromPackageRegistry(ctx)
+	}
 	if err != nil {
 		return fmt.Errorf("could not pull from remote repository: %w", err)
 	}

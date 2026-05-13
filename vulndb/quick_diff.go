@@ -70,6 +70,8 @@ type quickDiffCVE struct {
 	CISAActionDue         *string
 	CISARequiredAction    string
 	CISAVulnerabilityName string
+	EPSS                  *float64
+	Percentile            *float32
 	Vector                string
 }
 
@@ -83,11 +85,11 @@ type quickDiffAC struct {
 	ID                int64
 	Purl              string
 	Ecosystem         string
-	Version           string
-	SemverIntroduced  string
-	SemverFixed       string
-	VersionIntroduced string
-	VersionFixed      string
+	Version           *string
+	SemverIntroduced  *string
+	SemverFixed       *string
+	VersionIntroduced *string
+	VersionFixed      *string
 }
 
 type quickDiffPivot struct {
@@ -138,7 +140,7 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	rows, err = tx.Query(ctx, `
 		SELECT c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
 		       c.description, c.cvss, c."references", c.cisa_required_action,
-		       c.cisa_vulnerability_name, c.vector,
+		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
 		       to_char(c.cisa_exploit_add, 'YYYY-MM-DD'),
 		       to_char(c.cisa_action_due,  'YYYY-MM-DD')
 		FROM cves c
@@ -155,7 +157,7 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	rows, err = tx.Query(ctx, `
 		SELECT c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
 		       c.description, c.cvss, c."references", c.cisa_required_action,
-		       c.cisa_vulnerability_name, c.vector,
+		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
 		       to_char(c.cisa_exploit_add, 'YYYY-MM-DD'),
 		       to_char(c.cisa_action_due,  'YYYY-MM-DD')
 		FROM cves c
@@ -204,7 +206,7 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT a.id, a.purl, a.ecosystem, a.version,
+		SELECT a.id, a.purl, a.ecosystem, a.version::text,
 		       a.semver_introduced::text, a.semver_fixed::text,
 		       a.version_introduced, a.version_fixed
 		FROM affected_components a
@@ -330,7 +332,7 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT mc.id, mc.malicious_package_id, mc.purl, mc.ecosystem, mc.version,
+		SELECT mc.id, mc.malicious_package_id, mc.purl, mc.ecosystem, mc.version::text,
 		       mc.semver_introduced::text, mc.semver_fixed::text,
 		       mc.version_introduced, mc.version_fixed
 		FROM malicious_affected_components mc
@@ -395,7 +397,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.CVEsInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsInserted), func(i int) ([]interface{}, error) {
 			c := diff.CVEsInserted[i]
-			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, float32(0), float32(0), c.Vector}, nil
+			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cves: %w", err)
 		}
@@ -406,7 +408,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.CVEsUpdated) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsUpdated), func(i int) ([]interface{}, error) {
 			c := diff.CVEsUpdated[i]
-			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, float32(0), float32(0), c.Vector}, nil
+			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_cves: %w", err)
 		}
@@ -444,13 +446,15 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if err := copyIDs(ctx, tx, "_diff_del_affected_components", "id", diff.AffectedComponentsDeleted); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_affected_components: %w", err)
 	}
-	if err := createLike("_diff_ins_affected_components", "affected_components", strings.Join(acCols, ", ")); err != nil {
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE _diff_ins_affected_components ON COMMIT DROP AS
+		SELECT id, purl, ecosystem, version::text, semver_introduced::text, semver_fixed::text, version_introduced, version_fixed
+		FROM affected_components WHERE false`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_affected_components: %w", err)
 	}
 	if len(diff.AffectedComponentsInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_affected_components"}, acCols, pgx.CopyFromSlice(len(diff.AffectedComponentsInserted), func(i int) ([]interface{}, error) {
 			a := diff.AffectedComponentsInserted[i]
-			return []interface{}{a.ID, a.Purl, a.Ecosystem, a.Version, nilIfEmpty(a.SemverIntroduced), nilIfEmpty(a.SemverFixed), a.VersionIntroduced, a.VersionFixed}, nil
+			return []interface{}{a.ID, a.Purl, a.Ecosystem, a.Version, a.SemverIntroduced, a.SemverFixed, a.VersionIntroduced, a.VersionFixed}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_affected_components: %w", err)
 		}
@@ -551,7 +555,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if err := copyIDs(ctx, tx, "_diff_del_malicious_affected_components", "id", diff.MalCompsDeleted); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_malicious_affected_components: %w", err)
 	}
-	if err := createLike("_diff_ins_malicious_affected_components", "malicious_affected_components", strings.Join(malCompCols, ", ")); err != nil {
+	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE _diff_ins_malicious_affected_components ON COMMIT DROP AS
+		SELECT id, malicious_package_id, purl, ecosystem, version::text, semver_introduced::text, semver_fixed::text, version_introduced, version_fixed
+		FROM malicious_affected_components WHERE false`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_malicious_affected_components: %w", err)
 	}
 	if len(diff.MalCompsInserted) > 0 {
@@ -629,7 +635,7 @@ func collectCVERows(rows pgx.Rows) ([]quickDiffCVE, error) {
 		if err := rows.Scan(
 			&c.ID, &c.ContentHash, &c.CVE, &c.DatePublished, &c.DateLastModified,
 			&c.Description, &c.CVSS, &c.References, &c.CISARequiredAction,
-			&c.CISAVulnerabilityName, &c.Vector,
+			&c.CISAVulnerabilityName, &c.EPSS, &c.Percentile, &c.Vector,
 			&c.CISAExploitAdd, &c.CISAActionDue,
 		); err != nil {
 			return nil, err

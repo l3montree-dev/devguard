@@ -644,12 +644,14 @@ type ImportOptions struct {
 	// Debug logs per-row differences between the imported DB state and the gob archive
 	// when an integrity check fails, before the fallback retry wipes the state.
 	Debug bool
+	// LocalArchive reads from vulndb.tar.zst in the current directory instead of pulling from OCI.
+	LocalArchive bool
 }
 
 type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
-	ExportRCWithDiff(ctx context.Context) error
+	ExportRCWithDiff(ctx context.Context, localArchive bool) error
 }
 
 type AccessControl interface {

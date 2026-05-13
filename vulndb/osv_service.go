@@ -72,7 +72,7 @@ var liveTableSpecs = func() []syncSpec {
 	exploitAllCols := []string{"id", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
 	malPkgAllCols := []string{"id", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
+	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
 	return []syncSpec{
 		{
 			live: "cves", stage: "cves_stage", keyCols: []string{"id"},
@@ -740,7 +740,7 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	t = time.Now()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO malicious_affected_components (id, malicious_package_id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
-		SELECT id, malicious_package_id, purl, ecosystem, version,
+		SELECT id, malicious_package_id, purl, ecosystem, version::text,
 			semver_introduced::semver, semver_fixed::semver,
 			version_introduced, version_fixed
 		FROM mal_comps_stage
