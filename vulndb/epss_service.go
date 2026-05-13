@@ -132,3 +132,41 @@ func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPS
 	}
 	return nil
 }
+
+func applyEPSSToStage(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+	if len(epssData) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE IF NOT EXISTS epss_stage (
+			cve_id     text,
+			epss       numeric(6,5),
+			percentile numeric(6,5)
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create epss staging table: %w", err)
+	}
+	type epssRow struct {
+		cve        string
+		epss       float64
+		percentile float64
+	}
+	rows := make([]epssRow, 0, len(epssData))
+	for cve, e := range epssData {
+		rows = append(rows, epssRow{cve, e.EPSS, e.Percentile})
+	}
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"epss_stage"}, []string{"cve_id", "epss", "percentile"},
+		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
+			return []any{rows[i].cve, rows[i].epss, rows[i].percentile}, nil
+		})); err != nil {
+		return fmt.Errorf("could not copy epss rows into staging table: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE cves_stage SET
+			epss       = epss_stage.epss,
+			percentile = epss_stage.percentile
+		FROM epss_stage
+		WHERE cves_stage.cve = epss_stage.cve_id`); err != nil {
+		return fmt.Errorf("could not update cves_stage with epss data: %w", err)
+	}
+	return nil
+}

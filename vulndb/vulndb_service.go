@@ -448,19 +448,21 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	}
 
 	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
-		var existingAffectedComponents map[int64][]int64
+		var existingCVEIDs map[int64]struct{}
+		var componentToCVEs, cveToComponents map[int64][]int64
 		if !lastImportTime.IsZero() {
 			var loadErr error
-			existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+			componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 			if loadErr != nil {
 				return fmt.Errorf("could not get current affected components: %w", loadErr)
 			}
-			slog.Info("loaded existing affected components for deduplication", "count", len(existingAffectedComponents))
+			existingCVEIDs = cveIDsFromComponentMap(componentToCVEs)
+			slog.Info("loaded existing state for incremental import", "cves", len(existingCVEIDs), "affected_components", len(componentToCVEs))
 		}
 		group.Go(func() error {
 			defer close(vulndbChan)
 			t := time.Now()
-			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVStreamer(groupCtx, lastImportTime, existingAffectedComponents, vulndbChan)); err != nil {
+			if err := readGobFileStream(groupCtx, workingDir+"/osv.gob", gobOSVStreamer(groupCtx, lastImportTime, existingCVEIDs, componentToCVEs, cveToComponents, vulndbChan)); err != nil {
 				return fmt.Errorf("could not read OSV gob: %w", err)
 			}
 			slog.Info("decoded osv.gob (CVE/affected component data)", "took", time.Since(t))
@@ -630,19 +632,21 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 		return err
 	}
 
-	existingAffectedComponents := make(map[int64][]int64)
+	var existingCVEIDs map[int64]struct{}
+	var componentToCVEs, cveToComponents map[int64][]int64
 	if !lastImportTime.IsZero() {
 		var loadErr error
-		existingAffectedComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
+		componentToCVEs, cveToComponents, loadErr = getCurrentAffectedComponents(ctx, tx)
 		if loadErr != nil {
 			return fmt.Errorf("could not get current affected components: %w", loadErr)
 		}
+		existingCVEIDs = cveIDsFromComponentMap(componentToCVEs)
 	}
 
 	var vulnRows vulndbRows
 	var malRows malRows
 	if utils.ContainsAny(limitedToTables, []string{"cves", "affected_components", "cve_relationships", "cve_affected_component"}) {
-		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, existingAffectedComponents)(osvEntries)
+		vulnRows = gobOSVToVulnFilterTransformer(lastImportTime, existingCVEIDs, componentToCVEs, cveToComponents)(osvEntries)
 	}
 	if utils.ContainsAny(limitedToTables, []string{"malicious_packages", "malicious_affected_components"}) {
 		malRows = gobOSVToMalFilterTransformer(lastImportTime)(osvEntries)
@@ -905,6 +909,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
+	var allDeletedPivotRows []cveAffectedComponentRow
 	var cveCount, relationshipCount, deleteCveAffectedComponentCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
 	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, deleteCveAffectedComponentTime, malPkgTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
@@ -973,12 +978,8 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			cveAffectedComponentsTime += time.Since(t)
 			cveAffectedComponentCount += len(rows.CVEAffectedComponents)
 
-			t = time.Now()
-			if err := deleteCVEAffectedComponentsBulk(ctx, tx, rows.DeleteCVEAffectedComponents); err != nil {
-				return fmt.Errorf("could not delete old cve_affected_component relationships: %w", err)
-			}
-			deleteCveAffectedComponentTime += time.Since(t)
 			deleteCveAffectedComponentCount += len(rows.DeleteCVEAffectedComponents)
+			allDeletedPivotRows = append(allDeletedPivotRows, rows.DeleteCVEAffectedComponents...)
 		case exploits, ok := <-exploitsIn:
 			if !ok {
 				exploitsIn = nil
@@ -1018,9 +1019,14 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 
 	if deleteCveAffectedComponentCount > 0 {
-		slog.Info("running cleanup jobs")
 		t := time.Now()
-		runCleanUpJobs(ctx, tx)
+		if err := deleteCVEAffectedComponentsBulk(ctx, tx, allDeletedPivotRows); err != nil {
+			return fmt.Errorf("could not delete old cve_affected_component relationships: %w", err)
+		}
+		deleteCveAffectedComponentTime = time.Since(t)
+		slog.Info("running scoped cleanup jobs", "deleted_pivot_rows", deleteCveAffectedComponentCount)
+		t = time.Now()
+		runScopedCleanUpJobs(ctx, tx, allDeletedPivotRows)
 		slog.Info("finished cleanup jobs", "took", time.Since(t))
 	}
 

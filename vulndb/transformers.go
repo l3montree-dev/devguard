@@ -79,9 +79,12 @@ func gobOSVToMalFilterTransformer(lastImportTime time.Time) func([]OSVEntry) mal
 		}
 	}
 }
-func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64][]int64) func([]OSVEntry) vulndbRows {
-	if existing == nil {
-		existing = make(map[int64][]int64)
+func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existingCVEIDs map[int64]struct{}, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64) func([]OSVEntry) vulndbRows {
+	if componentToCVEs == nil {
+		componentToCVEs = make(map[int64][]int64)
+	}
+	if cveToComponents == nil {
+		cveToComponents = make(map[int64][]int64)
 	}
 	return func(elements []OSVEntry) vulndbRows {
 		cves := make([]models.CVE, 0, len(elements))
@@ -91,8 +94,13 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 		deleteCveAffectedComponents := make([]cveAffectedComponentRow, 0)
 
 		for i := range elements {
-			if !lastImportTime.IsZero() && !elements[i].ModifiedTimestamp.After(lastImportTime) {
-				continue
+			if !lastImportTime.IsZero() {
+				cveID := models.CalculateHashForCVE(elements[i].OSV.ID)
+				_, alreadyInDB := existingCVEIDs[cveID]
+				if alreadyInDB && !elements[i].ModifiedTimestamp.After(lastImportTime) {
+					continue
+				}
+				// new entry (not yet in DB): always import regardless of modified timestamp
 			}
 
 			// check if malicious package or vulnerability
@@ -110,29 +118,29 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 			cves = append(cves, cve)
 			cveRelationships = append(cveRelationships, relationships...)
 
-			newAffectedComponentHashes := make(map[int64]struct{})
+			newComponentHashes := make(map[int64]struct{}, len(affectedComponentsForCVE))
 
 			for _, affectedComponent := range affectedComponentsForCVE {
 				hash := affectedComponent.CalculateHashFast()
 				affectedComponent.ID = hash
 
-				cveIDs, componentExists := existing[hash]
-				if !componentExists {
+				if _, componentKnown := componentToCVEs[hash]; !componentKnown {
 					affectedComponents = append(affectedComponents, affectedComponent)
 				}
 
-				pairExists := slices.Contains(cveIDs, cve.ID)
-				if !pairExists {
+				if !slices.Contains(componentToCVEs[hash], cve.ID) {
 					cveAffectedComponents = append(cveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: hash})
-					existing[hash] = append(cveIDs, cve.ID)
+					componentToCVEs[hash] = append(componentToCVEs[hash], cve.ID)
+					cveToComponents[cve.ID] = append(cveToComponents[cve.ID], hash)
 				}
-				newAffectedComponentHashes[hash] = struct{}{}
+				newComponentHashes[hash] = struct{}{}
 			}
-			// check for all affected components this cve is part of - maybe we need to delete some cve affected component entries
-			for affectedComponentHash, cves := range existing {
-				if slices.Contains(cves, cve.ID) {
-					// check if this affected component is still part of the cve, if not we need to delete the cve affected component entry
-					if _, exist := newAffectedComponentHashes[affectedComponentHash]; !exist {
+
+			// For incremental imports: find affected components this CVE previously owned
+			// that are no longer present — use the reverse map for O(k) lookup.
+			if !lastImportTime.IsZero() {
+				for _, affectedComponentHash := range cveToComponents[cve.ID] {
+					if _, stillPresent := newComponentHashes[affectedComponentHash]; !stillPresent {
 						deleteCveAffectedComponents = append(deleteCveAffectedComponents, cveAffectedComponentRow{CveID: cve.ID, AffectedComponentID: affectedComponentHash})
 					}
 				}
@@ -148,8 +156,8 @@ func gobOSVToVulnFilterTransformer(lastImportTime time.Time, existing map[int64]
 	}
 }
 
-func gobOSVStreamer(ctx context.Context, lastImportTime time.Time, existing map[int64][]int64, vulndbChan chan<- vulndbRows) func([]OSVEntry) error {
-	transform := gobOSVToVulnFilterTransformer(lastImportTime, existing)
+func gobOSVStreamer(ctx context.Context, lastImportTime time.Time, existingCVEIDs map[int64]struct{}, componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, vulndbChan chan<- vulndbRows) func([]OSVEntry) error {
+	transform := gobOSVToVulnFilterTransformer(lastImportTime, existingCVEIDs, componentToCVEs, cveToComponents)
 	return func(elements []OSVEntry) error {
 		vulndbRows := transform(elements)
 		select {

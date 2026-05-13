@@ -18,7 +18,6 @@ package vulndb
 import (
 	"archive/zip"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,6 +78,7 @@ var importEcosystems = []string{
 var ignoreVulnerabilityEcosystems = []string{
 	"CGA",
 	"GSD",
+	"OSV",
 }
 
 type cveAffectedComponentRow struct {
@@ -100,9 +100,8 @@ type OSVEntry struct {
 }
 
 type zipJob struct {
-	File          *zip.File
-	Ecosystem     string
-	ModifiedTimes map[string]time.Time // parsed from modified_id.csv in the ecosystem zip
+	File      *zip.File
+	Ecosystem string
 }
 
 const numberOfZipWorkers = 10
@@ -174,7 +173,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
 	malRows := gobOSVToMalFilterTransformer(time.Time{})(allOSVVulns)
-	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil)(allOSVVulns)
+	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil, nil)(allOSVVulns)
 	fakeRows, fakeComps := buildFakePackages()
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
@@ -264,9 +263,6 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 		return
 	}
 
-	// Parse modified_id.csv if present to get authoritative modification timestamps.
-	modifiedTimes := parseModifiedIDCSV(zipReader)
-
 	// filter and push all jobs to the zip worker functions
 	for i := range zipReader.File {
 		// first check if we want to even include this vuln based on the file name
@@ -280,7 +276,7 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 			continue
 		}
 
-		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem, ModifiedTimes: modifiedTimes}
+		zipJobs <- zipJob{File: zipReader.File[i], Ecosystem: ecosystem}
 	}
 	slog.Info("finished extracting zip file", "ecosystem", ecosystem, "took", time.Since(start))
 }
@@ -349,43 +345,53 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 			continue
 		}
 
-		// Use the timestamp from modified_id.csv if present; fall back to the JSON field.
-		modifiedAt := osvEntry.Modified
-		if ts, ok := job.ModifiedTimes[osvEntry.ID]; ok {
-			modifiedAt = ts
-		}
-
 		// cut all vulns which are newer than our import start
-		if modifiedAt.After(importStart) {
+		if osvEntry.Modified.After(importStart) {
 			slog.Warn("ran into race condition on import, skipping vuln with newer information")
 			continue
 		}
-		output <- OSVEntry{OSV: &osvEntry, ModifiedTimestamp: modifiedAt}
+		output <- OSVEntry{OSV: &osvEntry, ModifiedTimestamp: osvEntry.Modified}
 	}
 }
 
-// getCurrentAffectedComponents returns a map of affectedComponentID → []cveID.
-// A key's presence means the affected_component exists; the slice encodes which CVEs already reference it.
-func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (map[int64][]int64, error) {
+// cveIDsFromComponentMap derives the set of known CVE IDs from the componentToCVEs map,
+// avoiding a separate SELECT on the cves table. CVEs without affected components are
+// excluded, but the cleanup jobs ensure those do not exist in a consistent database.
+func cveIDsFromComponentMap(componentToCVEs map[int64][]int64) map[int64]struct{} {
+	m := make(map[int64]struct{}, len(componentToCVEs))
+	for _, cveIDs := range componentToCVEs {
+		for _, id := range cveIDs {
+			m[id] = struct{}{}
+		}
+	}
+	return m
+}
+
+// getCurrentAffectedComponents returns two maps built from cve_affected_component:
+//   - componentToCVEs: affectedComponentID → []cveID
+//   - cveToComponents: cveID → []affectedComponentID
+func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, err error) {
 	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current state of affected components: %w", err)
+		return nil, nil, fmt.Errorf("could not get current state of affected components: %w", err)
 	}
 
-	m := make(map[int64][]int64, 200_000)
+	componentToCVEs = make(map[int64][]int64, 200_000)
+	cveToComponents = make(map[int64][]int64, 200_000)
 	for rows.Next() {
 		var affID, cveID int64
 		if err := rows.Scan(&affID, &cveID); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
+			return nil, nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
 		}
-		m[affID] = append(m[affID], cveID)
+		componentToCVEs[affID] = append(componentToCVEs[affID], cveID)
+		cveToComponents[cveID] = append(cveToComponents[cveID], affID)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
+		return nil, nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
 	}
-	return m, nil
+	return componentToCVEs, cveToComponents, nil
 }
 
 // insertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
@@ -806,6 +812,52 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 }
 
 // after importing check if the database state is consistent
+// runScopedCleanUpJobs removes orphaned affected_components and CVEs that resulted
+// from deleting the given pivot rows. Only checks the specific IDs involved rather
+// than scanning the full tables.
+func runScopedCleanUpJobs(ctx context.Context, tx pgx.Tx, deleted []cveAffectedComponentRow) {
+	if len(deleted) == 0 {
+		return
+	}
+
+	affIDs := make([]int64, 0, len(deleted))
+	cveIDs := make([]int64, 0, len(deleted))
+	for _, r := range deleted {
+		affIDs = append(affIDs, r.AffectedComponentID)
+		cveIDs = append(cveIDs, r.CveID)
+	}
+
+	start := time.Now()
+	_, err := tx.Exec(ctx, `
+		DELETE FROM affected_components
+		WHERE id = ANY($1)
+		AND NOT EXISTS (
+			SELECT 1 FROM cve_affected_component WHERE affected_component_id = id
+		)`, affIDs)
+	if err != nil {
+		slog.Error("could not clean up orphan affected components, continuing...", "error", err)
+	} else {
+		slog.Info("cleaned up orphan affected components", "took", time.Since(start))
+	}
+
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+		DELETE FROM cves
+		WHERE id = ANY($1)
+		AND NOT EXISTS (SELECT 1 FROM cve_affected_component WHERE cve_id = id)
+		AND NOT EXISTS (
+			SELECT 1 FROM cve_relationships cr
+			JOIN cves tc ON tc.cve = cr.target_cve
+			JOIN cve_affected_component cac ON cac.cve_id = tc.id
+			WHERE cr.source_cve = cves.cve
+		)`, cveIDs)
+	if err != nil {
+		slog.Error("could not clean up orphan cves, continuing...", "error", err)
+	} else {
+		slog.Info("cleaned up orphan cves", "took", time.Since(start))
+	}
+}
+
 func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	slog.Info("start running sanity checks")
 	// first delete all cves which have no affected components and also none of their relationships does
@@ -852,45 +904,6 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	}
 }
 
-// parseModifiedIDCSV reads the modified_id.csv file from an ecosystem zip and returns
-// a map of vulnerability ID → last-modified time. If the file is absent or unparseable,
-// an empty (non-nil) map is returned so callers can always do a safe map lookup.
-func parseModifiedIDCSV(zipReader *zip.Reader) map[string]time.Time {
-	result := make(map[string]time.Time)
-	for _, f := range zipReader.File {
-		if f.Name != "modified_id.csv" {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			slog.Warn("could not open modified_id.csv", "err", err)
-			return result
-		}
-		defer rc.Close()
-		r := csv.NewReader(rc)
-		r.ReuseRecord = true
-		// skip header row
-		if _, err := r.Read(); err != nil {
-			return result
-		}
-		for {
-			record, err := r.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil || len(record) < 2 {
-				continue
-			}
-			ts, err := time.Parse(time.RFC3339, record[1])
-			if err != nil {
-				continue
-			}
-			result[record[0]] = ts
-		}
-		return result
-	}
-	return result
-}
 
 func shouldIgnoreVulnerabilityID(id string) bool {
 	prefix, _, ok := strings.Cut(id, "-")
@@ -898,5 +911,6 @@ func shouldIgnoreVulnerabilityID(id string) bool {
 		// false negatives are ok
 		return false
 	}
+
 	return slices.Contains(ignoreVulnerabilityEcosystems, prefix)
 }
