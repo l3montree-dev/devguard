@@ -407,7 +407,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
-	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk)
+	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
 	if err != nil {
 		if opts.Debug {
 			showImportDebug(ctx, tx, workingDir, failingTables)
@@ -743,24 +743,35 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 // applyFromWorkingDir populates the database from gob files then verifies integrity.
 // bulk=true uses a full truncate+copy approach (faster for initial empty-DB imports);
 // bulk=false uses streaming with EXCEPT-based sync (correct for incremental updates).
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth integrityInformation, bulk bool) ([]string, error) {
-	populate := func() error {
-		if bulk {
-			return s.populateDBFromGobsBulk(ctx, tx, workingDir)
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth integrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
+	if tryQuickDiff {
+		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
+		if err != nil {
+			slog.Warn("quick-diff apply failed, falling back to full stream sync", "err", err)
+		} else if !ok {
+			slog.Info("quick-diff not applicable, falling back to full stream sync")
+			return s.applyFromWorkingDir(ctx, tx, workingDir, integrityGroundTruth, false, false) // retry with full streaming import
 		}
-		return s.populateDBFromGobsStream(ctx, tx, workingDir)
-	}
 
-	ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
-	if err != nil {
-		slog.Warn("quick-diff apply failed, falling back to full stream sync", "err", err)
-	} else if !ok {
-		slog.Info("quick-diff not applicable, falling back to full stream sync")
-	}
-	if err != nil || !ok {
-		if err := populate(); err != nil {
-			return nil, err
+		localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate integrity information: %w", err)
 		}
+		failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+		if !success {
+			slog.Warn("integrity validation failed for tables", "failingTables", failingTables)
+			return s.applyFromWorkingDir(ctx, tx, workingDir, integrityGroundTruth, false, false) // retry with full streaming import
+		}
+	}
+	slog.Info("populating database from gob files")
+	var err error
+	if bulk {
+		err = s.populateDBFromGobsBulk(ctx, tx, workingDir)
+	} else {
+		err = s.populateDBFromGobsStream(ctx, tx, workingDir)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not populate database from gob files: %w", err)
 	}
 
 	localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
