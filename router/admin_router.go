@@ -46,6 +46,7 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 
 	adminRouter.GET("/statistics/usage/", adminController.GetInstanceUsageStatistics)
 	adminRouter.PATCH("/settings/", adminController.UpdateInstanceSettings)
+	adminRouter.GET("/settings/", adminController.GetInstanceSettings)
 
 	// Daemon trigger endpoints – each daemon has its own SSE trigger route
 	daemonGroup := adminRouter.Group("/daemons")

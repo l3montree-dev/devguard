@@ -279,6 +279,14 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 	return ctx.NoContent(200)
 }
 
+func (controller AdminController) GetInstanceSettings(ctx shared.Context) error {
+	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get current instance settings state from config").WithInternal(err)
+	}
+	return ctx.JSON(200, instanceSettings)
+}
+
 // checkCooldown reads the config DB for the last trigger time and returns an
 // error message if the cooldown has not elapsed yet.
 // Because the timestamp lives in the shared config DB table, this correctly
