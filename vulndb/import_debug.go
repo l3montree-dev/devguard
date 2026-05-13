@@ -60,23 +60,23 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 		}
 		vulnRows := gobOSVToVulnTransformer()(osvEntries)
 		malRows := gobOSVToMalTransformer(osvEntries)
-		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs); err != nil {
+		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
 			slog.Error("show-diff: could not insert CVEs into staging", "err", err)
 			return
 		}
-		if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships); err != nil {
+		if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
 			return
 		}
-		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents); err != nil {
+		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
 			slog.Error("show-diff: could not insert affected_components into staging", "err", err)
 			return
 		}
-		if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents); err != nil {
+		if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents, "cve_affected_component_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_affected_component into staging", "err", err)
 			return
 		}
-		if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps); err != nil {
+		if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps, "mal_pkgs_stage", "mal_comps_stage"); err != nil {
 			slog.Error("show-diff: could not insert malicious packages into staging", "err", err)
 			return
 		}
@@ -123,7 +123,7 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			return
 		}
 		exploits := gobExploitFilterTransformer(gobExploits)
-		if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
+		if err := insertExploitsBulk(ctx, tx, exploits, "exploits_stage"); err != nil {
 			slog.Error("show-diff: could not insert exploits into staging", "err", err)
 			return
 		}

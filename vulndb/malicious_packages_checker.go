@@ -146,9 +146,9 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 }
 
 // insertMaliciousPackagesBulk streams malicious packages and components into staging tables. Call flushStagingTables once after all batches.
-func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
+func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent, pkgTable, compTable string) error {
 	if len(pkgs) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{pkgTable},
 			[]string{"id", "summary", "details", "published", "modified"},
 			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
 				p := pkgs[i]
@@ -158,7 +158,7 @@ func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.M
 		}
 	}
 	if len(comps) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{compTable},
 			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
 			pgx.CopyFromSlice(len(comps), func(i int) ([]any, error) {
 				c := comps[i]

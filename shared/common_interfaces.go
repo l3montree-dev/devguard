@@ -636,7 +636,6 @@ type LicenseRiskService interface {
 }
 
 type ImportOptions struct {
-	Full      bool
 	BatchSize int
 	// Bulk loads all gob data into RAM before writing — no channels, single DB flush.
 	// Faster than streaming but uses significantly more memory (~2-3 GB).
@@ -650,6 +649,7 @@ type ImportOptions struct {
 type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
+	ExportRCWithDiff(ctx context.Context) error
 }
 
 type AccessControl interface {
