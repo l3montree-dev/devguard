@@ -200,14 +200,7 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
 			cisa_vulnerability_name = ks.cisa_vulnerability_name
-		FROM (
-			SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
-			FROM kev_stage
-			UNION
-			SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
-			FROM kev_stage ks
-			JOIN cve_relationships cr ON cr.target_cve = ks.cve
-		) ks
+		FROM kev_stage ks
 		WHERE cves.cve = ks.cve`); err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
 	}
