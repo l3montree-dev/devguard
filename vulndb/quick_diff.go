@@ -605,13 +605,6 @@ func copyIDs[T any](ctx context.Context, tx pgx.Tx, tmp, col string, ids []T) er
 	return err
 }
 
-func nilIfEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 // --- row collectors ---
 
 func collectScalars[T any](rows pgx.Rows) ([]T, error) {

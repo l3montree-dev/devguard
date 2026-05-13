@@ -789,14 +789,6 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// flushStagingTables flushes all staging tables. Convenience wrapper for callers that handle all data types.
-func flushStagingTables(ctx context.Context, tx pgx.Tx) error {
-	if err := flushOSVStagingTables(ctx, tx); err != nil {
-		return err
-	}
-	return flushNonOSVStagingTables(ctx, tx)
-}
-
 func createStagingTables(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE IF NOT EXISTS cves_stage (
