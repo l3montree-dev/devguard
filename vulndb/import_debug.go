@@ -58,8 +58,8 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not read osv.gob", "err", err)
 			return
 		}
-		vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil, nil)(osvEntries)
-		malRows := gobOSVToMalFilterTransformer(time.Time{})(osvEntries)
+		vulnRows := gobOSVToVulnTransformer()(osvEntries)
+		malRows := gobOSVToMalTransformer(osvEntries)
 		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs); err != nil {
 			slog.Error("show-diff: could not insert CVEs into staging", "err", err)
 			return
@@ -122,7 +122,7 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not read exploits.gob", "err", err)
 			return
 		}
-		exploits := gobExploitFilterTransformer(time.Time{}, gobExploits)
+		exploits := gobExploitFilterTransformer(gobExploits)
 		if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
 			slog.Error("show-diff: could not insert exploits into staging", "err", err)
 			return

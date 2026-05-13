@@ -1,0 +1,1 @@
+ALTER TABLE public.cves ADD COLUMN IF NOT EXISTS content_hash bigint NOT NULL DEFAULT 0;

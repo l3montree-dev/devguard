@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -28,6 +29,7 @@ type cveReference struct {
 }
 type CVE struct {
 	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
+	ContentHash           int64               `json:"contentHash" gorm:"type:bigint;not null;default:0;"`
 	CVE                   string              `json:"cve" gorm:"type:text;"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
 	DateLastModified      time.Time           `json:"dateLastModified" cve:"dateLastModified"`
@@ -75,6 +77,16 @@ func CalculateHashForCVE(cveID string) int64 {
 	return int64(u & 0x7fffffffffffffff)
 }
 
+// CalculateContentHash hashes the OSV-sourced content fields (description, cvss, vector).
+// EPSS and CISA KEV are intentionally excluded — they are applied via separate UPDATE steps
+// and their changes should not trigger a delete+reinsert of the CVE or its related rows.
+func (cve CVE) CalculateContentHash() int64 {
+	h := fmt.Sprintf("%s|%.2f|%s", cve.Description, cve.CVSS, cve.Vector)
+	sum := md5.Sum([]byte(h))
+	u := binary.BigEndian.Uint64(sum[:8])
+	return int64(u & 0x7fffffffffffffff)
+}
+
 func (cve CVE) GetReferences() ([]cveReference, error) {
 	var refs []cveReference
 	if err := json.Unmarshal([]byte(cve.References), &refs); err != nil {
@@ -87,5 +99,6 @@ func (cve *CVE) BeforeSave(tx *gorm.DB) error {
 	if cve.ID == 0 {
 		cve.ID = cve.CalculateHash()
 	}
+	cve.ContentHash = cve.CalculateContentHash()
 	return nil
 }

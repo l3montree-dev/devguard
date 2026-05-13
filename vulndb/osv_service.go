@@ -39,6 +39,213 @@ import (
 	"github.com/pkg/errors"
 )
 
+// syncSpec describes how to sync one staging table into its live counterpart
+// using EXCEPT-based set operations. The three-step sync (delete removed rows,
+// insert new rows, update changed rows) makes every import idempotent and
+// removes the dependency on lastImportTime for correctness.
+type syncSpec struct {
+	live    string   // live table name
+	stage   string   // staging table name
+	keyCols []string // columns forming the row identity (used in EXCEPT queries)
+
+	// When set, rows whose key already exists in live but whose contentHashCol
+	// value differs are updated with contentCols values.
+	contentHashCol string
+	contentCols    []string
+
+	// insertCols lists the columns written on INSERT (must match insertSelectExprs length).
+	insertCols []string
+	// insertSelectExprs are the corresponding SELECT expressions from the stage table.
+	// Use this to apply type casts (e.g. "semver_introduced::semver").
+	insertSelectExprs []string
+}
+
+// syncTable performs a three-step EXCEPT-based sync from a staging table into its
+// live counterpart: delete removed rows, insert new rows, update changed rows.
+func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted, updated int64, err error) {
+	keysCSV := strings.Join(spec.keyCols, ", ")
+
+	// Build "live.k = gone.k AND ..." for the DELETE USING join.
+	whereJoin := make([]string, len(spec.keyCols))
+	for i, k := range spec.keyCols {
+		whereJoin[i] = fmt.Sprintf("%s.%s = _gone.%s", spec.live, k, k)
+	}
+
+	// The live table is locked (row-exclusive) for the duration of the three write steps.
+	lockStart := time.Now()
+
+	// Step 1 — DELETE rows present in live but absent from staging.
+	t := time.Now()
+	tag, err := tx.Exec(ctx, fmt.Sprintf(`
+		DELETE FROM %s
+		USING (
+			SELECT %s FROM %s
+			EXCEPT
+			SELECT %s FROM %s
+		) AS _gone
+		WHERE %s
+	`, spec.live, keysCSV, spec.live, keysCSV, spec.stage, strings.Join(whereJoin, " AND ")))
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("syncTable delete (%s): %w", spec.live, err)
+	}
+	deleted = tag.RowsAffected()
+	slog.Info("syncTable: delete", "table", spec.live, "deleted", deleted, "took", time.Since(t))
+
+	// Step 2 — INSERT rows present in staging but absent from live.
+	t = time.Now()
+	tag, err = tx.Exec(ctx, fmt.Sprintf(`
+		INSERT INTO %s (%s)
+		SELECT %s FROM %s
+		WHERE (%s) IN (
+			SELECT %s FROM %s
+			EXCEPT
+			SELECT %s FROM %s
+		)
+	`, spec.live,
+		strings.Join(spec.insertCols, ", "),
+		strings.Join(spec.insertSelectExprs, ", "),
+		spec.stage,
+		keysCSV,
+		keysCSV, spec.stage,
+		keysCSV, spec.live,
+	))
+	if err != nil {
+		return deleted, 0, 0, fmt.Errorf("syncTable insert (%s): %w", spec.live, err)
+	}
+	inserted = tag.RowsAffected()
+	slog.Info("syncTable: insert", "table", spec.live, "inserted", inserted, "took", time.Since(t))
+
+	// Step 3 — UPDATE rows whose key exists in both sides but whose content changed.
+	if spec.contentHashCol != "" && len(spec.contentCols) > 0 {
+		setClauses := make([]string, len(spec.contentCols))
+		for i, c := range spec.contentCols {
+			setClauses[i] = fmt.Sprintf("%s = _s.%s", c, c)
+		}
+		joinCond := make([]string, len(spec.keyCols))
+		for i, k := range spec.keyCols {
+			joinCond[i] = fmt.Sprintf("%s.%s = _s.%s", spec.live, k, k)
+		}
+		t = time.Now()
+		tag, err = tx.Exec(ctx, fmt.Sprintf(`
+			UPDATE %s SET %s
+			FROM %s AS _s
+			WHERE %s AND %s.%s != _s.%s
+		`, spec.live,
+			strings.Join(setClauses, ", "),
+			spec.stage,
+			strings.Join(joinCond, " AND "),
+			spec.live, spec.contentHashCol, spec.contentHashCol,
+		))
+		if err != nil {
+			return deleted, inserted, 0, fmt.Errorf("syncTable update (%s): %w", spec.live, err)
+		}
+		updated = tag.RowsAffected()
+		slog.Info("syncTable: update", "table", spec.live, "updated", updated, "took", time.Since(t))
+	}
+
+	slog.Info("syncTable: live table lock released", "table", spec.live, "lock_held", time.Since(lockStart))
+	return deleted, inserted, updated, nil
+}
+
+// syncAllTables syncs every staging table into its live counterpart using
+// EXCEPT-based set operations. It replaces the old flush functions and makes
+// every import fully idempotent regardless of import history.
+func syncAllTables(ctx context.Context, tx pgx.Tx) error {
+	start := time.Now()
+
+	// cves — stable id (hash of CVE string) + content_hash for change detection.
+	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "cves",
+		stage:             "cves_stage",
+		keyCols:           []string{"id"},
+		contentHashCol:    "content_hash",
+		contentCols:       []string{"content_hash", "description", "cvss", "vector", "date_published", "date_last_modified", `"references"`},
+		insertCols:        cveAllCols,
+		insertSelectExprs: cveAllCols,
+	}); err != nil {
+		return err
+	}
+
+	// cve_relationships — composite key, identity IS the content.
+	relAllCols := []string{"target_cve", "source_cve", "relationship_type"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "cve_relationships",
+		stage:             "cve_relationships_stage",
+		keyCols:           []string{"target_cve", "source_cve", "relationship_type"},
+		insertCols:        relAllCols,
+		insertSelectExprs: relAllCols,
+	}); err != nil {
+		return err
+	}
+
+	// affected_components — id is a full content hash; no separate UPDATE needed.
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "affected_components",
+		stage:             "affected_components_stage",
+		keyCols:           []string{"id"},
+		insertCols:        []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
+		insertSelectExprs: []string{"id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"},
+	}); err != nil {
+		return err
+	}
+
+	// cve_affected_component — composite key, identity IS the content.
+	pivotAllCols := []string{"affected_component_id", "cve_id"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "cve_affected_component",
+		stage:             "cve_affected_component_stage",
+		keyCols:           []string{"cve_id", "affected_component_id"},
+		insertCols:        pivotAllCols,
+		insertSelectExprs: pivotAllCols,
+	}); err != nil {
+		return err
+	}
+
+	// exploits — text id (external), update key content columns on change.
+	exploitAllCols := []string{"id", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "exploits",
+		stage:             "exploits_stage",
+		keyCols:           []string{"id"},
+		contentHashCol:    "updated",
+		contentCols:       []string{"published", "updated", "author", "source_url", "description", "forks", "watchers", "subscribers", "stars"},
+		insertCols:        exploitAllCols,
+		insertSelectExprs: exploitAllCols,
+	}); err != nil {
+		return err
+	}
+
+	// malicious_packages — text id (external), detect changes via modified timestamp.
+	malPkgAllCols := []string{"id", "summary", "details", "published", "modified"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "malicious_packages",
+		stage:             "mal_pkgs_stage",
+		keyCols:           []string{"id"},
+		contentHashCol:    "modified",
+		contentCols:       []string{"summary", "details", "published", "modified"},
+		insertCols:        malPkgAllCols,
+		insertSelectExprs: malPkgAllCols,
+	}); err != nil {
+		return err
+	}
+
+	// malicious_affected_components — text id is a content hash; no separate UPDATE needed.
+	malCompAllCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
+	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+		live:              "malicious_affected_components",
+		stage:             "mal_comps_stage",
+		keyCols:           []string{"id"},
+		insertCols:        malCompAllCols,
+		insertSelectExprs: []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"},
+	}); err != nil {
+		return err
+	}
+
+	slog.Info("finished syncing all tables", "took", time.Since(start))
+	return nil
+}
+
 type osvService struct {
 	httpClient                *http.Client
 	affectedCmpRepository     shared.AffectedComponentRepository
@@ -87,11 +294,10 @@ type cveAffectedComponentRow struct {
 }
 
 type vulndbRows struct {
-	CVEs                        []models.CVE
-	CVERelationships            []models.CVERelationship
-	AffectedComponents          []models.AffectedComponent
-	CVEAffectedComponents       []cveAffectedComponentRow
-	DeleteCVEAffectedComponents []cveAffectedComponentRow
+	CVEs                  []models.CVE
+	CVERelationships      []models.CVERelationship
+	AffectedComponents    []models.AffectedComponent
+	CVEAffectedComponents []cveAffectedComponentRow
 }
 
 type OSVEntry struct {
@@ -105,7 +311,7 @@ type zipJob struct {
 }
 
 const numberOfZipWorkers = 10
-const debugLocalZip = false // set to true to read the zip files from disk instead of fetching them from the network; useful for debugging and development to speed up the import process
+const debugLocalZip = true // set to true to read the zip files from disk instead of fetching them from the network; useful for debugging and development to speed up the import process
 
 var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 
@@ -172,8 +378,8 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := createStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
-	malRows := gobOSVToMalFilterTransformer(time.Time{})(allOSVVulns)
-	vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil, nil)(allOSVVulns)
+	malRows := gobOSVToMalTransformer(allOSVVulns)
+	vulnRows := gobOSVToVulnTransformer()(allOSVVulns)
 	fakeRows, fakeComps := buildFakePackages()
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
@@ -354,55 +560,15 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
-// cveIDsFromComponentMap derives the set of known CVE IDs from the componentToCVEs map,
-// avoiding a separate SELECT on the cves table. CVEs without affected components are
-// excluded, but the cleanup jobs ensure those do not exist in a consistent database.
-func cveIDsFromComponentMap(componentToCVEs map[int64][]int64) map[int64]struct{} {
-	m := make(map[int64]struct{}, len(componentToCVEs))
-	for _, cveIDs := range componentToCVEs {
-		for _, id := range cveIDs {
-			m[id] = struct{}{}
-		}
-	}
-	return m
-}
-
-// getCurrentAffectedComponents returns two maps built from cve_affected_component:
-//   - componentToCVEs: affectedComponentID → []cveID
-//   - cveToComponents: cveID → []affectedComponentID
-func getCurrentAffectedComponents(ctx context.Context, tx pgx.Tx) (componentToCVEs map[int64][]int64, cveToComponents map[int64][]int64, err error) {
-	rows, err := tx.Query(ctx, `SELECT affected_component_id, cve_id FROM cve_affected_component`)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get current state of affected components: %w", err)
-	}
-
-	componentToCVEs = make(map[int64][]int64, 200_000)
-	cveToComponents = make(map[int64][]int64, 200_000)
-	for rows.Next() {
-		var affID, cveID int64
-		if err := rows.Scan(&affID, &cveID); err != nil {
-			rows.Close()
-			return nil, nil, fmt.Errorf("could not scan cve_affected_component row: %w", err)
-		}
-		componentToCVEs[affID] = append(componentToCVEs[affID], cveID)
-		cveToComponents[cveID] = append(cveToComponents[cveID], affID)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("error iterating cve_affected_component rows: %w", err)
-	}
-	return componentToCVEs, cveToComponents, nil
-}
-
 // insertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
 func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE) error {
 	if len(cves) == 0 {
 		return nil
 	}
-	columnNames := []string{"id", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{"cves_stage"}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
-		return []any{row.ID, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
@@ -461,35 +627,17 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
-func deleteCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows []cveAffectedComponentRow) error {
-	if len(pivotRows) == 0 {
-		return nil
-	}
-
-	batch := &pgx.Batch{}
-	for _, row := range pivotRows {
-		batch.Queue(`DELETE FROM cve_affected_component WHERE affected_component_id = $1 AND cve_id = $2`, row.AffectedComponentID, row.CveID)
-	}
-	br := tx.SendBatch(ctx, batch)
-	if err := br.Close(); err != nil {
-		return fmt.Errorf("could not execute batch delete for cve affected component rows: %w", err)
-	}
-
-	return nil
-}
-
-// flushOSVStagingTables flushes cves, cve_relationships, affected_components and
-// cve_affected_component from their staging tables into the live tables.
-// Must be called before AddIndexesAndConstraints so the FK from cve_affected_component
-// to affected_components is satisfied.
+// flushOSVStagingTables is kept for the bulk import path which truncates live tables
+// and then does a simple INSERT from staging (no EXCEPT diff needed on an empty table).
 func flushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO cves (id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
-		SELECT id, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
+		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
 		FROM cves_stage
 		ON CONFLICT (id) DO UPDATE SET
+			content_hash       = EXCLUDED.content_hash,
 			date_published     = EXCLUDED.date_published,
 			date_last_modified = EXCLUDED.date_last_modified,
 			description        = EXCLUDED.description,
@@ -539,6 +687,13 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 
 	t := time.Now()
+	// Delete exploits that are no longer in the current fetch so that the live table
+	// exactly matches the gob before integrity is computed.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM exploits
+		WHERE id NOT IN (SELECT id FROM exploits_stage)`); err != nil {
+		return fmt.Errorf("could not delete stale exploits: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
 		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
@@ -598,6 +753,7 @@ func createStagingTables(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE IF NOT EXISTS cves_stage (
 			id                      bigint,
+			content_hash            bigint,
 			cve                     text,
 			date_published          timestamptz,
 			date_last_modified      timestamptz,
@@ -815,49 +971,6 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 // runScopedCleanUpJobs removes orphaned affected_components and CVEs that resulted
 // from deleting the given pivot rows. Only checks the specific IDs involved rather
 // than scanning the full tables.
-func runScopedCleanUpJobs(ctx context.Context, tx pgx.Tx, deleted []cveAffectedComponentRow) {
-	if len(deleted) == 0 {
-		return
-	}
-
-	affIDs := make([]int64, 0, len(deleted))
-	cveIDs := make([]int64, 0, len(deleted))
-	for _, r := range deleted {
-		affIDs = append(affIDs, r.AffectedComponentID)
-		cveIDs = append(cveIDs, r.CveID)
-	}
-
-	start := time.Now()
-	_, err := tx.Exec(ctx, `
-		DELETE FROM affected_components
-		WHERE id = ANY($1)
-		AND NOT EXISTS (
-			SELECT 1 FROM cve_affected_component WHERE affected_component_id = id
-		)`, affIDs)
-	if err != nil {
-		slog.Error("could not clean up orphan affected components, continuing...", "error", err)
-	} else {
-		slog.Info("cleaned up orphan affected components", "took", time.Since(start))
-	}
-
-	start = time.Now()
-	_, err = tx.Exec(ctx, `
-		DELETE FROM cves
-		WHERE id = ANY($1)
-		AND NOT EXISTS (SELECT 1 FROM cve_affected_component WHERE cve_id = id)
-		AND NOT EXISTS (
-			SELECT 1 FROM cve_relationships cr
-			JOIN cves tc ON tc.cve = cr.target_cve
-			JOIN cve_affected_component cac ON cac.cve_id = tc.id
-			WHERE cr.source_cve = cves.cve
-		)`, cveIDs)
-	if err != nil {
-		slog.Error("could not clean up orphan cves, continuing...", "error", err)
-	} else {
-		slog.Info("cleaned up orphan cves", "took", time.Since(start))
-	}
-}
-
 func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	slog.Info("start running sanity checks")
 	// first delete all cves which have no affected components and also none of their relationships does
@@ -903,7 +1016,6 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 		slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
 	}
 }
-
 
 func shouldIgnoreVulnerabilityID(id string) bool {
 	prefix, _, ok := strings.Cut(id, "-")

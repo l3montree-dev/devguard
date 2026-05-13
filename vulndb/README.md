@@ -1,6 +1,6 @@
 # vulndb
 
-The `vulndb` package manages the lifecycle of DevGuard's vulnerability database. It builds the database from upstream sources (OSV, EPSS, CISA KEV, exploit data, and malicious packages), packages it into a distributable archive, and imports it — either incrementally or in full — into a PostgreSQL database.
+The `vulndb` package manages the lifecycle of DevGuard's vulnerability database. It builds the database from upstream sources (OSV, EPSS, CISA KEV, exploit data, and malicious packages), packages it into a distributable archive, and imports it into a PostgreSQL database using an EXCEPT-based sync that is fully idempotent.
 
 ---
 
@@ -9,7 +9,7 @@ The `vulndb` package manages the lifecycle of DevGuard's vulnerability database.
 The package has two primary entry points:
 
 - **`ExportRC`** — fetches all upstream vulnerability data, writes it to the database, serializes snapshots to gob files, and packages everything into a `vulndb.tar.zst` archive that is pushed to an OCI registry.
-- **`ImportRC`** — pulls the archive from the OCI registry and imports its contents into a target database, with support for incremental and full import modes.
+- **`ImportRC`** — pulls the archive from the OCI registry and imports its contents into a target database, with support for streaming (incremental) and bulk (full) processing modes.
 
 ---
 
@@ -33,13 +33,9 @@ After OSV ingestion completes, the following are fetched in parallel:
 
 - **EPSS** — exploit prediction scores.
 - **CISA KEV** — Known Exploited Vulnerabilities catalog.
-- **Exploits** — exploit metadata from ExploitDB and GitHub.
+- **Exploits** — exploit metadata from ExploitDB and GitHub. Only exploits referencing a CVE present in the database are retained.
 
-### Cleanup
-
-After all data is written, cleanup jobs remove:
-- Orphaned CVEs (no longer referenced by any upstream source).
-- Orphaned affected components (no longer linked to any CVE).
+Before computing the integrity checksums, stale exploits (present in the database from a prior export but absent from the current fetch) are deleted so the live table exactly matches the gob.
 
 ### Output artifacts
 
@@ -51,7 +47,7 @@ The following files are written before packaging:
 | `epss.gob` | EPSS scores |
 | `cisakev.gob` | CISA KEV entries |
 | `exploits.gob` | Exploit metadata |
-| `integrity_checks.json` | Per-table checksums used to validate imports |
+| `integrity_checks.json` | Per-table row counts and checksums used to validate imports |
 
 All artifacts are bundled into `vulndb.tar.zst` and pushed to an OCI registry.
 
@@ -59,81 +55,45 @@ All artifacts are bundled into `vulndb.tar.zst` and pushed to an OCI registry.
 
 ## Import (`ImportRC`)
 
-### Modes
+### Processing modes
 
-**Incremental (default)**
+**Streaming (default)**
 
-Only processes CVE entries that are new or have changed since the last import watermark. After import, integrity checks run and any failing tables are re-imported in full automatically.
+Reads gob files in batches and streams them to staging tables. After all data is staged, `syncAllTables` applies an EXCEPT-based diff to the live tables (see below). Uses less memory than bulk mode.
 
-**Full (`--full`)**
+**Bulk (`--bulk`)**
 
-Truncates all relevant tables and reimports everything from scratch. Use this when the database needs to be rebuilt from a clean state.
+Loads all gob data into memory at once, then truncates the live tables and does a direct INSERT from staging. Faster for a clean initial import but requires ~2–3 GB of RAM.
 
----
+### EXCEPT-based sync (`syncAllTables`)
 
-## The Modified Timestamp Problem
+The incremental sync is implemented as a three-step SQL operation per table, handled by the generic `syncTable` function:
 
-This is the most important correctness concern in the incremental import path.
+1. **DELETE** rows present in the live table but absent from staging (`EXCEPT`).
+2. **INSERT** rows present in staging but absent from the live table (`EXCEPT`).
+3. **UPDATE** rows where the key exists on both sides but the `content_hash` (or equivalent change-detection column) differs.
 
-OSV sets the `modified` field on a vulnerability to when the bug was **filed** — for example, when it was first reported to OSS-Fuzz. This timestamp is not when the entry was **published** to the OSV GCS bucket, which can lag by many hours.
+This approach is fully idempotent — running the same import twice produces the same result. There is no dependency on a last-import watermark for correctness.
 
-**Concrete example:**
+### CVE change detection
 
-- `OSV-2026-717` has `modified: 00:11Z` — set when the bug was filed with OSS-Fuzz.
-- The GCS object for the individual JSON file was only created at `17:10Z`.
-- However, the `all.zip` downloaded at `15:15Z` already contained this entry.
-- The last import watermark was `05:10Z`.
+CVEs use a stable primary key (`id = hash(cve_string)`) for FK stability, plus a separate `content_hash` column that covers the OSV-sourced fields (`description`, `cvss`, `vector`). EPSS and CISA KEV are intentionally excluded from `content_hash` — they are applied as separate `UPDATE` steps after the sync and their changes do not trigger a delete+reinsert of the CVE or its related rows.
 
-The `modified` field inside the JSON and the `modified_id.csv` timestamps are always identical — OSV derives both from the same source. The zip file's internal mtime is also set to the same value. There is no timestamp in the zip that reflects when the entry was *published*, only when the underlying bug was filed.
+### EPSS and CISA KEV enrichment
 
-The old incremental filter (`modified > lastImportTime`) would skip this entry because `00:11Z < 05:10Z`, even though the entry was genuinely new to the database. It would remain missing and cause integrity check failures on every subsequent import.
-
-### The fix
-
-At the start of every incremental import, all existing CVE IDs are loaded from the database:
-
-```sql
-SELECT id FROM cves
-```
-
-The filter logic then becomes:
-
-- **CVE ID not in DB** — import unconditionally, regardless of `modified` timestamp. The entry is new and was never seen before.
-- **CVE ID already in DB** — apply the normal `modified > lastImportTime` filter. Skip entries that have not changed since the last import.
-
-This means the `modified` timestamp is only used to skip *updates* to existing entries, never to skip *new* entries.
+After `syncAllTables` completes, EPSS scores and CISA KEV metadata are applied directly to the live `cves` table via bulk UPDATE. Before applying CISA KEV data, all CISA-related fields are reset to `NULL` so that CVEs removed from the KEV catalog do not retain stale metadata.
 
 ---
 
 ## Integrity Checks
 
-After every import, checksums are computed per table and compared against the values in `integrity_checks.json` (written during export). If any table's checksum does not match:
-
-1. Only the failing tables are identified.
-2. A targeted full import is run for those tables only.
-3. Checksums are recomputed and verified.
-
-This avoids silently accepting a partially corrupted import.
-
----
-
-## CISA KEV Enrichment
-
-CISA KEV data is applied on top of imported OSV CVEs as a post-processing step. Before applying new KEV data, all CISA-related fields are reset to `NULL` across all CVEs. This ensures that CVEs which have been removed from the KEV catalog do not retain stale KEV metadata from a previous import.
+After every import, per-table row counts and checksums are computed and compared against the values in `integrity_checks.json` (written during export). A mismatch causes the import transaction to be rolled back and an error to be returned. Because the sync is deterministic, there is no retry — a mismatch indicates a real inconsistency between the gob data and the integrity file.
 
 ---
 
 ## Affected Component Deduplication
 
-During incremental import, two in-memory maps are maintained to efficiently detect and generate deletion rows when a CVE's affected components change:
+During streaming, each batch transformer shares a `componentToCVEs` map (`affectedComponentID → []cveID`) across calls. This ensures that:
 
-- `componentToCVEs`: `affectedComponentID → []cveID` — tracks which CVEs reference each component.
-- `cveToComponents`: `cveID → []affectedComponentID` — reverse map for O(k) lookup per CVE.
-
-When a CVE is updated and its component set changes, the reverse map is used to identify removed components in O(k) time (where k is the number of components for that CVE), rather than scanning the full components table.
-
----
-
-## Cleanup After Incremental Import
-
-When pivot rows (CVE ↔ affected component links) are deleted during an incremental import, `runScopedCleanUpJobs` is called to remove any resulting orphans. Importantly, cleanup is **scoped to only the affected IDs** — it does not perform a full table scan. This keeps incremental import performance predictable even on large databases.
+- Each unique `affected_components` row is only staged once across all batches.
+- Each `cve_affected_component` pivot row is only staged once even if the same CVE→component relationship appears in multiple OSV entries.
