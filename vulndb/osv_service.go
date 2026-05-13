@@ -60,91 +60,132 @@ type syncSpec struct {
 	insertSelectExprs []string
 }
 
-// syncTable performs a three-step EXCEPT-based sync from a staging table into its
-// live counterpart: delete removed rows, insert new rows, update changed rows.
-func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted, updated int64, err error) {
+// syncTable performs a two-phase EXCEPT-based sync from a staging table into its
+// live counterpart.
+//
+// Phase 1 (diff computation): builds three temp tables holding the keys/rows to
+// delete, insert, and update. Only AccessShareLock is held on the live table here.
+//
+// Phase 2 (apply): applies the pre-computed diffs. The live table's RowExclusiveLock
+// is held only for this short apply window, not during the expensive EXCEPT scans.
+func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted, updated int64, lockHeld time.Duration, err error) {
 	keysCSV := strings.Join(spec.keyCols, ", ")
+	tmpDel := "_diff_del_" + spec.live
+	tmpIns := "_diff_ins_" + spec.live
+	tmpUpd := "_diff_upd_" + spec.live
 
-	// Build "live.k = gone.k AND ..." for the DELETE USING join.
-	whereJoin := make([]string, len(spec.keyCols))
-	for i, k := range spec.keyCols {
-		whereJoin[i] = fmt.Sprintf("%s.%s = _gone.%s", spec.live, k, k)
-	}
-
-	// The live table is locked (row-exclusive) for the duration of the three write steps.
-	lockStart := time.Now()
-
-	// Step 1 — DELETE rows present in live but absent from staging.
+	// --- Phase 1: compute diffs (read-only on live, no RowExclusiveLock) ---
 	t := time.Now()
-	tag, err := tx.Exec(ctx, fmt.Sprintf(`
-		DELETE FROM %s
-		USING (
-			SELECT %s FROM %s
-			EXCEPT
-			SELECT %s FROM %s
-		) AS _gone
-		WHERE %s
-	`, spec.live, keysCSV, spec.live, keysCSV, spec.stage, strings.Join(whereJoin, " AND ")))
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("syncTable delete (%s): %w", spec.live, err)
-	}
-	deleted = tag.RowsAffected()
-	slog.Info("syncTable: delete", "table", spec.live, "deleted", deleted, "took", time.Since(t))
 
-	// Step 2 — INSERT rows present in staging but absent from live.
-	t = time.Now()
-	tag, err = tx.Exec(ctx, fmt.Sprintf(`
-		INSERT INTO %s (%s)
+	if _, err = tx.Exec(ctx, fmt.Sprintf(`
+		CREATE TEMP TABLE %s ON COMMIT DROP AS
+		SELECT %s FROM %s
+		EXCEPT
+		SELECT %s FROM %s
+	`, tmpDel, keysCSV, spec.live, keysCSV, spec.stage)); err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("syncTable diff-del (%s): %w", spec.live, err)
+	}
+
+	if _, err = tx.Exec(ctx, fmt.Sprintf(`
+		CREATE TEMP TABLE %s ON COMMIT DROP AS
 		SELECT %s FROM %s
 		WHERE (%s) IN (
 			SELECT %s FROM %s
 			EXCEPT
 			SELECT %s FROM %s
 		)
-	`, spec.live,
-		strings.Join(spec.insertCols, ", "),
+	`, tmpIns,
 		strings.Join(spec.insertSelectExprs, ", "),
 		spec.stage,
 		keysCSV,
 		keysCSV, spec.stage,
 		keysCSV, spec.live,
+	)); err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("syncTable diff-ins (%s): %w", spec.live, err)
+	}
+
+	if spec.contentHashCol != "" && len(spec.contentCols) > 0 {
+		if _, err = tx.Exec(ctx, fmt.Sprintf(`
+			CREATE TEMP TABLE %s ON COMMIT DROP AS
+			SELECT _s.*
+			FROM %s _s
+			JOIN %s _l ON %s
+			WHERE _l.%s != _s.%s
+		`, tmpUpd,
+			spec.stage, spec.live,
+			strings.Join(func() []string {
+				parts := make([]string, len(spec.keyCols))
+				for i, k := range spec.keyCols {
+					parts[i] = fmt.Sprintf("_s.%s = _l.%s", k, k)
+				}
+				return parts
+			}(), " AND "),
+			spec.contentHashCol, spec.contentHashCol,
+		)); err != nil {
+			return 0, 0, 0, 0, fmt.Errorf("syncTable diff-upd (%s): %w", spec.live, err)
+		}
+	}
+
+	slog.Info("syncTable: diff computed", "table", spec.live, "took", time.Since(t))
+
+	// --- Phase 2: apply diffs (RowExclusiveLock window starts here) ---
+	lockStart := time.Now()
+
+	whereJoin := make([]string, len(spec.keyCols))
+	for i, k := range spec.keyCols {
+		whereJoin[i] = fmt.Sprintf("%s.%s = %s.%s", spec.live, k, tmpDel, k)
+	}
+	t = time.Now()
+	tag, err := tx.Exec(ctx, fmt.Sprintf(`
+		DELETE FROM %s USING %s WHERE %s
+	`, spec.live, tmpDel, strings.Join(whereJoin, " AND ")))
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("syncTable delete (%s): %w", spec.live, err)
+	}
+	deleted = tag.RowsAffected()
+	slog.Info("syncTable: delete", "table", spec.live, "deleted", deleted, "took", time.Since(t))
+
+	t = time.Now()
+	tag, err = tx.Exec(ctx, fmt.Sprintf(`
+		INSERT INTO %s (%s) SELECT %s FROM %s
+	`, spec.live,
+		strings.Join(spec.insertCols, ", "),
+		strings.Join(spec.insertSelectExprs, ", "),
+		tmpIns,
 	))
 	if err != nil {
-		return deleted, 0, 0, fmt.Errorf("syncTable insert (%s): %w", spec.live, err)
+		return deleted, 0, 0, 0, fmt.Errorf("syncTable insert (%s): %w", spec.live, err)
 	}
 	inserted = tag.RowsAffected()
 	slog.Info("syncTable: insert", "table", spec.live, "inserted", inserted, "took", time.Since(t))
 
-	// Step 3 — UPDATE rows whose key exists in both sides but whose content changed.
 	if spec.contentHashCol != "" && len(spec.contentCols) > 0 {
 		setClauses := make([]string, len(spec.contentCols))
 		for i, c := range spec.contentCols {
-			setClauses[i] = fmt.Sprintf("%s = _s.%s", c, c)
+			setClauses[i] = fmt.Sprintf("%s = %s.%s", c, tmpUpd, c)
 		}
 		joinCond := make([]string, len(spec.keyCols))
 		for i, k := range spec.keyCols {
-			joinCond[i] = fmt.Sprintf("%s.%s = _s.%s", spec.live, k, k)
+			joinCond[i] = fmt.Sprintf("%s.%s = %s.%s", spec.live, k, tmpUpd, k)
 		}
 		t = time.Now()
 		tag, err = tx.Exec(ctx, fmt.Sprintf(`
-			UPDATE %s SET %s
-			FROM %s AS _s
-			WHERE %s AND %s.%s != _s.%s
+			UPDATE %s SET %s FROM %s WHERE %s
 		`, spec.live,
 			strings.Join(setClauses, ", "),
-			spec.stage,
+			tmpUpd,
 			strings.Join(joinCond, " AND "),
-			spec.live, spec.contentHashCol, spec.contentHashCol,
 		))
 		if err != nil {
-			return deleted, inserted, 0, fmt.Errorf("syncTable update (%s): %w", spec.live, err)
+			return deleted, inserted, 0, 0, fmt.Errorf("syncTable update (%s): %w", spec.live, err)
 		}
 		updated = tag.RowsAffected()
 		slog.Info("syncTable: update", "table", spec.live, "updated", updated, "took", time.Since(t))
 	}
 
-	slog.Info("syncTable: live table lock released", "table", spec.live, "lock_held", time.Since(lockStart))
-	return deleted, inserted, updated, nil
+	lockHeld = time.Since(lockStart)
+	slog.Info("syncTable: lock released", "table", spec.live, "lock_held", lockHeld)
+	return deleted, inserted, updated, lockHeld, nil
 }
 
 // syncAllTables syncs every staging table into its live counterpart using
@@ -152,10 +193,17 @@ func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted
 // every import fully idempotent regardless of import history.
 func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
+	var totalLock time.Duration
+
+	sync := func(spec syncSpec) error {
+		_, _, _, lock, err := syncTable(ctx, tx, spec)
+		totalLock += lock
+		return err
+	}
 
 	// cves — stable id (hash of CVE string) + content_hash for change detection.
 	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "cves",
 		stage:             "cves_stage",
 		keyCols:           []string{"id"},
@@ -169,7 +217,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 
 	// cve_relationships — composite key, identity IS the content.
 	relAllCols := []string{"target_cve", "source_cve", "relationship_type"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "cve_relationships",
 		stage:             "cve_relationships_stage",
 		keyCols:           []string{"target_cve", "source_cve", "relationship_type"},
@@ -180,7 +228,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 	}
 
 	// affected_components — id is a full content hash; no separate UPDATE needed.
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "affected_components",
 		stage:             "affected_components_stage",
 		keyCols:           []string{"id"},
@@ -192,7 +240,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 
 	// cve_affected_component — composite key, identity IS the content.
 	pivotAllCols := []string{"affected_component_id", "cve_id"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "cve_affected_component",
 		stage:             "cve_affected_component_stage",
 		keyCols:           []string{"cve_id", "affected_component_id"},
@@ -204,7 +252,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 
 	// exploits — text id (external), update key content columns on change.
 	exploitAllCols := []string{"id", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "exploits",
 		stage:             "exploits_stage",
 		keyCols:           []string{"id"},
@@ -218,7 +266,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 
 	// malicious_packages — text id (external), detect changes via modified timestamp.
 	malPkgAllCols := []string{"id", "summary", "details", "published", "modified"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "malicious_packages",
 		stage:             "mal_pkgs_stage",
 		keyCols:           []string{"id"},
@@ -232,7 +280,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 
 	// malicious_affected_components — text id is a content hash; no separate UPDATE needed.
 	malCompAllCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	if _, _, _, err := syncTable(ctx, tx, syncSpec{
+	if err := sync(syncSpec{
 		live:              "malicious_affected_components",
 		stage:             "mal_comps_stage",
 		keyCols:           []string{"id"},
@@ -242,7 +290,7 @@ func syncAllTables(ctx context.Context, tx pgx.Tx) error {
 		return err
 	}
 
-	slog.Info("finished syncing all tables", "took", time.Since(start))
+	slog.Info("finished syncing all tables", "took", time.Since(start), "total_lock_held", totalLock)
 	return nil
 }
 
@@ -311,7 +359,7 @@ type zipJob struct {
 }
 
 const numberOfZipWorkers = 10
-const debugLocalZip = true // set to true to read the zip files from disk instead of fetching them from the network; useful for debugging and development to speed up the import process
+const debugLocalZip = false // set to true to read the zip files from disk instead of fetching them from the network; useful for debugging and development to speed up the import process
 
 var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already processed CVE IDs and avoid duplicates
 
