@@ -978,11 +978,6 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			cveAffectedComponentsTime += time.Since(t)
 			cveAffectedComponentCount += len(rows.CVEAffectedComponents)
 
-			t = time.Now()
-			if err := deleteCVEAffectedComponentsBulk(ctx, tx, rows.DeleteCVEAffectedComponents); err != nil {
-				return fmt.Errorf("could not delete old cve_affected_component relationships: %w", err)
-			}
-			deleteCveAffectedComponentTime += time.Since(t)
 			deleteCveAffectedComponentCount += len(rows.DeleteCVEAffectedComponents)
 			allDeletedPivotRows = append(allDeletedPivotRows, rows.DeleteCVEAffectedComponents...)
 		case exploits, ok := <-exploitsIn:
@@ -1024,8 +1019,13 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 
 	if deleteCveAffectedComponentCount > 0 {
-		slog.Info("running scoped cleanup jobs", "deleted_pivot_rows", deleteCveAffectedComponentCount)
 		t := time.Now()
+		if err := deleteCVEAffectedComponentsBulk(ctx, tx, allDeletedPivotRows); err != nil {
+			return fmt.Errorf("could not delete old cve_affected_component relationships: %w", err)
+		}
+		deleteCveAffectedComponentTime = time.Since(t)
+		slog.Info("running scoped cleanup jobs", "deleted_pivot_rows", deleteCveAffectedComponentCount)
+		t = time.Now()
 		runScopedCleanUpJobs(ctx, tx, allDeletedPivotRows)
 		slog.Info("finished cleanup jobs", "took", time.Since(t))
 	}

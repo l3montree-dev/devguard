@@ -89,14 +89,15 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			"took", time.Since(t),
 		)
 
-		// Apply EPSS and CISA KEV enrichment so the staging side matches what the
-		// real import writes — without this, every enriched CVE looks like a mismatch.
+		// Apply EPSS and CISA KEV enrichment directly to cves_stage so the diff
+		// compares apples-to-apples. The normal insertEPSSBulk/insertCISAKEVBulk
+		// functions target the live cves table — unusable here.
 		var epssData map[string]dtos.EPSS
 		if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
 			slog.Error("show-diff: could not read epss.gob", "err", err)
 			return
 		}
-		if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+		if err := applyEPSSToStage(ctx, tx, epssData); err != nil {
 			slog.Error("show-diff: could not apply EPSS to staging", "err", err)
 			return
 		}
@@ -106,7 +107,7 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not read cisakev.gob", "err", err)
 			return
 		}
-		if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+		if err := applyCISAKEVToStage(ctx, tx, kevEntries); err != nil {
 			slog.Error("show-diff: could not apply CISA KEV to staging", "err", err)
 			return
 		}

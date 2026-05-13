@@ -213,3 +213,45 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 	}
 	return nil
 }
+
+func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE IF NOT EXISTS kev_stage (
+			cve                     text,
+			cisa_exploit_add        date,
+			cisa_action_due         date,
+			cisa_required_action    text,
+			cisa_vulnerability_name text
+		) ON COMMIT DROP`); err != nil {
+		return fmt.Errorf("could not create kev staging table: %w", err)
+	}
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
+			e := entries[i]
+			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+		})); err != nil {
+		return fmt.Errorf("could not copy kev rows into kev staging table: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE cves_stage SET
+			cisa_exploit_add        = ks.cisa_exploit_add,
+			cisa_action_due         = ks.cisa_action_due,
+			cisa_required_action    = ks.cisa_required_action,
+			cisa_vulnerability_name = ks.cisa_vulnerability_name
+		FROM (
+			SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			FROM kev_stage
+			UNION
+			SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+			FROM kev_stage ks
+			JOIN cve_relationships cr ON cr.target_cve = ks.cve
+		) ks
+		WHERE cves_stage.cve = ks.cve`); err != nil {
+		return fmt.Errorf("could not update cves_stage with kev data: %w", err)
+	}
+	return nil
+}
