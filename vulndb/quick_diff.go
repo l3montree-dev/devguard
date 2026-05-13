@@ -68,11 +68,11 @@ type quickDiffCVE struct {
 	References            string
 	CISAExploitAdd        *string // "YYYY-MM-DD" or nil
 	CISAActionDue         *string
-	CISARequiredAction    string
-	CISAVulnerabilityName string
+	CISARequiredAction    *string
+	CISAVulnerabilityName *string
 	EPSS                  *float64
 	Percentile            *float32
-	Vector                string
+	Vector                *string
 }
 
 type quickDiffRelKey struct {
@@ -395,9 +395,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_cves: %w", err)
 	}
 	if len(diff.CVEsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsInserted), func(i int) ([]any, error) {
 			c := diff.CVEsInserted[i]
-			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
+			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cves: %w", err)
 		}
@@ -406,9 +406,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_upd_cves: %w", err)
 	}
 	if len(diff.CVEsUpdated) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsUpdated), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsUpdated), func(i int) ([]any, error) {
 			c := diff.CVEsUpdated[i]
-			return []interface{}{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
+			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_cves: %w", err)
 		}
@@ -419,9 +419,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_cve_relationships: %w", err)
 	}
 	if len(diff.RelationshipsDeleted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_del_cve_relationships"}, []string{"source_cve", "target_cve", "relationship_type"}, pgx.CopyFromSlice(len(diff.RelationshipsDeleted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_del_cve_relationships"}, []string{"source_cve", "target_cve", "relationship_type"}, pgx.CopyFromSlice(len(diff.RelationshipsDeleted), func(i int) ([]any, error) {
 			r := diff.RelationshipsDeleted[i]
-			return []interface{}{r.SourceCVE, r.TargetCVE, r.RelationshipType}, nil
+			return []any{r.SourceCVE, r.TargetCVE, r.RelationshipType}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_cve_relationships: %w", err)
 		}
@@ -430,9 +430,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_cve_relationships: %w", err)
 	}
 	if len(diff.RelationshipsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cve_relationships"}, []string{"source_cve", "target_cve", "relationship_type"}, pgx.CopyFromSlice(len(diff.RelationshipsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cve_relationships"}, []string{"source_cve", "target_cve", "relationship_type"}, pgx.CopyFromSlice(len(diff.RelationshipsInserted), func(i int) ([]any, error) {
 			r := diff.RelationshipsInserted[i]
-			return []interface{}{r.SourceCVE, r.TargetCVE, r.RelationshipType}, nil
+			return []any{r.SourceCVE, r.TargetCVE, r.RelationshipType}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cve_relationships: %w", err)
 		}
@@ -452,9 +452,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_affected_components: %w", err)
 	}
 	if len(diff.AffectedComponentsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_affected_components"}, acCols, pgx.CopyFromSlice(len(diff.AffectedComponentsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_affected_components"}, acCols, pgx.CopyFromSlice(len(diff.AffectedComponentsInserted), func(i int) ([]any, error) {
 			a := diff.AffectedComponentsInserted[i]
-			return []interface{}{a.ID, a.Purl, a.Ecosystem, a.Version, a.SemverIntroduced, a.SemverFixed, a.VersionIntroduced, a.VersionFixed}, nil
+			return []any{a.ID, a.Purl, a.Ecosystem, a.Version, a.SemverIntroduced, a.SemverFixed, a.VersionIntroduced, a.VersionFixed}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_affected_components: %w", err)
 		}
@@ -466,9 +466,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_cve_affected_component: %w", err)
 	}
 	if len(diff.PivotDeleted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_del_cve_affected_component"}, []string{"cve_id", "affected_component_id"}, pgx.CopyFromSlice(len(diff.PivotDeleted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_del_cve_affected_component"}, []string{"cve_id", "affected_component_id"}, pgx.CopyFromSlice(len(diff.PivotDeleted), func(i int) ([]any, error) {
 			p := diff.PivotDeleted[i]
-			return []interface{}{p.CveID, p.AffectedComponentID}, nil
+			return []any{p.CveID, p.AffectedComponentID}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_cve_affected_component: %w", err)
 		}
@@ -477,9 +477,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_cve_affected_component: %w", err)
 	}
 	if len(diff.PivotInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cve_affected_component"}, []string{"cve_id", "affected_component_id"}, pgx.CopyFromSlice(len(diff.PivotInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cve_affected_component"}, []string{"cve_id", "affected_component_id"}, pgx.CopyFromSlice(len(diff.PivotInserted), func(i int) ([]any, error) {
 			p := diff.PivotInserted[i]
-			return []interface{}{p.CveID, p.AffectedComponentID}, nil
+			return []any{p.CveID, p.AffectedComponentID}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cve_affected_component: %w", err)
 		}
@@ -497,9 +497,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_exploits: %w", err)
 	}
 	if len(diff.ExploitsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsInserted), func(i int) ([]any, error) {
 			m := gobExploitToModel(diff.ExploitsInserted[i])
-			return []interface{}{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
+			return []any{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_exploits: %w", err)
 		}
@@ -508,9 +508,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_upd_exploits: %w", err)
 	}
 	if len(diff.ExploitsUpdated) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsUpdated), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsUpdated), func(i int) ([]any, error) {
 			m := gobExploitToModel(diff.ExploitsUpdated[i])
-			return []interface{}{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
+			return []any{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_exploits: %w", err)
 		}
@@ -528,9 +528,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_malicious_packages: %w", err)
 	}
 	if len(diff.MalPkgsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsInserted), func(i int) ([]any, error) {
 			m := diff.MalPkgsInserted[i]
-			return []interface{}{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
+			return []any{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_malicious_packages: %w", err)
 		}
@@ -539,9 +539,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_upd_malicious_packages: %w", err)
 	}
 	if len(diff.MalPkgsUpdated) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsUpdated), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsUpdated), func(i int) ([]any, error) {
 			m := diff.MalPkgsUpdated[i]
-			return []interface{}{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
+			return []any{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_malicious_packages: %w", err)
 		}
@@ -561,9 +561,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_malicious_affected_components: %w", err)
 	}
 	if len(diff.MalCompsInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_malicious_affected_components"}, malCompCols, pgx.CopyFromSlice(len(diff.MalCompsInserted), func(i int) ([]interface{}, error) {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_malicious_affected_components"}, malCompCols, pgx.CopyFromSlice(len(diff.MalCompsInserted), func(i int) ([]any, error) {
 			mc := diff.MalCompsInserted[i]
-			return []interface{}{mc.ID, mc.MaliciousPackageID, mc.PurlWithoutVersion, mc.Ecosystem, mc.Version, mc.SemverIntroduced, mc.SemverFixed, mc.VersionIntroduced, mc.VersionFixed}, nil
+			return []any{mc.ID, mc.MaliciousPackageID, mc.PurlWithoutVersion, mc.Ecosystem, mc.Version, mc.SemverIntroduced, mc.SemverFixed, mc.VersionIntroduced, mc.VersionFixed}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_malicious_affected_components: %w", err)
 		}
@@ -599,8 +599,8 @@ func copyIDs[T any](ctx context.Context, tx pgx.Tx, tmp, col string, ids []T) er
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{tmp}, []string{col}, pgx.CopyFromSlice(len(ids), func(i int) ([]interface{}, error) {
-		return []interface{}{ids[i]}, nil
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{tmp}, []string{col}, pgx.CopyFromSlice(len(ids), func(i int) ([]any, error) {
+		return []any{ids[i]}, nil
 	}))
 	return err
 }
