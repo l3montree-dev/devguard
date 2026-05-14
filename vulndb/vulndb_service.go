@@ -149,8 +149,6 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		epssData    map[string]dtos.EPSS
 		kevEntries  []CISAKEVEntry
 		allExploits []models.Exploit
-		malPkgs     []models.MaliciousPackage
-		malComps    []models.MaliciousAffectedComponent
 	)
 	group, groupCtx := errgroup.WithContext(ctx)
 
@@ -233,10 +231,6 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	slog.Info("writing exploit data to database")
 	if err := insertExploitsBulk(ctx, tx, allExploits, "exploits_stage"); err != nil {
 		return fmt.Errorf("could not write exploit data: %w", err)
-	}
-	slog.Info("writing malicious packages to database")
-	if err := insertMaliciousPackagesBulk(ctx, tx, malPkgs, malComps, "mal_pkgs_stage", "mal_comps_stage"); err != nil {
-		return fmt.Errorf("could not write malicious packages: %w", err)
 	}
 	if err := flushNonOSVStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not flush staging tables: %w", err)

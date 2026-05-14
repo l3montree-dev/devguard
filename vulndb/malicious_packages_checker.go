@@ -54,7 +54,7 @@ func NewMaliciousPackageChecker(
 
 // FetchAll downloads the malicious packages archive and returns all parsed packages
 // and affected components without touching the database.
-func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent) {
+func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent, []OSVEntry) {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -66,7 +66,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 
 	packages := make([]models.MaliciousPackage, 0)
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
-
+	osvEntries := make([]OSVEntry, 0)
 	for ecosystem, pkgNames := range testPackages {
 		for _, pkgName := range pkgNames {
 			normalizedPkgName := strings.NewReplacer("/", "-", "@", "-", ":", "-", ".", "-").Replace(pkgName)
@@ -86,7 +86,9 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 					},
 				},
 				Published: time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
+				Modified:  time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
 			}
+			osvEntries = append(osvEntries, OSVEntry{OSV: fakeEntry, ModifiedTimestamp: fakeEntry.Modified})
 			packages = append(packages, models.MaliciousPackage{
 				ID:        fakeID,
 				Summary:   fakeEntry.Summary,
@@ -97,7 +99,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 			affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
 		}
 	}
-	return packages, affectedComponents
+	return packages, affectedComponents, osvEntries
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {

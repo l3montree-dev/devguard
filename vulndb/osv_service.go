@@ -428,7 +428,9 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	}
 	malRows := gobOSVToMalTransformer(allOSVVulns)
 	vulnRows := gobOSVToVulnTransformer()(allOSVVulns)
-	fakeRows, fakeComps := buildFakePackages()
+	fakeRows, fakeComps, osvEntries := buildFakePackages()
+	// add the fake packages to the allOSVVulns - that is the gob file we are writing to disk for the import, so it needs to contain all entries, including the fake ones.
+	allOSVVulns = append(allOSVVulns, osvEntries...)
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
 	if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
@@ -726,40 +728,6 @@ func flushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	}
 	slog.Info("flushed cve_affected_component", "took", time.Since(t))
 
-	slog.Info("finished flushing osv staging tables", "total", time.Since(start))
-	return nil
-}
-
-// flushNonOSVStagingTables flushes exploits and malicious packages from their staging tables.
-func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
-	start := time.Now()
-
-	t := time.Now()
-	// Delete exploits that are no longer in the current fetch so that the live table
-	// exactly matches the gob before integrity is computed.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM exploits
-		WHERE id NOT IN (SELECT id FROM exploits_stage)`); err != nil {
-		return fmt.Errorf("could not delete stale exploits: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
-		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
-		FROM exploits_stage
-		ON CONFLICT (id) DO UPDATE SET
-			published   = EXCLUDED.published,
-			updated     = EXCLUDED.updated,
-			author      = EXCLUDED.author,
-			source_url  = EXCLUDED.source_url,
-			description = EXCLUDED.description,
-			forks       = EXCLUDED.forks,
-			watchers    = EXCLUDED.watchers,
-			subscribers = EXCLUDED.subscribers,
-			stars       = EXCLUDED.stars`); err != nil {
-		return fmt.Errorf("could not flush exploits: %w", err)
-	}
-	slog.Info("flushed exploits", "took", time.Since(t))
-
 	t = time.Now()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO malicious_packages (id, summary, details, published, modified)
@@ -785,7 +753,37 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	}
 	slog.Info("flushed malicious_affected_components", "took", time.Since(t))
 
-	slog.Info("finished flushing non-osv staging tables", "total", time.Since(start))
+	slog.Info("finished flushing osv staging tables", "total", time.Since(start))
+	return nil
+}
+
+// flushNonOSVStagingTables flushes exploits and malicious packages from their staging tables.
+func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
+	t := time.Now()
+	// Delete exploits that are no longer in the current fetch so that the live table
+	// exactly matches the gob before integrity is computed.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM exploits
+		WHERE id NOT IN (SELECT id FROM exploits_stage)`); err != nil {
+		return fmt.Errorf("could not delete stale exploits: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
+		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
+		FROM exploits_stage
+		ON CONFLICT (id) DO UPDATE SET
+			published   = EXCLUDED.published,
+			updated     = EXCLUDED.updated,
+			author      = EXCLUDED.author,
+			source_url  = EXCLUDED.source_url,
+			description = EXCLUDED.description,
+			forks       = EXCLUDED.forks,
+			watchers    = EXCLUDED.watchers,
+			subscribers = EXCLUDED.subscribers,
+			stars       = EXCLUDED.stars`); err != nil {
+		return fmt.Errorf("could not flush exploits: %w", err)
+	}
+	slog.Info("finished flushing non-osv staging tables (exploits)", "total", time.Since(t))
 	return nil
 }
 
