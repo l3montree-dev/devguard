@@ -485,7 +485,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 			"ticketID": vuln.GetTicketID(),
 			//TODO: set the right ticket URL
 			"ticketUrl": vuln.GetTicketURL(),
-		}, nil)
+		}, userAgent)
 
 	err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	if err != nil {
