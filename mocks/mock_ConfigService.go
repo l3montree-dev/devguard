@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -35,6 +36,66 @@ type ConfigService_Expecter struct {
 
 func (_m *ConfigService) EXPECT() *ConfigService_Expecter {
 	return &ConfigService_Expecter{mock: &_m.Mock}
+}
+
+// GetInstanceSettings provides a mock function for the type ConfigService
+func (_mock *ConfigService) GetInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInstanceSettings")
+	}
+
+	var r0 shared.InstanceSettings
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (shared.InstanceSettings, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.InstanceSettings); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(shared.InstanceSettings)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ConfigService_GetInstanceSettings_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstanceSettings'
+type ConfigService_GetInstanceSettings_Call struct {
+	*mock.Call
+}
+
+// GetInstanceSettings is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ConfigService_Expecter) GetInstanceSettings(ctx interface{}) *ConfigService_GetInstanceSettings_Call {
+	return &ConfigService_GetInstanceSettings_Call{Call: _e.mock.On("GetInstanceSettings", ctx)}
+}
+
+func (_c *ConfigService_GetInstanceSettings_Call) Run(run func(ctx context.Context)) *ConfigService_GetInstanceSettings_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ConfigService_GetInstanceSettings_Call) Return(instanceSettings shared.InstanceSettings, err error) *ConfigService_GetInstanceSettings_Call {
+	_c.Call.Return(instanceSettings, err)
+	return _c
+}
+
+func (_c *ConfigService_GetInstanceSettings_Call) RunAndReturn(run func(ctx context.Context) (shared.InstanceSettings, error)) *ConfigService_GetInstanceSettings_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetJSONConfig provides a mock function for the type ConfigService

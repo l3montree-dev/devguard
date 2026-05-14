@@ -79,7 +79,8 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 		licenseRisk = existingLicenseRisk
 	}
 
-	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision)
+	userAgent := ctx.Request().UserAgent()
+	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision, &userAgent)
 
 	err = controller.licenseRiskRepository.ApplyAndSave(ctx.Request().Context(), nil, &licenseRisk, &ev)
 	if err != nil {
@@ -167,6 +168,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not bind the request to a justification")
 	}
+	userAgent := ctx.Request().UserAgent()
 
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -178,7 +180,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	err = thirdPartyIntegrations.HandleEvent(ctx.Request().Context(), shared.ManualMitigateEvent{
 		Ctx:           ctx,
 		Justification: justification.Comment,
-	})
+	}, &userAgent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not mitigate licenseRisk").WithInternal(err)
 	}
@@ -217,14 +219,15 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
+	userAgent := ctx.Request().UserAgent()
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}
 	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
 		Event: event,
-	})
+	}, &userAgent)
 	// we do not want the transaction to be rolled back if the third party integration fails
 	if err != nil {
 		// just log the error
@@ -251,7 +254,8 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 	}
 
 	userID := shared.GetSession(ctx).GetUserID()
-	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID)
+	userAgent := ctx.Request().UserAgent()
+	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID, &userAgent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not make final license decision").WithInternal(err)
 	}

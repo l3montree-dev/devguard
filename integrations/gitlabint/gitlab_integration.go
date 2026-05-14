@@ -1233,7 +1233,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -1270,7 +1270,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		if err.Error() == "404 Not Found" {
 
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, userAgent)
 			// save the event
 			err := g.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -1375,7 +1375,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 	return nil, 0, notConnectedError
 }
 
-func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.CreateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -1427,7 +1427,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		map[string]any{
 			"ticketId":  vuln.GetTicketID(),
 			"ticketUrl": createdIssue.WebURL,
-		})
+		}, userAgent)
 
 	return g.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 }

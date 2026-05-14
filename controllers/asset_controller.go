@@ -329,6 +329,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
+	userAgent := ctx.Request().UserAgent()
 	if enableTicketRangeUpdated || justification != "" {
 		//check if we have already created the labels in gitlab, if not create them
 		// do NOT update the asset in the database yet, we do this after the ticket sync
@@ -353,7 +354,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 				return
 			}
 
-			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion); err != nil {
+			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, &userAgent); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		})

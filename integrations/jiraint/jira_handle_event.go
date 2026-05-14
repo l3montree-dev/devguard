@@ -16,7 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
+func (i *JiraIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	switch event := event.(type) {
 	case shared.ManualMitigateEvent:
 		asset := shared.GetAsset(event.Ctx)
@@ -67,7 +67,7 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 
 		session := shared.GetSession(event.Ctx)
 
-		return i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
+		return i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID(), userAgent)
 	case shared.VulnEvent:
 		ev := event.Event
 
@@ -187,7 +187,7 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 					}
 
 					session := shared.GetSession(event.Ctx)
-					err = i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, utils.SafeDereference(ev.Justification), session.GetUserID())
+					err = i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, utils.SafeDereference(ev.Justification), session.GetUserID(), userAgent)
 					if err != nil {
 						slog.Error("failed to create Jira issue", "err", err, "issue", vuln.GetTicketID())
 						return fmt.Errorf("failed to create Jira issue: %w", err)
@@ -213,7 +213,7 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any) error {
 			}
 
 		}
-		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln)
+		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 

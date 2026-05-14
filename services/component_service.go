@@ -276,13 +276,13 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 				return
 			}
 			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(bgCtx, nil, assetVersion, allComponents, artifact.ArtifactName)
+				err = s.licenseRiskService.FindLicenseRisksInComponents(bgCtx, nil, "system", nil, assetVersion, allComponents, artifact.ArtifactName)
 				if err != nil {
 					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
 				}
 			}
 		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(ctx, nil, assetVersion, allComponents, *artifactName)
+			err = s.licenseRiskService.FindLicenseRisksInComponents(ctx, nil, "system", nil, assetVersion, allComponents, *artifactName)
 			if err != nil {
 				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
 			}

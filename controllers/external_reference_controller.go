@@ -187,6 +187,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
+	userAgent := ctx.Request().UserAgent()
 
 	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
 	if err != nil {
@@ -198,7 +199,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 		tx := c.artifactRepository.Begin(ctx.Request().Context())
 		defer tx.Rollback()
 
-		_, _, vulns, err := c.RunArtifactSecurityLifecycle(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, userID)
+		_, _, vulns, err := c.RunArtifactSecurityLifecycle(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, userID, &userAgent)
 		if err != nil {
 			tx.Rollback()
 			slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -213,7 +214,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 
 		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
 		c.FireAndForget(func() {
-			if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns); err != nil {
+			if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent); err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
 			}
 		})

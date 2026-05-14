@@ -379,7 +379,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-tickets")
 			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
-				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion)
+				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion, nil)
 				if err != nil {
 					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
 					errs = append(errs, err)
@@ -511,7 +511,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
 					bom.ClearScope()
-					_, _, _, err = runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system")
+					_, _, _, err = runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
 
 					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {
 						tx.Rollback()
@@ -563,7 +563,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
-					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system"); err != nil {
+					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()
@@ -715,7 +715,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 			span.SetAttributes(attribute.Int("asset.vulns_to_reopen", len(vulnerabilities)))
 			errs := make([]error, 0)
 			for _, vuln := range vulnerabilities {
-				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), false)
+				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), false, nil)
 
 				if err := runner.dependencyVulnRepository.ApplyAndSave(stageCtx, nil, &vuln, &event); err != nil {
 					slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)

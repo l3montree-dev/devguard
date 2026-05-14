@@ -42,16 +42,16 @@ func (_m *LicenseRiskService) EXPECT() *LicenseRiskService_Expecter {
 }
 
 // FindLicenseRisksInComponents provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
-	ret := _mock.Called(ctx, tx, assetVersion, components, artifactName)
+func (_mock *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
+	ret := _mock.Called(ctx, tx, userID, userAgent, assetVersion, components, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindLicenseRisksInComponents")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, []models.Component, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetVersion, components, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, models.AssetVersion, []models.Component, string) error); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, assetVersion, components, artifactName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -66,14 +66,16 @@ type LicenseRiskService_FindLicenseRisksInComponents_Call struct {
 // FindLicenseRisksInComponents is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
+//   - userID string
+//   - userAgent *string
 //   - assetVersion models.AssetVersion
 //   - components []models.Component
 //   - artifactName string
-func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx interface{}, tx interface{}, assetVersion interface{}, components interface{}, artifactName interface{}) *LicenseRiskService_FindLicenseRisksInComponents_Call {
-	return &LicenseRiskService_FindLicenseRisksInComponents_Call{Call: _e.mock.On("FindLicenseRisksInComponents", ctx, tx, assetVersion, components, artifactName)}
+func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, assetVersion interface{}, components interface{}, artifactName interface{}) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+	return &LicenseRiskService_FindLicenseRisksInComponents_Call{Call: _e.mock.On("FindLicenseRisksInComponents", ctx, tx, userID, userAgent, assetVersion, components, artifactName)}
 }
 
-func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, components []models.Component, artifactName string)) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string)) *LicenseRiskService_FindLicenseRisksInComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -83,17 +85,25 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 models.AssetVersion
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(models.AssetVersion)
+			arg2 = args[2].(string)
 		}
-		var arg3 []models.Component
+		var arg3 *string
 		if args[3] != nil {
-			arg3 = args[3].([]models.Component)
+			arg3 = args[3].(*string)
 		}
-		var arg4 string
+		var arg4 models.AssetVersion
 		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 []models.Component
+		if args[5] != nil {
+			arg5 = args[5].([]models.Component)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
 		}
 		run(
 			arg0,
@@ -101,6 +111,8 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx
 			arg2,
 			arg3,
 			arg4,
+			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -111,22 +123,22 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Return(err error
 	return _c
 }
 
-func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, components []models.Component, artifactName string) error) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error) *LicenseRiskService_FindLicenseRisksInComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // MakeFinalLicenseDecision provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string) error {
-	ret := _mock.Called(ctx, tx, vulnID, finalLicense, justification, userID)
+func (_mock *LicenseRiskService) MakeFinalLicenseDecision(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string) error {
+	ret := _mock.Called(ctx, tx, vulnID, finalLicense, justification, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MakeFinalLicenseDecision")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, vulnID, finalLicense, justification, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string, *string) error); ok {
+		r0 = returnFunc(ctx, tx, vulnID, finalLicense, justification, userID, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -145,11 +157,12 @@ type LicenseRiskService_MakeFinalLicenseDecision_Call struct {
 //   - finalLicense string
 //   - justification string
 //   - userID string
-func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx interface{}, tx interface{}, vulnID interface{}, finalLicense interface{}, justification interface{}, userID interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
-	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", ctx, tx, vulnID, finalLicense, justification, userID)}
+//   - userAgent *string
+func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx interface{}, tx interface{}, vulnID interface{}, finalLicense interface{}, justification interface{}, userID interface{}, userAgent interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", ctx, tx, vulnID, finalLicense, justification, userID, userAgent)}
 }
 
-func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string)) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string)) *LicenseRiskService_MakeFinalLicenseDecision_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -175,6 +188,10 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx con
 		if args[5] != nil {
 			arg5 = args[5].(string)
 		}
+		var arg6 *string
+		if args[6] != nil {
+			arg6 = args[6].(*string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -182,6 +199,7 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(ctx con
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -192,14 +210,14 @@ func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Return(err error) *L
 	return _c
 }
 
-func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string) error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnID uuid.UUID, finalLicense string, justification string, userID string, userAgent *string) error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateLicenseRiskState provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) UpdateLicenseRiskState(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
-	ret := _mock.Called(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+func (_mock *LicenseRiskService) UpdateLicenseRiskState(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
+	ret := _mock.Called(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateLicenseRiskState")
@@ -207,16 +225,16 @@ func (_mock *LicenseRiskService) UpdateLicenseRiskState(ctx context.Context, tx 
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType) (models.VulnEvent, error)); ok {
-		return returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType, *string) (models.VulnEvent, error)); ok {
+		return returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType) models.VulnEvent); ok {
-		r0 = returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType, *string) models.VulnEvent); ok {
+		r0 = returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType) error); ok {
-		r1 = returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *models.LicenseRisk, string, string, dtos.MechanicalJustificationType, *string) error); ok {
+		r1 = returnFunc(ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -236,11 +254,12 @@ type LicenseRiskService_UpdateLicenseRiskState_Call struct {
 //   - statusType string
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
-func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(ctx interface{}, tx interface{}, userID interface{}, licenseRisk interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}) *LicenseRiskService_UpdateLicenseRiskState_Call {
-	return &LicenseRiskService_UpdateLicenseRiskState_Call{Call: _e.mock.On("UpdateLicenseRiskState", ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification)}
+//   - userAgent *string
+func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(ctx interface{}, tx interface{}, userID interface{}, licenseRisk interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *LicenseRiskService_UpdateLicenseRiskState_Call {
+	return &LicenseRiskService_UpdateLicenseRiskState_Call{Call: _e.mock.On("UpdateLicenseRiskState", ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)}
 }
 
-func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType)) *LicenseRiskService_UpdateLicenseRiskState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -270,6 +289,10 @@ func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(ctx conte
 		if args[6] != nil {
 			arg6 = args[6].(dtos.MechanicalJustificationType)
 		}
+		var arg7 *string
+		if args[7] != nil {
+			arg7 = args[7].(*string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -278,6 +301,7 @@ func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(ctx conte
 			arg4,
 			arg5,
 			arg6,
+			arg7,
 		)
 	})
 	return _c
@@ -288,7 +312,7 @@ func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Return(vulnEvent model
 	return _c
 }
 
-func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error)) *LicenseRiskService_UpdateLicenseRiskState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Return(run)
 	return _c
 }

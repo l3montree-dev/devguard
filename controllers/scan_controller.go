@@ -236,6 +236,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 	project := shared.GetProject(c)
 
 	userID := shared.GetSession(c).GetUserID()
+	userAgent := c.Request().UserAgent()
 
 	tag := c.Request().Header.Get("X-Tag")
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -313,7 +314,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 		return scanResults, err
 	}
 
-	opened, closed, newState, err := s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID)
+	opened, closed, newState, err := s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan normalized sbom", "err", err)
@@ -353,7 +354,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 					ArtifactName: artifactName,
 				},
 				SBOM: exportedBOM,
-			}); err != nil {
+			}, &userAgent); err != nil {
 				slog.Error("could not handle SBOM updated event", "err", err)
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
@@ -363,7 +364,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (dto
 
 	//Check if we want to create an issue for this assetVersion
 	s.FireAndForget(func() {
-		err := s.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...))
+		err := s.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...), &userAgent)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}
@@ -458,8 +459,10 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 
 	span.SetAttributes(attribute.String("scanner.id", scannerID))
 
+	userAgent := ctx.Request().UserAgent()
+
 	// handle the scan result
-	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, userID)
+	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		span.RecordError(err)
@@ -470,7 +473,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	linkedCtx := trace.ContextWithSpan(context.Background(), span)
 
 	s.FireAndForget(func() {
-		err := s.firstPartyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...))
+		err := s.firstPartyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...), &userAgent)
 		if err != nil {
 			slog.Error("could not create issues for vulnerabilities", "err", err)
 		}

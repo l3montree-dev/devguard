@@ -287,7 +287,7 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 	})
 }
 
-func (w *WebhookController) HandleEvent(ctx context.Context, event any) error {
+func (w *WebhookController) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 
 	switch event := event.(type) {
 	case shared.SBOMCreatedEvent:
@@ -406,12 +406,12 @@ func (w *WebhookController) GetRoleInProject(ctx context.Context, userID string,
 	return "", nil
 }
 
-func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	// Logic to create an issue
 	return nil
 }
 
-func (w *WebhookController) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (w *WebhookController) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	// Logic to update an issue
 	return nil
 }
