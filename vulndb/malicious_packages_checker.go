@@ -32,16 +32,9 @@ import (
 	"github.com/package-url/packageurl-go"
 )
 
-const (
-	DefaultMaliciousPackageRepo = "https://github.com/ossf/malicious-packages/archive/refs/heads/main.tar.gz"
-	BatchSize                   = 700 // Insert in batches to avoid memory spikes
-	malPkgNumOfGoRoutines       = 7
-)
-
 // MaliciousPackageChecker checks packages against the malicious package database
 type MaliciousPackageChecker struct {
 	repository *repositories.MaliciousPackageRepository
-	repoURL    string
 	httpClient *http.Client
 }
 
@@ -55,7 +48,6 @@ func NewMaliciousPackageChecker(
 ) (*MaliciousPackageChecker, error) {
 	return &MaliciousPackageChecker{
 		repository: repository,
-		repoURL:    DefaultMaliciousPackageRepo,
 		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}, nil
 }
@@ -93,7 +85,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 						Versions: []string{},
 					},
 				},
-				Published: time.Now(),
+				Published: time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
 			}
 			packages = append(packages, models.MaliciousPackage{
 				ID:        fakeID,
