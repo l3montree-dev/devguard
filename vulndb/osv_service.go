@@ -61,7 +61,7 @@ type syncSpec struct {
 }
 
 // liveTableSpecs defines the sync configuration for every live table.
-// Both syncAllTables (staging→live) and applyQuickDiff (QuickDiff struct→live)
+// Both SyncAllTables (staging→live) and applyQuickDiff (QuickDiff struct→live)
 // use these specs so all apply logic lives in one place.
 var liveTableSpecs = func() []syncSpec {
 	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
@@ -258,7 +258,7 @@ func insertStageIntoLive(ctx context.Context, tx pgx.Tx, spec syncSpec) (inserte
 	return inserted, lockHeld, nil
 }
 
-// syncTable is the thin wrapper used by syncAllTables: compute diff from staging, then apply.
+// syncTable is the thin wrapper used by SyncAllTables: compute diff from staging, then apply.
 func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted, updated int64, lockHeld time.Duration, err error) {
 	empty, err := liveTableIsEmpty(ctx, tx, spec.live)
 	if err != nil {
@@ -277,10 +277,10 @@ func syncTable(ctx context.Context, tx pgx.Tx, spec syncSpec) (deleted, inserted
 	return applyDiff(ctx, tx, spec)
 }
 
-// syncAllTables syncs every staging table into its live counterpart using
+// SyncAllTables syncs every staging table into its live counterpart using
 // EXCEPT-based set operations. It replaces the old flush functions and makes
 // every import fully idempotent regardless of import history.
-func syncAllTables(ctx context.Context, tx pgx.Tx) error {
+func SyncAllTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 	var totalLock time.Duration
 	for _, spec := range liveTableSpecs {
@@ -423,7 +423,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := PrepareBulkInsert(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not prepare bulk insert: %w", err)
 	}
-	if err := createStagingTables(ctx, tx); err != nil {
+	if err := CreateStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
 	malRows := gobOSVToMalTransformer(allOSVVulns)
@@ -433,10 +433,10 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	allOSVVulns = append(allOSVVulns, osvEntries...)
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
-	if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
+	if err := InsertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cves: %w", err)
 	}
-	if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
+	if err := InsertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
 		return nil, nil, fmt.Errorf("could not insert cve relationships: %w", err)
 	}
 	if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
@@ -448,7 +448,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps, "mal_pkgs_stage", "mal_comps_stage"); err != nil {
 		return nil, nil, fmt.Errorf("could not insert malicious packages: %w", err)
 	}
-	if err := flushOSVStagingTables(ctx, tx); err != nil {
+	if err := FlushOSVStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not flush osv staging tables: %w", err)
 	}
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
@@ -610,8 +610,8 @@ func (s osvService) zipWorkerFunction(zipWorkWaitGroup *sync.WaitGroup, zipJobs 
 	}
 }
 
-// insertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
-func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table string) error {
+// InsertCVEsBulk streams cves into the staging table. Call flushStagingTables once after all batches.
+func InsertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table string) error {
 	if len(cves) == 0 {
 		return nil
 	}
@@ -626,8 +626,8 @@ func insertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table str
 	return nil
 }
 
-// insertCVERelationshipsBulk streams cve relationships into the staging table. Call flushStagingTables once after all batches.
-func insertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship, table string) error {
+// InsertCVERelationshipsBulk streams cve relationships into the staging table. Call flushStagingTables once after all batches.
+func InsertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships []models.CVERelationship, table string) error {
 	if len(cveRelationships) == 0 {
 		return nil
 	}
@@ -677,9 +677,9 @@ func insertCVEAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, pivotRows [
 	return nil
 }
 
-// flushOSVStagingTables is kept for the bulk import path which truncates live tables
+// FlushOSVStagingTables is kept for the bulk import path which truncates live tables
 // and then does a simple INSERT from staging (no EXCEPT diff needed on an empty table).
-func flushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
+func FlushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 
 	if _, err := tx.Exec(ctx, `
@@ -787,7 +787,7 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-func createStagingTables(ctx context.Context, tx pgx.Tx) error {
+func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE IF NOT EXISTS cves_stage (
 			id                      bigint,

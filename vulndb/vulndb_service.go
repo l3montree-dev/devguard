@@ -119,13 +119,13 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 			computeDiff = false
 		} else {
 			prevVersion, _ = time.Parse(time.RFC3339Nano, lastImportStr)
-			if err := snapshotPrevState(ctx, tx); err != nil {
+			if err := SnapshotPrevState(ctx, tx); err != nil {
 				return fmt.Errorf("could not snapshot prev state: %w", err)
 			}
 		}
 	}
 
-	if err := truncateCveRelatedTables(ctx, tx); err != nil {
+	if err := TruncateCVERelatedTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not truncate vulndb tables: %w", err)
 	}
 
@@ -221,11 +221,11 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	// Write all fetched data to the DB within the same transaction.
 	slog.Info("writing EPSS data to database")
-	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not write EPSS data: %w", err)
 	}
 	slog.Info("writing CISA KEV data to database")
-	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not write CISA KEV data: %w", err)
 	}
 	slog.Info("writing exploit data to database")
@@ -240,18 +240,18 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	// (prev state) and the freshly loaded live tables (new state).
 	var quickDiff *QuickDiff
 	if computeDiff {
-		quickDiff, err = computeQuickDiff(ctx, tx, prevVersion)
+		quickDiff, err = ComputeQuickDiff(ctx, tx, prevVersion)
 		if err != nil {
 			return fmt.Errorf("could not compute quick diff: %w", err)
 		}
 	}
 
-	tableIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+	tableIntegrity, err := CalculateTotalIntegrityInformation(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("could not calculate integrity information: %w", err)
 	}
 
-	slices.SortFunc(tableIntegrity, func(a, b tableIntegrityInformation) int {
+	slices.SortFunc(tableIntegrity, func(a, b TableIntegrityInformation) int {
 		return strings.Compare(a.TableName, b.TableName)
 	})
 
@@ -272,7 +272,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	}
 	defer integrityFD.Close()
 
-	jsonContents, err := json.Marshal(integrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: start})
+	jsonContents, err := json.Marshal(IntegrityInformation{TableIntegrity: tableIntegrity, ImportTimestamp: start})
 	if err != nil {
 		return fmt.Errorf("could not marshal integrity information: %w", err)
 	}
@@ -316,15 +316,15 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	return nil
 }
 
-func readIntegrityInformation(workingDir string) (integrityInformation, error) {
+func readIntegrityInformation(workingDir string) (IntegrityInformation, error) {
 	fd, err := os.Open(workingDir + "/integrity_checks.json")
 	if err != nil {
-		return integrityInformation{}, fmt.Errorf("could not open integrity_checks.json: %w", err)
+		return IntegrityInformation{}, fmt.Errorf("could not open integrity_checks.json: %w", err)
 	}
 	defer fd.Close()
-	var integrity integrityInformation
+	var integrity IntegrityInformation
 	if err := json.NewDecoder(fd).Decode(&integrity); err != nil {
-		return integrityInformation{}, fmt.Errorf("could not decode integrity_checks.json: %w", err)
+		return IntegrityInformation{}, fmt.Errorf("could not decode integrity_checks.json: %w", err)
 	}
 
 	return integrity, nil
@@ -517,13 +517,13 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	}
 
 	t := time.Now()
-	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not apply EPSS data: %w", err)
 	}
 	slog.Info("applied epss data", "entries", len(epssData), "took", time.Since(t))
 
 	t = time.Now()
-	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not apply CISA KEV data: %w", err)
 	}
 	slog.Info("applied cisa kev data", "entries", len(kevEntries), "took", time.Since(t))
@@ -616,18 +616,18 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 		return fmt.Errorf("could not prepare bulk insert: %w", err)
 	}
 
-	if err := createStagingTables(ctx, tx); err != nil {
+	if err := CreateStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
 	t := time.Now()
-	if err := insertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
+	if err := InsertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
 		return fmt.Errorf("could not copy cves to staging: %w", err)
 	}
 	slog.Info("copied cves to staging", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
+	if err := InsertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
 		return fmt.Errorf("could not copy cve relationships to staging: %w", err)
 	}
 	slog.Info("copied cve_relationships to staging", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
@@ -657,19 +657,19 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	slog.Info("copied malicious_packages to staging", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not insert epss: %w", err)
 	}
 	slog.Info("inserted epss", "count", len(epssData), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not insert cisa kev: %w", err)
 	}
 	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := syncAllTables(ctx, tx); err != nil {
+	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
 	}
 	slog.Info("synced staging tables to live", "took", time.Since(t), "heap_alloc_mb", heapMB())
@@ -682,7 +682,7 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	return nil
 }
 
-func truncateCveRelatedTables(ctx context.Context, tx pgx.Tx) error {
+func TruncateCVERelatedTables(ctx context.Context, tx pgx.Tx) error {
 	// Drop the FK from exploits before truncating so that CASCADE does not silently
 	// wipe exploit rows — exploits may not be part of the current import batch.
 	// AddIndexesAndConstraints re-adds the constraint after CVE rows are flushed.
@@ -705,7 +705,7 @@ func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error
 // tryApplyQuickDiff attempts to apply a pre-computed QuickDiff from the archive.
 // Returns (nil, true, nil) on success, (nil, false, nil) if no quickdiff is present
 // or the version doesn't match, and (nil, false, err) on a hard failure.
-func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth integrityInformation) (bool, error) {
+func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation) (bool, error) {
 	var diff QuickDiff
 	if err := readGobFile(workingDir+"/quickdiff.gob", &diff); err != nil {
 		slog.Info("no quickdiff found in archive, skipping quick diff application")
@@ -724,7 +724,7 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 	}
 
 	slog.Info("quick-diff: version matches, applying patch", "from", diff.FromVersion)
-	if err := applyQuickDiff(ctx, tx, &diff); err != nil {
+	if err := ApplyQuickDiff(ctx, tx, &diff); err != nil {
 		return false, err
 	}
 
@@ -733,7 +733,7 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 	if err := readGobFile(workingDir+"/epss.gob", &epssData); err != nil {
 		return false, fmt.Errorf("quick-diff: could not read epss.gob: %w", err)
 	}
-	if err := insertEPSSBulk(ctx, tx, epssData); err != nil {
+	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return false, fmt.Errorf("quick-diff: could not apply epss: %w", err)
 	}
 
@@ -741,7 +741,7 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 	if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
 		return false, fmt.Errorf("quick-diff: could not read cisakev.gob: %w", err)
 	}
-	if err := insertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
 		return false, fmt.Errorf("quick-diff: could not apply cisa kev: %w", err)
 	}
 
@@ -758,7 +758,7 @@ var errQuickDiffFailed = fmt.Errorf("quick-diff failed, needs full sync in a new
 // bulk=false uses streaming with EXCEPT-based sync (correct for incremental updates).
 // When tryQuickDiff=true the quickdiff path is attempted first; on failure it returns
 // errQuickDiffFailed so the caller can rollback and retry with tryQuickDiff=false.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth integrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
+func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
 	if tryQuickDiff {
 		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
@@ -771,11 +771,11 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 			slog.Info("quick-diff not applicable, falling back to full stream sync")
 		} else {
 			// Quickdiff applied — verify integrity before committing.
-			localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+			localIntegrity, err := CalculateTotalIntegrityInformation(ctx, tx)
 			if err != nil {
 				return nil, fmt.Errorf("could not calculate integrity information: %w", err)
 			}
-			failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+			failingTables, success := ValidateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
 			if !success {
 				slog.Warn("quick-diff integrity check failed, will retry as full sync", "failingTables", failingTables)
 				return failingTables, errQuickDiffFailed
@@ -796,11 +796,11 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 		return nil, fmt.Errorf("could not populate database from gob files: %w", err)
 	}
 
-	localIntegrity, err := calculateTotalIntegrityInformation(ctx, tx)
+	localIntegrity, err := CalculateTotalIntegrityInformation(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate integrity information: %w", err)
 	}
-	failingTables, success := validateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
+	failingTables, success := ValidateIntegrityInformation(workingDir, integrityGroundTruth, localIntegrity)
 	if !success {
 		slog.Warn("integrity validation failed for tables", "failingTables", failingTables)
 		return failingTables, fmt.Errorf("integrity validation failed: %v", failingTables)
@@ -898,7 +898,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, error) {
 
 // streamToDatabase drains all three input channels in a single goroutine, writes all rows
 // into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
-// flushStagingTables (simple INSERT) instead of syncAllTables (expensive EXCEPT diff).
+// flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
 func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
@@ -907,7 +907,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not disable FK checks: %w", err)
 	}
 
-	if err := createStagingTables(ctx, tx); err != nil {
+	if err := CreateStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
@@ -954,13 +954,13 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				continue
 			}
 			t := time.Now()
-			if err := insertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
+			if err := InsertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
 				return fmt.Errorf("could not insert cves: %w", err)
 			}
 			cvesTime += time.Since(t)
 			cveCount += len(rows.CVEs)
 			t = time.Now()
-			if err := insertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
+			if err := InsertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
 				return fmt.Errorf("could not insert cve relationships: %w", err)
 			}
 			relationshipsTime += time.Since(t)
@@ -1005,7 +1005,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		}
 	}
 
-	if err := syncAllTables(ctx, tx); err != nil {
+	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
 	}
 

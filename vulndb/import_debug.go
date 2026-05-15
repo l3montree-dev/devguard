@@ -111,11 +111,11 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 		}
 		vulnRows := gobOSVToVulnTransformer()(osvEntries)
 		malRows := gobOSVToMalTransformer(osvEntries)
-		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
+		if err := InsertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
 			slog.Error("show-diff: could not insert CVEs into staging", "err", err)
 			return
 		}
-		if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
+		if err := InsertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
 			return
 		}

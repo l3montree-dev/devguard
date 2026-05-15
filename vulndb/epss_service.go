@@ -87,7 +87,11 @@ func (s *epssService) Fetch(ctx context.Context) (map[string]dtos.EPSS, error) {
 	return results, nil
 }
 
-func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+func InsertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+	// Always reset so CVEs no longer in the EPSS feed end up with NULL.
+	if _, err := tx.Exec(ctx, `UPDATE cves SET epss = NULL, percentile = NULL`); err != nil {
+		return fmt.Errorf("could not reset epss values: %w", err)
+	}
 	if len(epssData) == 0 {
 		return nil
 	}
@@ -115,11 +119,6 @@ func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPS
 			return []any{rows[i].cve, rows[i].epss, rows[i].percentile}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy epss rows into staging table: %w", err)
-	}
-
-	// reset all epss and percentile values to null before updating with new data, to handle removed CVEs
-	if _, err := tx.Exec(ctx, `UPDATE cves SET epss = NULL, percentile = NULL`); err != nil {
-		return fmt.Errorf("could not reset epss values: %w", err)
 	}
 
 	if _, err := tx.Exec(ctx, `

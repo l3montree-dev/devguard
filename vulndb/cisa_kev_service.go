@@ -96,8 +96,8 @@ func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 			CVE:                   entry.CVEID,
 			CISAExploitAdd:        dateAdded,
 			CISAActionDue:         dueDate,
-			CISARequiredAction:    entry.RequiredAction,
-			CISAVulnerabilityName: entry.VulnerabilityName,
+			CISARequiredAction:    &entry.RequiredAction,
+			CISAVulnerabilityName: &entry.VulnerabilityName,
 		})
 	}
 
@@ -164,7 +164,15 @@ func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.C
 	return nil
 }
 
-func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+	// Always reset CISA fields so CVEs that are no longer in the catalog (or were
+	// never in it) end up with NULL — not the empty-string zero-value written by
+	// the initial CVE insert. The reset must run even when the entry list is empty,
+	// otherwise existing CVEs keep "" while newly-inserted quickdiff CVEs get NULL,
+	// and the integrity checksum (coalesce(field, '\0')) treats the two differently.
+	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL`); err != nil {
+		return fmt.Errorf("could not reset cisa kev fields: %w", err)
+	}
 	if len(entries) == 0 {
 		return nil
 	}
@@ -186,11 +194,6 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
-	}
-
-	// Reset all CISA KEV fields before re-applying so CVEs that fell off the catalog are cleared.
-	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL`); err != nil {
-		return fmt.Errorf("could not reset cisa kev fields: %w", err)
 	}
 
 	// Update direct CVEs and alias CVEs. DISTINCT ON with ORDER BY cisa_exploit_add ASC gives a
@@ -217,7 +220,7 @@ func insertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 	if err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
 	}
-	slog.Debug("insertCISAKEVBulk: update complete", "rows_updated", tag.RowsAffected())
+	slog.Debug("InsertCISAKEVBulk: update complete", "rows_updated", tag.RowsAffected())
 	return nil
 }
 

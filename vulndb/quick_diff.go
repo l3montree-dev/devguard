@@ -66,13 +66,13 @@ type quickDiffCVE struct {
 	Description           string
 	CVSS                  float32
 	References            string
-	CISAExploitAdd        *string // "YYYY-MM-DD" or nil
-	CISAActionDue         *string
+	CISAExploitAdd        *time.Time
+	CISAActionDue         *time.Time
 	CISARequiredAction    *string
 	CISAVulnerabilityName *string
 	EPSS                  *float64
 	Percentile            *float32
-	Vector                *string
+	Vector                string
 }
 
 type quickDiffRelKey struct {
@@ -97,33 +97,33 @@ type quickDiffPivot struct {
 	AffectedComponentID int64
 }
 
-// snapshotPrevState creates lightweight temp tables capturing the current DB state
+// SnapshotPrevState creates lightweight temp tables capturing the current DB state
 // before the export truncates and reloads everything. Call this inside the export
 // transaction before any TRUNCATE.
-func snapshotPrevState(ctx context.Context, tx pgx.Tx) error {
+func SnapshotPrevState(ctx context.Context, tx pgx.Tx) error {
 	t := time.Now()
 	queries := []string{
-		`CREATE TEMP TABLE _snap_cves      AS SELECT id, content_hash FROM cves`,
-		`CREATE TEMP TABLE _snap_rel       AS SELECT source_cve, target_cve, relationship_type FROM cve_relationships`,
-		`CREATE TEMP TABLE _snap_ac        AS SELECT id FROM affected_components`,
-		`CREATE TEMP TABLE _snap_pivot     AS SELECT cve_id, affected_component_id FROM cve_affected_component`,
-		`CREATE TEMP TABLE _snap_exploits  AS SELECT id, updated FROM exploits`,
-		`CREATE TEMP TABLE _snap_mal_pkgs  AS SELECT id, modified FROM malicious_packages`,
-		`CREATE TEMP TABLE _snap_mal_comps AS SELECT id FROM malicious_affected_components`,
+		`CREATE TEMP TABLE _snap_cves      ON COMMIT DROP AS SELECT id, content_hash FROM cves`,
+		`CREATE TEMP TABLE _snap_rel       ON COMMIT DROP AS SELECT source_cve, target_cve, relationship_type FROM cve_relationships`,
+		`CREATE TEMP TABLE _snap_ac        ON COMMIT DROP AS SELECT id FROM affected_components`,
+		`CREATE TEMP TABLE _snap_pivot     ON COMMIT DROP AS SELECT cve_id, affected_component_id FROM cve_affected_component`,
+		`CREATE TEMP TABLE _snap_exploits  ON COMMIT DROP AS SELECT id, updated FROM exploits`,
+		`CREATE TEMP TABLE _snap_mal_pkgs  ON COMMIT DROP AS SELECT id, modified FROM malicious_packages`,
+		`CREATE TEMP TABLE _snap_mal_comps ON COMMIT DROP AS SELECT id FROM malicious_affected_components`,
 	}
 	for _, q := range queries {
 		if _, err := tx.Exec(ctx, q); err != nil {
-			return fmt.Errorf("snapshotPrevState: %w", err)
+			return fmt.Errorf("SnapshotPrevState: %w", err)
 		}
 	}
 	slog.Info("quick-diff: prev state snapshot created", "took", time.Since(t))
 	return nil
 }
 
-// computeQuickDiff runs SQL diffs between the snapshot (prev state) and the current
+// ComputeQuickDiff runs SQL diffs between the snapshot (prev state) and the current
 // live tables (new state) and collects the results into a QuickDiff. Call this after
 // the new data has been fully loaded into the live tables and EPSS/CISA applied.
-func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*QuickDiff, error) {
+func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*QuickDiff, error) {
 	diff := &QuickDiff{FromVersion: fromVersion}
 	t := time.Now()
 
@@ -141,8 +141,8 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 		SELECT c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
 		       c.description, c.cvss, c."references", c.cisa_required_action,
 		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
-		       to_char(c.cisa_exploit_add, 'YYYY-MM-DD'),
-		       to_char(c.cisa_action_due,  'YYYY-MM-DD')
+		       c.cisa_exploit_add,
+		       c.cisa_action_due
 		FROM cves c
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_cves s WHERE s.id = c.id)
 	`)
@@ -158,8 +158,8 @@ func computeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 		SELECT c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
 		       c.description, c.cvss, c."references", c.cisa_required_action,
 		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
-		       to_char(c.cisa_exploit_add, 'YYYY-MM-DD'),
-		       to_char(c.cisa_action_due,  'YYYY-MM-DD')
+		       c.cisa_exploit_add,
+		       c.cisa_action_due
 		FROM cves c
 		JOIN _snap_cves s ON s.id = c.id
 		WHERE s.content_hash != c.content_hash
@@ -572,9 +572,9 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	return nil
 }
 
-// applyQuickDiff applies a pre-computed diff directly to the live tables without
+// ApplyQuickDiff applies a pre-computed diff directly to the live tables without
 // any staging tables or EXCEPT queries. EPSS and CISA KEV are still applied separately.
-func applyQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) error {
+func ApplyQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) error {
 	t := time.Now()
 
 	if err := computeDiffFromQuickDiff(ctx, tx, diff); err != nil {

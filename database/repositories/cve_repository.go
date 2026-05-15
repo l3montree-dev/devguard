@@ -266,8 +266,8 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 		if batch[i].CISAActionDue != nil {
 			actionDues[i] = time.Time(*batch[i].CISAActionDue).Format("2006-01-02")
 		}
-		requiredActions[i] = batch[i].CISARequiredAction
-		vulnNames[i] = batch[i].CISAVulnerabilityName
+		requiredActions[i] = *batch[i].CISARequiredAction
+		vulnNames[i] = *batch[i].CISAVulnerabilityName
 	}
 
 	sql := `UPDATE cves SET

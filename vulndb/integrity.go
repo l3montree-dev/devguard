@@ -92,20 +92,20 @@ func verifySignature(ctx context.Context, pubKeyFile string, sigFile string, blo
 	return nil
 }
 
-type tableIntegrityInformation struct {
+type TableIntegrityInformation struct {
 	TableName  string `json:"table_name"`
 	Checksum   []byte `json:"checksum"`
 	TotalCount int    `json:"total_count"`
 }
 
-type integrityInformation struct {
-	TableIntegrity  []tableIntegrityInformation `json:"table_integrity"`
+type IntegrityInformation struct {
+	TableIntegrity  []TableIntegrityInformation `json:"table_integrity"`
 	ImportTimestamp time.Time                   `json:"import_timestamp"`
 }
 
 // returns a string slice with failing tables
 // if nil, then all tables are valid
-func validateIntegrityInformation(workingDir string, groundTruth integrityInformation, localIntegrityInformation []tableIntegrityInformation) ([]string, bool) {
+func ValidateIntegrityInformation(workingDir string, groundTruth IntegrityInformation, localIntegrityInformation []TableIntegrityInformation) ([]string, bool) {
 	failingTables := make([]string, 0)
 	for _, tableIntegrity := range localIntegrityInformation {
 		found := false
@@ -132,7 +132,7 @@ func validateIntegrityInformation(workingDir string, groundTruth integrityInform
 	return nil, true
 }
 
-func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]tableIntegrityInformation, error) {
+func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]TableIntegrityInformation, error) {
 	const query = `
 		WITH
 		cves_integrity AS (
@@ -215,9 +215,9 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 	}
 	defer rows.Close()
 
-	results := make([]tableIntegrityInformation, 0, 7)
+	results := make([]TableIntegrityInformation, 0, 7)
 	for rows.Next() {
-		var r tableIntegrityInformation
+		var r TableIntegrityInformation
 		if err := rows.Scan(&r.TableName, &r.TotalCount, &r.Checksum); err != nil {
 			return nil, fmt.Errorf("could not scan integrity row: %w", err)
 		}
@@ -234,6 +234,6 @@ func calculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]table
 	return results, nil
 }
 
-func (integrity tableIntegrityInformation) isEqual(compareInformation tableIntegrityInformation) bool {
+func (integrity TableIntegrityInformation) isEqual(compareInformation TableIntegrityInformation) bool {
 	return integrity.TotalCount == compareInformation.TotalCount && bytes.Equal(integrity.Checksum, compareInformation.Checksum)
 }

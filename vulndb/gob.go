@@ -73,8 +73,8 @@ func cisaKEVEntriesToGob(cves []models.CVE) []CISAKEVEntry {
 			CVE:               c.CVE,
 			ExploitAddDate:    dateToTimePtr(c.CISAExploitAdd),
 			ActionDueDate:     dateToTimePtr(c.CISAActionDue),
-			RequiredAction:    c.CISARequiredAction,
-			VulnerabilityName: c.CISAVulnerabilityName,
+			RequiredAction:    *c.CISARequiredAction,
+			VulnerabilityName: *c.CISAVulnerabilityName,
 		})
 	}
 	return out

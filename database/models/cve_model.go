@@ -39,8 +39,8 @@ type CVE struct {
 	References            string              `json:"references" gorm:"type:text;" cve:"references"`
 	CISAExploitAdd        *datatypes.Date     `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd" swaggertype:"string" format:"date"`
 	CISAActionDue         *datatypes.Date     `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue" swaggertype:"string" format:"date"`
-	CISARequiredAction    string              `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
-	CISAVulnerabilityName string              `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
+	CISARequiredAction    *string             `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
+	CISAVulnerabilityName *string             `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
 	EPSS                  *float64            `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
 	Percentile            *float32            `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
 	AffectedComponents    []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
