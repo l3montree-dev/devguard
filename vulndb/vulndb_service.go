@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
@@ -360,11 +361,11 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	slog.Info("start vulndb import", "processing", processingMode, "limitedToTables", opts.LimitedToTables)
 	start := time.Now()
 
-	var workingDir string
+	var workingDir, artifactDigest string
 	if opts.LocalArchive {
-		workingDir, err = pullVulnDBDebug(ctx)
+		workingDir, artifactDigest, err = pullVulnDBDebug(ctx)
 	} else {
-		workingDir, err = pullVulnDBFromPackageRegistry(ctx)
+		workingDir, artifactDigest, err = pullVulnDBFromPackageRegistry(ctx)
 	}
 	if err != nil {
 		return fmt.Errorf("could not pull from remote repository: %w", err)
@@ -381,6 +382,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	if err != nil {
 		return fmt.Errorf("could not read integrity information: %w", err)
 	}
+	integrity.ArtifactChecksum = artifactDigest
 
 	if integrity.ImportTimestamp.Equal(lastImportTime) {
 		slog.Info("vulndb is up to date, skipping import", "lastImportTime", lastImportTime)
@@ -434,6 +436,9 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
+	}
+	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCIntegrity", integrity); err != nil {
+		return fmt.Errorf("could not save integrity information: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -809,7 +814,7 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 	return nil, nil
 }
 
-func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {
+func pullVulnDBFromPackageRegistry(ctx context.Context) (string, string, error) {
 	if debugImport {
 		return pullVulnDBDebug(ctx)
 	}
@@ -818,82 +823,85 @@ func pullVulnDBFromPackageRegistry(ctx context.Context) (string, error) {
 
 // pullVulnDBDebug reuses vulndb.tar.zst from the current working directory when it already
 // exists, skipping the OCI pull and signature verification. Intended for local benchmarking only.
-func pullVulnDBDebug(ctx context.Context) (string, error) {
+func pullVulnDBDebug(ctx context.Context) (string, string, error) {
 	archivePath := vulnDBArchiveName
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
 		slog.Info("debug-import: no local archive found, downloading once")
-		dir, err := pullVulnDBFromOCI(ctx)
+		dir, digest, err := pullVulnDBFromOCI(ctx)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		data, err := os.ReadFile(dir + "/" + vulnDBArchiveName)
 		if err != nil {
 			os.RemoveAll(dir)
-			return "", fmt.Errorf("could not read downloaded archive: %w", err)
+			return "", "", fmt.Errorf("could not read downloaded archive: %w", err)
 		}
 		if err := os.WriteFile(archivePath, data, 0o644); err != nil {
 			os.RemoveAll(dir)
-			return "", fmt.Errorf("could not cache archive: %w", err)
+			return "", "", fmt.Errorf("could not cache archive: %w", err)
 		}
 		slog.Info("debug-import: cached archive", "path", archivePath)
-		return dir, nil
+		return dir, digest, nil
 	}
 
 	slog.Info("debug-import: reusing cached archive", "path", archivePath)
 	outpath, err := os.MkdirTemp("", "vulndb")
 	if err != nil {
-		return "", fmt.Errorf("could not create temp directory: %w", err)
+		return "", "", fmt.Errorf("could not create temp directory: %w", err)
 	}
 	if err := untarZstd(archivePath, outpath+"/"); err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not untar vulndb archive: %w", err)
+		return "", "", fmt.Errorf("could not untar vulndb archive: %w", err)
 	}
-	return outpath, nil
+	return outpath, "", nil
 }
 
-func pullVulnDBFromOCI(ctx context.Context) (string, error) {
+func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v2"
 	repo, err := remote.NewRepository(reg)
 	if err != nil {
-		return "", fmt.Errorf("could not connect to remote repository: %w", err)
+		return "", "", fmt.Errorf("could not connect to remote repository: %w", err)
 	}
 
 	outpath, err := os.MkdirTemp("", "vulndb")
 	if err != nil {
-		return "", fmt.Errorf("could not create temp directory: %w", err)
+		return "", "", fmt.Errorf("could not create temp directory: %w", err)
 	}
 
 	fs, err := file.New(outpath)
 	if err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not create file store: %w", err)
+		return "", "", fmt.Errorf("could not create file store: %w", err)
 	}
 
 	// pull the single tar.zst artifact and unpack it locally before reading the gob files
 	const tag = "latest"
-	if _, err = oras.Copy(ctx, repo, tag, fs, vulnDBArchiveName, oras.DefaultCopyOptions); err != nil {
+	var desc ocispec.Descriptor
+	if desc, err = oras.Copy(ctx, repo, tag, fs, vulnDBArchiveName, oras.DefaultCopyOptions); err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not copy artifact from remote repository: %w", err)
+		return "", "", fmt.Errorf("could not copy artifact from remote repository: %w", err)
 	}
+	digest := desc.Digest.String()
+	slog.Info("vulndb artifact checksum", "digest", digest)
 
 	// pull the matching signatures (one .sig per file) from the sibling tag
 	const sigTag = tag + ".sig"
 	if _, err = oras.Copy(ctx, repo, sigTag, fs, vulnDBArchiveName+".sig", oras.DefaultCopyOptions); err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not copy signatures from remote repository: %w", err)
+		return "", "", fmt.Errorf("could not copy signatures from remote repository: %w", err)
 	}
 
 	if err := verifySignature(ctx, vulnDBPubKeyFile, outpath+"/"+vulnDBArchiveName+".sig", outpath+"/"+vulnDBArchiveName); err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not verify signature for %s: %w", vulnDBArchiveName, err)
+		return "", "", fmt.Errorf("could not verify signature for %s: %w", vulnDBArchiveName, err)
 	}
 
 	if err := untarZstd(outpath+"/"+vulnDBArchiveName, outpath+"/"); err != nil {
 		os.RemoveAll(outpath)
-		return "", fmt.Errorf("could not untar vulndb archive: %w", err)
+		return "", "", fmt.Errorf("could not untar vulndb archive: %w", err)
 	}
 	slog.Info("successfully verified and untarred vulndb archive")
-	return outpath, nil
+	return outpath, digest, nil
 }
 
 // streamToDatabase drains all three input channels in a single goroutine, writes all rows

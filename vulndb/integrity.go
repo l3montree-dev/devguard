@@ -99,8 +99,9 @@ type TableIntegrityInformation struct {
 }
 
 type IntegrityInformation struct {
-	TableIntegrity  []TableIntegrityInformation `json:"table_integrity"`
-	ImportTimestamp time.Time                   `json:"import_timestamp"`
+	TableIntegrity   []TableIntegrityInformation `json:"table_integrity"`
+	ImportTimestamp  time.Time                   `json:"import_timestamp"`
+	ArtifactChecksum string                      `json:"artifact_checksum,omitempty"`
 }
 
 // returns a string slice with failing tables
