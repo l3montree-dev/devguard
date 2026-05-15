@@ -768,6 +768,7 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
 			slog.Warn("quick-diff apply failed, will retry as full sync", "err", err)
+			monitoring.Alert("vulndb quick-diff apply failed", fmt.Errorf("quick-diff apply failed: %w, will retry as full sync", err))
 			return nil, errQuickDiffFailed
 		}
 		if !ok {
