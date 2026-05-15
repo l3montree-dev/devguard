@@ -167,18 +167,18 @@ func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageI
 
 func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) (models.CVE, error) {
 
-	var cves models.CVE
+	var cve models.CVE
 
 	q := g.GetDB(ctx, tx).Model(&models.CVE{})
 
 	q = q.Where("LOWER(cve) = LOWER(?)", cveID)
 
-	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cves).Error
+	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cve).Error
 	if err != nil {
 		return models.CVE{}, err
 	}
 
-	return cves, nil
+	return cve, nil
 }
 
 // this method is used inside the risk_daemon to get all cves.
