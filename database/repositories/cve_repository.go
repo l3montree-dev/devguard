@@ -34,7 +34,7 @@ func (g *cveRepository) GetLastModDate(ctx context.Context, tx *gorm.DB) (time.T
 
 func (g *cveRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.CVE, error) {
 	var t models.CVE
-	err := g.GetDB(ctx, tx).First(&t, "cve = ?", id).Error
+	err := g.GetDB(ctx, tx).First(&t, "LOWER(cve) = LOWER(?)", id).Error
 
 	return t, err
 }
@@ -49,7 +49,7 @@ func (g *cveRepository) GetAllCVEsID(ctx context.Context, tx *gorm.DB) ([]string
 
 func (g *cveRepository) FindAll(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
-	err := g.GetDB(ctx, tx).Find(&cves, "cve IN ?", cveIDs).Error
+	err := g.GetDB(ctx, tx).Find(&cves, "LOWER(cve) IN ?", utils.ToLowerSlice(cveIDs)).Error
 	return cves, err
 }
 
@@ -171,7 +171,7 @@ func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) 
 
 	q := g.GetDB(ctx, tx).Model(&models.CVE{})
 
-	q = q.Where("cve = ?", cveID)
+	q = q.Where("LOWER(cve) = LOWER(?)", cveID)
 
 	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cves).Error
 	if err != nil {
@@ -186,8 +186,7 @@ func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) 
 // create your own method if you need preloading.
 func (g *cveRepository) FindCVEs(ctx context.Context, tx *gorm.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
-
-	err := g.GetDB(ctx, tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
+	err := g.GetDB(ctx, tx).Where("LOWER(cve) IN ?", utils.ToLowerSlice(cveIds)).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
 

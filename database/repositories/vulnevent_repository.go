@@ -77,7 +77,7 @@ func (r *eventRepository) readDependencyVulnAssetEvents(ctx context.Context, tx 
 		Where("vuln_events.dependency_vuln_id IN (?)",
 			r.GetDB(ctx, tx).Table("dependency_vulns").
 				Select("id").
-				Where("asset_id = ? AND cve_id = ? AND component_purl = ?", t.AssetID, t.CVEID, t.ComponentPurl),
+				Where("asset_id = ? AND LOWER(cve_id) = LOWER(?) AND component_purl = ?", t.AssetID, t.CVEID, t.ComponentPurl),
 		).
 		Order("vuln_events.created_at ASC").
 		Find(&events).Error

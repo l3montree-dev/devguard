@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -158,7 +159,7 @@ func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(ctx contex
 		}).
 		Preload("Artifacts").
 		Preload("CVE").
-		Where("asset_id = ? AND cve_id = ? AND component_purl = ?", assetID, cveID, componentPurl).
+		Where("asset_id = ? AND LOWER(cve_id) = LOWER(?) AND component_purl = ?", assetID, cveID, componentPurl).
 		Find(&vulns).Error
 	return vulns, err
 }
@@ -360,7 +361,7 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(ctx co
             SELECT id FROM projects WHERE organization_id = ?
         )
     )
-    AND d.cve_id = ?
+    AND LOWER(d.cve_id) = LOWER(?)
     AND d.component_purl = ?
 	) AS distinct_deps GROUP BY state`, orgID, cveID, pURL).Scan(&stateCounts).Error
 	if err != nil {
@@ -483,7 +484,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(c
 	var vuln []models.DependencyVuln
 	err := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("Artifacts").Preload("CVE").Where("cve_id = ? AND asset_id = ?", cveID, assetID).Find(&vuln).Error
+	}).Preload("Artifacts").Preload("CVE").Where("LOWER(cve_id) = LOWER(?) AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err
 }
 
@@ -517,10 +518,9 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 	assetID := rules[0].AssetID
 	assetVersionName := rules[0].AssetVersionName
 
-	// Convert CVE IDs to slice
 	cveIDSlice := make([]string, 0, len(cveIDs))
 	for id := range cveIDs {
-		cveIDSlice = append(cveIDSlice, id)
+		cveIDSlice = append(cveIDSlice, strings.ToLower(id))
 	}
 
 	// Single query for all vulns
@@ -528,7 +528,7 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 	err := repository.Repository.GetDB(ctx, tx).
 		Where("asset_id = ?", assetID).
 		Where("asset_version_name = ?", assetVersionName).
-		Where("cve_id IN ?", cveIDSlice).
+		Where("LOWER(cve_id) IN ?", cveIDSlice).
 		Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")
 		}).
