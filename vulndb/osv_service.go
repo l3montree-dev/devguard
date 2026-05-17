@@ -98,7 +98,7 @@ var liveTableSpecs = func() []syncSpec {
 		{
 			live: "exploits", stage: "exploits_stage", keyCols: []string{"id"},
 			contentHashCol: "updated",
-			contentCols:    []string{"published", "updated", "author", "source_url", "description", "forks", "watchers", "subscribers", "stars"},
+			contentCols:    []string{"published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"},
 			insertCols:     exploitAllCols, insertSelectExprs: exploitAllCols,
 		},
 		{
