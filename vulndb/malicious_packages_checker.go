@@ -143,10 +143,10 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent, pkgTable, compTable string) error {
 	if len(pkgs) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{pkgTable},
-			[]string{"id", "summary", "details", "published", "modified"},
+			[]string{"id", "content_hash", "summary", "details", "published", "modified"},
 			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
 				p := pkgs[i]
-				return []any{p.ID, p.Summary, p.Details, p.Published, p.Modified}, nil
+				return []any{p.ID, p.CalculateContentHash(), p.Summary, p.Details, p.Published, p.Modified}, nil
 			})); err != nil {
 			return fmt.Errorf("could not copy malicious packages into staging table: %w", err)
 		}

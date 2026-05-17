@@ -107,8 +107,8 @@ func SnapshotPrevState(ctx context.Context, tx pgx.Tx) error {
 		`CREATE TEMP TABLE _snap_rel       ON COMMIT DROP AS SELECT source_cve, target_cve, relationship_type FROM cve_relationships`,
 		`CREATE TEMP TABLE _snap_ac        ON COMMIT DROP AS SELECT id FROM affected_components`,
 		`CREATE TEMP TABLE _snap_pivot     ON COMMIT DROP AS SELECT cve_id, affected_component_id FROM cve_affected_component`,
-		`CREATE TEMP TABLE _snap_exploits  ON COMMIT DROP AS SELECT id, updated FROM exploits`,
-		`CREATE TEMP TABLE _snap_mal_pkgs  ON COMMIT DROP AS SELECT id, modified FROM malicious_packages`,
+		`CREATE TEMP TABLE _snap_exploits  ON COMMIT DROP AS SELECT id, content_hash FROM exploits`,
+		`CREATE TEMP TABLE _snap_mal_pkgs  ON COMMIT DROP AS SELECT id, content_hash FROM malicious_packages`,
 		`CREATE TEMP TABLE _snap_mal_comps ON COMMIT DROP AS SELECT id FROM malicious_affected_components`,
 	}
 	for _, q := range queries {
@@ -254,7 +254,7 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT e.id, e.published, e.updated, e.author, e.type, e.verified,
+		SELECT e.id, e.content_hash, e.published, e.updated, e.author, e.type, e.verified,
 		       e.source_url, e.description, e.cve_id, e.tags,
 		       e.forks, e.watchers, e.subscribers, e.stars
 		FROM exploits e
@@ -269,12 +269,12 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT e.id, e.published, e.updated, e.author, e.type, e.verified,
+		SELECT e.id, e.content_hash, e.published, e.updated, e.author, e.type, e.verified,
 		       e.source_url, e.description, e.cve_id, e.tags,
 		       e.forks, e.watchers, e.subscribers, e.stars
 		FROM exploits e
 		JOIN _snap_exploits s ON s.id = e.id
-		WHERE s.updated IS DISTINCT FROM e.updated
+		WHERE s.content_hash IS DISTINCT FROM e.content_hash
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("quick-diff exploits updated: %w", err)
@@ -295,7 +295,7 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT m.id, m.summary, m.details, m.published, m.modified
+		SELECT m.id, m.content_hash, m.summary, m.details, m.published, m.modified
 		FROM malicious_packages m
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_mal_pkgs s WHERE s.id = m.id)
 	`)
@@ -308,10 +308,10 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT m.id, m.summary, m.details, m.published, m.modified
+		SELECT m.id, m.content_hash, m.summary, m.details, m.published, m.modified
 		FROM malicious_packages m
 		JOIN _snap_mal_pkgs s ON s.id = m.id
-		WHERE s.modified IS DISTINCT FROM m.modified
+		WHERE s.content_hash IS DISTINCT FROM m.content_hash
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("quick-diff mal_pkgs updated: %w", err)
@@ -486,7 +486,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	}
 
 	// --- exploits ---
-	exploitCols := []string{"id", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
+	exploitCols := []string{"id", "content_hash", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
 	if err := createLike("_diff_del_exploits", "exploits", "id"); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_exploits: %w", err)
 	}
@@ -499,7 +499,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.ExploitsInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsInserted), func(i int) ([]any, error) {
 			m := gobExploitToModel(diff.ExploitsInserted[i])
-			return []any{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
+			return []any{m.ID, m.ContentHash, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_exploits: %w", err)
 		}
@@ -510,14 +510,14 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.ExploitsUpdated) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_exploits"}, exploitCols, pgx.CopyFromSlice(len(diff.ExploitsUpdated), func(i int) ([]any, error) {
 			m := gobExploitToModel(diff.ExploitsUpdated[i])
-			return []any{m.ID, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
+			return []any{m.ID, m.ContentHash, m.Published, m.Updated, m.Author, m.Type, m.Verified, m.SourceURL, m.Description, m.CVEID, m.Tags, m.Forks, m.Watchers, m.Subscribers, m.Stars}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_exploits: %w", err)
 		}
 	}
 
 	// --- malicious_packages ---
-	malPkgCols := []string{"id", "summary", "details", "published", "modified"}
+	malPkgCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	if err := createLike("_diff_del_malicious_packages", "malicious_packages", "id"); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_malicious_packages: %w", err)
 	}
@@ -530,7 +530,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.MalPkgsInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsInserted), func(i int) ([]any, error) {
 			m := diff.MalPkgsInserted[i]
-			return []any{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
+			return []any{m.ID, m.ContentHash, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_malicious_packages: %w", err)
 		}
@@ -541,7 +541,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.MalPkgsUpdated) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_malicious_packages"}, malPkgCols, pgx.CopyFromSlice(len(diff.MalPkgsUpdated), func(i int) ([]any, error) {
 			m := diff.MalPkgsUpdated[i]
-			return []any{m.ID, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
+			return []any{m.ID, m.ContentHash, m.Summary, m.Details, m.Published, m.Modified}, nil // nolint:exhaustruct
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_malicious_packages: %w", err)
 		}
@@ -687,7 +687,7 @@ func collectExploitRows(rows pgx.Rows) ([]GobExploit, error) {
 	for rows.Next() {
 		var e GobExploit
 		if err := rows.Scan(
-			&e.ID, &e.Published, &e.Updated, &e.Author, &e.Type, &e.Verified,
+			&e.ID, &e.ContentHash, &e.Published, &e.Updated, &e.Author, &e.Type, &e.Verified,
 			&e.SourceURL, &e.Description, &e.CVEID, &e.Tags,
 			&e.Forks, &e.Watchers, &e.Subscribers, &e.Stars,
 		); err != nil {
@@ -703,7 +703,7 @@ func collectMalPkgRows(rows pgx.Rows) ([]models.MaliciousPackage, error) {
 	var out []models.MaliciousPackage
 	for rows.Next() {
 		var m models.MaliciousPackage
-		if err := rows.Scan(&m.ID, &m.Summary, &m.Details, &m.Published, &m.Modified); err != nil {
+		if err := rows.Scan(&m.ID, &m.ContentHash, &m.Summary, &m.Details, &m.Published, &m.Modified); err != nil {
 			return nil, err
 		}
 		out = append(out, m)

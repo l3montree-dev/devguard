@@ -69,8 +69,8 @@ var liveTableSpecs = func() []syncSpec {
 	acInsertCols := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	acInsertExprs := []string{"id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
 	pivotAllCols := []string{"affected_component_id", "cve_id"}
-	exploitAllCols := []string{"id", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
-	malPkgAllCols := []string{"id", "summary", "details", "published", "modified"}
+	exploitAllCols := []string{"id", "content_hash", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
+	malPkgAllCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
 	return []syncSpec{
@@ -97,14 +97,14 @@ var liveTableSpecs = func() []syncSpec {
 		},
 		{
 			live: "exploits", stage: "exploits_stage", keyCols: []string{"id"},
-			contentHashCol: "updated",
-			contentCols:    []string{"published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"},
+			contentHashCol: "content_hash",
+			contentCols:    []string{"content_hash", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"},
 			insertCols:     exploitAllCols, insertSelectExprs: exploitAllCols,
 		},
 		{
 			live: "malicious_packages", stage: "mal_pkgs_stage", keyCols: []string{"id"},
-			contentHashCol: "modified",
-			contentCols:    []string{"summary", "details", "published", "modified"},
+			contentHashCol: "content_hash",
+			contentCols:    []string{"content_hash", "summary", "details", "published", "modified"},
 			insertCols:     malPkgAllCols, insertSelectExprs: malPkgAllCols,
 		},
 		{
@@ -730,13 +730,14 @@ func FlushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 
 	t = time.Now()
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO malicious_packages (id, summary, details, published, modified)
-		SELECT id, summary, details, published, modified FROM mal_pkgs_stage
+		INSERT INTO malicious_packages (id, content_hash, summary, details, published, modified)
+		SELECT id, content_hash, summary, details, published, modified FROM mal_pkgs_stage
 		ON CONFLICT (id) DO UPDATE SET
-			summary   = EXCLUDED.summary,
-			details   = EXCLUDED.details,
-			published = EXCLUDED.published,
-			modified  = EXCLUDED.modified`); err != nil {
+			content_hash = EXCLUDED.content_hash,
+			summary      = EXCLUDED.summary,
+			details      = EXCLUDED.details,
+			published    = EXCLUDED.published,
+			modified     = EXCLUDED.modified`); err != nil {
 		return fmt.Errorf("could not flush malicious_packages: %w", err)
 	}
 	slog.Info("flushed malicious_packages", "took", time.Since(t))
@@ -768,19 +769,24 @@ func flushNonOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("could not delete stale exploits: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO exploits (id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
-		SELECT id, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
+		INSERT INTO exploits (id, content_hash, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars)
+		SELECT id, content_hash, published, updated, author, type, verified, source_url, description, cve_id, tags, forks, watchers, subscribers, stars
 		FROM exploits_stage
 		ON CONFLICT (id) DO UPDATE SET
-			published   = EXCLUDED.published,
-			updated     = EXCLUDED.updated,
-			author      = EXCLUDED.author,
-			source_url  = EXCLUDED.source_url,
-			description = EXCLUDED.description,
-			forks       = EXCLUDED.forks,
-			watchers    = EXCLUDED.watchers,
-			subscribers = EXCLUDED.subscribers,
-			stars       = EXCLUDED.stars`); err != nil {
+			content_hash = EXCLUDED.content_hash,
+			published    = EXCLUDED.published,
+			updated      = EXCLUDED.updated,
+			author       = EXCLUDED.author,
+			type         = EXCLUDED.type,
+			verified     = EXCLUDED.verified,
+			source_url   = EXCLUDED.source_url,
+			description  = EXCLUDED.description,
+			cve_id       = EXCLUDED.cve_id,
+			tags         = EXCLUDED.tags,
+			forks        = EXCLUDED.forks,
+			watchers     = EXCLUDED.watchers,
+			subscribers  = EXCLUDED.subscribers,
+			stars        = EXCLUDED.stars`); err != nil {
 		return fmt.Errorf("could not flush exploits: %w", err)
 	}
 	slog.Info("finished flushing non-osv staging tables (exploits)", "total", time.Since(t))
@@ -830,28 +836,30 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS exploits_stage (
-			id          text,
-			published   date,
-			updated     date,
-			author      text,
-			type        text,
-			verified    boolean,
-			source_url  text,
-			description text,
-			cve_id      text,
-			tags        text,
-			forks       integer,
-			watchers    integer,
-			subscribers integer,
-			stars       integer
+			id           text,
+			content_hash bigint,
+			published    date,
+			updated      date,
+			author       text,
+			type         text,
+			verified     boolean,
+			source_url   text,
+			description  text,
+			cve_id       text,
+			tags         text,
+			forks        integer,
+			watchers     integer,
+			subscribers  integer,
+			stars        integer
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS mal_pkgs_stage (
-			id        text,
-			summary   text,
-			details   text,
-			published timestamptz,
-			modified  timestamptz
+			id           text,
+			content_hash bigint,
+			summary      text,
+			details      text,
+			published    timestamptz,
+			modified     timestamptz
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS mal_comps_stage (

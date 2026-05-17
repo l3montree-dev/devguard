@@ -29,6 +29,7 @@ type CISAKEVEntry struct {
 // It omits the nested CVE field which contains datatypes.Date.
 type GobExploit struct {
 	ID          string
+	ContentHash int64
 	Published   *time.Time
 	Updated     *time.Time
 	Author      string
@@ -91,8 +92,10 @@ func dateToTimePtr(d *datatypes.Date) *time.Time {
 // --- Exploit conversions ---
 
 func exploitToGob(e models.Exploit) GobExploit {
+	e.ContentHash = e.CalculateContentHash()
 	return GobExploit{
 		ID:          e.ID,
+		ContentHash: e.ContentHash,
 		Published:   e.Published,
 		Updated:     e.Updated,
 		Author:      e.Author,
@@ -112,6 +115,7 @@ func exploitToGob(e models.Exploit) GobExploit {
 func gobExploitToModel(g GobExploit) models.Exploit {
 	return models.Exploit{
 		ID:          g.ID,
+		ContentHash: g.ContentHash,
 		Published:   g.Published,
 		Updated:     g.Updated,
 		Author:      g.Author,

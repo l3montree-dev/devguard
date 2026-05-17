@@ -9,7 +9,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 type Severity string
@@ -95,10 +94,3 @@ func (cve CVE) GetReferences() ([]cveReference, error) {
 	return refs, nil
 }
 
-func (cve *CVE) BeforeSave(tx *gorm.DB) error {
-	if cve.ID == 0 {
-		cve.ID = cve.CalculateHash()
-	}
-	cve.ContentHash = cve.CalculateContentHash()
-	return nil
-}
