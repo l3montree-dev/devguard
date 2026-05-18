@@ -27,7 +27,6 @@ import (
 )
 
 const vulnDBArchiveName = "vulndb.tar.zst"
-const vulnDBPubKeyFile = "cosign.pub"
 
 var _ shared.VulnDBService = (*VulnDBService)(nil)
 
@@ -892,7 +891,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 		return "", "", fmt.Errorf("could not copy signatures from remote repository: %w", err)
 	}
 
-	if err := verifySignature(ctx, vulnDBPubKeyFile, outpath+"/"+vulnDBArchiveName+".sig", outpath+"/"+vulnDBArchiveName); err != nil {
+	if err := verifySignature(ctx, outpath+"/"+vulnDBArchiveName+".sig", outpath+"/"+vulnDBArchiveName); err != nil {
 		os.RemoveAll(outpath)
 		return "", "", fmt.Errorf("could not verify signature for %s: %w", vulnDBArchiveName, err)
 	}
