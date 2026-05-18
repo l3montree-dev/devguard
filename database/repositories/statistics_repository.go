@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -657,4 +658,27 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 		a.type IN ?
 	GROUP BY a.type;`, orgID, fixedEvents).Find(&rows).Error
 	return rows, err
+}
+
+func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, tx *gorm.DB) (dtos.InstanceUsageStatistics, error) {
+	var instanceStatistics dtos.InstanceUsageStatistics
+	var err error
+
+	err = r.GetDB(ctx, tx).Raw(`
+    SELECT
+        (SELECT COUNT(*) FROM public.organizations) AS number_of_organizations,
+        (SELECT COUNT(*) FROM public.projects
+            WHERE EXISTS (SELECT FROM assets WHERE assets.project_id = projects.id)) AS number_of_projects,
+        (SELECT COUNT(*) FROM public.asset_versions) AS number_of_asset_versions,
+        (SELECT COUNT(*) FROM public.projects
+            WHERE external_entity_id IS NOT NULL
+            AND external_entity_provider_id IN ('gitlab','opencode')) AS number_of_projects_with_gitlab_integration
+	`).First(&instanceStatistics).Error
+	if err != nil {
+		return instanceStatistics, fmt.Errorf("could not fetch instance usage statistics: %w", err)
+	}
+
+	instanceStatistics.NumberOfTicketSyncedProjects = instanceStatistics.NumberOfProjectsWithGitlabIntegration // not yet clear what that statistic should represent
+
+	return instanceStatistics, nil
 }

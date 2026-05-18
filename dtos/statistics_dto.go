@@ -217,3 +217,12 @@ type OrgOverview struct {
 
 	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`
 }
+
+type InstanceUsageStatistics struct {
+	NumberOfUsers                         int `gorm:"column:number_of_users"`
+	NumberOfOrganizations                 int `gorm:"column:number_of_organizations"`
+	NumberOfProjects                      int `gorm:"column:number_of_projects"`
+	NumberOfAssetVersions                 int `gorm:"column:number_of_asset_versions"`
+	NumberOfTicketSyncedProjects          int `gorm:"column:number_of_ticket_synced_projects"`
+	NumberOfProjectsWithGitlabIntegration int `gorm:"column:number_of_projects_with_gitlab_integration"`
+}

@@ -72,6 +72,22 @@ func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
 	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
 }
 
+func (c *casbinRBAC) GetAdminsOfOrganization() ([]string, error) {
+	concurrencyMutex.Lock()
+	implicitUsers, err := c.enforcer.GetImplicitUsersForRole("role::admin", "domain::"+c.domain)
+	if err != nil {
+		return nil, err
+	}
+	concurrencyMutex.Unlock()
+	userIDs := make([]string, 0, len(implicitUsers))
+	for _, user := range implicitUsers {
+		if strings.HasPrefix(user, "user::") {
+			userIDs = append(userIDs, strings.TrimPrefix(user, "user::"))
+		}
+	}
+	return userIDs, nil
+}
+
 func (c *casbinRBAC) GetAllMembersOfOrganization() ([]string, error) {
 	concurrencyMutex.Lock()
 	users, err := c.enforcer.GetAllUsersByDomain("domain::" + c.domain)
@@ -114,10 +130,8 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(ctx context.Context, user string) (bool, error) {
-	concurrencyMutex.Lock()
-	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
-	concurrencyMutex.Unlock()
+func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
+	roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetUserID(), "domain::"+c.domain)
 	return len(roles) > 0, nil
 }
 
@@ -359,9 +373,9 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(ctx context.Context, user string, object shared.Object, action shared.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	concurrencyMutex.Lock()
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	concurrencyMutex.Unlock()
 	if err != nil {
 		return false, err
@@ -374,10 +388,11 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, user string, object shared.O
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	concurrencyMutex.Lock()
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	concurrencyMutex.Unlock()
+
 	if err != nil {
 		return false, err
 	}
@@ -390,9 +405,9 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	concurrencyMutex.Lock()
-	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	concurrencyMutex.Unlock()
 	if err != nil {
 		return false, err
@@ -415,6 +430,34 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	}
 	for i, d := range domains {
 		domains[i] = d[8:]
+	}
+	return domains, nil
+}
+
+func (c casbinRBACProvider) GetAllUsers() ([]string, error) {
+	concurrencyMutex.RLock()
+	users, err := c.enforcer.GetAllUsers()
+	concurrencyMutex.RUnlock()
+	return users, err
+}
+
+// get all organizations where the given user has the owner role
+func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error) {
+	concurrencyMutex.RLock()
+	policies, err := c.enforcer.GetFilteredGroupingPolicy(0, "user::"+user, "role::"+string(shared.RoleOwner))
+	concurrencyMutex.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+
+	domains := make([]string, 0, len(policies))
+	for _, p := range policies {
+		if len(p) < 3 {
+			// if we have less than 3 columns the output is malformed
+			continue
+		}
+		// the domain is specified in the 3rd column with the domain:: prefix
+		domains = append(domains, strings.TrimPrefix(p[2], "domain::"))
 	}
 	return domains, nil
 }

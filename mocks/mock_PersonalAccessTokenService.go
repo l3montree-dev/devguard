@@ -10,6 +10,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -160,36 +161,92 @@ func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// VerifyAdminRequest provides a mock function for the type PersonalAccessTokenService
+func (_mock *PersonalAccessTokenService) VerifyAdminRequest(req *http.Request) (bool, error) {
+	ret := _mock.Called(req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyAdminRequest")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) (bool, error)); ok {
+		return returnFunc(req)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) bool); ok {
+		r0 = returnFunc(req)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(*http.Request) error); ok {
+		r1 = returnFunc(req)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenService_VerifyAdminRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAdminRequest'
+type PersonalAccessTokenService_VerifyAdminRequest_Call struct {
+	*mock.Call
+}
+
+// VerifyAdminRequest is a helper method to define mock.On call
+//   - req *http.Request
+func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req interface{}) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	return &PersonalAccessTokenService_VerifyAdminRequest_Call{Call: _e.mock.On("VerifyAdminRequest", req)}
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) Run(run func(req *http.Request)) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *http.Request
+		if args[0] != nil {
+			arg0 = args[0].(*http.Request)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) Return(b bool, err error) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAdminRequest_Call) RunAndReturn(run func(req *http.Request) (bool, error)) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifyRequestSignature provides a mock function for the type PersonalAccessTokenService
-func (_mock *PersonalAccessTokenService) VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error) {
+func (_mock *PersonalAccessTokenService) VerifyRequestSignature(ctx context.Context, req *http.Request) (shared.AuthSession, error) {
 	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyRequestSignature")
 	}
 
-	var r0 string
-	var r1 string
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) (string, string, error)); ok {
+	var r0 shared.AuthSession
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) (shared.AuthSession, error)); ok {
 		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) shared.AuthSession); ok {
 		r0 = returnFunc(ctx, req)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.AuthSession)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *http.Request) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *http.Request) error); ok {
 		r1 = returnFunc(ctx, req)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, *http.Request) error); ok {
-		r2 = returnFunc(ctx, req)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // PersonalAccessTokenService_VerifyRequestSignature_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyRequestSignature'
@@ -222,12 +279,12 @@ func (_c *PersonalAccessTokenService_VerifyRequestSignature_Call) Run(run func(c
 	return _c
 }
 
-func (_c *PersonalAccessTokenService_VerifyRequestSignature_Call) Return(s string, s1 string, err error) *PersonalAccessTokenService_VerifyRequestSignature_Call {
-	_c.Call.Return(s, s1, err)
+func (_c *PersonalAccessTokenService_VerifyRequestSignature_Call) Return(authSession shared.AuthSession, err error) *PersonalAccessTokenService_VerifyRequestSignature_Call {
+	_c.Call.Return(authSession, err)
 	return _c
 }
 
-func (_c *PersonalAccessTokenService_VerifyRequestSignature_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) (string, string, error)) *PersonalAccessTokenService_VerifyRequestSignature_Call {
+func (_c *PersonalAccessTokenService_VerifyRequestSignature_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) (shared.AuthSession, error)) *PersonalAccessTokenService_VerifyRequestSignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

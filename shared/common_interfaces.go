@@ -69,7 +69,8 @@ type ReleaseService interface {
 }
 
 type PersonalAccessTokenService interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAdminRequest(req *http.Request) (bool, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT
 }
@@ -109,7 +110,7 @@ type ProjectRepository interface {
 }
 
 type Verifier interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 }
 
 type PolicyRepository interface {
@@ -383,6 +384,7 @@ type AssetService interface {
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
+	UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -581,6 +583,8 @@ type StatisticsRepository interface {
 	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
 	GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)
 	CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx DB, assetVersion models.AssetVersion) ([]models.CVE, error)
+
+	GetInstanceUsageStatistics(ctx context.Context, tx DB) (dtos.InstanceUsageStatistics, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
@@ -654,8 +658,24 @@ type VulnDBService interface {
 	ExportRCWithDiff(ctx context.Context, localArchive bool) error
 }
 
+type AdminService interface {
+	GetAdminsForOrg(orgID uuid.UUID, adminClient AdminClient) ([]dtos.UserDTO, error)
+	AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
+	RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
+	GetUserIDFromMail(ctx context.Context, adminClient AdminClient, email string) (uuid.UUID, error)
+	CheckIfOrgExists(ctx context.Context, orgID uuid.UUID) error
+	GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error)
+	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
+	GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error)
+	GetInstanceUsageStatistics(ctx context.Context, tx DB, authClient AdminClient) (dtos.InstanceUsageStatistics, error)
+}
+
+type AdminRepository interface {
+	GetAllExternalEntityOrganizations() ([]models.Org, error)
+}
+
 type AccessControl interface {
-	HasAccess(ctx context.Context, subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -682,10 +702,10 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, subject string, object Object, action Action) (bool, error)
+	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action) (bool, error)
 
-	IsAllowedInProject(ctx context.Context, project *models.Project, user string, object Object, action Action) (bool, error)
-	IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
@@ -694,6 +714,7 @@ type AccessControl interface {
 	GetAllAssetsForUser(user string) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
+	GetAdminsOfOrganization() ([]string, error)
 
 	GetAllMembersOfOrganization() ([]string, error)
 
@@ -710,6 +731,8 @@ type AccessControl interface {
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
+	GetOwnerDomainsOfUser(user string) ([]string, error)
+	GetAllUsers() ([]string, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

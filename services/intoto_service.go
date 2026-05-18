@@ -401,7 +401,10 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 }
 
 func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) { // nosemgrep: service-method-missing-ctx
-	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
+	ecdsaPubKey, err := HexPubKeyToECDSA(hexPubKey)
+	if err != nil {
+		return toto.Key{}, errors.Wrap(err, "could not convert hex public key to ecdsa public key")
+	}
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }
 

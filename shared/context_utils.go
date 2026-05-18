@@ -36,6 +36,7 @@ import (
 type AuthSession interface {
 	GetUserID() string
 	GetScopes() []string
+	IsInstanceAdmin() bool
 }
 
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {
