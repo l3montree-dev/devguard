@@ -395,7 +395,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		}
 
 	})
-	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
+	t.Run("Everything works as expected with a non empty component list", func(t *testing.T) {
 		// Create a chain of actual components (all with pkg: prefix) to have a path with edges
 		components := []models.ComponentDependency{
 			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                           // root --> artifact
