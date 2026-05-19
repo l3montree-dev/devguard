@@ -37,20 +37,18 @@ func (_m *GraphComponent) EXPECT() *GraphComponent_Expecter {
 }
 
 // GetDependentID provides a mock function for the type GraphComponent
-func (_mock *GraphComponent) GetDependentID() *string {
+func (_mock *GraphComponent) GetDependentID() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependentID")
 	}
 
-	var r0 *string
-	if returnFunc, ok := ret.Get(0).(func() *string); ok {
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
 		r0 = returnFunc()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*string)
-		}
+		r0 = ret.Get(0).(string)
 	}
 	return r0
 }
@@ -72,12 +70,12 @@ func (_c *GraphComponent_GetDependentID_Call) Run(run func()) *GraphComponent_Ge
 	return _c
 }
 
-func (_c *GraphComponent_GetDependentID_Call) Return(s *string) *GraphComponent_GetDependentID_Call {
+func (_c *GraphComponent_GetDependentID_Call) Return(s string) *GraphComponent_GetDependentID_Call {
 	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *GraphComponent_GetDependentID_Call) RunAndReturn(run func() *string) *GraphComponent_GetDependentID_Call {
+func (_c *GraphComponent_GetDependentID_Call) RunAndReturn(run func() string) *GraphComponent_GetDependentID_Call {
 	_c.Call.Return(run)
 	return _c
 }

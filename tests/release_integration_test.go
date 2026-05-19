@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,8 +79,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 			ID: artifactRoot2,
 		})
 
-		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: utils.Ptr("ROOT")}
-		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: utils.Ptr("ROOT")}
+		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: "ROOT"}
+		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: "ROOT"}
 		if err := f.DB.Create(&rootDep1).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -90,8 +89,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		}
 
 		// Create component dependencies (artifact:name -> pkg:...)
-		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot1}
-		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: &artifactRoot2}
+		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: artifactRoot1}
+		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: artifactRoot2}
 		if err := f.DB.Create(&c1).Error; err != nil {
 			t.Fatal(err)
 		}

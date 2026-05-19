@@ -69,7 +69,7 @@ type ComponentDependency struct {
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
 	Component    Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
-	ComponentID  *string   `json:"componentPurl" gorm:"column:component_id;index:component_purl_idx"` // will be ROOT, for direct dependencies
+	ComponentID  string    `json:"componentPurl" gorm:"column:component_id;index:component_purl_idx"` // will be ROOT for direct dependencies
 	Dependency   Component `json:"dependency" gorm:"foreignKey:DependencyID;references:ID;constraint:OnDelete:CASCADE;"`
 	DependencyID string    `json:"dependencyPurl" gorm:"column:dependency_id;index:dependency_purl_idx"`
 
@@ -92,7 +92,7 @@ func (c ComponentDependencyNode) GetID() string {
 func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
 	// a component dependency represents an edge in the dependency tree
 	// thus we can represent it as two nodes
-	return []ComponentDependencyNode{{ID: utils.SafeDereference(c.ComponentID)}, {ID: c.DependencyID}}
+	return []ComponentDependencyNode{{ID: c.ComponentID}, {ID: c.DependencyID}}
 }
 
 func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {
@@ -241,7 +241,7 @@ func (c ComponentDependency) GetID() string {
 	return c.DependencyID
 }
 
-func (c ComponentDependency) GetDependentID() *string {
+func (c ComponentDependency) GetDependentID() string {
 	return c.ComponentID
 }
 

@@ -97,7 +97,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				ComponentID:      utils.Ptr("ROOT"),
+				ComponentID:      "ROOT",
 				DependencyID:     artifactRoot,
 			}).Error
 			assert.NoError(t, err)
@@ -107,21 +107,21 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					ComponentID:      &artifactRoot,
+					ComponentID:      artifactRoot,
 					DependencyID:     componentWithInvalidLicense.ID,
 					Dependency:       componentWithInvalidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					ComponentID:      &artifactRoot,
+					ComponentID:      artifactRoot,
 					DependencyID:     componentWithValidLicense.ID,
 					Dependency:       componentWithValidLicense,
 				},
 				{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          assetVersion.AssetID,
-					ComponentID:      &artifactRoot,
+					ComponentID:      artifactRoot,
 					DependencyID:     componentWithoutLicense.ID,
 					Dependency:       componentWithoutLicense,
 				},
@@ -219,7 +219,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				ComponentID:      utils.Ptr("ROOT"),
+				ComponentID:      "ROOT",
 				DependencyID:     artifactRoot,
 			}).Error
 			assert.NoError(t, err)
@@ -228,7 +228,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			componentDep := models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				ComponentID:      &artifactRoot,
+				ComponentID:      artifactRoot,
 				DependencyID:     componentWithInvalidLicense.ID,
 				Dependency:       componentWithInvalidLicense,
 			}

@@ -148,8 +148,8 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 		}
-		if component.ComponentID != nil && *component.ComponentID != "ROOT" {
-			if license, ok := isPurlOverwrittenMap[*component.ComponentID]; ok {
+		if component.ComponentID != "ROOT" {
+			if license, ok := isPurlOverwrittenMap[component.ComponentID]; ok {
 				componentDependencies[i].Component.License = &license
 				componentDependencies[i].Component.IsLicenseOverwritten = true
 			}
@@ -197,15 +197,9 @@ func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, 
 	if len(diff.RemovedEdges) > 0 {
 		var valueClauses []string
 		for _, edge := range diff.RemovedEdges {
-			var componentID string
-			if edge[0] == normalize.GraphRootNodeID {
-				componentID = "NULL"
-			} else {
-				componentID = fmt.Sprintf("'%s'", strings.ReplaceAll(edge[0], "'", "''"))
-			}
-
+			escapedComp := strings.ReplaceAll(edge[0], "'", "''")
 			escapedDep := strings.ReplaceAll(edge[1], "'", "''")
-			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, escapedDep))
+			valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s')", escapedComp, escapedDep))
 		}
 		// Join the value clauses with commas
 		values := strings.Join(valueClauses, ",")
@@ -244,7 +238,7 @@ func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, 
 		componentDependency := models.ComponentDependency{
 			AssetID:          assetVersion.AssetID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      utils.Ptr(componentID),
+			ComponentID:      componentID,
 			DependencyID:     c2.Component.PackageURL,
 		}
 

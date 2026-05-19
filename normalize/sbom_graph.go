@@ -1831,7 +1831,7 @@ func ParseGraphNodeID(id string) (prefix, name string) {
 // GraphComponent represents a component that can be loaded from the database.
 type GraphComponent interface {
 	GetID() string
-	GetDependentID() *string
+	GetDependentID() string
 	ToCdxComponent(componentLicenseOverwrites map[string]string) (cdx.Component, error)
 }
 
@@ -1845,10 +1845,8 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 	// Build dependency map: parent -> children
 	dependencyMap := make(map[string][]string, len(components))
 	for _, c := range components {
-		var parentID string
-		if c.GetDependentID() != nil {
-			parentID = *c.GetDependentID()
-		} else {
+		parentID := c.GetDependentID()
+		if parentID == "" {
 			parentID = GraphRootNodeID
 		}
 		dependencyMap[parentID] = append(dependencyMap[parentID], c.GetID())
