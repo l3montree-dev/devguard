@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type componentRepository struct {
@@ -55,7 +56,7 @@ func (c *componentRepository) CreateComponents(ctx context.Context, tx *gorm.DB,
 		return nil
 	}
 
-	return c.GetDB(ctx, tx).Create(&components).Error
+	return c.GetDB(ctx, tx).Clauses(clause.OnConflict{DoNothing: true}).Create(&components).Error
 }
 
 // LoadComponents loads all component dependencies for an asset version.
