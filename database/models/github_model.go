@@ -44,7 +44,7 @@ type ExternalUser struct {
 	ID            string `json:"id" gorm:"primaryKey"`
 	Username      string `json:"username"`
 	AvatarURL     string `json:"avatarUrl"`
-	Organizations []Org  `json:"orgs" gorm:"many2many:external_user_orgs;"`
+	Organizations []Org  `json:"orgs" gorm:"many2many:external_user_orgs;constraint:OnDelete:CASCADE;"`
 }
 
 func (ExternalUser) TableName() string {
