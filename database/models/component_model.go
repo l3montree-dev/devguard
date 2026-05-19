@@ -65,7 +65,6 @@ func (c Component) GetID() (packageurl.PackageURL, error) {
 }
 
 type ComponentDependency struct {
-	ID uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
