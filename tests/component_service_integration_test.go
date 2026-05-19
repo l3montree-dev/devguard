@@ -97,7 +97,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				ComponentID:      nil,
+				ComponentID:      utils.Ptr("ROOT"),
 				DependencyID:     artifactRoot,
 			}).Error
 			assert.NoError(t, err)
@@ -219,7 +219,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&models.ComponentDependency{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
-				ComponentID:      nil,
+				ComponentID:      utils.Ptr("ROOT"),
 				DependencyID:     artifactRoot,
 			}).Error
 			assert.NoError(t, err)

@@ -147,7 +147,7 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 		}
-		if component.ComponentID != nil {
+		if component.ComponentID != nil && *component.ComponentID != "ROOT" {
 			if license, ok := isPurlOverwrittenMap[*component.ComponentID]; ok {
 				componentDependencies[i].Component.License = &license
 				componentDependencies[i].Component.IsLicenseOverwritten = true
@@ -232,18 +232,18 @@ func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, 
 	for _, edge := range diff.AddedEdges {
 		c1 := wholeAssetGraph.Node(edge[0])
 		c2 := wholeAssetGraph.Node(edge[1])
-		var componentID *string
+		var componentID string
 		if c1.Type == normalize.GraphNodeTypeRoot {
-			// set to nil for root nodes
-			componentID = nil
+			// set to ROOT for root nodes
+			componentID = "ROOT"
 		} else {
-			componentID = utils.Ptr(c1.Component.PackageURL)
+			componentID = c1.Component.PackageURL
 		}
 
 		componentDependency := models.ComponentDependency{
 			AssetID:          assetVersion.AssetID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      componentID,
+			ComponentID:      utils.Ptr(componentID),
 			DependencyID:     c2.Component.PackageURL,
 		}
 

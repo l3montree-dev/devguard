@@ -51,7 +51,7 @@ func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models
 	artifactRootDep := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		ComponentID:      nil,
+		ComponentID:      utils.Ptr("ROOT"),
 		DependencyID:     artifactRoot,
 	}
 	if err := f.DB.Create(&artifactRootDep).Error; err != nil {
@@ -179,7 +179,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			artifactRootDep := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      nil,
+				ComponentID:      utils.Ptr("ROOT"),
 				DependencyID:     artifactRoot,
 			}
 			err = f.DB.Create(&artifactRootDep).Error
@@ -580,7 +580,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		artifactRootDep := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      nil,
+			ComponentID:      utils.Ptr("ROOT"),
 			DependencyID:     artifactRoot,
 		}
 		err = f.DB.Create(&artifactRootDep).Error
@@ -772,7 +772,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			artifactRootDep := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      nil,
+				ComponentID:      utils.Ptr("ROOT"),
 				DependencyID:     artifactRoot,
 			}
 			err = f.DB.Create(&artifactRootDep).Error

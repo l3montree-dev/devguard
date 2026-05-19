@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,8 +80,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 			ID: artifactRoot2,
 		})
 
-		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
-		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: nil}
+		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: utils.Ptr("ROOT")}
+		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: utils.Ptr("ROOT")}
 		if err := f.DB.Create(&rootDep1).Error; err != nil {
 			t.Fatal(err)
 		}
