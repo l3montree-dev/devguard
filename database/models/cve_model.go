@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type Severity string
@@ -65,6 +66,13 @@ func (cve CVE) TableName() string {
 	return "cves"
 }
 
+func (cve *CVE) BeforeSave(tx *gorm.DB) error {
+	if cve.ID == 0 {
+		cve.ID = cve.CalculateHash()
+	}
+	return nil
+}
+
 // calculate the hash for the cve solely based on the cve-id using md5 for compatibility with the postgresql database
 func (cve CVE) CalculateHash() int64 {
 	return CalculateHashForCVE(cve.CVE)
@@ -93,4 +101,3 @@ func (cve CVE) GetReferences() ([]cveReference, error) {
 	}
 	return refs, nil
 }
-
