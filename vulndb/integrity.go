@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
+	_ "embed"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -33,15 +34,12 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-func verifySignature(ctx context.Context, pubKeyFile string, sigFile string, blobFile string) error {
-	// Load the public key
-	pubKeyData, err := os.ReadFile(pubKeyFile)
-	if err != nil {
-		return fmt.Errorf("could not read public key: %w", err)
-	}
+//go:embed cosign.pub
+var cosignPubKey []byte
 
+func verifySignature(ctx context.Context, sigFile string, blobFile string) error {
 	// PEM-Block dekodieren
-	block, _ := pem.Decode(pubKeyData)
+	block, _ := pem.Decode(cosignPubKey)
 	if block == nil {
 		return fmt.Errorf("could not decode pem block")
 	}

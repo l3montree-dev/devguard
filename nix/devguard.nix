@@ -25,6 +25,7 @@
       ../normalize/package_mappings.json
       ../integrations/commonint/templates
       ../controllers/report-templates
+      ../vulndb/cosign.pub
     ];
   };
 

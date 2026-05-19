@@ -239,15 +239,19 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 }
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models.GitLabOauth2Token, iteration int) bool {
+	reqCtx, span := gitlabTracer.Start(ctx.Request().Context(), "gitlab.checkIfTokenIsValid")
+	defer span.End()
+	span.SetAttributes(attribute.Int("iteration", iteration))
+
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx.Request().Context(), token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(reqCtx, token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
 	}
 
 	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.GetVersion(ctx.Request().Context())
+	_, _, err = gitlabClient.GetVersion(reqCtx)
 	if err != nil {
 		if iteration >= 3 {
 			// we tried 3 times to check if the token is valid, but it is still not valid
