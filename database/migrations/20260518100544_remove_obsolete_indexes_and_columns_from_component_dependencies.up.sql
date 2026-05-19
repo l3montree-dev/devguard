@@ -16,7 +16,7 @@ DROP INDEX IF EXISTS dependency_purl_idx;
 -- remove the current id column and replace it with a composite key on all columns to make enforce deduplication on a data level and reduce complexity (also on indexes)
 
 -- currently component_id can be NULL if its a root node; but primary keys cannot contain NULL values, so we replace it with a ROOT constant
-INSERT INTO public.components (id, name, version, purl, cpe) 
+INSERT INTO public.components (id, component_type, license, published, project_key) 
 VALUES('ROOT','',NULL,NULL,NULL) ON CONFLICT (id) DO NOTHING; -- add a ROOT component to the components table to be referenced
 
 UPDATE public.component_dependencies SET component_id = 'ROOT' WHERE component_id IS NULL; -- use an explicit value for ROOT component dependencies instead of NULL
