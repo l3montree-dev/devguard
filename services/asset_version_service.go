@@ -164,6 +164,9 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 
 	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
 	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.CVE == nil {
+			continue
+		}
 		statement := vex.Statement{
 			ID:              dependencyVuln.GetCVE().CVE,
 			Status:          dependencyVulnToOpenVexStatus(dependencyVuln),
@@ -205,6 +208,9 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
 		cve := dependencyVuln.CVE
+		if cve == nil {
+			continue
+		}
 		// check if we have a matching VEX rule for this vuln
 		var properties *[]cdx.Property = nil
 		if rules, ok := matches[dependencyVuln.ID]; ok {
