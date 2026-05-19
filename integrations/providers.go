@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/integrations/trivyoperatorint"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -37,10 +38,22 @@ var Module = fx.Options(
 	// Jira Integration
 	fx.Provide(jiraint.NewJiraIntegration),
 
-	// Aggregated Third Party Integration
+	// Trivy Operator Integration (ScanService and AssetService injected via Invoke to break DI cycle)
+	fx.Provide(trivyoperatorint.NewTrivyOperatorIntegration),
+	fx.Invoke(func(t *trivyoperatorint.TrivyOperatorIntegration, s shared.ScanService, a shared.AssetService) {
+		t.SetScanService(s)
+		t.SetAssetService(a)
+	}),
 	fx.Provide(fx.Annotate(
-		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration, webhookIntegration *controllers.WebhookController) shared.IntegrationAggregate {
-			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration, webhookIntegration)
+		func(
+			externalUserRepository shared.ExternalUserRepository,
+			gitlabIntegration *gitlabint.GitlabIntegration,
+			githubIntegration *githubint.GithubIntegration,
+			jiraIntegration *jiraint.JiraIntegration,
+			webhookIntegration *controllers.WebhookController,
+			trivyOperatorIntegration *trivyoperatorint.TrivyOperatorIntegration,
+		) shared.IntegrationAggregate {
+			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration, webhookIntegration, trivyOperatorIntegration)
 		},
 		fx.As(new(shared.IntegrationAggregate)),
 	)),

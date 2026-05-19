@@ -15,6 +15,13 @@ type JiraIntegrationDTO struct {
 	UserEmail       string `json:"userEmail"`
 }
 
+type TrivyOperatorIntegrationDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ClusterID string `json:"clusterId"`
+	Secret    string `json:"secret"`
+}
+
 type WebhookIntegrationDTO struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`

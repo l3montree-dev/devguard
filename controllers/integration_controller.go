@@ -21,8 +21,10 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/integrations/trivyoperatorint"
 	"github.com/l3montree-dev/devguard/shared"
 )
+
 
 type IntegrationController struct {
 	gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config
@@ -190,5 +192,36 @@ func (c *IntegrationController) DeleteJiraAccessToken(ctx shared.Context) error 
 		return err
 	}
 
+	return nil
+}
+
+func (c *IntegrationController) HandleTrivyOperatorWebhook(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	t := thirdPartyIntegration.GetIntegration(shared.TrivyOperatorIntegrationID)
+	if t == nil {
+		return ctx.JSON(404, "Trivy Operator integration not enabled")
+	}
+	return t.(*trivyoperatorint.TrivyOperatorIntegration).HandleWebhook(ctx)
+}
+
+func (c *IntegrationController) CreateTrivyOperatorIntegration(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	t := thirdPartyIntegration.GetIntegration(shared.TrivyOperatorIntegrationID)
+	if t == nil {
+		return ctx.JSON(404, "Trivy Operator integration not enabled")
+	}
+	return t.(*trivyoperatorint.TrivyOperatorIntegration).Create(ctx)
+}
+
+func (c *IntegrationController) DeleteTrivyOperatorIntegration(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	t := thirdPartyIntegration.GetIntegration(shared.TrivyOperatorIntegrationID)
+	if t == nil {
+		return ctx.JSON(404, "Trivy Operator integration not enabled")
+	}
+	if err := t.(*trivyoperatorint.TrivyOperatorIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete trivy operator integration", "err", err)
+		return err
+	}
 	return nil
 }

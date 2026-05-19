@@ -23,6 +23,8 @@ type Org struct {
 
 	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
+	TrivyOperatorIntegrations []TrivyOperatorIntegration `json:"trivyOperatorIntegrations" gorm:"foreignKey:OrgID;"`
+
 	SharesVulnInformation bool                 `json:"sharesVulnInformation" gorm:"default:false"`
 	Webhooks              []WebhookIntegration `json:"webhooks" gorm:"foreignKey:OrgID;"`
 

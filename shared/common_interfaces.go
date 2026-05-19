@@ -541,6 +541,14 @@ type GitlabIntegrationRepository interface {
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
 }
 
+type TrivyOperatorIntegrationRepository interface {
+	Save(ctx context.Context, tx DB, model *models.TrivyOperatorIntegration) error
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.TrivyOperatorIntegration, error)
+	FindByOrganizationID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.TrivyOperatorIntegration, error)
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	FindBySecret(ctx context.Context, tx DB, secret string) (models.TrivyOperatorIntegration, error)
+}
+
 type GitLabOauth2TokenRepository interface {
 	Save(ctx context.Context, tx DB, model ...*models.GitLabOauth2Token) error
 	FindByUserIDAndProviderID(ctx context.Context, tx DB, userID string, providerID string) (*models.GitLabOauth2Token, error)

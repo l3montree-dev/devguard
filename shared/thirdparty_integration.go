@@ -11,11 +11,12 @@ import (
 type IntegrationID string
 
 const (
-	GitLabIntegrationID  IntegrationID = "gitlab"
-	GitHubIntegrationID  IntegrationID = "github"
-	AggregateID          IntegrationID = "aggregate"
-	JiraIntegrationID    IntegrationID = "jira"
-	WebhookIntegrationID IntegrationID = "webhook"
+	GitLabIntegrationID        IntegrationID = "gitlab"
+	GitHubIntegrationID        IntegrationID = "github"
+	AggregateID                IntegrationID = "aggregate"
+	JiraIntegrationID          IntegrationID = "jira"
+	WebhookIntegrationID       IntegrationID = "webhook"
+	TrivyOperatorIntegrationID IntegrationID = "trivy-operator"
 )
 
 type ThirdPartyIntegration interface {

@@ -135,6 +135,15 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraInte
 	}
 }
 
+func TrivyOperatorIntegrationToDTO(integration models.TrivyOperatorIntegration) dtos.TrivyOperatorIntegrationDTO {
+	return dtos.TrivyOperatorIntegrationDTO{
+		ID:        integration.ID.String(),
+		Name:      integration.Name,
+		ClusterID: integration.ClusterID,
+		Secret:    integration.Secret,
+	}
+}
+
 func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.WebhookIntegrationDTO {
 	return dtos.WebhookIntegrationDTO{
 		ID:          integration.ID.String(),
@@ -179,7 +188,8 @@ func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
 		Projects:                 utils.Map(org.Projects, ProjectModelToDTO),
 		GithubAppInstallations:   utils.Map(org.GithubAppInstallations, GithubAppInstallationToDTO),
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
-		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
+		JiraIntegrations:              utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
+		TrivyOperatorIntegrations:     utils.Map(org.TrivyOperatorIntegrations, TrivyOperatorIntegrationToDTO),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,
