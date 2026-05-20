@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
+	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -843,6 +845,173 @@ func TestParseVEXRulesInBOM_ComponentPurlWithEncodedAtSign(t *testing.T) {
 		"middle element should be the wildcard")
 
 	vexRuleRepo.AssertExpectations(t)
+}
+
+func TestParseVEXRulesFromOpenVEXReport(t *testing.T) {
+	assetID := uuid.New()
+	service := NewVEXRuleService(nil, nil, nil)
+
+	testCases := []struct {
+		name            string
+		product         ov.Product
+		wantPathPattern []string
+	}{
+		{
+			name: "falls back to product id when identifiers are nil",
+			product: ov.Product{
+				Component: ov.Component{
+					ID: "pkg:npm/@myorg/myapp@1.0.0",
+				},
+			},
+			wantPathPattern: []string{"pkg:npm/@myorg/myapp@1.0.0"},
+		},
+		{
+			name: "uses purl identifier when present",
+			product: ov.Product{
+				Component: ov.Component{
+					ID: "pkg:npm/ignored@0.0.0",
+					Identifiers: map[ov.IdentifierType]string{
+						ov.PURL: "pkg:npm/@myorg/myapp@1.0.0",
+					},
+				},
+			},
+			wantPathPattern: []string{"pkg:npm/@myorg/myapp@1.0.0"},
+		},
+	}
+	ts := time.Now().UTC()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			report := &normalize.VexReportOpenVEX{
+				Source: "test-source",
+				Report: &ov.VEX{
+					Metadata: ov.Metadata{
+						ID:        "openvex-report-1",
+						Context:   "https://openvex.dev/ns/v0.2.0",
+						Author:    "test-author",
+						Version:   1,
+						Timestamp: &ts,
+					},
+					Statements: []ov.Statement{
+						{
+							ID: "stmt-1",
+							Vulnerability: ov.Vulnerability{
+								Name: "CVE-2024-1234",
+							},
+							Status:          ov.StatusNotAffected,
+							ImpactStatement: "not affected",
+							Justification:   "component_not_present",
+							Products:        []ov.Product{tc.product},
+						},
+					},
+				},
+			}
+
+			rules, err := service.parseVEXRulesFromOpenVEXReport(context.Background(), assetID, "v1.0", report)
+			assert.NoError(t, err)
+			assert.Len(t, rules, 1)
+
+			rule := rules[0]
+			assert.Equal(t, assetID, rule.AssetID)
+			assert.Equal(t, "v1.0", rule.AssetVersionName)
+			assert.Equal(t, "CVE-2024-1234", rule.CVEID)
+			assert.Equal(t, dtos.EventTypeFalsePositive, rule.EventType)
+			assert.Equal(t, tc.wantPathPattern, []string(rule.PathPattern))
+			assert.Equal(t, "not affected", rule.Justification)
+			assert.Equal(t, dtos.MechanicalJustificationType("component_not_present"), rule.MechanicalJustification)
+		})
+	}
+}
+
+// TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements verifies
+// parsing a normal OpenVEX report with multiple statements produces one
+// VEX rule per statement.
+func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T) {
+	assetID := uuid.New()
+	service := NewVEXRuleService(nil, nil, nil)
+
+	ts := time.Now().UTC()
+	report := &normalize.VexReportOpenVEX{
+		Source: "test-source",
+		Report: &ov.VEX{
+			Metadata: ov.Metadata{
+				ID:        "openvex-report-2",
+				Context:   "https://openvex.dev/ns/v0.2.0",
+				Author:    "test-author",
+				Version:   1,
+				Timestamp: &ts,
+			},
+			Statements: []ov.Statement{
+				{
+					ID: "stmt-1",
+					Vulnerability: ov.Vulnerability{
+						Name: "CVE-2024-1111",
+					},
+					Status:        ov.StatusNotAffected,
+					Justification: "component_not_present",
+					Products: []ov.Product{
+						{
+							Component: ov.Component{
+								ID: "pkg:golang/app@1.0",
+								Identifiers: map[ov.IdentifierType]string{
+									ov.PURL: "pkg:golang/app@1.0",
+								},
+							},
+						},
+					},
+				},
+				{
+					ID: "stmt-2",
+					Vulnerability: ov.Vulnerability{
+						Name: "CVE-2024-2222",
+					},
+					Status:        ov.StatusNotAffected,
+					Justification: "component_not_present",
+					Products: []ov.Product{
+						{
+							Component: ov.Component{
+								ID:          "pkg:golang/lib@2.0",
+								Identifiers: map[ov.IdentifierType]string{},
+							},
+							Subcomponents: []ov.Subcomponent{
+								{
+									Component: ov.Component{
+										ID: "pkg:golang/lib/sub@2.0",
+									},
+								},
+							},
+						},
+						{
+							Component: ov.Component{
+								ID: "pkg:golang/app@1.0",
+								Identifiers: map[ov.IdentifierType]string{
+									ov.PURL: "pkg:golang/app@1.0",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	rules, err := service.parseVEXRulesFromOpenVEXReport(context.Background(), assetID, "v1.0", report)
+	assert.NoError(t, err)
+
+	expected := []struct {
+		cve  string
+		path []string
+	}{
+		{cve: "CVE-2024-1111", path: []string{"pkg:golang/app@1.0"}},
+		{cve: "CVE-2024-2222", path: []string{"pkg:golang/lib@2.0", dtos.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}},
+		{cve: "CVE-2024-2222", path: []string{"pkg:golang/app@1.0"}},
+	}
+
+	assert.Len(t, rules, len(expected), "number of generated rules should match expected")
+
+	// We check by order, results and expected results have to line up for this test
+	for i, exp := range expected {
+		assert.Equal(t, exp.path, []string(rules[i].PathPattern), "path pattern for %s", exp.cve)
+	}
 }
 
 // TestMatchRulesToVulns_ComponentPurlWithAtSign verifies that rules with properly

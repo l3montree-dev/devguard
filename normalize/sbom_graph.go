@@ -27,6 +27,7 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -136,6 +137,41 @@ func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
 	}
 
 	return &VexReport{
+		Report: report,
+		Source: source,
+	}, nil
+}
+
+type VexReportOpenVEX struct {
+	Report *ov.VEX
+	Source string
+}
+
+func validateVexReportOpenVEX(report *ov.VEX) error {
+	if report.ID == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing id")
+	}
+	if report.Context == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing context")
+	}
+	if report.Author == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing author")
+	}
+	if report.Timestamp.IsZero() {
+		return fmt.Errorf("invalid OpenVEX report: missing timestamp")
+	}
+	if report.Version == 0 {
+		return fmt.Errorf("invalid OpenVEX report: missing version")
+	}
+	return nil
+}
+
+func NewVexReportOpenVEX(report *ov.VEX, source string) (*VexReportOpenVEX, error) {
+	if err := validateVexReportOpenVEX(report); err != nil {
+		return nil, err
+	}
+
+	return &VexReportOpenVEX{
 		Report: report,
 		Source: source,
 	}, nil

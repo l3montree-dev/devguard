@@ -22,11 +22,14 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
@@ -38,6 +41,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
@@ -62,6 +66,12 @@ type scanService struct {
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
+
+var newGitHubClient = func() *github.Client {
+	return github.NewClient(nil)
+}
+
+var downloadRawFileFn = DownloadRawFile
 
 var _ shared.ScanService = (*scanService)(nil)
 
@@ -921,4 +931,98 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
+}
+
+func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetUrl string) (vexReports []*normalize.VexReportOpenVEX, err error) {
+	client := newGitHubClient()
+	githubDomain := "https://github.com"
+	if !strings.HasPrefix(targetUrl, githubDomain) {
+		return nil, fmt.Errorf("invalid github repository url")
+	}
+	owner, repo, err := ParseGitHubURL(targetUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine default branch
+	repository, _, err := client.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	branch := repository.GetDefaultBranch()
+	if branch == "" {
+		branch = "main"
+	}
+
+	tree, _, err := client.Git.GetTree(
+		ctx,
+		owner,
+		repo,
+		branch,
+		true, // recursive
+	)
+	if err != nil {
+
+		return nil, err
+	}
+	for _, entry := range tree.Entries {
+		if entry.GetType() != "blob" {
+			continue
+		}
+		filePath := entry.GetPath()
+		filename := strings.ToLower(path.Base(filePath))
+		if !strings.HasSuffix(filename, ".json") {
+			continue
+		}
+
+		content, err := downloadRawFileFn(
+			owner,
+			repo,
+			branch,
+			filePath,
+		)
+		if err != nil {
+			slog.Info("download of openVEX failed", "err", err)
+			continue
+		}
+		var openVEX ov.VEX
+		err = json.Unmarshal(content, &openVEX)
+		if err != nil {
+			slog.Info("could not unmarshal openVEX failed", "err", err)
+			continue
+		}
+
+		vexReports = append(vexReports, &normalize.VexReportOpenVEX{
+			Report: &openVEX,
+			Source: targetUrl,
+		})
+	}
+	return vexReports, nil
+}
+
+func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", "", err
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	return parts[0], parts[1], nil
+}
+
+func DownloadRawFile(owner, repo, branch, filePath string) ([]byte, error) {
+
+	rawURL := fmt.Sprintf(
+		"https://raw.githubusercontent.com/%s/%s/%s/%s",
+		owner,
+		repo,
+		branch,
+		filePath,
+	)
+	resp, err := http.Get(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+
 }
