@@ -525,7 +525,7 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 		return nil, fmt.Errorf("no statements inside OpenVex Report")
 	}
 
-	rules := make([]models.VEXRule, 0, len(*&vex.Statements))
+	rules := make([]models.VEXRule, 0, len(vex.Statements))
 	for _, statement := range vex.Statements {
 		if statement.ID == "" {
 			slog.Info("statement does not contain ID, skipping component for VEX rule creation", "openVEXReport", vex.ID)
