@@ -27,6 +27,7 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -929,11 +930,14 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 					// if not, just discard this path, as it does not belong to the scoped artifact
 					parentArtifact := reverseEdges[parentID]
 					if len(parentArtifact) > 1 {
-						panic("more than one parent, makes no sense")
+						slog.Warn("Info source has multiple parents, which should not happen in a well-formed graph. This may lead to incorrect path results.", "infoSourceID", parentID, "parentArtifacts", parentArtifact)
+						monitoring.Alert("info source has multiple parents in SBOM graph", fmt.Errorf("infoSourceID=%s parentArtifacts=%v", parentID, parentArtifact))
 					}
 
-					if parentArtifact[0] != g.ScopeID {
-						// this info source does not belong to the scoped artifact, discard path
+					if !slices.ContainsFunc(parentArtifact, func(artifact string) bool {
+						return artifact == g.ScopeID
+					}) {
+						// parent artifact is not the one we scoped to, so skip this path
 						continue
 					}
 				}
