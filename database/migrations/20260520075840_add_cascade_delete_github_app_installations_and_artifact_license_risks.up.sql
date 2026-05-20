@@ -9,5 +9,8 @@ ALTER TABLE public.artifact_license_risks
     DROP CONSTRAINT IF EXISTS artifact_license_risks_new_license_risk_id_fkey;
 
 ALTER TABLE public.artifact_license_risks
-    ADD CONSTRAINT artifact_license_risks_new_license_risk_id_fkey
-        FOREIGN KEY (new_license_risk_id) REFERENCES public.license_risks(id) ON DELETE CASCADE;
+    DROP CONSTRAINT IF EXISTS artifact_license_risks_license_risk_id_fkey;
+
+ALTER TABLE public.artifact_license_risks
+    ADD CONSTRAINT artifact_license_risks_license_risk_id_fkey
+        FOREIGN KEY (license_risk_id) REFERENCES public.license_risks(id) ON DELETE CASCADE;
