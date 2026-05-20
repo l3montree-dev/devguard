@@ -398,14 +398,14 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
 			var id, author string
-
-			if filePath == "vex/vex1.json" {
+			switch {
+			case filePath == "vex/vex1.json":
 				id = "openvex-first"
 				author = "author-one"
-			} else if filePath == "vex/vex2.json" {
+			case filePath == "vex/vex2.json":
 				id = "openvex-second"
 				author = "author-two"
-			} else {
+			default:
 				t.Fatalf("unexpected file path: %s", filePath)
 			}
 
