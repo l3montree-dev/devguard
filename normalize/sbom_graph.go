@@ -27,7 +27,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/package-url/packageurl-go"
 )
 
