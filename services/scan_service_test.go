@@ -398,11 +398,11 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
 			var id, author string
-			switch {
-			case filePath == "vex/vex1.json":
+			switch filePath {
+			case "vex/vex1.json":
 				id = "openvex-first"
 				author = "author-one"
-			case filePath == "vex/vex2.json":
+			case "vex/vex2.json":
 				id = "openvex-second"
 				author = "author-two"
 			default:

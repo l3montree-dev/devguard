@@ -875,13 +875,13 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 	}, nil
 }
 
-func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetUrl string) (vexReports []*normalize.VexReportOpenVEX, err error) {
+func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL string) (vexReports []*normalize.VexReportOpenVEX, err error) {
 	client := newGitHubClient()
 	githubDomain := "https://github.com"
-	if !strings.HasPrefix(targetUrl, githubDomain) {
+	if !strings.HasPrefix(targetURL, githubDomain) {
 		return nil, fmt.Errorf("invalid github repository url")
 	}
-	owner, repo, err := ParseGitHubURL(targetUrl)
+	owner, repo, err := ParseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
 	}
@@ -936,7 +936,7 @@ func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetUrl stri
 
 		vexReports = append(vexReports, &normalize.VexReportOpenVEX{
 			Report: &openVEX,
-			Source: targetUrl,
+			Source: targetURL,
 		})
 	}
 	return vexReports, nil
