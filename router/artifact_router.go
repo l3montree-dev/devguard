@@ -30,8 +30,10 @@ func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
 	artifactController *controllers.ArtifactController,
 	artifactRepository shared.ArtifactRepository,
+	assetRepository shared.AssetRepository,
 ) ArtifactRouter {
 	artifactRouter := assetVersionGroup.Group.Group("/artifacts/:artifactName", middlewares.ArtifactMiddleware(artifactRepository))
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	artifactRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	artifactRouter.GET("/sbom.xml/", artifactController.SBOMXML)
@@ -41,8 +43,8 @@ func NewArtifactRouter(
 	artifactRouter.GET("/sbom.pdf/", artifactController.BuildPDFFromSBOM)
 	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
 
-	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}))
-	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}))
+	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	return ArtifactRouter{Group: artifactRouter}
 }

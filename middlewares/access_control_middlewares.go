@@ -95,6 +95,16 @@ func NeededScope(NeededScopes []string) shared.MiddlewareFunc {
 	}
 }
 
+func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx shared.Context) error {
+		if shared.IsPublicRequest(ctx) {
+			slog.Warn("access denied for public request in DisallowPublicRequests middleware")
+			return echo.NewHTTPError(404, "could not find resource")
+		}
+		return next(ctx)
+	}
+}
+
 func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
