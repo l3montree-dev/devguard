@@ -32,7 +32,7 @@ func NewFirstPartyVulnService(firstPartyVulnRepository shared.FirstPartyVulnRepo
 
 var _ shared.FirstPartyVulnService = (*firstPartyVulnService)(nil)
 
-func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, firstPartyVulns []models.FirstPartyVuln) error {
 
 	if len(firstPartyVulns) == 0 {
 		return nil
@@ -40,7 +40,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false, userAgent)
 
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -54,14 +54,14 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -95,31 +95,31 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
 }
 
-func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.firstPartyVulnRepository.Transaction(ctx, func(d shared.DB) error {
-			ev, err = s.updateFirstPartyVulnState(ctx, d, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+			ev, err = s.updateFirstPartyVulnState(ctx, d, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateFirstPartyVulnState(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
+	return s.updateFirstPartyVulnState(ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)
 }
 
-func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch dtos.VulnEventType(statusType) {
 	case dtos.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, false)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, false, userAgent)
 	case dtos.EventTypeReopened:
-		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
-		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false)
+		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	}
 
 	return s.applyAndSave(ctx, tx, firstPartyVuln, &ev)
@@ -154,7 +154,7 @@ func (s *firstPartyVulnService) applyAndSave(ctx context.Context, tx shared.DB, 
 	return *ev, nil
 }
 
-func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
 	// get all first-party for the assetVersion
 	vulnList, err := s.firstPartyVulnRepository.ListByScanner(ctx, nil, assetVersion.Name, asset.ID, "")
 	if err != nil {
@@ -166,10 +166,10 @@ func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 		return nil
 	}
 
-	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList)
+	return s.SyncIssues(ctx, org, project, asset, assetVersion, vulnList, userAgent)
 }
 
-func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln, userAgent *string) error {
 	if len(vulnList) == 0 {
 		return nil
 	}
@@ -177,7 +177,7 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability), nil
+				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability, userAgent), nil
 			})
 		}
 	}
@@ -186,11 +186,11 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln) error {
+func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability, userAgent)
 	if err != nil {
 		return err
 	}

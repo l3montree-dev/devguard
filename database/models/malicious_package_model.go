@@ -16,7 +16,9 @@
 package models
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -29,11 +31,23 @@ import (
 // MaliciousPackage stores metadata for malicious packages from OSV
 type MaliciousPackage struct {
 	ID                          string                       `gorm:"primarykey;type:varchar(255)" json:"id"` // OSV ID
+	ContentHash                 int64                        `gorm:"type:bigint;not null;default:0" json:"contentHash"`
 	Summary                     string                       `gorm:"type:text" json:"summary"`
 	Details                     string                       `gorm:"type:text" json:"details"`
 	Published                   time.Time                    `json:"published"`
 	Modified                    time.Time                    `json:"modified"`
 	MaliciousAffectedComponents []MaliciousAffectedComponent `json:"affectedComponents" gorm:"foreignKey:MaliciousPackageID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+func (mp MaliciousPackage) CalculateContentHash() int64 {
+	h := fmt.Sprintf("%s|%s|%s|%s",
+		mp.Summary, mp.Details,
+		mp.Published.Format(time.RFC3339),
+		mp.Modified.Format(time.RFC3339),
+	)
+	sum := md5.Sum([]byte(h))
+	u := binary.BigEndian.Uint64(sum[:8])
+	return int64(u & 0x7fffffffffffffff)
 }
 
 func (MaliciousPackage) TableName() string {

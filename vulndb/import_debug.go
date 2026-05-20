@@ -25,6 +25,57 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
+// diffCVEsByIntegrityHash computes the exact same per-row hash used by the integrity check
+// for both cves (live) and cves_stage, then reports rows whose hash differs.
+// This catches columns not listed in contentCols (e.g. id) and subtle representation differences.
+func diffCVEsByIntegrityHash(ctx context.Context, tx pgx.Tx) error {
+	const hashExpr = `md5(
+		coalesce(id::text, '\0') || '|' ||
+		coalesce(description, '\0') || '|' ||
+		coalesce(cvss::text, '\0') || '|' ||
+		coalesce(vector, '\0') || '|' ||
+		coalesce(cisa_required_action, '\0') || '|' ||
+		coalesce(cisa_vulnerability_name, '\0') || '|' ||
+		coalesce(epss::text, '\0') || '|' ||
+		coalesce(percentile::text, '\0')
+	)`
+
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT db.cve, db_hash, gob_hash,
+			db.id, db.cisa_required_action, db.cisa_vulnerability_name, db.epss, db.percentile,
+			gob.id, gob.cisa_required_action, gob.cisa_vulnerability_name, gob.epss, gob.percentile
+		FROM (SELECT cve, %s AS db_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves) db
+		JOIN (SELECT cve, %s AS gob_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves_stage) gob
+			ON db.cve = gob.cve
+		WHERE db_hash <> gob_hash
+		LIMIT 20
+	`, hashExpr, hashExpr))
+	if err != nil {
+		return fmt.Errorf("could not query integrity hash diff: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cve, dbHash, gobHash string
+		var dbID, gobID int64
+		var dbReqAction, dbVulnName, gobReqAction, gobVulnName *string
+		var dbEPSS, gobEPSS *float64
+		var dbPct, gobPct *float32
+		if err := rows.Scan(&cve, &dbHash, &gobHash, &dbID, &dbReqAction, &dbVulnName, &dbEPSS, &dbPct, &gobID, &gobReqAction, &gobVulnName, &gobEPSS, &gobPct); err != nil {
+			break
+		}
+		slog.Warn("show-diff: integrity hash mismatch",
+			"cve", cve,
+			"db_hash", dbHash, "gob_hash", gobHash,
+			"db_id", dbID, "gob_id", gobID,
+			"db_cisa_required_action", dbReqAction, "gob_cisa_required_action", gobReqAction,
+			"db_cisa_vulnerability_name", dbVulnName, "gob_cisa_vulnerability_name", gobVulnName,
+			"db_epss", dbEPSS, "gob_epss", gobEPSS,
+			"db_percentile", dbPct, "gob_percentile", gobPct,
+		)
+	}
+	return rows.Err()
+}
+
 // showImportDebug logs per-row differences between what was just written to the DB (within tx)
 // and what the gob archive in workingDir would produce. Call this after an integrity failure
 // and before the fallback retry to see exactly which rows diverge.
@@ -58,25 +109,25 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not read osv.gob", "err", err)
 			return
 		}
-		vulnRows := gobOSVToVulnFilterTransformer(time.Time{}, nil, nil, nil)(osvEntries)
-		malRows := gobOSVToMalFilterTransformer(time.Time{})(osvEntries)
-		if err := insertCVEsBulk(ctx, tx, vulnRows.CVEs); err != nil {
+		vulnRows := gobOSVToVulnTransformer()(osvEntries)
+		malRows := gobOSVToMalTransformer(osvEntries)
+		if err := InsertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
 			slog.Error("show-diff: could not insert CVEs into staging", "err", err)
 			return
 		}
-		if err := insertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships); err != nil {
+		if err := InsertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
 			return
 		}
-		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents); err != nil {
+		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
 			slog.Error("show-diff: could not insert affected_components into staging", "err", err)
 			return
 		}
-		if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents); err != nil {
+		if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents, "cve_affected_component_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_affected_component into staging", "err", err)
 			return
 		}
-		if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps); err != nil {
+		if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps, "mal_pkgs_stage", "mal_comps_stage"); err != nil {
 			slog.Error("show-diff: could not insert malicious packages into staging", "err", err)
 			return
 		}
@@ -122,8 +173,8 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not read exploits.gob", "err", err)
 			return
 		}
-		exploits := gobExploitFilterTransformer(time.Time{}, gobExploits)
-		if err := insertExploitsBulk(ctx, tx, exploits); err != nil {
+		exploits := gobExploitFilterTransformer(gobExploits)
+		if err := insertExploitsBulk(ctx, tx, exploits, "exploits_stage"); err != nil {
 			slog.Error("show-diff: could not insert exploits into staging", "err", err)
 			return
 		}
@@ -143,6 +194,9 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 				joinCond:    "db.cve = gob.cve",
 				contentCols: []string{"description", "cvss", "vector", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile"},
 			})
+			if err == nil {
+				err = diffCVEsByIntegrityHash(ctx, tx)
+			}
 		case "cve_relationships":
 			err = diffTable(ctx, tx, diffSpec{
 				live:     "cve_relationships",

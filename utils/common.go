@@ -47,6 +47,14 @@ func SlicePtr[T any](t []T) []*T {
 	return res
 }
 
+func ToLowerSlice(s []string) []string {
+	lower := make([]string, len(s))
+	for i, v := range s {
+		lower[i] = strings.ToLower(v)
+	}
+	return lower
+}
+
 func RunsInCI() bool {
 	if val, ok := os.LookupEnv("CI"); ok {
 		return val == "true"

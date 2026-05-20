@@ -57,7 +57,7 @@ func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXR
 
 func (r *vexRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Preload("Asset").Where("cve_id = ? AND enabled = ?", cveID, true).Find(&rules).Error
+	err := r.GetDB(ctx, tx).Preload("Asset").Where("LOWER(cve_id) = LOWER(?) AND enabled = ?", cveID, true).Find(&rules).Error
 	return rules, err
 }
 
@@ -69,7 +69,7 @@ func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB,
 
 func (r *vexRuleRepository) FindByAssetVersionAndCVE(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND LOWER(cve_id) = LOWER(?)", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

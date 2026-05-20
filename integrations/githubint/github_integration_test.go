@@ -39,7 +39,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 
 		assert.Error(t, err)
 	})
@@ -66,7 +66,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 		assert.Error(t, err)
 	})
 
@@ -90,7 +90,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 		assert.NoError(t, err)
 	})
 
@@ -130,7 +130,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 
 		assert.Error(t, err)
 	})
@@ -203,7 +203,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 		assert.Error(t, err)
 	})
 
@@ -287,7 +287,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
 			Ctx: ctx,
-		})
+		}, nil)
 		assert.NoError(t, err)
 	})
 

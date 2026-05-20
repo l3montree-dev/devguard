@@ -51,7 +51,7 @@ func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models
 	artifactRootDep := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		ComponentID:      nil,
+		ComponentID:      "ROOT",
 		DependencyID:     artifactRoot,
 	}
 	if err := f.DB.Create(&artifactRootDep).Error; err != nil {
@@ -62,7 +62,7 @@ func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models
 	infoSourceDep := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		ComponentID:      &artifactRoot,
+		ComponentID:      artifactRoot,
 		DependencyID:     infoSourceID,
 	}
 	if err := f.DB.Create(&infoSourceDep).Error; err != nil {
@@ -74,7 +74,7 @@ func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      &infoSourceID,
+			ComponentID:      infoSourceID,
 			DependencyID:     purl,
 		}
 		if err := f.DB.Create(&componentDependency).Error; err != nil {
@@ -101,7 +101,7 @@ func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.
 	vexInfoSourceDep := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		ComponentID:      &artifactRoot,
+		ComponentID:      artifactRoot,
 		DependencyID:     vexInfoSourceID,
 	}
 	if err := f.DB.Create(&vexInfoSourceDep).Error; err != nil {
@@ -114,7 +114,7 @@ func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      &vexInfoSourceID,
+			ComponentID:      vexInfoSourceID,
 			DependencyID:     purl,
 		}
 		if err := f.DB.Create(&componentDependency).Error; err != nil {
@@ -179,7 +179,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			artifactRootDep := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      nil,
+				ComponentID:      "ROOT",
 				DependencyID:     artifactRoot,
 			}
 			err = f.DB.Create(&artifactRootDep).Error
@@ -189,7 +189,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			componentDependency := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      &artifactRoot,
+				ComponentID:      artifactRoot,
 				DependencyID:     "pkg:npm/test-package@1.0.0",
 				Dependency:       component,
 			}
@@ -299,6 +299,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 			"test-user",
 			"Test acceptance",
 			false,
+			nil,
 		)
 		acceptEvent.CreatedAt = time.Now().Add(-48 * time.Hour)
 		err = f.DB.Create(&acceptEvent).Error
@@ -579,7 +580,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		artifactRootDep := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      nil,
+			ComponentID:      "ROOT",
 			DependencyID:     artifactRoot,
 		}
 		err = f.DB.Create(&artifactRootDep).Error
@@ -589,7 +590,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			ComponentID:      &artifactRoot,
+			ComponentID:      artifactRoot,
 			DependencyID:     "pkg:npm/vulnerable-package@2.0.0",
 			Dependency:       component,
 		}
@@ -771,7 +772,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			artifactRootDep := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      nil,
+				ComponentID:      "ROOT",
 				DependencyID:     artifactRoot,
 			}
 			err = f.DB.Create(&artifactRootDep).Error
@@ -781,7 +782,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			componentDependency := models.ComponentDependency{
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
-				ComponentID:      &artifactRoot,
+				ComponentID:      artifactRoot,
 				DependencyID:     "pkg:npm/risk-test-package@1.0.0",
 				Dependency:       component,
 			}

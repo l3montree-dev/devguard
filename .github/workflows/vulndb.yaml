@@ -53,7 +53,7 @@ jobs:
       - name: Export the vulnerability database archive
         run: |
           # writes the database snapshot files and bundles them into a single tar.zst archive
-          go run ./cmd/devguard-cli/main.go vulndb export
+          go run ./cmd/devguard-cli/main.go vulndb export --diff-to-previous
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0

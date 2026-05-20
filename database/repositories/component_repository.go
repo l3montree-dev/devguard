@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type componentRepository struct {
@@ -55,7 +56,7 @@ func (c *componentRepository) CreateComponents(ctx context.Context, tx *gorm.DB,
 		return nil
 	}
 
-	return c.GetDB(ctx, tx).Create(&components).Error
+	return c.GetDB(ctx, tx).Clauses(clause.OnConflict{DoNothing: true}).Create(&components).Error
 }
 
 // LoadComponents loads all component dependencies for an asset version.
@@ -147,8 +148,8 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 		}
-		if component.ComponentID != nil {
-			if license, ok := isPurlOverwrittenMap[*component.ComponentID]; ok {
+		if component.ComponentID != "ROOT" {
+			if license, ok := isPurlOverwrittenMap[component.ComponentID]; ok {
 				componentDependencies[i].Component.License = &license
 				componentDependencies[i].Component.IsLicenseOverwritten = true
 			}
@@ -196,15 +197,9 @@ func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, 
 	if len(diff.RemovedEdges) > 0 {
 		var valueClauses []string
 		for _, edge := range diff.RemovedEdges {
-			var componentID string
-			if edge[0] == normalize.GraphRootNodeID {
-				componentID = "NULL"
-			} else {
-				componentID = fmt.Sprintf("'%s'", strings.ReplaceAll(edge[0], "'", "''"))
-			}
-
+			escapedComp := strings.ReplaceAll(edge[0], "'", "''")
 			escapedDep := strings.ReplaceAll(edge[1], "'", "''")
-			valueClauses = append(valueClauses, fmt.Sprintf("(%s, '%s')", componentID, escapedDep))
+			valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s')", escapedComp, escapedDep))
 		}
 		// Join the value clauses with commas
 		values := strings.Join(valueClauses, ",")
@@ -232,12 +227,12 @@ func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, 
 	for _, edge := range diff.AddedEdges {
 		c1 := wholeAssetGraph.Node(edge[0])
 		c2 := wholeAssetGraph.Node(edge[1])
-		var componentID *string
+		var componentID string
 		if c1.Type == normalize.GraphNodeTypeRoot {
-			// set to nil for root nodes
-			componentID = nil
+			// set to ROOT for root nodes
+			componentID = "ROOT"
 		} else {
-			componentID = utils.Ptr(c1.Component.PackageURL)
+			componentID = c1.Component.PackageURL
 		}
 
 		componentDependency := models.ComponentDependency{

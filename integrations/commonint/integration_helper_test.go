@@ -395,13 +395,13 @@ func TestRenderPathToComponent(t *testing.T) {
 		}
 
 	})
-	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
+	t.Run("Everything works as expected with a non empty component list", func(t *testing.T) {
 		// Create a chain of actual components (all with pkg: prefix) to have a path with edges
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                                         // root --> artifact
-			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
-			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
-			{ComponentID: utils.Ptr("pkg:npm/root-dep@1.0.0"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
+			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                           // root --> artifact
+			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
+			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
+			{ComponentID: "pkg:npm/root-dep@1.0.0", DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -423,10 +423,10 @@ func TestRenderPathToComponent(t *testing.T) {
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		// Create a chain of actual components to verify @ escaping in mermaid output
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                                         // root --> artifact
-			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
-			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
-			{ComponentID: utils.Ptr("pkg:npm/root-dep@1.0.0"), DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
+			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                           // root --> artifact
+			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
+			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
+			{ComponentID: "pkg:npm/root-dep@1.0.0", DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -452,9 +452,9 @@ func TestRenderPathToComponent(t *testing.T) {
 		// The graph requires an artifact and sbom info-source node above the component
 		// so that FindAllComponentOnlyPathsToPURL can terminate the BFS correctly.
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},
-			{ComponentID: utils.Ptr("artifact:test-artifact"), DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
-			{ComponentID: utils.Ptr("sbom:test@test-artifact"), DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
+			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},
+			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
+			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -711,12 +711,12 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 		// Previously, map iteration randomness caused the two path edges to appear
 		// in non-deterministic order in the Mermaid output.
 		components := []models.ComponentDependency{
-			{ComponentID: nil, DependencyID: "artifact:art", Dependency: models.Component{ID: "artifact:art"}},
-			{ComponentID: utils.Ptr("artifact:art"), DependencyID: "sbom:s@art", Dependency: models.Component{ID: "sbom:s@art"}},
-			{ComponentID: utils.Ptr("sbom:s@art"), DependencyID: "pkg:npm/route-b@1.0", Dependency: models.Component{ID: "pkg:npm/route-b@1.0"}},
-			{ComponentID: utils.Ptr("sbom:s@art"), DependencyID: "pkg:npm/route-a@1.0", Dependency: models.Component{ID: "pkg:npm/route-a@1.0"}},
-			{ComponentID: utils.Ptr("pkg:npm/route-a@1.0"), DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
-			{ComponentID: utils.Ptr("pkg:npm/route-b@1.0"), DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
+			{ComponentID: "ROOT", DependencyID: "artifact:art", Dependency: models.Component{ID: "artifact:art"}},
+			{ComponentID: "artifact:art", DependencyID: "sbom:s@art", Dependency: models.Component{ID: "sbom:s@art"}},
+			{ComponentID: "sbom:s@art", DependencyID: "pkg:npm/route-b@1.0", Dependency: models.Component{ID: "pkg:npm/route-b@1.0"}},
+			{ComponentID: "sbom:s@art", DependencyID: "pkg:npm/route-a@1.0", Dependency: models.Component{ID: "pkg:npm/route-a@1.0"}},
+			{ComponentID: "pkg:npm/route-a@1.0", DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
+			{ComponentID: "pkg:npm/route-b@1.0", DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
 		}
 
 		assetID := uuid.New()

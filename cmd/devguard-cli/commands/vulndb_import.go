@@ -14,11 +14,11 @@ import (
 )
 
 func newImportCommand() *cobra.Command {
-	var full bool
 	var batchSize int
 	var bulk bool
 	var limitedToTables []string
 	var debug bool
+	var localArchive bool
 
 	importCmd := &cobra.Command{
 		Use:   "import",
@@ -28,11 +28,11 @@ func newImportCommand() *cobra.Command {
 			shared.LoadConfig() // nolint
 			migrateDB()
 			opts := shared.ImportOptions{
-				Full:            full,
 				BatchSize:       batchSize,
 				Bulk:            bulk,
 				LimitedToTables: limitedToTables,
 				Debug:           debug,
+				LocalArchive:    localArchive,
 			}
 			app := fx.New(
 				fx.NopLogger,
@@ -59,16 +59,19 @@ func newImportCommand() *cobra.Command {
 		},
 	}
 
-	importCmd.Flags().BoolVar(&full, "full", false, "Force a full import, ignoring the last-import watermark")
 	importCmd.Flags().IntVar(&batchSize, "batchSize", 5000, "Number of OSV entries per batch (default 5000)")
 	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
 	importCmd.Flags().StringSliceVar(&limitedToTables, "limitedToTables", []string{}, "Comma-separated list of tables to limit the import to (e.g. --limitedToTables=cves,exploits,malicious_packages)")
 	importCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
+	importCmd.Flags().BoolVar(&localArchive, "local-archive", false, "Read from vulndb.tar.zst in the current directory instead of pulling from OCI")
 
 	return importCmd
 }
 
 func newExportCommand() *cobra.Command {
+	var diffToPrevious bool
+	var localArchive bool
+
 	exportCmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export the vulnerability database to an OCI artifact",
@@ -84,6 +87,9 @@ func newExportCommand() *cobra.Command {
 				services.ServiceModule,
 				vulndb.Module,
 				fx.Invoke(func(svc shared.VulnDBService) error {
+					if diffToPrevious {
+						return svc.ExportRCWithDiff(context.Background(), localArchive)
+					}
 					return svc.ExportRC(context.Background())
 				}),
 			)
@@ -100,6 +106,11 @@ func newExportCommand() *cobra.Command {
 			return app.Stop(stopCtx)
 		},
 	}
+
+	exportCmd.Flags().BoolVar(&diffToPrevious, "diff-to-previous", false,
+		"Compute a QuickDiff against the previous export so importers on the last version can skip staging entirely")
+	exportCmd.Flags().BoolVar(&localArchive, "local-archive", false,
+		"Use vulndb.tar.zst in the current directory for the baseline import instead of pulling from OCI")
 
 	return exportCmd
 }

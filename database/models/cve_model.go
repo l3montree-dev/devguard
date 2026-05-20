@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -28,6 +29,7 @@ type cveReference struct {
 }
 type CVE struct {
 	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
+	ContentHash           int64               `json:"contentHash" gorm:"type:bigint;not null;default:0;"`
 	CVE                   string              `json:"cve" gorm:"type:text;"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
 	DateLastModified      time.Time           `json:"dateLastModified" cve:"dateLastModified"`
@@ -37,8 +39,8 @@ type CVE struct {
 	References            string              `json:"references" gorm:"type:text;" cve:"references"`
 	CISAExploitAdd        *datatypes.Date     `json:"cisaExploitAdd" gorm:"type:date;" cve:"cisaExploitAdd" swaggertype:"string" format:"date"`
 	CISAActionDue         *datatypes.Date     `json:"cisaActionDue" gorm:"type:date;" cve:"cisaActionDue" swaggertype:"string" format:"date"`
-	CISARequiredAction    string              `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
-	CISAVulnerabilityName string              `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
+	CISARequiredAction    *string             `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
+	CISAVulnerabilityName *string             `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
 	EPSS                  *float64            `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
 	Percentile            *float32            `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
 	AffectedComponents    []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
@@ -64,6 +66,13 @@ func (cve CVE) TableName() string {
 	return "cves"
 }
 
+func (cve *CVE) BeforeSave(tx *gorm.DB) error {
+	if cve.ID == 0 {
+		cve.ID = cve.CalculateHash()
+	}
+	return nil
+}
+
 // calculate the hash for the cve solely based on the cve-id using md5 for compatibility with the postgresql database
 func (cve CVE) CalculateHash() int64 {
 	return CalculateHashForCVE(cve.CVE)
@@ -75,17 +84,20 @@ func CalculateHashForCVE(cveID string) int64 {
 	return int64(u & 0x7fffffffffffffff)
 }
 
+// CalculateContentHash hashes the OSV-sourced content fields (description, cvss, vector).
+// EPSS and CISA KEV are intentionally excluded — they are applied via separate UPDATE steps
+// and their changes should not trigger a delete+reinsert of the CVE or its related rows.
+func (cve CVE) CalculateContentHash() int64 {
+	h := fmt.Sprintf("%s|%.2f|%s", cve.Description, cve.CVSS, cve.Vector)
+	sum := md5.Sum([]byte(h))
+	u := binary.BigEndian.Uint64(sum[:8])
+	return int64(u & 0x7fffffffffffffff)
+}
+
 func (cve CVE) GetReferences() ([]cveReference, error) {
 	var refs []cveReference
 	if err := json.Unmarshal([]byte(cve.References), &refs); err != nil {
 		return nil, err
 	}
 	return refs, nil
-}
-
-func (cve *CVE) BeforeSave(tx *gorm.DB) error {
-	if cve.ID == 0 {
-		cve.ID = cve.CalculateHash()
-	}
-	return nil
 }

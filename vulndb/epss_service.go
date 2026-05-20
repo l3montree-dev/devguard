@@ -87,7 +87,11 @@ func (s *epssService) Fetch(ctx context.Context) (map[string]dtos.EPSS, error) {
 	return results, nil
 }
 
-func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+func InsertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPSS) error {
+	// Always reset so CVEs no longer in the EPSS feed end up with NULL.
+	if _, err := tx.Exec(ctx, `UPDATE cves SET epss = NULL, percentile = NULL`); err != nil {
+		return fmt.Errorf("could not reset epss values: %w", err)
+	}
 	if len(epssData) == 0 {
 		return nil
 	}
@@ -117,17 +121,22 @@ func insertEPSSBulk(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.EPS
 		return fmt.Errorf("could not copy epss rows into staging table: %w", err)
 	}
 
-	// reset all epss and percentile values to null before updating with new data, to handle removed CVEs
-	if _, err := tx.Exec(ctx, `UPDATE cves SET epss = NULL, percentile = NULL`); err != nil {
-		return fmt.Errorf("could not reset epss values: %w", err)
-	}
-
 	if _, err := tx.Exec(ctx, `
 		UPDATE cves SET
-			epss       = epss_stage.epss,
-			percentile = epss_stage.percentile
-		FROM epss_stage
-		WHERE cves.cve = epss_stage.cve_id`); err != nil {
+			epss       = es.epss,
+			percentile = es.percentile
+		FROM (
+			SELECT cve_id, MAX(epss) AS epss, MAX(percentile) AS percentile
+			FROM (
+				SELECT cve_id, epss, percentile FROM epss_stage
+				UNION ALL
+				SELECT cr.source_cve, es.epss, es.percentile
+				FROM epss_stage es
+				JOIN cve_relationships cr ON cr.target_cve = es.cve_id
+			) combined
+			GROUP BY cve_id
+		) es
+		WHERE cves.cve = es.cve_id`); err != nil {
 		return fmt.Errorf("could not update cves with epss data: %w", err)
 	}
 	return nil
@@ -162,10 +171,20 @@ func applyEPSSToStage(ctx context.Context, tx pgx.Tx, epssData map[string]dtos.E
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE cves_stage SET
-			epss       = epss_stage.epss,
-			percentile = epss_stage.percentile
-		FROM epss_stage
-		WHERE cves_stage.cve = epss_stage.cve_id`); err != nil {
+			epss       = es.epss,
+			percentile = es.percentile
+		FROM (
+			SELECT cve_id, MAX(epss) AS epss, MAX(percentile) AS percentile
+			FROM (
+				SELECT cve_id, epss, percentile FROM epss_stage
+				UNION ALL
+				SELECT cr.source_cve, es.epss, es.percentile
+				FROM epss_stage es
+				JOIN cve_relationships cr ON cr.target_cve = es.cve_id
+			) combined
+			GROUP BY cve_id
+		) es
+		WHERE cves_stage.cve = es.cve_id`); err != nil {
 		return fmt.Errorf("could not update cves_stage with epss data: %w", err)
 	}
 	return nil

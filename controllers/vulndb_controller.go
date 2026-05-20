@@ -18,6 +18,8 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type VulnDBController struct {
@@ -98,6 +100,9 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 	)
 
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "could not get CVEs").WithInternal(err)
+		}
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
 

@@ -294,7 +294,10 @@ func initTracer(sampleRate float64) {
 	}
 
 	opts := []sdktrace.TracerProviderOption{
-		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(sampleRate)),
+		// ParentBased honors the sampled flag from an incoming traceparent header, so a specific
+		// request can be force-traced regardless of the ratio by setting the flag to 01:
+		//   curl -H "traceparent: 00-$(openssl rand -hex 16)-$(openssl rand -hex 8)-01" <url>
+		sdktrace.WithSampler(sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampleRate))),
 		sdktrace.WithResource(res),
 	}
 	for _, p := range processors {

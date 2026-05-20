@@ -32,16 +32,9 @@ import (
 	"github.com/package-url/packageurl-go"
 )
 
-const (
-	DefaultMaliciousPackageRepo = "https://github.com/ossf/malicious-packages/archive/refs/heads/main.tar.gz"
-	BatchSize                   = 700 // Insert in batches to avoid memory spikes
-	malPkgNumOfGoRoutines       = 7
-)
-
 // MaliciousPackageChecker checks packages against the malicious package database
 type MaliciousPackageChecker struct {
 	repository *repositories.MaliciousPackageRepository
-	repoURL    string
 	httpClient *http.Client
 }
 
@@ -55,14 +48,13 @@ func NewMaliciousPackageChecker(
 ) (*MaliciousPackageChecker, error) {
 	return &MaliciousPackageChecker{
 		repository: repository,
-		repoURL:    DefaultMaliciousPackageRepo,
 		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}, nil
 }
 
 // FetchAll downloads the malicious packages archive and returns all parsed packages
 // and affected components without touching the database.
-func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent) {
+func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedComponent, []OSVEntry) {
 	testPackages := map[string][]string{
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
@@ -74,7 +66,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 
 	packages := make([]models.MaliciousPackage, 0)
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
-
+	osvEntries := make([]OSVEntry, 0)
 	for ecosystem, pkgNames := range testPackages {
 		for _, pkgName := range pkgNames {
 			normalizedPkgName := strings.NewReplacer("/", "-", "@", "-", ":", "-", ".", "-").Replace(pkgName)
@@ -93,8 +85,10 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 						Versions: []string{},
 					},
 				},
-				Published: time.Now(),
+				Published: time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
+				Modified:  time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
 			}
+			osvEntries = append(osvEntries, OSVEntry{OSV: fakeEntry, ModifiedTimestamp: fakeEntry.Modified})
 			packages = append(packages, models.MaliciousPackage{
 				ID:        fakeID,
 				Summary:   fakeEntry.Summary,
@@ -105,7 +99,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 			affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
 		}
 	}
-	return packages, affectedComponents
+	return packages, affectedComponents, osvEntries
 }
 
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
@@ -146,19 +140,19 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 }
 
 // insertMaliciousPackagesBulk streams malicious packages and components into staging tables. Call flushStagingTables once after all batches.
-func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent) error {
+func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent, pkgTable, compTable string) error {
 	if len(pkgs) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_pkgs_stage"},
-			[]string{"id", "summary", "details", "published", "modified"},
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{pkgTable},
+			[]string{"id", "content_hash", "summary", "details", "published", "modified"},
 			pgx.CopyFromSlice(len(pkgs), func(i int) ([]any, error) {
 				p := pkgs[i]
-				return []any{p.ID, p.Summary, p.Details, p.Published, p.Modified}, nil
+				return []any{p.ID, p.CalculateContentHash(), p.Summary, p.Details, p.Published, p.Modified}, nil
 			})); err != nil {
 			return fmt.Errorf("could not copy malicious packages into staging table: %w", err)
 		}
 	}
 	if len(comps) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"mal_comps_stage"},
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{compTable},
 			[]string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"},
 			pgx.CopyFromSlice(len(comps), func(i int) ([]any, error) {
 				c := comps[i]

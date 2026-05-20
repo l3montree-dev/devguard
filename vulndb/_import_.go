@@ -17,6 +17,7 @@ package vulndb
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -29,18 +30,12 @@ func TestX(t *testing.T) {
 		untarZstd("vulndb.tar.zst", "vulndb-temp")
 	}
 
-	items, err := readAllGobItems[OSVEntry]("vulndb-temp/osv.gob")
+	entries, _ := readAllGobItems[OSVEntry]("vulndb-temp/osv.gob")
+	// check for the fake package ids
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.OSV.ID, "MAL-FAKE") {
+			t.Logf("found fake package: %s", entry.OSV.ID)
 
-	if err != nil {
-		t.Fatalf("failed to read gob items: %v", err)
-	}
-	// print OSV-2026-718 AND OSV-2026-717
-	different := 0
-	for _, item := range items {
-		if item.ModifiedTimestamp.Unix() != item.OSV.Modified.Unix() {
-			different++
 		}
 	}
-	t.Logf("read %d items, %d had different modified timestamps", len(items), different)
-	t.Fail()
 }

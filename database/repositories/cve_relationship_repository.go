@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -22,7 +21,7 @@ func NewCveRelationshipRepository(db *gorm.DB) *cveRelationshipRepository {
 
 func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(ctx context.Context, tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
 	var relations []models.CVERelationship
-	err := repository.GetDB(ctx, tx).Where("target_cve IN ?", targetCVEIDs).Find(&relations).Error
+	err := repository.GetDB(ctx, tx).Where("LOWER(target_cve) IN ?", utils.ToLowerSlice(targetCVEIDs)).Find(&relations).Error
 	if err != nil {
 		return nil, err
 	}

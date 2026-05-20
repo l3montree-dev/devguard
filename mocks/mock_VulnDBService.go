@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -88,17 +89,74 @@ func (_c *VulnDBService_ExportRC_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// ExportRCWithDiff provides a mock function for the type VulnDBService
+func (_mock *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
+	ret := _mock.Called(ctx, localArchive)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExportRCWithDiff")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, bool) error); ok {
+		r0 = returnFunc(ctx, localArchive)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VulnDBService_ExportRCWithDiff_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExportRCWithDiff'
+type VulnDBService_ExportRCWithDiff_Call struct {
+	*mock.Call
+}
+
+// ExportRCWithDiff is a helper method to define mock.On call
+//   - ctx context.Context
+//   - localArchive bool
+func (_e *VulnDBService_Expecter) ExportRCWithDiff(ctx interface{}, localArchive interface{}) *VulnDBService_ExportRCWithDiff_Call {
+	return &VulnDBService_ExportRCWithDiff_Call{Call: _e.mock.On("ExportRCWithDiff", ctx, localArchive)}
+}
+
+func (_c *VulnDBService_ExportRCWithDiff_Call) Run(run func(ctx context.Context, localArchive bool)) *VulnDBService_ExportRCWithDiff_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 bool
+		if args[1] != nil {
+			arg1 = args[1].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnDBService_ExportRCWithDiff_Call) Return(err error) *VulnDBService_ExportRCWithDiff_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VulnDBService_ExportRCWithDiff_Call) RunAndReturn(run func(ctx context.Context, localArchive bool) error) *VulnDBService_ExportRCWithDiff_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ImportRC provides a mock function for the type VulnDBService
-func (_mock *VulnDBService) ImportRC(ctx context.Context) error {
-	ret := _mock.Called(ctx)
+func (_mock *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) error {
+	ret := _mock.Called(ctx, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ImportRC")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.ImportOptions) error); ok {
+		r0 = returnFunc(ctx, opts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -112,18 +170,24 @@ type VulnDBService_ImportRC_Call struct {
 
 // ImportRC is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *VulnDBService_Expecter) ImportRC(ctx interface{}) *VulnDBService_ImportRC_Call {
-	return &VulnDBService_ImportRC_Call{Call: _e.mock.On("ImportRC", ctx)}
+//   - opts shared.ImportOptions
+func (_e *VulnDBService_Expecter) ImportRC(ctx interface{}, opts interface{}) *VulnDBService_ImportRC_Call {
+	return &VulnDBService_ImportRC_Call{Call: _e.mock.On("ImportRC", ctx, opts)}
 }
 
-func (_c *VulnDBService_ImportRC_Call) Run(run func(ctx context.Context)) *VulnDBService_ImportRC_Call {
+func (_c *VulnDBService_ImportRC_Call) Run(run func(ctx context.Context, opts shared.ImportOptions)) *VulnDBService_ImportRC_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 shared.ImportOptions
+		if args[1] != nil {
+			arg1 = args[1].(shared.ImportOptions)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -134,7 +198,7 @@ func (_c *VulnDBService_ImportRC_Call) Return(err error) *VulnDBService_ImportRC
 	return _c
 }
 
-func (_c *VulnDBService_ImportRC_Call) RunAndReturn(run func(ctx context.Context) error) *VulnDBService_ImportRC_Call {
+func (_c *VulnDBService_ImportRC_Call) RunAndReturn(run func(ctx context.Context, opts shared.ImportOptions) error) *VulnDBService_ImportRC_Call {
 	_c.Call.Return(run)
 	return _c
 }

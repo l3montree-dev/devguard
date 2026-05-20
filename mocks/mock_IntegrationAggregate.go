@@ -104,16 +104,16 @@ func (_c *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call) Run
 }
 
 // CreateIssue provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	ret := _mock.Called(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)
+func (_mock *IntegrationAggregate) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
+	ret := _mock.Called(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln, string, string, string, string) error); ok {
-		r0 = returnFunc(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln, string, string, string, string, *string) error); ok {
+		r0 = returnFunc(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -134,11 +134,12 @@ type IntegrationAggregate_CreateIssue_Call struct {
 //   - orgSlug string
 //   - justification string
 //   - userID string
-func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, userID interface{}) *IntegrationAggregate_CreateIssue_Call {
-	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)}
+//   - userAgent *string
+func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, userID interface{}, userAgent interface{}) *IntegrationAggregate_CreateIssue_Call {
+	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID, userAgent)}
 }
 
-func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string)) *IntegrationAggregate_CreateIssue_Call {
+func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string)) *IntegrationAggregate_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -172,6 +173,10 @@ func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Contex
 		if args[7] != nil {
 			arg7 = args[7].(string)
 		}
+		var arg8 *string
+		if args[8] != nil {
+			arg8 = args[8].(*string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -181,6 +186,7 @@ func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Contex
 			arg5,
 			arg6,
 			arg7,
+			arg8,
 		)
 	})
 	return _c
@@ -191,7 +197,7 @@ func (_c *IntegrationAggregate_CreateIssue_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_CreateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error) *IntegrationAggregate_CreateIssue_Call {
+func (_c *IntegrationAggregate_CreateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error) *IntegrationAggregate_CreateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -404,16 +410,16 @@ func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.O
 }
 
 // HandleEvent provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HandleEvent(ctx context.Context, event any) error {
-	ret := _mock.Called(ctx, event)
+func (_mock *IntegrationAggregate) HandleEvent(ctx context.Context, event any, userAgent *string) error {
+	ret := _mock.Called(ctx, event, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleEvent")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, any) error); ok {
-		r0 = returnFunc(ctx, event)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, any, *string) error); ok {
+		r0 = returnFunc(ctx, event, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -428,11 +434,12 @@ type IntegrationAggregate_HandleEvent_Call struct {
 // HandleEvent is a helper method to define mock.On call
 //   - ctx context.Context
 //   - event any
-func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx interface{}, event interface{}) *IntegrationAggregate_HandleEvent_Call {
-	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event)}
+//   - userAgent *string
+func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx interface{}, event interface{}, userAgent interface{}) *IntegrationAggregate_HandleEvent_Call {
+	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event, userAgent)}
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(ctx context.Context, event any)) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(ctx context.Context, event any, userAgent *string)) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -442,9 +449,14 @@ func (_c *IntegrationAggregate_HandleEvent_Call) Run(run func(ctx context.Contex
 		if args[1] != nil {
 			arg1 = args[1].(any)
 		}
+		var arg2 *string
+		if args[2] != nil {
+			arg2 = args[2].(*string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -455,7 +467,7 @@ func (_c *IntegrationAggregate_HandleEvent_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(ctx context.Context, event any) error) *IntegrationAggregate_HandleEvent_Call {
+func (_c *IntegrationAggregate_HandleEvent_Call) RunAndReturn(run func(ctx context.Context, event any, userAgent *string) error) *IntegrationAggregate_HandleEvent_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -872,16 +884,16 @@ func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx 
 }
 
 // UpdateIssue provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, asset, assetVersionSlug, vuln)
+func (_mock *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+	ret := _mock.Called(ctx, asset, assetVersionSlug, vuln, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, asset, assetVersionSlug, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln, *string) error); ok {
+		r0 = returnFunc(ctx, asset, assetVersionSlug, vuln, userAgent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -898,11 +910,12 @@ type IntegrationAggregate_UpdateIssue_Call struct {
 //   - asset models.Asset
 //   - assetVersionSlug string
 //   - vuln models.Vuln
-func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
-	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln)}
+//   - userAgent *string
+func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}, userAgent interface{}) *IntegrationAggregate_UpdateIssue_Call {
+	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln, userAgent)}
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln)) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string)) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -920,11 +933,16 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Contex
 		if args[3] != nil {
 			arg3 = args[3].(models.Vuln)
 		}
+		var arg4 *string
+		if args[4] != nil {
+			arg4 = args[4].(*string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -935,7 +953,7 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

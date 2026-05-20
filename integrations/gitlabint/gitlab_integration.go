@@ -239,15 +239,19 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 }
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models.GitLabOauth2Token, iteration int) bool {
+	reqCtx, span := gitlabTracer.Start(ctx.Request().Context(), "gitlab.checkIfTokenIsValid")
+	defer span.End()
+	span.SetAttributes(attribute.Int("iteration", iteration))
+
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(ctx.Request().Context(), token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(reqCtx, token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
 	}
 
 	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.GetVersion(ctx.Request().Context())
+	_, _, err = gitlabClient.GetVersion(reqCtx)
 	if err != nil {
 		if iteration >= 3 {
 			// we tried 3 times to check if the token is valid, but it is still not valid
@@ -1233,7 +1237,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -1270,7 +1274,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		if err.Error() == "404 Not Found" {
 
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, userAgent)
 			// save the event
 			err := g.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {
@@ -1375,7 +1379,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 	return nil, 0, notConnectedError
 }
 
-func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.CreateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -1427,7 +1431,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		map[string]any{
 			"ticketId":  vuln.GetTicketID(),
 			"ticketUrl": createdIssue.WebURL,
-		})
+		}, userAgent)
 
 	return g.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 }

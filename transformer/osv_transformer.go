@@ -290,7 +290,7 @@ func MaliciousAffectedComponentFromOSV(osv *dtos.OSV, maliciousPackageID string)
 	affectedComponents := make([]models.MaliciousAffectedComponent, 0)
 	for _, affected := range osv.Affected {
 		for _, c := range affectedComponentsFromAffected(affected) {
-			affectedComponents = append(affectedComponents, models.MaliciousAffectedComponent{
+			m := models.MaliciousAffectedComponent{
 				MaliciousPackageID: maliciousPackageID,
 				PurlWithoutVersion: c.PurlWithoutVersion,
 				Ecosystem:          c.Ecosystem,
@@ -299,7 +299,9 @@ func MaliciousAffectedComponentFromOSV(osv *dtos.OSV, maliciousPackageID string)
 				SemverFixed:        c.SemverFixed,
 				VersionIntroduced:  c.VersionIntroduced,
 				VersionFixed:       c.VersionFixed,
-			})
+			}
+			m.ID = m.CalculateHash()
+			affectedComponents = append(affectedComponents, m)
 		}
 	}
 	return affectedComponents

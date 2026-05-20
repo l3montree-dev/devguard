@@ -34,7 +34,7 @@ func (g *cveRepository) GetLastModDate(ctx context.Context, tx *gorm.DB) (time.T
 
 func (g *cveRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.CVE, error) {
 	var t models.CVE
-	err := g.GetDB(ctx, tx).First(&t, "cve = ?", id).Error
+	err := g.GetDB(ctx, tx).First(&t, "LOWER(cve) = LOWER(?)", id).Error
 
 	return t, err
 }
@@ -49,7 +49,7 @@ func (g *cveRepository) GetAllCVEsID(ctx context.Context, tx *gorm.DB) ([]string
 
 func (g *cveRepository) FindAll(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
-	err := g.GetDB(ctx, tx).Find(&cves, "cve IN ?", cveIDs).Error
+	err := g.GetDB(ctx, tx).Find(&cves, "LOWER(cve) IN ?", utils.ToLowerSlice(cveIDs)).Error
 	return cves, err
 }
 
@@ -167,18 +167,18 @@ func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageI
 
 func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) (models.CVE, error) {
 
-	var cves models.CVE
+	var cve models.CVE
 
 	q := g.GetDB(ctx, tx).Model(&models.CVE{})
 
-	q = q.Where("cve = ?", cveID)
+	q = q.Where("LOWER(cve) = LOWER(?)", cveID)
 
-	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cves).Error
+	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cve).Error
 	if err != nil {
 		return models.CVE{}, err
 	}
 
-	return cves, nil
+	return cve, nil
 }
 
 // this method is used inside the risk_daemon to get all cves.
@@ -186,8 +186,7 @@ func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) 
 // create your own method if you need preloading.
 func (g *cveRepository) FindCVEs(ctx context.Context, tx *gorm.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
-
-	err := g.GetDB(ctx, tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
+	err := g.GetDB(ctx, tx).Where("LOWER(cve) IN ?", utils.ToLowerSlice(cveIds)).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
 
@@ -266,8 +265,8 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 		if batch[i].CISAActionDue != nil {
 			actionDues[i] = time.Time(*batch[i].CISAActionDue).Format("2006-01-02")
 		}
-		requiredActions[i] = batch[i].CISARequiredAction
-		vulnNames[i] = batch[i].CISAVulnerabilityName
+		requiredActions[i] = *batch[i].CISARequiredAction
+		vulnNames[i] = *batch[i].CISAVulnerabilityName
 	}
 
 	sql := `UPDATE cves SET
