@@ -933,9 +933,7 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 						slog.Warn("Info source has multiple parents, which should not happen in a well-formed graph. This may lead to incorrect path results.", "infoSourceID", parentID, "parentArtifacts", parentArtifact)
 					}
 
-					if !slices.ContainsFunc(parentArtifact, func(artifact string) bool {
-						return artifact == g.ScopeID
-					}) {
+					if !slices.Contains(parentArtifact, g.ScopeID) {
 						// parent artifact is not the one we scoped to, so skip this path
 						continue
 					}
