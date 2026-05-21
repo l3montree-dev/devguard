@@ -59,7 +59,6 @@ All notable changes to this project will be documented in this file.
 - Integration tests for scoped SBOM scans with artifact-specific vulnerabilities
 - OpenTelemetry spans on vulndb `ImportRC` and `checkIfTokenIsValid`, including retry attributes
 - Dedicated health-check database connection; db-stats logging on failing health checks
-- `DEBUG_LOCAL_ZIP` support for local vulndb development
 
 ### Changed
 
