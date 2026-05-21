@@ -2,6 +2,98 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.2] - 2026-05-20
+
+### Fixed
+
+- SBOM graph normalization panicked when a component had multiple info-source parents — multi-parent cases are now handled
+- Cascade delete for `github_app_installations` and `artifact_license_risks` — installations and license risks are removed when their parent records are deleted (migration uses the correct `license_risk_id` column name)
+- **Web:** PDF download path; autosetup loading state on failure
+
+### Added
+
+- `DisablePublicRequest` middleware to enforce the public-request toggle at the route level, with router tests verifying it is applied to the intended endpoints
+
+### Contributors (Web)
+
+[@seb-kw](https://github.com/seb-kw); external: [@resolvicomai](https://github.com/resolvicomai) (Mauro Marques Filho) — autosetup fix
+
+## [v1.4.1] - 2026-05-19
+
+### Fixed
+
+- Nil pointer dereference in `asset_version_service`
+- **Web:** last-active-org redirect: SSR hydration mismatch, localStorage placeholder-org guards, session update on org registration; streaming-chunk buffering for newline-delimited JSON parsing; SBOM/SARIF order in the own-scanner upload flow
+
+### Changed
+
+- **Web:** CVE marked optional on vulnerability views (matches backend foreign-key removal); lightmode severity colors adjusted for contrast
+
+### Contributors (Web)
+
+[@timbastin](https://github.com/timbastin), [@refoo0](https://github.com/refoo0), [@juliankepka](https://github.com/juliankepka)
+
+## [v1.4.0] - 2026-05-19
+
+### Added
+
+- VulnDB v2 — Rewrite of the vulnerability database pipeline. The published vulndb image is now a single streaming bundle of gob-encoded, zst-compressed files (CVEs, affected components, CVE relationships, EPSS, CISA KEV, exploits, malicious packages) instead of multiple data sources fetched at runtime
+- Quick-diff incremental updates — VulnDB clients apply only the rows that changed since the last sync via a stage-table EXCEPT-based diff, with a streaming fallback if quick-diff fails and a monitoring alert when it does
+- Streaming imports — Streaming transformers pipe gob files into PostgreSQL using buffered channels and bulk inserts; staging tables are flushed once per stream; index rebuild is triggered if the local vulndb is older than 7 days
+- Embedded vulndb cosign public key — The cosign pubkey used to verify the vulndb image is embedded in the DevGuard binary; content-hash columns added to malicious packages and exploits for integrity verification
+- Crowdsourced VEX — Recommendation algorithm with project-based recommendations, vote keying, VEX rules included in recommendation output, and matching DTOs
+- Deep search — Search endpoint that returns projects together with their subprojects and assets in a single query
+- Admin instance settings — Endpoint and middleware to read and update instance-level settings; `DISABLE_ORG_CREATION` config option for single-organization deployments
+- OCI proxy hardening — SSRF protection for the public OCI dependency proxy; path-parameter validation; GitLab registry support; public kill switch via the `DisablePublicRequest` middleware
+- User-agent propagation — User agent threaded through controllers, services, and integrations (events, license decisions, Jira); `user_agent` column on the events table; MCP-server `CreateEvent` calls are tagged accordingly
+- Fixable CVSS counts in risk statistics; risk calculation uses the highest risk per CVE/PURL pair
+- Daemon pipeline timeout raised to 2 hours to surface stuck imports instead of blocking the queue
+- Integration tests for scoped SBOM scans with artifact-specific vulnerabilities
+- OpenTelemetry spans on vulndb `ImportRC` and `checkIfTokenIsValid`, including retry attributes
+- Dedicated health-check database connection; db-stats logging on failing health checks
+- `DEBUG_LOCAL_ZIP` support for local vulndb development
+
+### Changed
+
+- VulnDB export now writes a single zip of gob files with deterministic ordering and timestamp consistency between OSV CSV and stored records; checksum is computed after import and the `modified_id.csv` file is mirrored on fetch
+- VulnDB import: parallel work and on-the-fly table truncation; only reachable CVEs are stored; CISA KEV and EPSS enrichment is deterministic and applied directly (no relationship expansion); tie-breaker added for CISA KEV import
+- `cves` table — surrogate ID column added; primary key on the old text column dropped; CISA and EPSS values are part of the table checksum
+- CVE references on `dependency_vulns` and `vex_rules` are now nullable, allowing rows to survive a CVE wipe
+- `ProjectAssetDTO` field renamed from `type` to `resourceType` (queries updated accordingly)
+- Vulnerability state update no longer filters by `deleted_at` when selecting the last event; legacy `fixed`/`reopened` system events from the `system` user are deleted and state is rebuilt
+- Down migrations removed — migrations are forward-only
+- Dependencies updated; `go-git` bumped to a non-vulnerable version; Python `urllib3` patched to 2.7.0
+- Docker Compose `try-it`: corrected image versions, added `tmpfs` mounts for `/run/postgresql`, `uid`/`gid` flags added
+
+### Fixed
+
+- SBOM graph path finding — extends through component parents and respects scope during path resolution; nil check added after the termination-condition change
+- Incremental import silently skipping new CVEs with stale modified timestamps
+- Partial imports not applying EPSS and CISA KEV data
+- Exploits table being wiped via cascade delete — exploits are retained and CVE-affected-components are deleted dynamically with a scoped cleanup job
+- Migration hanging; migration connection leakage
+- Integrity verification failing because of missing EPSS values
+- Quickdiff fallback running on the original (poisoned) transaction; now uses a new transaction
+- "Cannot scan NULL to string" error during vulndb import
+- Duplicate entries in `failingTables` during integrity validation
+- VulnDB queries are case-insensitive
+- Wrong HTTP status code on a public endpoint
+- Preallocated-slice bug in vulndb export
+- Defer rollback bug; orphan CVE entries left in the database after import
+
+### Web
+
+- **Added:** Reactour-based guided tours and help center (org settings + three more flows); DocDrawer component for inline docs; tools dropdown (package inspector, vulnerability database); subgroups + assets shown in one list with active-state search (min. 3 chars); collapsible group headers in the risk assessment feed; AI-applied actions indicated on event messages (uses `userAgent` from backend); crowdsourced VEX display; share VEX/SBOM option in the "Share your…" modal; last active org remembered across sessions; quickfix badges and CVSS quickfix variants; tooltip on recommendations; robots.txt; mobile support page; Umami tracking on help center, tours, and docu
+- **Changed:** Glacier theme refined and set as default; CSS consolidated into semantic tokens with new `--grid-line-color`; client-side fetching used for the landing-page tunnel; `devguard-landing-page-tunnel` added; member-invite form cleared after success; copyright year bump; Next.js → 15.5.18, lodash refreshed
+- **Fixed:** Welcome modal logo and white-on-white image bug; inner-scrollbar issue replaced by a fully scrollable modal; skeleton loader consistency on org/project lists; VEX modal manual button and column alignment; misc border, spacing, and icon cleanup; help dropdown Umami location
+
+### Contributors
+
+Thanks to everyone who contributed to this release:
+[@timbastin](https://github.com/timbastin), [@Hubtrick-Git](https://github.com/Hubtrick-Git), [@Dboy0ZDev](https://github.com/Dboy0ZDev), [@refoo0](https://github.com/refoo0), [@seb-kw](https://github.com/seb-kw), [@juliankepka](https://github.com/juliankepka), [@5byuri](https://github.com/5byuri)
+
+Special thanks to external contributors [@gauravshinde1729](https://github.com/gauravshinde1729) for the OCI proxy SSRF hardening and kill switch, and [@mine-13-zoom](https://github.com/mine-13-zoom) for the admin org-settings endpoint.
+
 ## [v1.3.1] - 2026-04-28
 
 ### Fixed
@@ -46,7 +138,7 @@ All notable changes to this project will be documented in this file.
 ### Contributors
 
 Thanks to everyone who contributed to this release:
-[@timbastin](https://github.com/timbastin), [@Hubtrick-Git](https://github.com/Hubtrick-Git), [@refoo0](https://github.com/refoo0), [@Dboy0ZDev](https://github.com/Dboy0ZDev), [@seb-kw](https://github.com/seb-kw), [@5byuri](https://github.com/5byuri), [@l3monKenji](https://github.com/l3monKenji)
+[@timbastin](https://github.com/timbastin), [@Hubtrick-Git](https://github.com/Hubtrick-Git), [@refoo0](https://github.com/refoo0), [@Dboy0ZDev](https://github.com/Dboy0ZDev), [@seb-kw](https://github.com/seb-kw), [@5byuri](https://github.com/5byuri), [@juliankepka](https://github.com/juliankepka)
 
 Special thanks to the external contributor [@gauravshinde1729](https://github.com/gauravshinde1729) for fixing VEX rules for direct dependencies!
 
@@ -240,7 +332,12 @@ This is the first stable release of DevGuard. It marks the transition from the `
 - GitLab ticket links using un-slugified refs
 - Various database constraint and migration errors
 
-[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.2.3...main
+[unstable]: https://github.com/l3montree-dev/devguard/compare/v1.4.2...main
+[v1.4.2]: https://github.com/l3montree-dev/devguard/compare/v1.4.1...v1.4.2
+[v1.4.1]: https://github.com/l3montree-dev/devguard/compare/v1.4.0...v1.4.1
+[v1.4.0]: https://github.com/l3montree-dev/devguard/compare/v1.3.1...v1.4.0
+[v1.3.1]: https://github.com/l3montree-dev/devguard/compare/v1.3.0...v1.3.1
+[v1.3.0]: https://github.com/l3montree-dev/devguard/compare/v1.2.3...v1.3.0
 [v1.2.3]: https://github.com/l3montree-dev/devguard/compare/v1.2.2...v1.2.3
 [v1.2.2]: https://github.com/l3montree-dev/devguard/compare/v1.2.1...v1.2.2
 [v1.2.1]: https://github.com/l3montree-dev/devguard/compare/v1.2.0...v1.2.1
