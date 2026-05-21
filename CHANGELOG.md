@@ -52,7 +52,7 @@ All notable changes to this project will be documented in this file.
 - Crowdsourced VEX — Recommendation algorithm with project-based recommendations, vote keying, VEX rules included in recommendation output, and matching DTOs
 - Deep search — Search endpoint that returns projects together with their subprojects and assets in a single query
 - Admin instance settings — Endpoint and middleware to read and update instance-level settings; `DISABLE_ORG_CREATION` config option for single-organization deployments
-- OCI proxy hardening — SSRF protection for the public OCI dependency proxy; path-parameter validation; GitLab registry support; public kill switch via the `DisablePublicRequest` middleware
+- OCI proxy hardening — SSRF protection for the public OCI dependency proxy; path-parameter validation; GitLab registry support;
 - User-agent propagation — User agent threaded through controllers, services, and integrations (events, license decisions, Jira); `user_agent` column on the events table; MCP-server `CreateEvent` calls are tagged accordingly
 - Fixable CVSS counts in risk statistics; risk calculation uses the highest risk per CVE/PURL pair. This builds upon the QuickFix Algoritm (https://docs.devguard.org/explanations/supply-chain-security/transitive-vulnerability-path-analysis/)
 - Daemon pipeline timeout raised to 2 hours to surface stuck imports instead of blocking the queue
