@@ -73,7 +73,7 @@ All notable changes to this project will be documented in this file.
 - Exploits table being wiped via cascade delete — exploits are retained and CVE-affected-components are deleted dynamically with a scoped cleanup job
 - Migration hanging; migration connection leakage
 - Integrity verification failing because of missing EPSS values
-- Quickdiff fallback running on the original (poisoned) transaction; now uses a new transaction
+- Quick-diff fallback running on the original (poisoned) transaction; now uses a new transaction
 - "Cannot scan NULL to string" error during vulndb import
 - Duplicate entries in `failingTables` during integrity validation
 - VulnDB queries are case-insensitive
