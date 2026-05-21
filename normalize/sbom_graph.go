@@ -157,7 +157,7 @@ func validateVexReportOpenVEX(report *ov.VEX) error {
 	if report.Author == "" {
 		return fmt.Errorf("invalid OpenVEX report: missing author")
 	}
-	if report.Timestamp.IsZero() {
+	if report.Timestamp != nil && report.Timestamp.IsZero() {
 		return fmt.Errorf("invalid OpenVEX report: missing timestamp")
 	}
 	if report.Version == 0 {

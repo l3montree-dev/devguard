@@ -847,7 +847,7 @@ func TestParseVEXRulesInBOM_ComponentPurlWithEncodedAtSign(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
-func TestParseVEXRulesFromOpenVEXReport(t *testing.T) {
+func TestParseVEXRulesFromOpenVEXReport_SelectValidProductID(t *testing.T) {
 	assetID := uuid.New()
 	service := NewVEXRuleService(nil, nil, nil)
 
@@ -947,7 +947,7 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 						Name: "CVE-2024-1111",
 					},
 					Status:        ov.StatusNotAffected,
-					Justification: "component_not_present",
+					Justification: ov.ComponentNotPresent,
 					Products: []ov.Product{
 						{
 							Component: ov.Component{
@@ -965,7 +965,7 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 						Name: "CVE-2024-2222",
 					},
 					Status:        ov.StatusNotAffected,
-					Justification: "component_not_present",
+					Justification: ov.ComponentNotPresent,
 					Products: []ov.Product{
 						{
 							Component: ov.Component{
@@ -990,6 +990,24 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 						},
 					},
 				},
+				{
+					ID: "stmt-3",
+					Vulnerability: ov.Vulnerability{
+						Name: "CVE-2024-3333",
+					},
+					Status:          ov.StatusAffected,
+					ActionStatement: "Update",
+					Products: []ov.Product{
+						{
+							Component: ov.Component{
+								ID: "pkg:golang/app@1.0",
+								Identifiers: map[ov.IdentifierType]string{
+									ov.PURL: "pkg:golang/app@1.0",
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -998,12 +1016,15 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 	assert.NoError(t, err)
 
 	expected := []struct {
-		cve  string
-		path []string
+		cve                     string
+		path                    []string
+		mechanicalJustification string
+		eventType               dtos.VulnEventType
 	}{
-		{cve: "CVE-2024-1111", path: []string{"pkg:golang/app@1.0"}},
-		{cve: "CVE-2024-2222", path: []string{"pkg:golang/lib@2.0", dtos.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}},
-		{cve: "CVE-2024-2222", path: []string{"pkg:golang/app@1.0"}},
+		{cve: "CVE-2024-1111", path: []string{"pkg:golang/app@1.0"}, mechanicalJustification: string(ov.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-2222", path: []string{"pkg:golang/lib@2.0", dtos.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}, mechanicalJustification: string(ov.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-2222", path: []string{"pkg:golang/app@1.0"}, mechanicalJustification: string(ov.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-3333", path: []string{"pkg:golang/app@1.0"}, mechanicalJustification: "", eventType: dtos.EventTypeComment},
 	}
 
 	assert.Len(t, rules, len(expected), "number of generated rules should match expected")
@@ -1011,6 +1032,8 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 	// We check by order, results and expected results have to line up for this test
 	for i, exp := range expected {
 		assert.Equal(t, exp.path, []string(rules[i].PathPattern), "path pattern for %s", exp.cve)
+		assert.Equal(t, exp.mechanicalJustification, string(rules[i].MechanicalJustification), "justification for %s", exp.cve)
+		assert.Equal(t, exp.eventType, rules[i].EventType, "eventType for %s", exp.cve)
 	}
 }
 
