@@ -545,7 +545,6 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 			var err error
 			var componentPurl packageurl.PackageURL
 			if product.Identifiers != nil && product.Identifiers[ov.PURL] != "" {
-				fmt.Println(product.Identifiers[ov.PURL])
 				componentPurl, err = packageurl.FromString(product.Identifiers[ov.PURL])
 			} else if product.ID != "" {
 				componentPurl, err = packageurl.FromString(product.ID)
@@ -559,7 +558,14 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 				continue
 			}
 
-			justification := statement.ImpactStatement
+			var justification string
+			switch statement.Status {
+			case ov.StatusAffected:
+				justification = statement.ActionStatement
+			case ov.StatusNotAffected:
+				justification = statement.ImpactStatement
+			}
+
 			mechanicalJustification := dtos.MechanicalJustificationType(statement.Justification)
 
 			eventType, err := mapOpenVEXToEventType(&statement)
@@ -574,7 +580,7 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 				componentPurlStr = componentPurl.String()
 			}
 
-			if product.Subcomponents != nil {
+			if len(product.Subcomponents) > 0 {
 				for _, subcomponent := range product.Subcomponents {
 					var subcomponentPurl packageurl.PackageURL
 					subcomponentPurl, err = packageurl.FromString(subcomponent.ID)
@@ -632,9 +638,12 @@ func mapOpenVEXToEventType(s *ov.Statement) (dtos.VulnEventType, error) {
 	case ov.StatusNotAffected:
 		return dtos.EventTypeFalsePositive, nil
 	case ov.StatusAffected:
-		return dtos.EventTypeAccepted, nil
+		if s.ActionStatement != "" {
+			return dtos.EventTypeComment, nil
+		}
+		return "", fmt.Errorf("vulnerability analysis state is exploitable, no event type mapping")
 	default:
-		return "", fmt.Errorf("unknown vulnerability analysis state: %s", s.Status)
+		return "", fmt.Errorf("unsupported OpenVEX vulnerability analysis state: %s", s.Status)
 	}
 }
 

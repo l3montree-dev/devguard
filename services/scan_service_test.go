@@ -332,7 +332,7 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 		}
 
 		calls := 0
-		downloadRawFileFn = func(owner, repo, branch, filePath string) ([]byte, error) {
+		downloadRawFileFn = func(ctx context.Context, owner, repo, branch, filePath string) ([]byte, error) {
 			calls++
 			assert.Equal(t, "octo-org", owner)
 			assert.Equal(t, "openvex-repo", repo)
@@ -390,7 +390,7 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 		}
 
 		calls := 0
-		downloadRawFileFn = func(owner, repo, branch, filePath string) ([]byte, error) {
+		downloadRawFileFn = func(ctx context.Context, owner, repo, branch, filePath string) ([]byte, error) {
 			calls++
 			assert.Equal(t, "octo-org", owner)
 			assert.Equal(t, "multi-vex-repo", repo)

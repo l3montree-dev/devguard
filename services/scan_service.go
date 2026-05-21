@@ -68,7 +68,10 @@ type scanService struct {
 }
 
 var newGitHubClient = func() *github.Client {
-	return github.NewClient(nil)
+	return github.NewClient(&http.Client{
+		Transport: utils.EgressTransport,
+		Timeout:   10 * time.Minute,
+	})
 }
 
 var downloadRawFileFn = DownloadRawFile
@@ -877,10 +880,6 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 
 func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL string) (vexReports []*normalize.VexReportOpenVEX, err error) {
 	client := newGitHubClient()
-	githubDomain := "https://github.com"
-	if !strings.HasPrefix(targetURL, githubDomain) {
-		return nil, fmt.Errorf("invalid github repository url")
-	}
 	owner, repo, err := ParseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
@@ -918,6 +917,7 @@ func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL stri
 		}
 
 		content, err := downloadRawFileFn(
+			ctx,
 			owner,
 			repo,
 			branch,
@@ -947,11 +947,23 @@ func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
 	if err != nil {
 		return "", "", err
 	}
+	const githubDomain = "github.com"
+	if u.Host != githubDomain {
+		return "", "", fmt.Errorf("invalid github repository url")
+	}
 	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	return parts[0], parts[1], nil
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid github repository url path: expected /{owner}/{repo}, got %q", u.Path)
+	}
+	owner = parts[0]
+	repo = strings.TrimSuffix(parts[1], ".git")
+	if owner == "" || repo == "" {
+		return "", "", fmt.Errorf("invalid github repository url path: expected non-empty owner and repo, got %q", u.Path)
+	}
+	return owner, repo, nil
 }
 
-func DownloadRawFile(owner, repo, branch, filePath string) ([]byte, error) {
+func DownloadRawFile(ctx context.Context, owner, repo, branch, filePath string) ([]byte, error) {
 
 	rawURL := fmt.Sprintf(
 		"https://raw.githubusercontent.com/%s/%s/%s/%s",
@@ -960,11 +972,25 @@ func DownloadRawFile(owner, repo, branch, filePath string) ([]byte, error) {
 		branch,
 		filePath,
 	)
-	resp, err := http.Get(rawURL)
+	resp, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
-
+	switch resp.Response.StatusCode {
+	case http.StatusOK:
+		file, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("401 Unauthorized")
+		}
+		return file, nil
+	case http.StatusNotFound:
+		return nil, fmt.Errorf("404 Source not found")
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("401 Unauthorized")
+	case http.StatusInternalServerError:
+		return nil, fmt.Errorf("500 Internal Server error")
+	default:
+		return nil, fmt.Errorf("Unexpected status: %d\n", resp.Response.StatusCode)
+	}
 }
