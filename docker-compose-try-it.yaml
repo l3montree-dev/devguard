@@ -12,7 +12,7 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.4.0
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.4.2
     shm_size: 1g
     container_name: devguard-postgres
     security_opt:
