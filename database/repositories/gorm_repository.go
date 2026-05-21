@@ -234,10 +234,10 @@ WHERE NOT EXISTS (SELECT artifact_dependency_vulns.dependency_vuln_id FROM artif
 DELETE FROM license_risks lr
 WHERE NOT EXISTS (SELECT artifact_license_risks.license_risk_id FROM artifact_license_risks WHERE artifact_license_risks.license_risk_id = lr.id);
 
--- Clean up artifact root nodes (component_id IS NULL, dependency_id LIKE 'artifact:%')
+-- Clean up artifact root nodes (component_id = 'ROOT', dependency_id LIKE 'artifact:%')
 -- where the artifact no longer exists
 DELETE FROM component_dependencies cd
-WHERE cd.component_id IS NULL
+WHERE cd.component_id = 'ROOT'
 AND cd.dependency_id LIKE 'artifact:%'
 AND NOT EXISTS (
     SELECT 1 FROM artifacts a

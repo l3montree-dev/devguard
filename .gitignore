@@ -33,3 +33,4 @@ cache
 CLAUDE.md
 .claudeignore
 result
+instance_admin_pub_key_new.pem
