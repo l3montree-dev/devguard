@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- VulnDB v2 — Rewrite of the vulnerability database pipeline. The published vulndb image is now a single streaming bundle of gob-encoded, zst-compressed files (CVEs, affected components, CVE relationships, EPSS, CISA KEV, exploits, malicious packages) instead of multiple data sources fetched at runtime
+- VulnDB v2 — Complete rewrite of the vulnerability database pipeline. The published VulnDB image is now distributed as a single streaming bundle of gob-encoded, Zstandard-compressed datasets (CVEs, affected components, CVE relationships, EPSS, CISA KEV, exploits, and malicious packages), replacing the previous model of fetching multiple data sources at runtime. In addition, every table is checksummed during the GitHub Actions build process, and the resulting artifact embeds metadata containing these checksums. After both quick-diff and full streaming imports, integrity is verified by ensuring the imported state matches the original build output using Merkle-tree-based validation.
 - Quick-diff incremental updates — VulnDB clients apply only the rows that changed since the last sync via a stage-table EXCEPT-based diff, with a streaming fallback if quick-diff fails and a monitoring alert when it does
 - Streaming imports — Streaming transformers pipe gob files into PostgreSQL using buffered channels and bulk inserts; staging tables are flushed once per stream; index rebuild is triggered if the local vulndb is older than 7 days
 - Embedded vulndb cosign public key — The cosign pubkey used to verify the vulndb image is embedded in the DevGuard binary; content-hash columns added to malicious packages and exploits for integrity verification
