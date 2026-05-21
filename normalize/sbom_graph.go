@@ -1846,7 +1846,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 	dependencyMap := make(map[string][]string, len(components))
 	for _, c := range components {
 		parentID := c.GetDependentID()
-		if parentID == "" {
+		if parentID == "ROOT" {
 			parentID = GraphRootNodeID
 		}
 		dependencyMap[parentID] = append(dependencyMap[parentID], c.GetID())
