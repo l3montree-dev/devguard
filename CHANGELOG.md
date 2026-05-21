@@ -23,7 +23,15 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Nil pointer dereference in `asset_version_service`
-- **Web:** last-active-org redirect: SSR hydration mismatch, localStorage placeholder-org guards, session update on org registration; streaming-chunk buffering for newline-delimited JSON parsing; SBOM/SARIF order in the own-scanner upload flow
+#### API
+- Nil pointer dereference in `asset_version_service`
+
+#### Web
+- last-active-org redirect: SSR hydration mismatch
+- localStorage placeholder-org guards, session update on org registration
+- streaming-chunk buffering for newline-delimited JSON parsing
+- SBOM/SARIF order in the own-scanner upload flow
+
 
 ### Changed
 
