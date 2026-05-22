@@ -89,7 +89,7 @@ func replayHistoricalEvents(dependencyVulns []models.DependencyVuln) []models.De
 	return dependencyVulns
 }
 
-var fixedEvents = []dtos.VulnEventType{
+var remediationEvents = []dtos.VulnEventType{
 	dtos.EventTypeAccepted,
 	dtos.EventTypeFixed,
 	dtos.EventTypeFalsePositive,
@@ -133,7 +133,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type IN ? AND prev_type IN ?;`, append(fixedEvents, openEvents...), assetVersionName, assetID, fixedEvents, openEvents).Find(&results).Error
+WHERE type IN ? AND prev_type IN ?;`, append(remediationEvents, openEvents...), assetVersionName, assetID, remediationEvents, openEvents).Find(&results).Error
 	} else {
 		err = r.db.Raw(`
 WITH events AS (
@@ -167,7 +167,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type IN ? AND prev_type IN ?;`, artifactName, append(fixedEvents, openEvents...), assetVersionName, assetID, fixedEvents, openEvents).Find(&results).Error
+WHERE type IN ? AND prev_type IN ?;`, artifactName, append(remediationEvents, openEvents...), assetVersionName, assetID, remediationEvents, openEvents).Find(&results).Error
 	}
 
 	return results, err
@@ -206,7 +206,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type IN ? AND prev_type IN ?;`, releaseID, append(fixedEvents, openEvents...), fixedEvents, openEvents).Find(&results).Error
+WHERE type IN ? AND prev_type IN ?;`, releaseID, append(remediationEvents, openEvents...), remediationEvents, openEvents).Find(&results).Error
 	return results, err
 }
 
@@ -624,29 +624,28 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
 		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS high_cvss_average,
 		COALESCE(EXTRACT(EPOCH FROM AVG(fixing_time) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS critical_cvss_average
 	FROM
-		intervals;`, append(fixedEvents, openEvents...), orgID, openEvents, openEvents, openEvents, openEvents).Find(&averages).Error
+		intervals;`, append(remediationEvents, openEvents...), orgID, openEvents, openEvents, openEvents, openEvents).Find(&averages).Error
 	return averages, err
 }
 
+// calculate the distribution of how dependency vulns are handled inside an org
+// to achieve this, the query uses the latest (remediation) event per vuln
 func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error) {
 	rows := []dtos.RemediationTypeDistributionRow{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
-		a.type, 
-		COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
-	FROM 
-		vuln_events a
-	LEFT JOIN 
-		dependency_vulns b ON a.dependency_vuln_id = b.id
-	LEFT JOIN 
-		assets ON b.asset_id = assets.id
-	LEFT JOIN 
-		projects ON projects.id = assets.project_id
-	WHERE 
-		projects.organization_id = ?
-	AND 
-		a.type IN ?
-	GROUP BY a.type;`, orgID, fixedEvents).Find(&rows).Error
+	SELECT ve_filtered.type, 
+	COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() AS percentage
+	FROM projects p
+	JOIN assets a ON a.project_id = p.id
+	JOIN dependency_vulns dv ON dv.asset_id = a.id
+	JOIN LATERAL(
+		SELECT ve.type FROM vuln_events ve 
+		WHERE ve.type IN ?
+		AND ve.dependency_vuln_id = dv.id 
+		ORDER BY ve.created_at DESC 
+		LIMIT 1) as ve_filtered ON TRUE
+	WHERE p.organization_id = ?
+	GROUP BY ve_filtered.type;`, remediationEvents, orgID).Find(&rows).Error
 	return rows, err
 }
 
