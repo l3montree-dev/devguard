@@ -552,23 +552,13 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, t
 func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (time.Duration, error) {
 	var seconds float64
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
-		COALESCE(EXTRACT(EPOCH FROM (AVG(NOW() - published))),0) as seconds
-	FROM (
-			SELECT 
-				b.id, MAX(b.published) as published
-			FROM 
-				component_dependencies a 
-			LEFT JOIN 
-				components b ON a.dependency_id = b.id
-			LEFT JOIN 
-				assets ON assets.id = a.asset_id
-			LEFT JOIN 
-				projects ON projects.id = assets.project_id
-			WHERE 
-				projects.organization_id = ?
-			GROUP BY b.id
-		);`, orgID).Find(&seconds).Error
+	SELECT EXTRACT(EPOCH FROM (AVG(NOW() - published))) 
+	FROM components JOIN (
+		SELECT DISTINCT cd.dependency_id FROM projects p
+		JOIN assets a ON a.project_id = p.id
+		JOIN component_dependencies cd ON cd.asset_id = a.id
+		WHERE p.organization_id = ?) as dep
+	ON dep.dependency_id = components.id;;`, orgID).Find(&seconds).Error
 	return time.Duration(seconds), err
 }
 
