@@ -15,15 +15,17 @@
 package services
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"sort"
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -297,62 +299,67 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 }
 
 func TestFetchOpenVexFromGitHub(t *testing.T) {
-	originalNewGitHubClient := newGitHubClient
 	originalDownloadRawFileFn := downloadRawFileFn
 	t.Cleanup(func() {
-		newGitHubClient = originalNewGitHubClient
 		downloadRawFileFn = originalDownloadRawFileFn
 	})
 
-	t.Run("should fetch openvex reports from json files in the repository", func(t *testing.T) {
-		mockGitHub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch {
-			case r.Method == http.MethodGet && r.URL.Path == "/repos/octo-org/openvex-repo":
-				_, _ = w.Write([]byte(`{"default_branch":"main"}`))
-			case r.Method == http.MethodGet && r.URL.Path == "/repos/octo-org/openvex-repo/git/trees/main":
-				if got := r.URL.Query().Get("recursive"); got != "1" {
-					t.Fatalf("expected recursive=1, got %q", got)
-				}
-				_, _ = w.Write([]byte(`{"tree":[{"path":"reports/openvex.json","type":"blob"},{"path":"README.md","type":"blob"}]}`))
-			default:
-				t.Fatalf("unexpected github api request: %s %s", r.Method, r.URL.String())
-			}
-		}))
-		defer mockGitHub.Close()
+	newZipResponse := func(t *testing.T, files map[string]string) *http.Response {
+		t.Helper()
 
-		newGitHubClient = func() *github.Client {
-			client := github.NewClient(mockGitHub.Client())
-			baseURL, err := url.Parse(mockGitHub.URL + "/")
+		var buf bytes.Buffer
+		zw := zip.NewWriter(&buf)
+		paths := make([]string, 0, len(files))
+		for filePath := range files {
+			paths = append(paths, filePath)
+		}
+		sort.Strings(paths)
+		for _, filePath := range paths {
+			content := files[filePath]
+			entry, err := zw.Create(filePath)
 			if err != nil {
-				t.Fatalf("failed to parse mock github url: %v", err)
+				t.Fatalf("failed to create zip entry %s: %v", filePath, err)
 			}
-			client.BaseURL = baseURL
-			client.UploadURL = baseURL
-			return client
+			if _, err := entry.Write([]byte(content)); err != nil {
+				t.Fatalf("failed to write zip entry %s: %v", filePath, err)
+			}
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatalf("failed to close zip writer: %v", err)
 		}
 
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     make(http.Header),
+			Body:       io.NopCloser(bytes.NewReader(buf.Bytes())),
+		}
+	}
+
+	t.Run("should fetch openvex reports from json files in the repository", func(t *testing.T) {
 		calls := 0
-		downloadRawFileFn = func(ctx context.Context, owner, repo, branch, filePath string) ([]byte, error) {
+		downloadRawFileFn = func(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
 			calls++
 			assert.Equal(t, "octo-org", owner)
 			assert.Equal(t, "openvex-repo", repo)
 			assert.Equal(t, "main", branch)
-			assert.Equal(t, "reports/openvex.json", filePath)
 
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
-			payload := map[string]any{
-				"@context":   "https://openvex.dev/ns/v0.2.0",
-				"@id":        "openvex-1",
-				"author":     "test-author",
-				"timestamp":  ts,
-				"version":    1,
-				"statements": []any{},
-			}
-			return json.Marshal(payload)
+			return newZipResponse(t, map[string]string{
+				"reports/openvex.json": mustMarshalJSON(t, map[string]any{
+					"@context":   "https://openvex.dev/ns/v0.2.0",
+					"@id":        "openvex-1",
+					"author":     "test-author",
+					"timestamp":  ts,
+					"version":    1,
+					"statements": []any{},
+				}),
+				"README.md": "# ignore me",
+			}), nil
 		}
 
 		service := &scanService{}
-		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo")
+		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 1)
 		assert.Equal(t, "https://github.com/octo-org/openvex-repo", reports[0].Source)
@@ -363,65 +370,37 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 	})
 
 	t.Run("should fetch multiple openvex reports from multiple json files", func(t *testing.T) {
-		mockGitHub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch {
-			case r.Method == http.MethodGet && r.URL.Path == "/repos/octo-org/multi-vex-repo":
-				_, _ = w.Write([]byte(`{"default_branch":"develop"}`))
-			case r.Method == http.MethodGet && r.URL.Path == "/repos/octo-org/multi-vex-repo/git/trees/develop":
-				if got := r.URL.Query().Get("recursive"); got != "1" {
-					t.Fatalf("expected recursive=1, got %q", got)
-				}
-				_, _ = w.Write([]byte(`{"tree":[{"path":"vex/vex1.json","type":"blob"},{"path":"vex/vex2.json","type":"blob"},{"path":"README.md","type":"blob"}]}`))
-			default:
-				t.Fatalf("unexpected github api request: %s %s", r.Method, r.URL.String())
-			}
-		}))
-		defer mockGitHub.Close()
-
-		newGitHubClient = func() *github.Client {
-			client := github.NewClient(mockGitHub.Client())
-			baseURL, err := url.Parse(mockGitHub.URL + "/")
-			if err != nil {
-				t.Fatalf("failed to parse mock github url: %v", err)
-			}
-			client.BaseURL = baseURL
-			client.UploadURL = baseURL
-			return client
-		}
-
 		calls := 0
-		downloadRawFileFn = func(ctx context.Context, owner, repo, branch, filePath string) ([]byte, error) {
+		downloadRawFileFn = func(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
 			calls++
 			assert.Equal(t, "octo-org", owner)
 			assert.Equal(t, "multi-vex-repo", repo)
 			assert.Equal(t, "develop", branch)
 
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
-			var id, author string
-			switch filePath {
-			case "vex/vex1.json":
-				id = "openvex-first"
-				author = "author-one"
-			case "vex/vex2.json":
-				id = "openvex-second"
-				author = "author-two"
-			default:
-				t.Fatalf("unexpected file path: %s", filePath)
-			}
-
-			payload := map[string]any{
-				"@context":   "https://openvex.dev/ns/v0.2.0",
-				"@id":        id,
-				"author":     author,
-				"timestamp":  ts,
-				"version":    1,
-				"statements": []any{},
-			}
-			return json.Marshal(payload)
+			return newZipResponse(t, map[string]string{
+				"vex/vex1.json": mustMarshalJSON(t, map[string]any{
+					"@context":   "https://openvex.dev/ns/v0.2.0",
+					"@id":        "openvex-first",
+					"author":     "author-one",
+					"timestamp":  ts,
+					"version":    1,
+					"statements": []any{},
+				}),
+				"vex/vex2.json": mustMarshalJSON(t, map[string]any{
+					"@context":   "https://openvex.dev/ns/v0.2.0",
+					"@id":        "openvex-second",
+					"author":     "author-two",
+					"timestamp":  ts,
+					"version":    1,
+					"statements": []any{},
+				}),
+				"README.md": "# ignore me",
+			}), nil
 		}
 
 		service := &scanService{}
-		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo")
+		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 2)
 		assert.Equal(t, "https://github.com/octo-org/multi-vex-repo", reports[0].Source)
@@ -430,14 +409,23 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 		assert.Equal(t, "openvex-second", reports[1].Report.ID)
 		assert.Equal(t, "author-one", reports[0].Report.Author)
 		assert.Equal(t, "author-two", reports[1].Report.Author)
-		assert.Equal(t, 2, calls)
+		assert.Equal(t, 1, calls)
 	})
 
 	t.Run("should reject non github urls", func(t *testing.T) {
 		service := &scanService{}
-		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://example.com/repo")
+		reports, err := service.FetchOpenVexFromGitHub(context.Background(), "https://example.com/repo", "")
 		assert.Error(t, err)
 		assert.Nil(t, reports)
 		assert.Contains(t, err.Error(), "invalid github repository url")
 	})
+}
+
+func mustMarshalJSON(t *testing.T, value any) string {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("failed to marshal json: %v", err)
+	}
+	return string(data)
 }
