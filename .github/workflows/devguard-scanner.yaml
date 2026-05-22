@@ -1,7 +1,7 @@
 # DevSecOps Workflow Definition
 # This workflow is triggered on every push to the repository
 
-# Test 1
+# Test 2
 
 name: DevGuard-Workflow
 
