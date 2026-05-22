@@ -387,13 +387,13 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, t
 	components := []dtos.ComponentUsageAcrossOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.dependency_id as purl, 
-	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
+	COUNT(DISTINCT (a.asset_id)) AS total_amount
 	FROM component_dependencies a
-	LEFT JOIN assets b ON a.asset_id = b.id
-	LEFT JOIN projects c ON b.project_id = c.id
+	JOIN assets b ON a.asset_id = b.id
+	JOIN projects c ON b.project_id = c.id
 	WHERE c.organization_id = ?
 	GROUP BY a.dependency_id
-	ORDER BY total_amount DESC
+	ORDER BY total_amount DESC, a.dependency_id ASC
 	LIMIT ?;`, orgID, limit).Find(&components).Error
 	return components, err
 }
@@ -402,14 +402,14 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *g
 	topCVEs := []dtos.CVEOccurrencesAcrossOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.cve_id, 
-	cves.cvss,
-	COUNT(DISTINCT (a.asset_id, a.asset_version_name)) AS total_amount
+	MAX(cves.cvss) as cvss,
+	COUNT(DISTINCT (a.asset_id)) AS total_amount
 	FROM dependency_vulns a
-	LEFT JOIN cves ON cves.cve = a.cve_id
-	LEFT JOIN assets b ON a.asset_id = b.id
-	LEFT JOIN projects c ON b.project_id = c.id
+	JOIN cves ON cves.cve = a.cve_id
+	JOIN assets b ON a.asset_id = b.id
+	JOIN projects c ON b.project_id = c.id
 	WHERE c.organization_id = ?
-	GROUP BY a.cve_id, cves.cvss
+	GROUP BY a.cve_id
 	ORDER BY total_amount DESC, cvss DESC
 	LIMIT ?;`, orgID, limit).Find(&topCVEs).Error
 	return topCVEs, err
