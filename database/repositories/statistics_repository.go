@@ -506,8 +506,8 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 }
 
 // returns the relative and absolute amount of components per ecosystem inside an org
-func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
-	distribution := []dtos.ComponentOccurrenceCount{}
+func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
+	distribution := []dtos.EcosystemUsage{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT ecosystem, COUNT(*) as absolute, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage
 	FROM (

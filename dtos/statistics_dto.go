@@ -151,15 +151,10 @@ type ProjectVulnCountAverageBySeverity struct {
 	CVSSCriticalAverage float32 `json:"cvssCriticalAverage" gorm:"column:cvss_critical_average"`
 }
 
-type ComponentOccurrenceCount struct {
-	DependencyID string `gorm:"column:dependency_id"`
-	Count        int    `gorm:"column:count"`
-}
-
 type EcosystemUsage struct {
-	Ecosystem      string  `json:"ecosystem"`
-	TotalCount     int     `json:"totalCount"`
-	RelativeAmount float32 `json:"relativeAmount"`
+	Ecosystem      string  `json:"ecosystem"      gorm:"column:ecosystem"`
+	TotalCount     int     `json:"absoluteAmount" gorm:"column:absolute_amount"`
+	RelativeAmount float32 `json:"relativeAmount" gorm:"column:relative_amount"`
 }
 
 type MaliciousPackageInOrg struct {

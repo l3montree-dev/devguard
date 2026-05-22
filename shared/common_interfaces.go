@@ -577,7 +577,7 @@ type StatisticsRepository interface {
 
 	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (float32, error)
 	GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)
-	GetEcosystemDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
+	GetEcosystemDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	FindMaliciousPackagesInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)
 	GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (time.Duration, error)
 	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
@@ -605,7 +605,7 @@ type StatisticsService interface {
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// CVSS-based average fixing time methods
-	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
+	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 }
 
