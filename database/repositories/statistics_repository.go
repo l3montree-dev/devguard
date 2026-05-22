@@ -505,24 +505,22 @@ func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityIn
 	return projectAverage, err
 }
 
-func (r *statisticsRepository) GetComponentDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+// returns the relative and absolute amount of components per ecosystem inside an org
+func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
 	distribution := []dtos.ComponentOccurrenceCount{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
-    	a.dependency_id,
-    	COUNT(DISTINCT (a.asset_id, a.asset_version_name))
-	FROM 
-		component_dependencies a
-	LEFT JOIN 
-		assets b ON a.asset_id = b.id
-	LEFT JOIN 
-		projects c ON b.project_id = c.id
-	WHERE 
-		c.organization_id = ?
-	GROUP BY 
-		a.dependency_id
-	ORDER BY 
-		count DESC;`, orgID).Find(&distribution).Error
+	SELECT ecosystem, COUNT(*) as absolute, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage
+	FROM (
+		SELECT split_part(split_part(cd.dependency_id, ':', 2), '/', 1) AS ecosystem 	-- extract the ecosystem from the pURL
+		FROM component_dependencies cd
+		JOIN assets a ON cd.asset_id = a.id
+		JOIN projects p ON a.project_id = p.id
+		WHERE p.organization_id = ?
+		AND cd.dependency_id LIKE 'pkg:%'	-- pre filter only for valid purls
+	) sub
+	WHERE ecosystem ~ '^[a-z][a-z0-9+-\.]+$' 	-- lastly filter out any invalid ecosystems (using the official regex)
+	GROUP BY ecosystem
+	ORDER BY count(*) DESC;`, orgID).Find(&distribution).Error
 	return distribution, err
 }
 
@@ -638,11 +636,11 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 	FROM projects p
 	JOIN assets a ON a.project_id = p.id
 	JOIN dependency_vulns dv ON dv.asset_id = a.id
-	JOIN LATERAL(
+	JOIN LATERAL( 						-- lateral join the latest vuln event to each dependency vuln present in the org
 		SELECT ve.type FROM vuln_events ve 
 		WHERE ve.type IN ?
 		AND ve.dependency_vuln_id = dv.id 
-		ORDER BY ve.created_at DESC 
+		ORDER BY ve.created_at DESC  	-- order by created_at + limit 1 to only get the latest
 		LIMIT 1) as ve_filtered ON TRUE
 	WHERE p.organization_id = ?
 	GROUP BY ve_filtered.type;`, remediationEvents, orgID).Find(&rows).Error

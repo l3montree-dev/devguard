@@ -450,7 +450,7 @@ func (s *statisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uui
 		return []dtos.EcosystemUsage{}, nil
 	}
 
-	distribution, err := s.statisticsRepository.GetComponentDistributionInOrg(ctx, nil, orgID)
+	distribution, err := s.statisticsRepository.GetEcosystemDistributionInOrg(ctx, nil, orgID)
 	if err != nil {
 		return nil, err
 	}

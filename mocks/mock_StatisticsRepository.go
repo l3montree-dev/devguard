@@ -628,12 +628,12 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndR
 	return _c
 }
 
-// GetComponentDistributionInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetComponentDistributionInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+// GetEcosystemDistributionInOrg provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
 	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetComponentDistributionInOrg")
+		panic("no return value specified for GetEcosystemDistributionInOrg")
 	}
 
 	var r0 []dtos.ComponentOccurrenceCount
@@ -656,20 +656,20 @@ func (_mock *StatisticsRepository) GetComponentDistributionInOrg(ctx context.Con
 	return r0, r1
 }
 
-// StatisticsRepository_GetComponentDistributionInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetComponentDistributionInOrg'
-type StatisticsRepository_GetComponentDistributionInOrg_Call struct {
+// StatisticsRepository_GetEcosystemDistributionInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEcosystemDistributionInOrg'
+type StatisticsRepository_GetEcosystemDistributionInOrg_Call struct {
 	*mock.Call
 }
 
-// GetComponentDistributionInOrg is a helper method to define mock.On call
+// GetEcosystemDistributionInOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetComponentDistributionInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetComponentDistributionInOrg_Call {
-	return &StatisticsRepository_GetComponentDistributionInOrg_Call{Call: _e.mock.On("GetComponentDistributionInOrg", ctx, tx, orgID)}
+func (_e *StatisticsRepository_Expecter) GetEcosystemDistributionInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
+	return &StatisticsRepository_GetEcosystemDistributionInOrg_Call{Call: _e.mock.On("GetEcosystemDistributionInOrg", ctx, tx, orgID)}
 }
 
-func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -692,12 +692,12 @@ func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Run(run func(
 	return _c
 }
 
-func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) Return(componentOccurrenceCounts []dtos.ComponentOccurrenceCount, err error) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) Return(componentOccurrenceCounts []dtos.ComponentOccurrenceCount, err error) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
 	_c.Call.Return(componentOccurrenceCounts, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetComponentDistributionInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetComponentDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

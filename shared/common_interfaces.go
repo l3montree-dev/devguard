@@ -577,7 +577,7 @@ type StatisticsRepository interface {
 
 	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (float32, error)
 	GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)
-	GetComponentDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
+	GetEcosystemDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
 	FindMaliciousPackagesInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)
 	GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (time.Duration, error)
 	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
