@@ -199,7 +199,7 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	type listIDsRow struct {
 		CVEID     string    `gorm:"column:cve"`
-		CreatedAt time.Time `gorm:"column:date_published" json:"CreatedAt"`
+		CreatedAt time.Time `gorm:"column:date_published"`
 	}
 	type responseDTO struct {
 		Count   int          `json:"total"`
