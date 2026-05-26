@@ -222,34 +222,30 @@ func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(ctx context.C
 	return cves, nil
 }
 
-// TO-DO refactor to dtos
-
+// queries the amount of open vulnerabilities in each severity class (count each component_purl + cve_id once -> take the highest risk score)
 func (r *statisticsRepository) VulnClassificationByOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.Distribution, error) {
 	distribution := dtos.Distribution{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT
-		COUNT(*) filter (where a.raw_risk_assessment < 4) as low,
-		COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as medium,
-		COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as high,
-		COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as critical,
-		COUNT(*) filter (where d.cvss < 4) as low_cvss,
-		COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as medium_cvss,
-		COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as high_cvss,
-		COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as critical_cvss,
-		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low,
-		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium,
-		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high,
-		COUNT(DISTINCT CASE WHEN a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical,
-		COUNT(DISTINCT CASE WHEN d.cvss < 4 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_low_cvss,
-		COUNT(DISTINCT CASE WHEN d.cvss >= 4 AND d.cvss < 7 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_medium_cvss,
-		COUNT(DISTINCT CASE WHEN d.cvss >= 7 AND d.cvss < 9 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_high_cvss,
-		COUNT(DISTINCT CASE WHEN d.cvss >= 9 AND d.cvss <= 10 THEN a.cve_id || '|' || a.component_purl END) as cve_purl_critical_cvss
-	FROM dependency_vulns a
-	LEFT JOIN assets b ON a.asset_id = b.id
-	LEFT JOIN projects c ON b.project_id = c.id
-	LEFT JOIN cves d ON a.cve_id = d.cve
-	WHERE c.organization_id = ?
-	AND a.state = 'open';`, orgID).Find(&distribution).Error
+	SELECT 
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 4 AND sub.raw_risk_assessment < 7) AS medium_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 7 AND sub.raw_risk_assessment < 9) AS high_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 9 AND sub.raw_risk_assessment <= 10) AS critical_risk,
+		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
+	FROM (
+		SELECT DISTINCT ON (dv.component_purl, dv.cve_id)
+			dv.raw_risk_assessment, cves.cvss
+		FROM dependency_vulns dv
+		JOIN cves ON cves.cve = dv.cve_id
+		JOIN assets a ON dv.asset_id = a.id
+		JOIN projects p ON a.project_id = p.id
+		WHERE p.organization_id = ?
+		AND dv.state = 'open'
+		ORDER BY dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
+	) sub;`, orgID).Find(&distribution).Error
 	if err != nil {
 		return distribution, err
 	}
