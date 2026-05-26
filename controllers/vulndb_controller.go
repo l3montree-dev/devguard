@@ -229,10 +229,10 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
 		}
 
-		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ? LIMIT ?;`
+		sql := `SELECT cve,date_published AS created_at FROM cves ORDER BY date_published DESC OFFSET ? LIMIT ?;`
 		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset, limit).Find(&results).Error
 	} else {
-		sql := `SELECT cve,created_at FROM cves ORDER BY created_at DESC OFFSET ?;`
+		sql := `SELECT cve,date_published AS created_at FROM cves ORDER BY date_published DESC OFFSET ?;`
 		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset).Find(&results).Error
 	}
 	if err != nil {
