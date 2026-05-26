@@ -258,7 +258,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	org := shared.GetOrg(ctx)
 
-	orgComponentsLimit, topCVEsLimit, topComponentsLimit, topEcosystemsLimit := evaluateOrgStatisticsParams(ctx)
+	orgComponentsLimit, topCVEsLimit, topComponentsLimit, _ := evaluateOrgStatisticsParams(ctx)
 
 	// test if org is empty
 	amount, err := c.assetVersionRepository.GetAmountOfAssetVersionsInOrg(reqCtx, nil, org.ID)
@@ -349,7 +349,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 			return results, nil
 		},
 		func() (any, error) { // 11: topEcosystems
-			results, err := c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID, topEcosystemsLimit)
+			results, err := c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get top ecosystems: %w", err)
 			}

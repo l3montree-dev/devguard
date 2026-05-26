@@ -415,29 +415,26 @@ func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *g
 	return topCVEs, err
 }
 
+// calculate the average amount of remediation events per week since the org was created (or 1 if younger than 1 week)
 func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error) {
 	averageByType := []dtos.VulnEventAverage{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
-		type, AVG(count) as weekly_average
-	FROM(
-	SELECT
-		weeks.week,
-		types.type,
-		COALESCE(counts.count, 0) AS count
-	FROM
-		(SELECT DISTINCT date_trunc('week', created_at) AS week FROM vuln_events) weeks
-		CROSS JOIN (SELECT DISTINCT type FROM vuln_events) types
-		LEFT JOIN (
-		SELECT date_trunc('week', a.created_at) AS week, a.type, COUNT(*)
-		FROM vuln_events a
-		LEFT JOIN dependency_vulns b ON a.dependency_vuln_id = b.id
-		LEFT JOIN assets c ON b.asset_id = c.id
-		LEFT JOIN projects d ON c.project_id = d.id
-		WHERE d.organization_id = ?
-		GROUP BY week, a.type
-		) counts USING (week, type)
-	) GROUP BY type;`, orgID).Find(&averageByType).Error
+	WITH org_weeks AS ( -- calculate the created at of the org once at the start
+		SELECT GREATEST(EXTRACT(EPOCH FROM (NOW() - created_at)) / 604800, 1) AS weeks -- calculate all weeks since creation (or 1 if less than 1 week)
+		FROM organizations
+		WHERE id = ?
+	)
+	SELECT ve.type,
+		COUNT(*)::float / ow.weeks AS average
+	FROM org_weeks ow
+	CROSS JOIN organizations org
+	JOIN projects p ON p.organization_id = org.id
+	JOIN assets a ON a.project_id = p.id
+	JOIN dependency_vulns dv ON dv.asset_id = a.id
+	JOIN vuln_events ve ON ve.dependency_vuln_id = dv.id
+	WHERE org.id = ?
+	AND ve.type IN ?
+	GROUP BY ve.type, ow.weeks;`, orgID, orgID, remediationEvents).Find(&averageByType).Error
 	return averageByType, err
 }
 

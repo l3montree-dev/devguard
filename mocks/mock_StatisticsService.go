@@ -360,8 +360,8 @@ func (_c *StatisticsService_GetRemediationTimeAveragesForRelease_Call) RunAndRet
 }
 
 // GetTopEcosystemsInOrg provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error) {
-	ret := _mock.Called(ctx, orgID, limit)
+func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
+	ret := _mock.Called(ctx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetTopEcosystemsInOrg")
@@ -369,18 +369,18 @@ func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID
 
 	var r0 []dtos.EcosystemUsage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) ([]dtos.EcosystemUsage, error)); ok {
-		return returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]dtos.EcosystemUsage, error)); ok {
+		return returnFunc(ctx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) []dtos.EcosystemUsage); ok {
-		r0 = returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []dtos.EcosystemUsage); ok {
+		r0 = returnFunc(ctx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.EcosystemUsage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, int) error); ok {
-		r1 = returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -395,12 +395,11 @@ type StatisticsService_GetTopEcosystemsInOrg_Call struct {
 // GetTopEcosystemsInOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-//   - limit int
-func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}, limit interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
-	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID, limit)}
+func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
+	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID)}
 }
 
-func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context.Context, orgID uuid.UUID, limit int)) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context.Context, orgID uuid.UUID)) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -410,14 +409,9 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -428,7 +422,7 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Return(ecosystemUsages [
 	return _c
 }
 
-func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

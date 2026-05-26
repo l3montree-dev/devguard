@@ -124,7 +124,7 @@ type CVEOccurrencesAcrossOrg struct {
 
 type VulnEventAverage struct {
 	VulnEventType VulnEventType `gorm:"column:type"`
-	Average       float32       `gorm:"column:weekly_average"`
+	Average       float32       `gorm:"column:average"`
 }
 
 type AverageVulnEventsPerWeek struct {

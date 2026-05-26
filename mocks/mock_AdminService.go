@@ -229,6 +229,78 @@ func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(orgID uuid.UU
 	return _c
 }
 
+// GetInstanceUsageStatistics provides a mock function for the type AdminService
+func (_mock *AdminService) GetInstanceUsageStatistics(ctx context.Context, tx shared.DB, authClient shared.AdminClient) (dtos.InstanceUsageStatistics, error) {
+	ret := _mock.Called(ctx, tx, authClient)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInstanceUsageStatistics")
+	}
+
+	var r0 dtos.InstanceUsageStatistics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, shared.AdminClient) (dtos.InstanceUsageStatistics, error)); ok {
+		return returnFunc(ctx, tx, authClient)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, shared.AdminClient) dtos.InstanceUsageStatistics); ok {
+		r0 = returnFunc(ctx, tx, authClient)
+	} else {
+		r0 = ret.Get(0).(dtos.InstanceUsageStatistics)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, shared.AdminClient) error); ok {
+		r1 = returnFunc(ctx, tx, authClient)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AdminService_GetInstanceUsageStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstanceUsageStatistics'
+type AdminService_GetInstanceUsageStatistics_Call struct {
+	*mock.Call
+}
+
+// GetInstanceUsageStatistics is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - authClient shared.AdminClient
+func (_e *AdminService_Expecter) GetInstanceUsageStatistics(ctx interface{}, tx interface{}, authClient interface{}) *AdminService_GetInstanceUsageStatistics_Call {
+	return &AdminService_GetInstanceUsageStatistics_Call{Call: _e.mock.On("GetInstanceUsageStatistics", ctx, tx, authClient)}
+}
+
+func (_c *AdminService_GetInstanceUsageStatistics_Call) Run(run func(ctx context.Context, tx shared.DB, authClient shared.AdminClient)) *AdminService_GetInstanceUsageStatistics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 shared.AdminClient
+		if args[2] != nil {
+			arg2 = args[2].(shared.AdminClient)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AdminService_GetInstanceUsageStatistics_Call) Return(instanceUsageStatistics dtos.InstanceUsageStatistics, err error) *AdminService_GetInstanceUsageStatistics_Call {
+	_c.Call.Return(instanceUsageStatistics, err)
+	return _c
+}
+
+func (_c *AdminService_GetInstanceUsageStatistics_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, authClient shared.AdminClient) (dtos.InstanceUsageStatistics, error)) *AdminService_GetInstanceUsageStatistics_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetMailFromUserID provides a mock function for the type AdminService
 func (_mock *AdminService) GetMailFromUserID(ctx context.Context, authClient shared.AdminClient, userID uuid.UUID) (string, error) {
 	ret := _mock.Called(ctx, authClient, userID)

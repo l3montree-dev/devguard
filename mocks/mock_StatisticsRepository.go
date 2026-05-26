@@ -629,23 +629,23 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndR
 }
 
 // GetEcosystemDistributionInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error) {
+func (_mock *StatisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
 	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetEcosystemDistributionInOrg")
 	}
 
-	var r0 []dtos.ComponentOccurrenceCount
+	var r0 []dtos.EcosystemUsage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]dtos.EcosystemUsage, error)); ok {
 		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.ComponentOccurrenceCount); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []dtos.EcosystemUsage); ok {
 		r0 = returnFunc(ctx, tx, orgID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.ComponentOccurrenceCount)
+			r0 = ret.Get(0).([]dtos.EcosystemUsage)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
@@ -692,12 +692,78 @@ func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) Run(run func(
 	return _c
 }
 
-func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) Return(componentOccurrenceCounts []dtos.ComponentOccurrenceCount, err error) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
-	_c.Call.Return(componentOccurrenceCounts, err)
+func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) Return(ecosystemUsages []dtos.EcosystemUsage, err error) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
+	_c.Call.Return(ecosystemUsages, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
+func (_c *StatisticsRepository_GetEcosystemDistributionInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetInstanceUsageStatistics provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetInstanceUsageStatistics(ctx context.Context, tx shared.DB) (dtos.InstanceUsageStatistics, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInstanceUsageStatistics")
+	}
+
+	var r0 dtos.InstanceUsageStatistics
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) (dtos.InstanceUsageStatistics, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) dtos.InstanceUsageStatistics); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		r0 = ret.Get(0).(dtos.InstanceUsageStatistics)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_GetInstanceUsageStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstanceUsageStatistics'
+type StatisticsRepository_GetInstanceUsageStatistics_Call struct {
+	*mock.Call
+}
+
+// GetInstanceUsageStatistics is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *StatisticsRepository_Expecter) GetInstanceUsageStatistics(ctx interface{}, tx interface{}) *StatisticsRepository_GetInstanceUsageStatistics_Call {
+	return &StatisticsRepository_GetInstanceUsageStatistics_Call{Call: _e.mock.On("GetInstanceUsageStatistics", ctx, tx)}
+}
+
+func (_c *StatisticsRepository_GetInstanceUsageStatistics_Call) Run(run func(ctx context.Context, tx shared.DB)) *StatisticsRepository_GetInstanceUsageStatistics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetInstanceUsageStatistics_Call) Return(instanceUsageStatistics dtos.InstanceUsageStatistics, err error) *StatisticsRepository_GetInstanceUsageStatistics_Call {
+	_c.Call.Return(instanceUsageStatistics, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetInstanceUsageStatistics_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) (dtos.InstanceUsageStatistics, error)) *StatisticsRepository_GetInstanceUsageStatistics_Call {
 	_c.Call.Return(run)
 	return _c
 }
