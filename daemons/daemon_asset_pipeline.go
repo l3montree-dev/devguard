@@ -215,7 +215,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 
 				directDependencyFixedVersion, err := runner.fixedVersionResolver.ResolveFixedVersions(purls, *vuln.ComponentFixedVersion)
 				if err != nil {
-					slog.Warn("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
+					slog.Debug("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
 					continue
 				}
 
