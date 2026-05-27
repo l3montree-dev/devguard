@@ -22,16 +22,6 @@ type OrgStructureDistribution struct {
 	AmountOfArtifacts int `json:"numArtifacts" gorm:"column:num_artifacts"`
 }
 
-type VulnDistributionInStructure struct {
-	Name             string  `json:"name" gorm:"column:name"`
-	Slug             string  `json:"slug" gorm:"column:slug"`
-	ProjectSlug      *string `json:"projectSlug" gorm:"column:project_slug"`
-	AssetSlug        *string `json:"assetSlug" gorm:"column:asset_slug"`
-	AssetVersionName *string `json:"assetVersionName" gorm:"column:asset_version_name"`
-
-	Distribution
-}
-
 type Distribution struct {
 	Low      int `json:"low"`
 	High     int `json:"high"`
@@ -72,6 +62,41 @@ type Distribution struct {
 	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCVSS"`
 	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCVSS"`
 	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCVSS"`
+}
+
+type VulnSeverityDistribution struct {
+	Low      int `json:"low"      gorm:"column:low_risk"`
+	Medium   int `json:"medium"   gorm:"column:medium_risk"`
+	High     int `json:"high"     gorm:"column:high_risk"`
+	Critical int `json:"critical" gorm:"column:critical_risk"`
+
+	LowCVSS      int `json:"lowCvss"      gorm:"column:low_cvss"`
+	MediumCVSS   int `json:"mediumCvss"   gorm:"column:medium_cvss"`
+	HighCVSS     int `json:"highCvss"     gorm:"column:high_cvss"`
+	CriticalCVSS int `json:"criticalCvss" gorm:"column:critical_cvss"`
+}
+
+type ProjectVulnDistribution struct {
+	Name string `json:"name" gorm:"column:pname"`
+	Slug string `json:"slug" gorm:"column:pslug"`
+
+	VulnSeverityDistribution
+}
+
+type AssetVulnDistribution struct {
+	Name string `json:"name" gorm:"column:aname"`
+	Slug string `json:"slug" gorm:"column:aslug"`
+
+	VulnSeverityDistribution
+}
+
+type ArtifactVulnDistribution struct {
+	Name             string `json:"name"             gorm:"column:name"`
+	ProjectSlug      string `json:"projectSlug"      gorm:"column:project_slug"`
+	AssetSlug        string `json:"assetSlug"        gorm:"column:asset_slug"`
+	AssetVersionName string `json:"assetVersionName" gorm:"column:asset_version_name"`
+
+	VulnSeverityDistribution
 }
 
 type History struct {
@@ -118,7 +143,7 @@ type ComponentUsageAcrossOrg struct {
 
 type CVEOccurrencesAcrossOrg struct {
 	CVEID            string  `json:"cveID" gorm:"column:cve_id"`
-	CVSS             float32 `json:"cvss" gorm:"cvss"`
+	CVSS             float32 `json:"cvss" gorm:"column:cvss"`
 	TotalAmountInOrg int     `json:"totalAmount" gorm:"column:total_amount"`
 }
 
@@ -153,8 +178,8 @@ type ProjectVulnCountAverageBySeverity struct {
 
 type EcosystemUsage struct {
 	Ecosystem      string  `json:"ecosystem"      gorm:"column:ecosystem"`
-	TotalCount     int     `json:"absoluteAmount" gorm:"column:absolute_amount"`
-	RelativeAmount float32 `json:"relativeAmount" gorm:"column:relative_amount"`
+	TotalCount     int     `json:"absoluteAmount" gorm:"column:absolute"`
+	RelativeAmount float32 `json:"relativeAmount" gorm:"column:percentage"`
 }
 
 type MaliciousPackageInOrg struct {
@@ -176,25 +201,39 @@ type RemediationTypeDistribution struct {
 	FixedPercentage         float64 `json:"fixedPercentage"`
 }
 
+// average remediation times for remediated vulns in org
+// as well as the average age of all non remediated ('open') vulns
 type AverageRemediationTimes struct {
-	LowRiskAverage      float64 `json:"lowRiskAverage" gorm:"column:low_risk_average"`
-	MediumRiskAverage   float64 `json:"mediumRiskAverage" gorm:"column:medium_risk_average"`
-	HighRiskAverage     float64 `json:"highRiskAverage" gorm:"column:high_risk_average"`
-	CriticalRiskAverage float64 `json:"criticalRiskAverage" gorm:"column:critical_risk_average"`
+	// average time until vulns are remediated
+	LowRiskRemediated      float64 `json:"lowRiskRemediated"      gorm:"column:low_risk_remediated"`
+	MediumRiskRemediated   float64 `json:"mediumRiskRemediated"   gorm:"column:medium_risk_remediated"`
+	HighRiskRemediated     float64 `json:"highRiskRemediated"     gorm:"column:high_risk_remediated"`
+	CriticalRiskRemediated float64 `json:"criticalRiskRemediated" gorm:"column:critical_risk_remediated"`
 
-	LowCVSSAverage      float64 `json:"lowCVSSAverage" gorm:"column:low_cvss_average"`
-	MediumCVSSAverage   float64 `json:"mediumCVSSAverage" gorm:"column:medium_cvss_average"`
-	HighCVSSAverage     float64 `json:"highCVSSAverage" gorm:"column:high_cvss_average"`
-	CriticalCVSSAverage float64 `json:"criticalCVSSAverage" gorm:"column:critical_cvss_average"`
+	LowCVSSRemediated      float64 `json:"lowCVSSRemediated"      gorm:"column:low_cvss_remediated"`
+	MediumCVSSRemediated   float64 `json:"mediumCVSSRemediated"   gorm:"column:medium_cvss_remediated"`
+	HighCVSSRemediated     float64 `json:"highCVSSRemediated"     gorm:"column:high_cvss_remediated"`
+	CriticalCVSSRemediated float64 `json:"criticalCVSSRemediated" gorm:"column:critical_cvss_remediated"`
+
+	// average age of non remediated (open) vulns
+	LowRiskOpen      float64 `json:"lowRiskOpen"      gorm:"column:low_risk_open"`
+	MediumRiskOpen   float64 `json:"mediumRiskOpen"   gorm:"column:medium_risk_open"`
+	HighRiskOpen     float64 `json:"highRiskOpen"     gorm:"column:high_risk_open"`
+	CriticalRiskOpen float64 `json:"criticalRiskOpen" gorm:"column:critical_risk_open"`
+
+	LowCVSSOpen      float64 `json:"lowCVSSOpen"      gorm:"column:low_cvss_open"`
+	MediumCVSSOpen   float64 `json:"mediumCVSSOpen"   gorm:"column:medium_cvss_open"`
+	HighCVSSOpen     float64 `json:"highCVSSOpen"     gorm:"column:high_cvss_open"`
+	CriticalCVSSOpen float64 `json:"criticalCVSSOpen" gorm:"column:critical_cvss_open"`
 }
 
 type OrgOverview struct {
-	VulnDistribution Distribution `json:"vulnDistribution"`
+	VulnDistribution VulnSeverityDistribution `json:"vulnDistribution"`
 
-	OrgStructure OrgStructureDistribution      `json:"structure"`
-	TopProjects  []VulnDistributionInStructure `json:"topProjects"`
-	TopAssets    []VulnDistributionInStructure `json:"topAssets"`
-	TopArtifacts []VulnDistributionInStructure `json:"topArtifacts"`
+	OrgStructure OrgStructureDistribution   `json:"structure"`
+	TopProjects  []ProjectVulnDistribution  `json:"topProjects"`
+	TopAssets    []AssetVulnDistribution    `json:"topAssets"`
+	TopArtifacts []ArtifactVulnDistribution `json:"topArtifacts"`
 
 	TopComponents []ComponentUsageAcrossOrg `json:"topComponents"`
 	TopCVEs       []CVEOccurrencesAcrossOrg `json:"topCVEs"`

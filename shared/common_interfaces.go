@@ -566,11 +566,11 @@ type StatisticsRepository interface {
 	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 
 	// CVSS-based average fixing time methods
-	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.Distribution, error)
+	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error)
 	GetOrgStructureDistribution(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error)
-	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
-	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
-	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
+	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error)
+	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error)
+	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error)
 	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
 	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
 	GetWeeklyAveragePerVulnEventType(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error)

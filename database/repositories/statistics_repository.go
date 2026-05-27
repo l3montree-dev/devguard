@@ -223,8 +223,8 @@ func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(ctx context.C
 }
 
 // queries the amount of open vulnerabilities in each severity class (count each component_purl + cve_id once -> take the highest risk score)
-func (r *statisticsRepository) VulnClassificationByOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.Distribution, error) {
-	distribution := dtos.Distribution{}
+func (r *statisticsRepository) VulnClassificationByOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error) {
+	distribution := dtos.VulnSeverityDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) AS low_risk,
@@ -270,8 +270,8 @@ func (r *statisticsRepository) GetOrgStructureDistribution(ctx context.Context, 
 	return structure, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	projects := []dtos.VulnDistributionInStructure{}
+func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error) {
+	projects := []dtos.ProjectVulnDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT sub.pslug, sub.pname,
 		COUNT(*) as total,
@@ -300,8 +300,8 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Contex
 	return projects, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	assets := []dtos.VulnDistributionInStructure{}
+func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error) {
+	assets := []dtos.AssetVulnDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT sub.aslug, sub.aname,
 		COUNT(*) as total,
@@ -330,8 +330,8 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context,
 	return assets, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
-	artifacts := []dtos.VulnDistributionInStructure{}
+func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error) {
+	artifacts := []dtos.ArtifactVulnDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
 		sub.artifact_name AS name,

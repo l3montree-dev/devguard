@@ -929,23 +929,23 @@ func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) RunAndReturn(run
 }
 
 // GetMostVulnerableArtifactsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (_mock *StatisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error) {
 	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableArtifactsInOrg")
 	}
 
-	var r0 []dtos.VulnDistributionInStructure
+	var r0 []dtos.ArtifactVulnDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.ArtifactVulnDistribution, error)); ok {
 		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.ArtifactVulnDistribution); ok {
 		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
+			r0 = ret.Get(0).([]dtos.ArtifactVulnDistribution)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
@@ -998,34 +998,34 @@ func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Run(run fun
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Return(vulnDistributionInStructures []dtos.VulnDistributionInStructure, err error) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
-	_c.Call.Return(vulnDistributionInStructures, err)
+func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) Return(artifactVulnDistributions []dtos.ArtifactVulnDistribution, err error) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+	_c.Call.Return(artifactVulnDistributions, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostVulnerableAssetsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (_mock *StatisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error) {
 	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableAssetsInOrg")
 	}
 
-	var r0 []dtos.VulnDistributionInStructure
+	var r0 []dtos.AssetVulnDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.AssetVulnDistribution, error)); ok {
 		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.AssetVulnDistribution); ok {
 		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
+			r0 = ret.Get(0).([]dtos.AssetVulnDistribution)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
@@ -1078,34 +1078,34 @@ func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Run(run func(c
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Return(vulnDistributionInStructures []dtos.VulnDistributionInStructure, err error) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
-	_c.Call.Return(vulnDistributionInStructures, err)
+func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Return(assetVulnDistributions []dtos.AssetVulnDistribution, err error) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+	_c.Call.Return(assetVulnDistributions, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostVulnerableProjectsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error) {
+func (_mock *StatisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error) {
 	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableProjectsInOrg")
 	}
 
-	var r0 []dtos.VulnDistributionInStructure
+	var r0 []dtos.ProjectVulnDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.VulnDistributionInStructure, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.ProjectVulnDistribution, error)); ok {
 		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.VulnDistributionInStructure); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.ProjectVulnDistribution); ok {
 		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.VulnDistributionInStructure)
+			r0 = ret.Get(0).([]dtos.ProjectVulnDistribution)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
@@ -1158,12 +1158,12 @@ func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Run(run func
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Return(vulnDistributionInStructures []dtos.VulnDistributionInStructure, err error) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
-	_c.Call.Return(vulnDistributionInStructures, err)
+func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) Return(projectVulnDistributions []dtos.ProjectVulnDistribution, err error) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+	_c.Call.Return(projectVulnDistributions, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+func (_c *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1481,22 +1481,22 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(
 }
 
 // VulnClassificationByOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) VulnClassificationByOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.Distribution, error) {
+func (_mock *StatisticsRepository) VulnClassificationByOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error) {
 	ret := _mock.Called(ctx, tx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VulnClassificationByOrg")
 	}
 
-	var r0 dtos.Distribution
+	var r0 dtos.VulnSeverityDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.Distribution, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.VulnSeverityDistribution, error)); ok {
 		return returnFunc(ctx, tx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.Distribution); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.VulnSeverityDistribution); ok {
 		r0 = returnFunc(ctx, tx, orgID)
 	} else {
-		r0 = ret.Get(0).(dtos.Distribution)
+		r0 = ret.Get(0).(dtos.VulnSeverityDistribution)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, orgID)
@@ -1542,12 +1542,12 @@ func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Run(run func(ctx co
 	return _c
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Return(distribution dtos.Distribution, err error) *StatisticsRepository_VulnClassificationByOrg_Call {
-	_c.Call.Return(distribution, err)
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) Return(vulnSeverityDistribution dtos.VulnSeverityDistribution, err error) *StatisticsRepository_VulnClassificationByOrg_Call {
+	_c.Call.Return(vulnSeverityDistribution, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.Distribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_c *StatisticsRepository_VulnClassificationByOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error)) *StatisticsRepository_VulnClassificationByOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
