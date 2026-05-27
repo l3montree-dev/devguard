@@ -543,36 +543,47 @@ func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.
 	return time.Duration(seconds), err
 }
 
-// calculate the average time between the time the vuln was created and the first remediation event (use now if not yet remediated)
+// calculate the average time between the time the vuln was created and the first remediation event
+// also count all the not handled vulns
 func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error) {
 	averages := dtos.AverageRemediationTimes{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.raw_risk_assessment < 4)), 0) AS low_risk_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.raw_risk_assessment >= 4 AND dv.raw_risk_assessment < 7)), 0) AS medium_risk_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.raw_risk_assessment >= 7 AND dv.raw_risk_assessment < 9)), 0) AS high_risk_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.raw_risk_assessment >= 9 AND dv.raw_risk_assessment <= 10)), 0) AS critical_risk_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.cvss < 4)), 0) AS low_cvss_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.cvss >= 4 AND dv.cvss < 7)), 0) AS medium_cvss_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.cvss >= 7 AND dv.cvss < 9)), 0) AS high_cvss_average,
-		COALESCE(EXTRACT(EPOCH FROM AVG(COALESCE(sub.created_at, now()) - dv.created_at) FILTER (WHERE dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_average
-	FROM (													--filtered and deduplicated vulnerabilities for this org
-		SELECT DISTINCT ON (dv.cve_id, dv.component_purl) 			--deduplicate based on purl and cve_id
+		-- remediated averages
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.raw_risk_assessment < 4)), 0) AS low_risk_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.raw_risk_assessment >= 4 AND dv.raw_risk_assessment < 7)), 0) AS medium_risk_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.raw_risk_assessment >= 7 AND dv.raw_risk_assessment < 9)), 0) AS high_risk_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.raw_risk_assessment >= 9 AND dv.raw_risk_assessment <= 10)), 0) AS critical_risk_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss < 4)), 0) AS low_cvss_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 4 AND dv.cvss < 7)), 0) AS medium_cvss_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 7 AND dv.cvss < 9)), 0) AS high_cvss_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_remediated,
+		-- non-remediated averages
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.raw_risk_assessment < 4)), 0) AS low_risk_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.raw_risk_assessment >= 4 AND dv.raw_risk_assessment < 7)), 0) AS medium_risk_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.raw_risk_assessment >= 7 AND dv.raw_risk_assessment < 9)), 0) AS high_risk_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.raw_risk_assessment >= 9 AND dv.raw_risk_assessment <= 10)), 0) AS critical_risk_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss < 4)), 0) AS low_cvss_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 4 AND dv.cvss < 7)), 0) AS medium_cvss_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 7 AND dv.cvss < 9)), 0) AS high_cvss_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_open
+	FROM (
+		SELECT DISTINCT ON (dv.cve_id, dv.component_purl)			--deduplicate based on cve_id and purl
 			dv.id, dv.created_at, dv.raw_risk_assessment, cves.cvss
 		FROM dependency_vulns dv
 		JOIN assets a ON dv.asset_id = a.id
 		JOIN projects p ON a.project_id = p.id
 		LEFT JOIN cves ON cves.cve = dv.cve_id
 		WHERE p.organization_id = ?
-		ORDER BY dv.cve_id, dv.component_purl, dv.created_at ASC	-- make distinct deterministic
+		ORDER BY dv.cve_id, dv.component_purl, dv.created_at ASC   	--ORDER for deterministic distinct
 	) dv
-	LEFT JOIN LATERAL ( 							--for each vuln get the earliest remediation event
+	LEFT JOIN LATERAL (
 		SELECT created_at
 		FROM vuln_events ve
 		WHERE ve.dependency_vuln_id = dv.id
-		AND ve.type IN ? -- remediation events
-		ORDER BY created_at ASC 					--earliest
-		LIMIT 1 									--only the first needed
+		AND ve.type IN ?
+		ORDER BY created_at ASC			--only get the earliest remediation event
+		LIMIT 1
 	) sub ON TRUE;`, orgID, remediationEvents).Find(&averages).Error
 	return averages, err
 }
