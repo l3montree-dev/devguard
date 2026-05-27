@@ -94,6 +94,30 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 		packageName = strings.ReplaceAll(packageName, "/", ":")
 	}
 
+	if ecosystem == "go" && version != "" {
+		return s.getGoVersion(ctx, ecosystem, packageName, version)
+	}
+
+	return s.getVersion(ctx, ecosystem, packageName, version)
+}
+
+func (s *openSourceInsightService) getGoVersion(ctx context.Context, ecosystem, packageName, version string) (dtos.OpenSourceInsightsVersionResponse, error) {
+	preferredVersion := version
+	fallbackVersion := strings.TrimPrefix(version, "v")
+	if !strings.HasPrefix(version, "v") {
+		preferredVersion = "v" + version
+		fallbackVersion = version
+	}
+
+	response, err := s.getVersion(ctx, ecosystem, packageName, preferredVersion)
+	if err == nil || fallbackVersion == preferredVersion {
+		return response, err
+	}
+
+	return s.getVersion(ctx, ecosystem, packageName, fallbackVersion)
+}
+
+func (s *openSourceInsightService) getVersion(ctx context.Context, ecosystem, packageName, version string) (dtos.OpenSourceInsightsVersionResponse, error) {
 	// make sure the package name is url encoded
 	packageName = url.PathEscape(packageName)
 	if err := s.rateLimiter.Wait(ctx); err != nil {
