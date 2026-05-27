@@ -249,17 +249,18 @@ func TestGetVersion(t *testing.T) {
 			packageName     string
 			expectedSystem  string
 			expectedPackage string
+			expectedVersion string
 		}{
-			{"npm", "react/dom", "npm", "react%2Fdom"},                         // npm should keep slashes (URL encoded)
-			{"golang", "github.com/test/pkg", "go", "github.com%2Ftest%2Fpkg"}, // golang -> go, keep slashes (URL encoded)
-			{"pypi", "django/contrib", "pypi", "django%2Fcontrib"},             // pypi should keep slashes (URL encoded)
+			{"npm", "react/dom", "npm", "react%2Fdom", "1.0.0"},                          // npm should keep slashes (URL encoded)
+			{"golang", "github.com/test/pkg", "go", "github.com%2Ftest%2Fpkg", "v1.0.0"}, // golang -> go, keep slashes (URL encoded)
+			{"pypi", "django/contrib", "pypi", "django%2Fcontrib", "1.0.0"},              // pypi should keep slashes (URL encoded)
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.ecosystem+"_"+tc.packageName, func(t *testing.T) {
 				// Mock server to simulate the deps.dev API
 				mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					expectedPath := "/systems/" + tc.expectedSystem + "/packages/" + tc.expectedPackage + "/versions/1.0.0"
+					expectedPath := "/systems/" + tc.expectedSystem + "/packages/" + tc.expectedPackage + "/versions/" + tc.expectedVersion
 					actualPath := r.URL.Path
 					// Check RawPath for encoded values if Path is unescaped
 					if r.URL.RawPath != "" {
@@ -315,6 +316,94 @@ func TestGetVersion(t *testing.T) {
 		_, err := service.GetVersion(ctx, "maven", "org.springframework/spring-web/core", "5.3.21")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("should prefer v-prefixed go versions", func(t *testing.T) {
+		requestedPaths := []string{}
+		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestedPaths = append(requestedPaths, r.URL.EscapedPath())
+			switch r.URL.EscapedPath() {
+			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1":
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"versionKey": {"system": "go", "name": "github.com/ProtonMail/gopenpgp/v3", "version": "v3.4.1"}, "licenses": ["MIT"]}`)) // nolint
+			default:
+				t.Errorf("unexpected path %s", r.URL.EscapedPath())
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		}))
+		defer mockServer.Close()
+
+		originalURL := openSourceInsightsAPIURL
+		t.Cleanup(func() {
+			openSourceInsightsAPIURL = originalURL
+		})
+		openSourceInsightsAPIURL = mockServer.URL
+
+		service := NewOpenSourceInsightService()
+		ctx := context.Background()
+
+		response, err := service.GetVersion(ctx, "golang", "github.com/ProtonMail/gopenpgp/v3", "3.4.1")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(response.Licenses) != 1 || response.Licenses[0] != "MIT" {
+			t.Fatalf("expected MIT license, got %v", response.Licenses)
+		}
+
+		expectedPaths := []string{"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1"}
+		if len(requestedPaths) != len(expectedPaths) || requestedPaths[0] != expectedPaths[0] {
+			t.Fatalf("expected deps.dev requests %v, got %v", expectedPaths, requestedPaths)
+		}
+	})
+
+	t.Run("should fall back to go versions without v prefix", func(t *testing.T) {
+		requestedPaths := []string{}
+		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestedPaths = append(requestedPaths, r.URL.EscapedPath())
+			switch r.URL.EscapedPath() {
+			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1":
+				http.Error(w, "Not Found", http.StatusNotFound)
+			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/3.4.1":
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"versionKey": {"system": "go", "name": "github.com/ProtonMail/gopenpgp/v3", "version": "3.4.1"}, "licenses": ["MIT"]}`)) // nolint
+			default:
+				t.Errorf("unexpected path %s", r.URL.EscapedPath())
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
+		}))
+		defer mockServer.Close()
+
+		originalURL := openSourceInsightsAPIURL
+		t.Cleanup(func() {
+			openSourceInsightsAPIURL = originalURL
+		})
+		openSourceInsightsAPIURL = mockServer.URL
+
+		service := NewOpenSourceInsightService()
+		ctx := context.Background()
+
+		response, err := service.GetVersion(ctx, "golang", "github.com/ProtonMail/gopenpgp/v3", "v3.4.1")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(response.Licenses) != 1 || response.Licenses[0] != "MIT" {
+			t.Fatalf("expected MIT license, got %v", response.Licenses)
+		}
+
+		expectedPaths := []string{
+			"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1",
+			"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/3.4.1",
+		}
+		if len(requestedPaths) != len(expectedPaths) {
+			t.Fatalf("expected deps.dev requests %v, got %v", expectedPaths, requestedPaths)
+		}
+		for i := range expectedPaths {
+			if requestedPaths[i] != expectedPaths[i] {
+				t.Fatalf("expected deps.dev requests %v, got %v", expectedPaths, requestedPaths)
+			}
 		}
 	})
 }
