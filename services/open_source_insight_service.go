@@ -31,7 +31,7 @@ func NewOpenSourceInsightService() *openSourceInsightService {
 }
 
 var openSourceInsightsAPIURL = "https://api.deps.dev/v3"
-var packagistAPIURL = "https://repo.packagist.org/p2/"
+var packagistAPIURL = "https://repo.packagist.org/p2"
 
 func (s *openSourceInsightService) GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error) {
 	// make sure the projectID (which is usually a github repository url) is url encoded
@@ -110,9 +110,13 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 
 	switch ecosystem {
 	case "composer":
-		parts := strings.Split(packageName, "%2F")
+		packageNameDecoded, err := url.PathUnescape(packageName)
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", packageName)
+		}
+		parts := strings.SplitN(packageNameDecoded, "/", 2)
 		if len(parts) < 2 {
-			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", res.Status)
+			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", packageName)
 		}
 		vendor := parts[0]
 		packageIdentifier := parts[1]
@@ -127,6 +131,10 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 
+		if res.StatusCode != http.StatusOK {
+			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("could not get version information: %s", res.Status)
+		}
+
 		var packagistResponse dtos.PackagistPackageResponse
 		if err := json.NewDecoder(res.Body).Decode(&packagistResponse); err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
@@ -135,10 +143,10 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 		packagistPackageKey := vendor + "/" + packageIdentifier
 
 		packagistToDepsDev, err := transformer.TransformPackagistToDepsDev(packagistResponse, packagistPackageKey, version)
-
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
+		defer res.Body.Close()
 
 		return packagistToDepsDev, nil
 	default:
@@ -159,6 +167,7 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
+		defer res.Body.Close()
 	}
 
 	return response, nil

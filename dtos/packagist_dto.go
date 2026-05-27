@@ -4,10 +4,10 @@ import "encoding/json"
 
 type PackagistPackageResponse struct {
 	Packages           map[string][]PackagistPackageVersion `json:"packages,omitempty"`
-	SecurityAdvisories []PackageistSecurityAdvisory         `json:"security-advisories,omitempty"`
+	SecurityAdvisories []PackagistSecurityAdvisory          `json:"security-advisories,omitempty"`
 }
 
-type PackageistSecurityAdvisory struct {
+type PackagistSecurityAdvisory struct {
 	AdvisoryID       string `json:"advisoryId"`
 	AffectedVersions string `json:"affectedVersions"`
 }

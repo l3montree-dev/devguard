@@ -3,6 +3,7 @@ package transformer
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -49,7 +50,9 @@ func TransformPackagistToDepsDev(
 		})
 	}
 
-	out.AdvisoryKeys = append(out.AdvisoryKeys, packagistResponse.SecurityAdvisories)
+	for _, advisory := range packagistResponse.SecurityAdvisories {
+		out.AdvisoryKeys = append(out.AdvisoryKeys, advisory)
+	}
 
 	packagistVersions := packagistResponse.Packages[packageKey]
 
@@ -119,16 +122,22 @@ func TransformPackagistToDepsDev(
 
 	out.VersionKey.Version = specificPackage.Version
 
-	addLink("source", specificPackage.Source.URL)
+	if specificPackage.Source != nil {
+		addLink("source", specificPackage.Source.URL)
 
-	//Create correct projectID that can be used by OpenSourceInsightsVersionResponse and GetProject()
-	repositoryURLComponent, err := url.Parse(specificPackage.Source.URL)
-	repositoryURL := repositoryURLComponent.Host + repositoryURLComponent.Path
-	if err != nil {
-		addRelatedProject(specificPackage.Source.URL, "UNVERIFIED_METADATA", "SOURCE_REPO")
+		//Create correct projectID that can be used by OpenSourceInsightsVersionResponse and GetProject()
+		repositoryURLComponent, err := url.Parse(specificPackage.Source.URL)
+		if err != nil {
+			addRelatedProject(specificPackage.Source.URL, "UNVERIFIED_METADATA", "SOURCE_REPO")
+		} else {
+			repositoryURL := repositoryURLComponent.Host + strings.TrimSuffix(repositoryURLComponent.Path, ".git")
+			addRelatedProject(repositoryURL, "UNVERIFIED_METADATA", "SOURCE_REPO")
+		}
 	}
-	addRelatedProject(repositoryURL, "UNVERIFIED_METADATA", "SOURCE_REPO")
-	addLink("distribution", specificPackage.Dist.URL)
+
+	if specificPackage.Dist != nil {
+		addLink("distribution", specificPackage.Dist.URL)
+	}
 
 	return out, nil
 }
