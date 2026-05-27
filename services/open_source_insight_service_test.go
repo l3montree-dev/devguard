@@ -43,6 +43,7 @@ func TestGetVersion(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusOK)
+			// nolint:errcheck
 			w.Write([]byte(`{
 				"packages": {
 					"vendor/package": [
@@ -67,7 +68,7 @@ func TestGetVersion(t *testing.T) {
 						}
 					]
 				}
-			}`)) // nolint
+			}`))
 		}))
 		defer mockServer.Close()
 
@@ -142,6 +143,7 @@ func TestGetVersion(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusOK)
+			// nolint:errcheck
 			w.Write([]byte(`{
 				"packages": {
 					"vendor/package": [
@@ -152,7 +154,7 @@ func TestGetVersion(t *testing.T) {
 						}
 					]
 				}
-			}`)) // nolint
+			}`))
 		}))
 		defer mockServer.Close()
 
