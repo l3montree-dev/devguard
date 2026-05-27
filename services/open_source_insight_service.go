@@ -11,6 +11,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/time/rate"
 )
@@ -30,6 +31,7 @@ func NewOpenSourceInsightService() *openSourceInsightService {
 }
 
 var openSourceInsightsAPIURL = "https://api.deps.dev/v3"
+var packagistAPIURL = "https://repo.packagist.org/p2/"
 
 func (s *openSourceInsightService) GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error) {
 	// make sure the projectID (which is usually a github repository url) is url encoded
@@ -77,6 +79,8 @@ func translateEcosystem(ecosystem string) (string, error) {
 		return "nuget", nil
 	case "cargo":
 		return "cargo", nil
+	case "composer":
+		return "composer", nil
 	}
 
 	return "", fmt.Errorf("ecosystem %s is not supported", ecosystem)
@@ -100,23 +104,61 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, ecosystem, pa
 		return dtos.OpenSourceInsightsVersionResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystem, packageName, version), nil)
-	if err != nil {
-		return dtos.OpenSourceInsightsVersionResponse{}, err
-	}
-
-	res, err := s.httpClient.Do(req)
-	if err != nil {
-		return dtos.OpenSourceInsightsVersionResponse{}, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("could not get version information: %s", res.Status)
-	}
-
+	var req *http.Request
+	var res *http.Response
 	var response dtos.OpenSourceInsightsVersionResponse
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return dtos.OpenSourceInsightsVersionResponse{}, err
+
+	switch ecosystem {
+	case "composer":
+		parts := strings.Split(packageName, "%2F")
+		if len(parts) < 2 {
+			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", res.Status)
+		}
+		vendor := parts[0]
+		packageIdentifier := parts[1]
+
+		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s/%s.json", packagistAPIURL, vendor, packageIdentifier), nil)
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		res, err = s.httpClient.Do(req)
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		var packagistResponse dtos.PackagistPackageResponse
+		if err := json.NewDecoder(res.Body).Decode(&packagistResponse); err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		packagistPackageKey := vendor + "/" + packageIdentifier
+
+		packagistToDepsDev, err := transformer.TransformPackagistToDepsDev(packagistResponse, packagistPackageKey, version)
+
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		return packagistToDepsDev, nil
+	default:
+		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystem, packageName, version), nil)
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		res, err = s.httpClient.Do(req)
+		if err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
+
+		if res.StatusCode != http.StatusOK {
+			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("could not get version information: %s", res.Status)
+		}
+
+		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
 	}
 
 	return response, nil
