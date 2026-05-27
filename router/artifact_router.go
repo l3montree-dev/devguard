@@ -29,6 +29,7 @@ type ArtifactRouter struct {
 func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
 	artifactController *controllers.ArtifactController,
+	externalReferenceController *controllers.ExternalReferenceController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
 ) ArtifactRouter {
@@ -45,6 +46,7 @@ func NewArtifactRouter(
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.POST("/sync-external-sources/", externalReferenceController.SyncArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	return ArtifactRouter{Group: artifactRouter}
 }

@@ -181,6 +181,38 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync [post]
+func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent string) error {
+	tx := c.artifactRepository.Begin(reqCtx)
+	defer tx.Rollback()
+
+	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, userID, &userAgent)
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
+		return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
+	}
+
+	if commitResult := tx.Commit(); commitResult.Error != nil {
+		slog.Error("could not commit transaction after syncing external sources", "err", commitResult.Error, "artifact", artifact.ArtifactName)
+		return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
+	}
+
+	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
+	c.FireAndForget(func() {
+		if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent); err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
+	c.FireAndForget(func() {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+		}
+	})
+
+	return nil
+}
+
 func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -196,37 +228,29 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	}
 
 	for _, artifact := range artifacts {
-		tx := c.artifactRepository.Begin(ctx.Request().Context())
-		defer tx.Rollback()
-
-		_, _, vulns, err := c.RunArtifactSecurityLifecycle(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, userID, &userAgent)
-		if err != nil {
-			tx.Rollback()
-			slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
-			return echo.NewHTTPError(500, "could not scan sbom after syncing external sources").WithInternal(err)
+		if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
+			return err
 		}
-
-		commitResult := tx.Commit()
-		if commitResult.Error != nil {
-			slog.Error("could not commit transaction after syncing external sources", "err", commitResult.Error, "artifact", artifact.ArtifactName)
-			return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
-		}
-
-		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
-		c.FireAndForget(func() {
-			if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent); err != nil {
-				slog.Error("could not create issues for vulnerabilities", "err", err)
-			}
-		})
-
-		c.FireAndForget(func() {
-			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		})
 	}
 
+	return ctx.NoContent(200)
+}
+
+// @Summary Sync external sources for a single artifact
+// @Tags ExternalReferences
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources [post]
+func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
+	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetUserID(), ctx.Request().UserAgent()); err != nil {
+		return err
+	}
 	return ctx.NoContent(200)
 }
 
