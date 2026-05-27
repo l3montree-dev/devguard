@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -164,7 +163,8 @@ func (f *TestFixture) GetProjectMembers(t testing.TB, e *echo.Echo, org models.O
 
 	// Pre-resolve which identities RBAC considers members, so the mock returns
 	// only those — not every identity in the lookup map.
-	rbacMembers, _ := f.App.RBACProvider.GetDomainRBAC(org.ID.String()).GetAllMembersOfProject(project.ID.String())
+	rbacMembers, err := f.App.RBACProvider.GetDomainRBAC(org.ID.String()).GetAllMembersOfProject(project.ID.String())
+	require.NoError(t, err)
 	var filteredIdentities []client.Identity
 	for _, memberID := range rbacMembers {
 		if identity, ok := byID[memberID]; ok {
@@ -255,7 +255,8 @@ func (f *TestFixture) GetAssetMembers(t testing.TB, e *echo.Echo, org models.Org
 		byID[id.Id] = id
 	}
 
-	rbacMembers, _ := f.App.RBACProvider.GetDomainRBAC(org.ID.String()).GetAllMembersOfAsset(asset.ID.String())
+	rbacMembers, err := f.App.RBACProvider.GetDomainRBAC(org.ID.String()).GetAllMembersOfAsset(asset.ID.String())
+	require.NoError(t, err)
 	var filteredIdentities []client.Identity
 	for _, memberID := range rbacMembers {
 		if identity, ok := byID[memberID]; ok {
@@ -341,7 +342,6 @@ func TestMemberRolesAcrossProjectHierarchy(t *testing.T) {
 		})
 
 		t.Run("user B has no role in asset without invite", func(t *testing.T) {
-			_ = services.FetchMembersOfAsset
 			ids := memberIDs(f.GetAssetMembers(t, e, org, subproject, asset, allIdentities))
 			assert.NotContains(t, ids, userBID, "user B should not appear as asset member without explicit invite")
 		})
@@ -406,17 +406,17 @@ func TestOrgAdminRolePropagatesDownHierarchy(t *testing.T) {
 
 		t.Run("user B has no role in project after demotion to org member", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, project, allIdentities))
-			t.Logf("user B role in project after org demotion: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 		t.Run("user B has no role in subproject after demotion to org member", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, subproject, allIdentities))
-			t.Logf("user B role in subproject after org demotion: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 		t.Run("user B has no role in asset after demotion to org member", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetAssetMembers(t, e, org, subproject, asset, allIdentities))
-			t.Logf("user B role in asset after org demotion: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 	})
@@ -480,17 +480,17 @@ func TestProjectInvitePropagatesDownHierarchy(t *testing.T) {
 
 		t.Run("user B has no role in subproject after project invite", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, subproject, allIdentities))
-			t.Logf("user B role in subproject after project invite: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 		t.Run("user B has no role in child subproject after project invite", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, childSubproject, allIdentities))
-			t.Logf("user B role in child subproject after project invite: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 		t.Run("user B has no role in asset after project invite", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetAssetMembers(t, e, org, childSubproject, asset, allIdentities))
-			t.Logf("user B role in asset after project invite: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID])
 		})
 
 		// Promote User B to admin in the top-level project
@@ -804,17 +804,17 @@ func TestOrgMemberRemovedFromOrgClearsHierarchyRoles(t *testing.T) {
 
 		t.Run("user B role in project after org removal", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, project, allIdentities))
-			t.Logf("user B role in project after org removal: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID], "user B should have no role in project after org removal")
 		})
 
 		t.Run("user B role in subproject after org removal", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetProjectMembers(t, e, org, subproject, allIdentities))
-			t.Logf("user B role in subproject after org removal: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID], "user B should have no role in subproject after org removal")
 		})
 
 		t.Run("user B role in asset after org removal", func(t *testing.T) {
 			roles := rolesFromMembers(f.GetAssetMembers(t, e, org, subproject, asset, allIdentities))
-			t.Logf("user B role in asset after org removal: %q", roles[userBID])
+			assert.Equal(t, "", roles[userBID], "user B should have no role in asset after org removal")
 		})
 	})
 }

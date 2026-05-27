@@ -134,6 +134,11 @@ func (f *TestFixture) AcceptInvitation(t testing.TB, e *echo.Echo, code string, 
 func (f *TestFixture) GetOrgMembers(t testing.TB, e *echo.Echo, org models.Org, identities []client.Identity) []dtos.UserDTO {
 	t.Helper()
 
+	byID := make(map[string]client.Identity, len(identities))
+	for _, id := range identities {
+		byID[id.Id] = id
+	}
+
 	req := httptest.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
@@ -141,8 +146,17 @@ func (f *TestFixture) GetOrgMembers(t testing.TB, e *echo.Echo, org models.Org, 
 	shared.SetOrg(ctx, org)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
 
+	rbacMembers, err := f.App.RBACProvider.GetDomainRBAC(org.ID.String()).GetAllMembersOfOrganization()
+	require.NoError(t, err)
+	var filteredIdentities []client.Identity
+	for _, memberID := range rbacMembers {
+		if identity, ok := byID[memberID]; ok {
+			filteredIdentities = append(filteredIdentities, identity)
+		}
+	}
+
 	adminClient := mocks.NewAdminClient(t)
-	adminClient.On("ListUser", mock.Anything).Return(identities, nil)
+	adminClient.On("ListUser", mock.Anything).Return(filteredIdentities, nil)
 	shared.SetAuthAdminClient(ctx, adminClient)
 
 	integration := mocks.NewIntegrationAggregate(t)
