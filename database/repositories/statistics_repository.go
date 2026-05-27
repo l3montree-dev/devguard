@@ -427,20 +427,20 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Cont
 func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (float32, error) {
 	var average float32
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
-		AVG(count) 
-	FROM 
+	SELECT
+		COALESCE(AVG(count), 0)
+	FROM
 		(
-			SELECT 
-				c.id, 
-				COUNT(b.id) 
-			FROM 
-				assets a 
-			LEFT JOIN 
-				first_party_vulnerabilities b ON a.id = b.asset_id 
-			LEFT JOIN 
+			SELECT
+				c.id,
+				COUNT(b.id)
+			FROM
+				assets a
+			LEFT JOIN
+				first_party_vulnerabilities b ON a.id = b.asset_id
+			LEFT JOIN
 				projects c ON a.project_id = c.id
-			WHERE 
+			WHERE
 				c.organization_id = ?
 			GROUP BY c.id
 		);`, orgID).Find(&average).Error
@@ -533,13 +533,13 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, t
 func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (time.Duration, error) {
 	var seconds float64
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT EXTRACT(EPOCH FROM (AVG(NOW() - published))) 
+	SELECT COALESCE(EXTRACT(EPOCH FROM AVG(NOW() - published)), 0)
 	FROM components JOIN (
 		SELECT DISTINCT cd.dependency_id FROM projects p
 		JOIN assets a ON a.project_id = p.id
 		JOIN component_dependencies cd ON cd.asset_id = a.id
 		WHERE p.organization_id = ?) as dep
-	ON dep.dependency_id = components.id;;`, orgID).Find(&seconds).Error
+	ON dep.dependency_id = components.id;`, orgID).Find(&seconds).Error
 	return time.Duration(seconds), err
 }
 

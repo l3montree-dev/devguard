@@ -47,7 +47,7 @@ func TestGetOrgStatistics(t *testing.T) {
 		criticalRisk := 9.5
 		mediumRisk := 5.0
 
-		// depVuln1: CVE-A on pkg:X via direct path — counts once in both regular and CVEPurl
+		// depVuln1: CVE-A on pkg:X via direct path
 		depVuln1 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				State:            dtos.VulnStateOpen,
@@ -61,8 +61,8 @@ func TestGetOrgStatistics(t *testing.T) {
 		}
 		require.NoError(t, f.DB.Create(&depVuln1).Error)
 
-		// depVuln2: same CVE-A on same pkg:X but via a transitive path — counts in regular
-		// counts but must NOT add to CVEPurl (same cve+purl pair)
+		// depVuln2: same CVE-A on same pkg:X via a transitive path — same (cve_id, purl)
+		// as depVuln1, so the dedup query must collapse the two into a single count
 		depVuln2 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				State:            dtos.VulnStateOpen,
@@ -105,22 +105,17 @@ func TestGetOrgStatistics(t *testing.T) {
 
 		dist := resp.VulnDistribution
 
-		// Regular counts include all open rows regardless of path
-		assert.Equal(t, 2, dist.Critical, "2 open rows with critical raw_risk_assessment")
-		assert.Equal(t, 1, dist.Medium, "1 open row with medium raw_risk_assessment")
-		assert.Equal(t, 2, dist.CriticalCVSS, "2 open rows with critical CVSS")
-		assert.Equal(t, 1, dist.MediumCVSS, "1 open row with medium CVSS")
+		// VulnClassificationByOrg deduplicates on (cve_id, component_purl). depVuln1
+		// and depVuln2 share (CVE-A, pkg:X) so they collapse into a single critical
+		// count; depVuln3 is a unique (CVE-B, pkg:Y) medium count.
+		assert.Equal(t, 1, dist.Critical, "depVuln1 and depVuln2 share the same CVE+purl — count as 1")
+		assert.Equal(t, 1, dist.Medium, "depVuln3 is a unique CVE+purl pair")
+		assert.Equal(t, 1, dist.CriticalCVSS, "unique (CVE-A, pkg:X) critical CVSS pair")
+		assert.Equal(t, 1, dist.MediumCVSS, "unique (CVE-B, pkg:Y) medium CVSS pair")
 
-		// CVEPurl counts deduplicate on (cve_id, component_purl)
-		assert.Equal(t, 1, dist.CVEPurlCritical, "depVuln1 and depVuln2 share the same CVE+purl — should count as 1")
-		assert.Equal(t, 1, dist.CVEPurlMedium, "depVuln3 is a unique CVE+purl pair")
-		assert.Equal(t, 1, dist.CVEPurlCriticalCVSS, "unique (CVE-A, pkg:X) critical CVSS pair")
-		assert.Equal(t, 1, dist.CVEPurlMediumCVSS, "unique (CVE-B, pkg:Y) medium CVSS pair")
-
-		// Totals for sanity
 		assert.Equal(t, 0, dist.Low, "no low-risk vulns")
 		assert.Equal(t, 0, dist.High, "no high-risk vulns")
-		assert.Equal(t, 0, dist.CVEPurlLow)
-		assert.Equal(t, 0, dist.CVEPurlHigh)
+		assert.Equal(t, 0, dist.LowCVSS, "no low-CVSS vulns")
+		assert.Equal(t, 0, dist.HighCVSS, "no high-CVSS vulns")
 	})
 }
