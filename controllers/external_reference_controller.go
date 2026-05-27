@@ -171,16 +171,6 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	})
 }
 
-// @Summary Sync external sources for all artifacts of an asset version
-// @Tags ExternalReferences
-// @Security CookieAuth
-// @Security PATAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync [post]
 func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent string) error {
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
@@ -213,6 +203,16 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	return nil
 }
 
+// @Summary Sync external sources for all artifacts of an asset version
+// @Tags ExternalReferences
+// @Security CookieAuth
+// @Security PATAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync [post]
 func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
