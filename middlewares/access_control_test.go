@@ -32,17 +32,17 @@ import (
 
 // TestInstanceAdminMiddleware tests the instance admin middleware
 func TestInstanceAdminMiddleware(t *testing.T) {
-	t.Run("allows access for instance admin", func(t *testing.T) {
+	t.Run("allows access when PAT verifies as admin", func(t *testing.T) {
 		// Arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		session := accesscontrol.NewSession("admin-user", []string{"manage"}, true)
-		ctx.Set("session", session)
+		mockPAT := mocks.NewPersonalAccessTokenService(t)
+		mockPAT.EXPECT().VerifyAdminRequest(req).Return(true, nil)
 
-		middleware := InstanceAdminMiddleware()
+		middleware := InstanceAdminMiddleware(mockPAT)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -54,17 +54,17 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
-	t.Run("denies access for non-instance admin", func(t *testing.T) {
+	t.Run("denies access when PAT is valid but not an admin", func(t *testing.T) {
 		// Arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		session := accesscontrol.NewSession("regular-user", []string{"manage"}, false)
-		ctx.Set("session", session)
+		mockPAT := mocks.NewPersonalAccessTokenService(t)
+		mockPAT.EXPECT().VerifyAdminRequest(req).Return(false, nil)
 
-		middleware := InstanceAdminMiddleware()
+		middleware := InstanceAdminMiddleware(mockPAT)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -75,19 +75,20 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 		assert.Error(t, err)
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		assert.Equal(t, http.StatusUnauthorized, httpErr.Code)
 	})
 
-	t.Run("denies access for NoSession", func(t *testing.T) {
+	t.Run("denies access when PAT verification fails", func(t *testing.T) {
 		// Arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		ctx.Set("session", accesscontrol.NoSession)
+		mockPAT := mocks.NewPersonalAccessTokenService(t)
+		mockPAT.EXPECT().VerifyAdminRequest(req).Return(false, errors.New("invalid signature"))
 
-		middleware := InstanceAdminMiddleware()
+		middleware := InstanceAdminMiddleware(mockPAT)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -98,7 +99,7 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 		assert.Error(t, err)
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
-		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		assert.Equal(t, http.StatusUnauthorized, httpErr.Code)
 	})
 }
 
