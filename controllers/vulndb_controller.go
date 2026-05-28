@@ -286,4 +286,3 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	// convert the result in a map and return it
 	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
 }
- 
