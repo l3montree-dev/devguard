@@ -203,7 +203,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the auth admin client from the context
 	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
 	if !ok {
-		fmt.Errorf("could not get auth admin client")
+		return echo.NewHTTPError(500, "could not get auth admin client")
 	}
 	// fetch the users from the auth service
 	m, err := authAdminClient.GetIdentity(reqCtx, userID)

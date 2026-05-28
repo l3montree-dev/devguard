@@ -196,6 +196,17 @@ type MaliciousPackageInOrg struct {
 	MaliciousPackageID string `json:"maliciousPackageID"`
 }
 
+// a malicious package inside an org (with the slugs to determine the path of the malicious package)
+type MaliciousPackage struct {
+	OrgSlug            string `json:"orgSlug" gorm:"column:org_slug"`
+	ProjectSlug        string `json:"projectSlug" gorm:"column:project_slug"`
+	AssetSlug          string `json:"assetSlug" gorm:"column:asset_slug"`
+	AssetName          string `json:"assetName" gorm:"column:asset_name"`
+	AssetVersionName   string `json:"assetVersionName" gorm:"column:asset_version_name"`
+	Component          string `json:"component" gorm:"column:component"`
+	MaliciousPackageID string `json:"maliciousPackageID" gorm:"malicious_package_id"`
+}
+
 type RemediationTypeDistributionRow struct {
 	Type       string
 	Percentage float64

@@ -616,3 +616,27 @@ func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Contex
 	LIMIT ?;`, limit).Find(&components).Error
 	return components, err
 }
+
+func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error) {
+	packages := []dtos.MaliciousPackage{}
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT 
+		mac.malicious_package_id,
+		cd.dependency_id as component,
+		o.slug as org_slug,
+		p.slug as project_slug,
+		a.slug as asset_slug,
+		a.name as asset_name,
+		cd.asset_version_name as asset_version_name
+	FROM 
+		malicious_affected_components mac
+	JOIN 
+		component_dependencies cd ON cd.dependency_id = mac.purl
+	JOIN 
+		assets a ON cd.asset_id = a.id
+	JOIN 
+		projects p ON a.project_id = p.id
+	JOIN
+		organizations o ON p.organization_id = o.id;`).Find(&packages).Error
+	return packages, err
+}
