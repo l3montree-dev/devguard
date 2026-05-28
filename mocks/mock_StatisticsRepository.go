@@ -769,23 +769,23 @@ func (_c *StatisticsRepository_GetInstanceUsageStatistics_Call) RunAndReturn(run
 }
 
 // GetMostCommonCVEsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
+func (_mock *StatisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrences, error) {
 	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostCommonCVEsInOrg")
 	}
 
-	var r0 []dtos.CVEOccurrencesAcrossOrg
+	var r0 []dtos.CVEOccurrences
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.CVEOccurrencesAcrossOrg, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.CVEOccurrences, error)); ok {
 		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.CVEOccurrencesAcrossOrg); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.CVEOccurrences); ok {
 		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.CVEOccurrencesAcrossOrg)
+			r0 = ret.Get(0).([]dtos.CVEOccurrences)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
@@ -838,34 +838,34 @@ func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Run(run func(ctx con
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Return(cVEOccurrencesAcrossOrgs []dtos.CVEOccurrencesAcrossOrg, err error) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Return(cVEOccurrencesAcrossOrgs []dtos.CVEOccurrences, err error) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
 	_c.Call.Return(cVEOccurrencesAcrossOrgs, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrences, error)) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetMostUsedComponentsInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
+func (_mock *StatisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrences, error) {
 	ret := _mock.Called(ctx, tx, orgID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostUsedComponentsInOrg")
 	}
 
-	var r0 []dtos.ComponentUsageAcrossOrg
+	var r0 []dtos.ComponentOccurrences
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.ComponentUsageAcrossOrg, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) ([]dtos.ComponentOccurrences, error)); ok {
 		return returnFunc(ctx, tx, orgID, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.ComponentUsageAcrossOrg); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, int) []dtos.ComponentOccurrences); ok {
 		r0 = returnFunc(ctx, tx, orgID, limit)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.ComponentUsageAcrossOrg)
+			r0 = ret.Get(0).([]dtos.ComponentOccurrences)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, int) error); ok {
@@ -918,12 +918,12 @@ func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Run(run func(ctx
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Return(componentUsageAcrossOrgs []dtos.ComponentUsageAcrossOrg, err error) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Return(componentUsageAcrossOrgs []dtos.ComponentOccurrences, err error) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
 	_c.Call.Return(componentUsageAcrossOrgs, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrences, error)) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

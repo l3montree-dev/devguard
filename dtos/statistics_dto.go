@@ -136,12 +136,12 @@ type RemediationTimeAverages struct {
 	CVSSAvgCritical float64 `json:"cvssAvgCritical"`
 }
 
-type ComponentUsageAcrossOrg struct {
+type ComponentOccurrences struct {
 	PackageURL       string `json:"purl" gorm:"column:purl"`
 	TotalAmountInOrg int    `json:"totalAmount" gorm:"column:total_amount"`
 }
 
-type CVEOccurrencesAcrossOrg struct {
+type CVEOccurrences struct {
 	CVEID            string  `json:"cveID" gorm:"column:cve_id"`
 	CVSS             float32 `json:"cvss" gorm:"column:cvss"`
 	TotalAmountInOrg int     `json:"totalAmount" gorm:"column:total_amount"`
@@ -235,8 +235,8 @@ type OrgOverview struct {
 	TopAssets    []AssetVulnDistribution    `json:"topAssets"`
 	TopArtifacts []ArtifactVulnDistribution `json:"topArtifacts"`
 
-	TopComponents []ComponentUsageAcrossOrg `json:"topComponents"`
-	TopCVEs       []CVEOccurrencesAcrossOrg `json:"topCVEs"`
+	TopComponents []ComponentOccurrences `json:"topComponents"`
+	TopCVEs       []CVEOccurrences       `json:"topCVEs"`
 
 	VulnEventAverage AverageVulnEventsPerWeek `json:"vulnEventAverage"`
 	OrgRiskHistory   []OrgRiskHistory         `json:"orgRiskHistory"`

@@ -369,8 +369,8 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 	return artifacts, err
 }
 
-func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error) {
-	components := []dtos.ComponentUsageAcrossOrg{}
+func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrences, error) {
+	components := []dtos.ComponentOccurrences{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.dependency_id as purl, 
 	COUNT(DISTINCT (a.asset_id)) AS total_amount
@@ -384,8 +384,8 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, t
 	return components, err
 }
 
-func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error) {
-	topCVEs := []dtos.CVEOccurrencesAcrossOrg{}
+func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrences, error) {
+	topCVEs := []dtos.CVEOccurrences{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.cve_id, 
 	MAX(cves.cvss) as cvss,
@@ -588,4 +588,18 @@ func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, t
 	instanceStatistics.NumberOfTicketSyncedProjects = instanceStatistics.NumberOfProjectsWithGitlabIntegration // not yet clear what that statistic should represent
 
 	return instanceStatistics, nil
+}
+
+func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrences, error) {
+	topCVEs := make([]dtos.CVEOccurrences, 0, limit)
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT a.cve_id, 
+	MAX(cves.cvss) as cvss,
+	COUNT(DISTINCT (a.asset_id)) AS total_amount
+	FROM dependency_vulns a
+	JOIN cves ON cves.cve = a.cve_id
+	GROUP BY a.cve_id
+	ORDER BY total_amount DESC, cvss DESC
+	LIMIT ?;`, limit).Find(&topCVEs).Error
+	return topCVEs, err
 }
