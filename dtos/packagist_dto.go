@@ -28,8 +28,7 @@ type PackagistPackageVersion struct {
 
 	Type string `json:"type,omitempty"`
 
-	Support *PackagistSupport  `json:"support,omitempty"`
-	Funding []PackagistFunding `json:"funding,omitempty"`
+	Support *PackagistSupport `json:"support,omitempty"`
 
 	Require    StringMapField `json:"require,omitempty"`
 	RequireDev StringMapField `json:"require-dev,omitempty"`
@@ -79,10 +78,6 @@ type PackagistSupport struct {
 	Security string `json:"security,omitempty"`
 }
 
-type PackagistFunding struct {
-	Type string `json:"type,omitempty"`
-	URL  string `json:"url,omitempty"`
-}
 
 type StringMapField struct {
 	Map map[string]any

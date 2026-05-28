@@ -99,6 +99,65 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 	})
 }
 
+func TestLicenseRiskClosedByRefresh(t *testing.T) {
+	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
+
+	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
+		SuppressLogs: true,
+		ExtraOptions: []fx.Option{
+			fx.Decorate(func() shared.OpenSourceInsightService {
+				return mockOpenSourceInsightService
+			}),
+		},
+	}, func(f *TestFixture) {
+		_, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		// Component starts with an invalid license
+		comp := models.Component{
+			ID:      "pkg:npm/bad-license-package@1.0.0",
+			License: utils.Ptr("PROPRIETARY"),
+		}
+		assert.NoError(t, f.DB.Create(&comp).Error)
+
+		artifact := models.Artifact{
+			ArtifactName:     "test-artifact",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          assetVersion.AssetID,
+		}
+		assert.NoError(t, f.DB.Create(&artifact).Error)
+
+		// Wire the component into the SBOM graph so GetAndSaveLicenseInformation can find it
+		artifactRoot := "artifact:" + artifact.ArtifactName
+		infoSourceID := "sbom:DEFAULT@" + artifact.ArtifactName
+		assert.NoError(t, f.DB.Create(&models.Component{ID: artifactRoot}).Error)
+		assert.NoError(t, f.DB.Create(&models.Component{ID: infoSourceID}).Error)
+		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: "ROOT", DependencyID: artifactRoot}).Error)
+		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: artifactRoot, DependencyID: infoSourceID}).Error)
+		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: infoSourceID, DependencyID: comp.ID}).Error)
+
+		// Open the license risk
+		err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact.ArtifactName)
+		assert.NoError(t, err)
+
+		risks, err := f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
+		assert.NoError(t, err)
+		assert.Len(t, risks, 1)
+		assert.Equal(t, dtos.VulnStateOpen, risks[0].State)
+
+		// Refresh returns a valid license now
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(dtos.OpenSourceInsightsVersionResponse{Licenses: []string{"MIT"}}, nil)
+
+		_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, nil, true)
+		assert.NoError(t, err)
+
+		risks, err = f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
+		assert.NoError(t, err)
+		assert.Len(t, risks, 1)
+		assert.Equal(t, dtos.VulnStateFixed, risks[0].State, "license risk should be closed after refresh returns a valid license")
+	})
+}
+
 func getSBOMWithWithLicenseRisk() io.Reader {
 	file, err := os.Open("testdata/sbom-with-license-risk.json")
 	if err != nil {

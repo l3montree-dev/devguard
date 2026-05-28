@@ -17,16 +17,18 @@ import (
 )
 
 type openSourceInsightService struct {
-	httpClient  *http.Client
-	rateLimiter rate.Limiter
+	httpClient           *http.Client
+	depsDevRateLimiter   rate.Limiter
+	packagistRateLimiter rate.Limiter
 }
 
 var _ shared.OpenSourceInsightService = (*openSourceInsightService)(nil) // Ensure openSourceInsightService implements shared.OpenSourceInsightService interface
 
 func NewOpenSourceInsightService() *openSourceInsightService {
 	return &openSourceInsightService{
-		httpClient:  &http.Client{Transport: utils.EgressTransport},
-		rateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
+		httpClient:           &http.Client{Transport: utils.EgressTransport},
+		depsDevRateLimiter:   *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
+		packagistRateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
 	}
 }
 
@@ -37,7 +39,7 @@ func (s *openSourceInsightService) GetProject(ctx context.Context, projectID str
 	// make sure the projectID (which is usually a github repository url) is url encoded
 	projectID = url.PathEscape(projectID)
 
-	if err := s.rateLimiter.Wait(ctx); err != nil {
+	if err := s.depsDevRateLimiter.Wait(ctx); err != nil {
 		return dtos.OpenSourceInsightsProjectResponse{}, err
 	}
 
@@ -124,9 +126,6 @@ func (s *openSourceInsightService) getGoVersion(ctx context.Context, ecosystem, 
 func (s *openSourceInsightService) getVersion(ctx context.Context, ecosystem, packageName, version string) (dtos.OpenSourceInsightsVersionResponse, error) {
 	// make sure the package name is url encoded
 	packageName = url.PathEscape(packageName)
-	if err := s.rateLimiter.Wait(ctx); err != nil {
-		return dtos.OpenSourceInsightsVersionResponse{}, err
-	}
 
 	var req *http.Request
 	var res *http.Response
@@ -135,6 +134,9 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, ecosystem, pa
 
 	switch ecosystem {
 	case "composer":
+		if err := s.packagistRateLimiter.Wait(ctx); err != nil {
+			return dtos.OpenSourceInsightsVersionResponse{}, err
+		}
 		packageNameDecoded, err := url.PathUnescape(packageName)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", packageName)
