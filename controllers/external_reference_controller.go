@@ -246,7 +246,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/ [post]
 func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetUserID(), ctx.Request().UserAgent()); err != nil {
 		return err
