@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.5.1] - 2026-05-28
+
+### Fixed
+
+- Hash migration v4 no longer re-runs on every startup — the config version was not persisted after the full vulndb re-import, causing it to trigger again on each restart
+
 ## [v1.5.0] - 2026-05-28
 
 ### Added
