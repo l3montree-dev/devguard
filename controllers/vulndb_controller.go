@@ -198,8 +198,9 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 // query parameter limit: limit the amount of entries in the data
 func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	type listIDsRow struct {
-		CVEID     string    `gorm:"column:cve"`
-		CreatedAt time.Time `gorm:"column:date_published"`
+		CVEID         string    `gorm:"column:cve"`
+		CreatedAt     time.Time `gorm:"column:created_at"`
+		DatePublished time.Time `gorm:"column:date_published"`
 	}
 	type responseDTO struct {
 		Count   int          `json:"total"`
@@ -229,10 +230,10 @@ func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 			return echo.NewHTTPError(400, "invalid limit value").WithInternal(err)
 		}
 
-		sql := `SELECT cve,date_published FROM cves ORDER BY date_published DESC OFFSET ? LIMIT ?;`
+		sql := `SELECT cve, date_published AS created_at, date_published FROM cves ORDER BY date_published DESC OFFSET ? LIMIT ?;`
 		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset, limit).Find(&results).Error
 	} else {
-		sql := `SELECT cve,date_published FROM cves ORDER BY date_published DESC OFFSET ?;`
+		sql := `SELECT cve, date_published AS created_at, date_published FROM cves ORDER BY date_published DESC OFFSET ?;`
 		err = c.cveRepository.GetDB(ctx.Request().Context(), nil).Raw(sql, offset).Find(&results).Error
 	}
 	if err != nil {
@@ -285,3 +286,4 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	// convert the result in a map and return it
 	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
 }
+ 
