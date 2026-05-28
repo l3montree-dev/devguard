@@ -369,8 +369,8 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 	return artifacts, err
 }
 
-func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrences, error) {
-	components := []dtos.ComponentOccurrences{}
+func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrenceAcrossOrg, error) {
+	components := []dtos.ComponentOccurrenceAcrossOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.dependency_id as purl, 
 	COUNT(DISTINCT (a.asset_id)) AS total_amount
@@ -384,8 +384,8 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, t
 	return components, err
 }
 
-func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrences, error) {
-	topCVEs := []dtos.CVEOccurrences{}
+func (r *statisticsRepository) GetMostCommonCVEsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrence, error) {
+	topCVEs := []dtos.CVEOccurrence{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.cve_id, 
 	MAX(cves.cvss) as cvss,
@@ -590,8 +590,8 @@ func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, t
 	return instanceStatistics, nil
 }
 
-func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrences, error) {
-	topCVEs := make([]dtos.CVEOccurrences, 0, limit)
+func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error) {
+	topCVEs := make([]dtos.CVEOccurrence, 0, limit)
 	err := r.GetDB(ctx, nil).Raw(`
 	SELECT a.cve_id, 
 	MAX(cves.cvss) as cvss,
@@ -602,4 +602,17 @@ func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, lim
 	ORDER BY total_amount DESC, cvss DESC
 	LIMIT ?;`, limit).Find(&topCVEs).Error
 	return topCVEs, err
+}
+
+func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
+	components := make([]dtos.ComponentOccurrenceAcrossInstance, 0, limit)
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT cd.dependency_id as purl, 
+	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
+  	1.0 * COUNT(DISTINCT (cd.asset_id))/(SELECT COUNT(*) FROM assets) as relative_amount
+	FROM component_dependencies cd
+	GROUP BY cd.dependency_id
+	ORDER BY total_amount DESC, cd.dependency_id ASC
+	LIMIT ?;`, limit).Find(&components).Error
+	return components, err
 }

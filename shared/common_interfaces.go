@@ -571,8 +571,8 @@ type StatisticsRepository interface {
 	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error)
 	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error)
 	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error)
-	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrences, error)
-	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrences, error)
+	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrenceAcrossOrg, error)
+	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrence, error)
 	GetWeeklyAveragePerVulnEventType(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error)
 
 	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (float32, error)
@@ -585,7 +585,8 @@ type StatisticsRepository interface {
 
 	// instance dashboard functions
 	GetInstanceUsageStatistics(ctx context.Context, tx DB) (dtos.InstanceUsageStatistics, error)
-	GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrences, error)
+	GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error)
+	GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
