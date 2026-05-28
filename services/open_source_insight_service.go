@@ -131,6 +131,7 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, ecosystem, pa
 	var req *http.Request
 	var res *http.Response
 	var response dtos.OpenSourceInsightsVersionResponse
+	var err error
 
 	switch ecosystem {
 	case "composer":
@@ -174,7 +175,7 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, ecosystem, pa
 
 		return packagistToDepsDev, nil
 	default:
-		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystem, packageName, version), nil)
+		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystem, packageName, version), nil)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
