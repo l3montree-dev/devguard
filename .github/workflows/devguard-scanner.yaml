@@ -58,7 +58,7 @@ jobs:
 
 
   code-scanning:
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@github-v1
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@main
     permissions:
       contents: read
       security-events: write
@@ -75,7 +75,7 @@ jobs:
 
   api-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@github-v1
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
     permissions:
       contents: read
       packages: write
@@ -100,7 +100,7 @@ jobs:
   scanner-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     needs: [tests]
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@github-v1
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
     permissions:
       contents: read
       packages: write
@@ -125,7 +125,7 @@ jobs:
 
   postgresql-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@github-v1
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
     permissions:
       contents: read
       packages: write
