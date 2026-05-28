@@ -341,35 +341,35 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 			}
 			return results, nil
 		},
-		func() (any, error) { // 11: topEcosystems
+		func() (any, error) { // 10: topEcosystems
 			results, err := c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get top ecosystems: %w", err)
 			}
 			return results, nil
 		},
-		func() (any, error) { // 12: maliciousPackages
+		func() (any, error) { // 11: maliciousPackages
 			results, err := c.statisticsRepository.FindMaliciousPackagesInOrg(reqCtx, nil, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get malicious packages: %w", err)
 			}
 			return results, nil
 		},
-		func() (any, error) { // 13: averageAge
+		func() (any, error) { // 12: averageAge
 			results, err := c.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(reqCtx, nil, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get average age of dependencies: %w", err)
 			}
 			return results, nil
 		},
-		func() (any, error) { // 14: averageRemediations
+		func() (any, error) { // 13: averageRemediations
 			results, err := c.statisticsRepository.GetAverageRemediationTimesAcrossOrg(reqCtx, nil, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get average remediation times: %w", err)
 			}
 			return results, nil
 		},
-		func() (any, error) { // 15: remediationTypeDistributionRows
+		func() (any, error) { // 14: remediationTypeDistributionRows
 			results, err := c.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(reqCtx, nil, org.ID)
 			if err != nil {
 				return results, fmt.Errorf("could not get remediation type distribution: %w", err)
@@ -400,7 +400,7 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 	}
 
 	remediationTypeDistribution := dtos.RemediationTypeDistribution{}
-	for _, row := range res.GetValue(15).([]dtos.RemediationTypeDistributionRow) {
+	for _, row := range res.GetValue(14).([]dtos.RemediationTypeDistributionRow) {
 		switch row.Type {
 		case string(dtos.EventTypeAccepted):
 			remediationTypeDistribution.AcceptedPercentage = row.Percentage

@@ -76,7 +76,10 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 		return echo.NewHTTPError(500, "could not get external organizations")
 	}
 
-	adminClient := shared.GetAuthAdminClient(ctx)
+	adminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
+		return echo.NewHTTPError(500, "could not get auth client")
+	}
 
 	orgsWithAdmins := make([]dtos.AdminsInOrg, 0, len(orgs))
 	for _, org := range orgs {
@@ -109,8 +112,8 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a valid mail address")
 	}
 
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-	if authAdminClient == nil {
+	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
 		return echo.NewHTTPError(500, "could not get auth client")
 	}
 
@@ -146,11 +149,6 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingUserID)
 	}
 
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-	if authAdminClient == nil {
-		return echo.NewHTTPError(500, "could not get auth client")
-	}
-
 	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, parsedUserID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not revoke admin role from user")
@@ -178,8 +176,8 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get owner of organization")
 	}
 
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-	if authAdminClient == nil {
+	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
 		return echo.NewHTTPError(500, "could not get auth client")
 	}
 
@@ -233,8 +231,8 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 }
 
 func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context) error {
-	authAdminClient := shared.GetAuthAdminClient(ctx)
-	if authAdminClient == nil {
+	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
 		return echo.NewHTTPError(500, "could not get auth client")
 	}
 

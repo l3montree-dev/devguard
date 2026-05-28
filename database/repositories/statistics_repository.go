@@ -570,9 +570,8 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 
 func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, tx *gorm.DB) (dtos.InstanceUsageStatistics, error) {
 	var instanceStatistics dtos.InstanceUsageStatistics
-	var err error
 
-	err = r.GetDB(ctx, tx).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
     SELECT
         (SELECT COUNT(*) FROM public.organizations) AS number_of_organizations,
         (SELECT COUNT(*) FROM public.projects
