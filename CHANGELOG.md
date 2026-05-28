@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.5.0] - 2026-05-28
+
+### Added
+
+- Packagist integration — DevGuard now queries Packagist to enrich PHP package metadata and licensing information
+- Single artifact sync endpoint re-added — the per-artifact sync endpoint was restored along with a missing trailing slash in the Swagger docs
+- QuickFix direct dependency support — an `if` statement guard ensures the quickfix path applies correctly to direct dependencies
+- Programmatic CI support — DevGuard CI workflows now use reusable `devguard-ci-components` / `github-v1` workflow references
+
+### Changed
+
+- Component dependencies table overhauled — composite primary key replaces the surrogate `id` column; obsolete indexes and columns removed; SBOM graph normalisation updated accordingly
+- All dependencies updated; reusable GitHub Actions workflow references updated to `github-v1`
+- Content-Length header is now forwarded through the OCI proxy
+
+### Fixed
+
+- License risks not being closed correctly; Packagist DTO parsing fixed
+- Open source insight service: incorrect variable declaration in `getVersion` default case
+- Go license version prefix — versions without the `v` prefix are now retried with it
+- VulnDB: `lastAffected` ranges in OSV transformation were not respected
+- Migration retry — opens a new connection pool after closing the migrator to avoid `sql: database is closed` errors
+- Maven vulnerability fixed-version resolution
+- Sitemap `listIDsByCreationDate` endpoint column mismatch
+
+### Web
+
+#### Added
+
+- Theme toggler — light/dark mode toggle on sign-in and sign-up pages
+- Star/GitHub banner
+- CVSS badge shown in risk handling view (users were confused by the absence of CVSS highlighting)
+- Guided tour hints — contextual hints added to existing first-access tours
+
+#### Changed
+
+- QuickFix: fallback to direct dependency removed (handled in backend); hidden when there are too many paths
+- Risk badge reworked
+- `RiskGroup`: "across other branches" suffix removed
+- Link colours made consistent across components; drawer button link uses `--link` CSS variable
+- Code colour fixed to black in light mode
+
+#### Fixed
+
+- Filter button styling
+- Link colour inconsistency across the application
+- Description/code colour in Markdown component
+- Gitleaks config editor now uses TOML format
+- Member invitation dialog: improved contextual descriptions and sub-project support
+- Package URL qualifiers truncated to prevent display overflow
+- Invalid package URLs now return `null` instead of throwing
+
+### Contributors
+
+[@iccccccccccccc](https://github.com/iccccccccccccc) — Go license v-prefix fix, Gitleaks TOML fix; [@resolvicomai](https://github.com/resolvicomai) — truncate PURL qualifiers
+
 ## [v1.4.2] - 2026-05-20
 
 ### Fixed
