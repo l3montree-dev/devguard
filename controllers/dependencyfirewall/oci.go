@@ -491,6 +491,9 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	if method == http.MethodHead {
+		if cl := headers.Get("Content-Length"); cl != "" {
+			c.Response().Header().Set("Content-Length", cl)
+		}
 		return c.NoContent(http.StatusOK)
 	}
 	return ociEco.writeResponse(c, data, requestPath, false)
@@ -579,6 +582,13 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		c.Response().Header().Set("Docker-Content-Digest", d)
 	}
 
+	if method == http.MethodHead {
+		if cl := headers.Get("Content-Length"); cl != "" {
+			c.Response().Header().Set("Content-Length", cl)
+		}
+		return c.NoContent(http.StatusOK)
+	}
+
 	if method == http.MethodGet && len(data) > 0 {
 		// Verify the downloaded content matches the requested digest before caching.
 		// digest is of the form "sha256:<hex>"; skip verification for other algorithms.
@@ -594,9 +604,6 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		}
 	}
 
-	if method == http.MethodHead {
-		return c.NoContent(http.StatusOK)
-	}
 	return ociEco.writeResponse(c, data, requestPath, false)
 }
 
