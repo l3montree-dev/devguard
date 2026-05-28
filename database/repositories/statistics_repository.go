@@ -447,47 +447,6 @@ func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(c
 	return average, err
 }
 
-func (r *statisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
-	projectAverage := dtos.ProjectVulnCountAverageBySeverity{}
-	err := r.GetDB(ctx, tx).Raw(`
-		SELECT 
-			COALESCE(AVG(sub.risk_low), 0) risk_low_average, 
-			COALESCE(AVG(sub.risk_medium), 0) risk_medium_average, 
-			COALESCE(AVG(sub.risk_high), 0) risk_high_average, 
-			COALESCE(AVG(sub.risk_critical), 0) risk_critical_average,
-			COALESCE(AVG(sub.cvss_low), 0) cvss_low_average, 
-			COALESCE(AVG(sub.cvss_medium), 0) cvss_medium_average, 
-			COALESCE(AVG(sub.cvss_high), 0) cvss_high_average, 
-			COALESCE(AVG(sub.cvss_critical), 0) cvss_critical_average
-		FROM 
-			(
-				SELECT 
-					b.project_id,
-					COUNT(*) filter (where a.raw_risk_assessment < 4) as risk_low,
-					COUNT(*) filter (where a.raw_risk_assessment >= 4 AND a.raw_risk_assessment < 7) as risk_medium,
-					COUNT(*) filter (where a.raw_risk_assessment >= 7 AND a.raw_risk_assessment < 9) as risk_high,
-					COUNT(*) filter (where a.raw_risk_assessment >= 9 AND a.raw_risk_assessment <= 10) as risk_critical ,
-					COUNT(*) filter (where d.cvss < 4) as cvss_low,
-					COUNT(*) filter (where d.cvss >= 4 AND d.cvss < 7) as cvss_medium,
-					COUNT(*) filter (where d.cvss >= 7 AND d.cvss < 9) as cvss_high,
-					COUNT(*) filter (where d.cvss >= 9 AND d.cvss <= 10) as cvss_critical
-				FROM 
-					dependency_vulns a 
-				LEFT JOIN 
-					assets b ON a.asset_id = b.id
-				LEFT JOIN 
-					projects c ON b.project_id = c.id
-				LEFT JOIN 
-					cves d ON a.cve_id = d.cve
-				WHERE 
-					a.state = 'open' 
-				AND 
-					c.organization_id = ?
-				GROUP BY b.project_id
-			) as sub;`, orgID).Find(&projectAverage).Error
-	return projectAverage, err
-}
-
 // returns the relative and absolute amount of components per ecosystem inside an org
 func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
 	distribution := []dtos.EcosystemUsage{}

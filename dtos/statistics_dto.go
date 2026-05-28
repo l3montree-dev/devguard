@@ -241,9 +241,8 @@ type OrgOverview struct {
 	VulnEventAverage AverageVulnEventsPerWeek `json:"vulnEventAverage"`
 	OrgRiskHistory   []OrgRiskHistory         `json:"orgRiskHistory"`
 
-	AverageOpenCodeRisksPerProject float32                           `json:"averageOpenCodeRisksPerProject"`
-	ProjectOpenVulnAverage         ProjectVulnCountAverageBySeverity `json:"projectOpenVulnAverage"`
-	TopEcosystems                  []EcosystemUsage                  `json:"topEcosystems"`
+	AverageOpenCodeRisksPerProject float32          `json:"averageOpenCodeRisksPerProject"`
+	TopEcosystems                  []EcosystemUsage `json:"topEcosystems"`
 
 	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
 	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies" swaggertype:"integer"`

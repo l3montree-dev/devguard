@@ -341,13 +341,6 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 			}
 			return results, nil
 		},
-		func() (any, error) { // 10: openVulnAverage
-			results, err := c.statisticsRepository.GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(reqCtx, nil, org.ID)
-			if err != nil {
-				return results, fmt.Errorf("could not get open vuln average: %w", err)
-			}
-			return results, nil
-		},
 		func() (any, error) { // 11: topEcosystems
 			results, err := c.statisticsService.GetTopEcosystemsInOrg(reqCtx, org.ID)
 			if err != nil {
@@ -429,11 +422,10 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 		TopCVEs:                        res.GetValue(6).([]dtos.CVEOccurrencesAcrossOrg),
 		OrgRiskHistory:                 res.GetValue(8).([]dtos.OrgRiskHistory),
 		AverageOpenCodeRisksPerProject: res.GetValue(9).(float32),
-		ProjectOpenVulnAverage:         res.GetValue(10).(dtos.ProjectVulnCountAverageBySeverity),
-		TopEcosystems:                  res.GetValue(11).([]dtos.EcosystemUsage),
-		MaliciousPackages:              res.GetValue(12).([]dtos.MaliciousPackageInOrg),
-		AverageAgeOfDependencies:       res.GetValue(13).(time.Duration),
-		AverageRemediationTimes:        res.GetValue(14).(dtos.AverageRemediationTimes),
+		TopEcosystems:                  res.GetValue(10).([]dtos.EcosystemUsage),
+		MaliciousPackages:              res.GetValue(11).([]dtos.MaliciousPackageInOrg),
+		AverageAgeOfDependencies:       res.GetValue(12).(time.Duration),
+		AverageRemediationTimes:        res.GetValue(13).(dtos.AverageRemediationTimes),
 		RemediationTypeDistribution:    remediationTypeDistribution,
 	}
 
