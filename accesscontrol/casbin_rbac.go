@@ -35,6 +35,14 @@ import (
 var _ shared.AccessControl = &casbinRBAC{}
 var casbinEnforcer *casbin.ContextEnforcer
 
+// ResetEnforcer clears the cached enforcer singleton so the next call to
+// NewCasbinRBACProvider builds a fresh one. Intended for use in tests only.
+func ResetEnforcer() {
+	concurrencyMutex.Lock()
+	defer concurrencyMutex.Unlock()
+	casbinEnforcer = nil
+}
+
 // protect against concurrent access on shared rbac structures like maps
 // in practical terms this means that whenever we call a function of the casbin context enforcer, we wrap the call inside a mutex lock and unlock
 var concurrencyMutex sync.RWMutex
