@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"golang.org/x/sync/singleflight"
 )
 
 type statisticsService struct {
@@ -19,6 +20,11 @@ type statisticsService struct {
 	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
 	dependencyVulnRepository      shared.DependencyVulnRepository
 	assetVersionRepository        shared.AssetVersionRepository
+
+	// caching variables for the org dashboard statistics
+	orgStatisticsCache      map[uuid.UUID]orgStatisticsEntry
+	orgStatisticsCacheMutex sync.RWMutex
+	orgStatisticsGroup      singleflight.Group
 }
 
 var _ shared.StatisticsService = (*statisticsService)(nil)
@@ -29,6 +35,7 @@ func NewStatisticsService(statisticsRepository shared.StatisticsRepository, asse
 		artifactRiskHistoryRepository: assetRiskHistoryRepository,
 		dependencyVulnRepository:      dependencyVulnRepository,
 		assetVersionRepository:        assetVersionRepository,
+		orgStatisticsCache:            make(map[uuid.UUID]orgStatisticsEntry),
 	}
 }
 
@@ -464,11 +471,28 @@ func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUI
 		return dtos.OrgOverview{}, fmt.Errorf("organization has no vulnerability data yet: %w", err)
 	}
 
-	overview, found := GetOrgStatisticFromCache(orgID)
-	if found {
+	if overview, found := s.getOrgStatisticFromCache(orgID); found {
 		return overview, nil
 	}
 
+	// use singleflight to avoid concurrent statistics computations
+	result, err, _ := s.orgStatisticsGroup.Do(orgID.String(), func() (any, error) {
+		// check if the stats are in cache
+		overview, found := s.getOrgStatisticFromCache(orgID)
+		if found {
+			// they are; we can just return them
+			return overview, nil
+		}
+		// otherwise compute the new statistics ONCE
+		return s.computeOrgStatistics(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit)
+	})
+	if err != nil {
+		return dtos.OrgOverview{}, err
+	}
+	return result.(dtos.OrgOverview), nil
+}
+
+func (s *statisticsService) computeOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int) (dtos.OrgOverview, error) {
 	now := time.Now()
 
 	res := utils.Concurrently(
@@ -629,7 +653,7 @@ func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUI
 		AverageRemediationTimes:        res.GetValue(13).(dtos.AverageRemediationTimes),
 		RemediationTypeDistribution:    remediationTypeDistribution,
 	}
-	CacheOrgStatistics(orgID, orgStatistics)
+	s.cacheOrgStatistics(orgID, orgStatistics)
 
 	return orgStatistics, nil
 }
@@ -641,28 +665,27 @@ type orgStatisticsEntry struct {
 
 const StatisticsExpiryTime = 15 * time.Minute
 
-var statisticsCache = make(map[uuid.UUID]orgStatisticsEntry)
-var cacheMutex sync.RWMutex
-
-func GetOrgStatisticFromCache(orgID uuid.UUID) (dtos.OrgOverview, bool) {
-	cacheMutex.RLock()
-	entry, ok := statisticsCache[orgID]
-	cacheMutex.RUnlock()
+// return cached statistics if present and not stale; also handles clean up of stale values
+func (s *statisticsService) getOrgStatisticFromCache(orgID uuid.UUID) (dtos.OrgOverview, bool) {
+	s.orgStatisticsCacheMutex.RLock()
+	entry, ok := s.orgStatisticsCache[orgID]
+	s.orgStatisticsCacheMutex.RUnlock()
 	if !ok || entry.expiryTime.Before(time.Now()) {
 		if ok {
-			cacheMutex.Lock()
-			delete(statisticsCache, orgID)
-			cacheMutex.Unlock()
+			s.orgStatisticsCacheMutex.Lock()
+			delete(s.orgStatisticsCache, orgID)
+			s.orgStatisticsCacheMutex.Unlock()
 		}
 		return dtos.OrgOverview{}, false
 	}
 	return entry.statistics, true
 }
 
-func CacheOrgStatistics(orgID uuid.UUID, stats dtos.OrgOverview) {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-	statisticsCache[orgID] = orgStatisticsEntry{
+// writes new statistic date to the cache
+func (s *statisticsService) cacheOrgStatistics(orgID uuid.UUID, stats dtos.OrgOverview) {
+	s.orgStatisticsCacheMutex.Lock()
+	defer s.orgStatisticsCacheMutex.Unlock()
+	s.orgStatisticsCache[orgID] = orgStatisticsEntry{
 		statistics: stats,
 		expiryTime: time.Now().Add(StatisticsExpiryTime),
 	}
