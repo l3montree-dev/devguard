@@ -607,9 +607,9 @@ func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, lim
 func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
 	components := make([]dtos.ComponentOccurrenceAcrossInstance, 0, limit)
 	err := r.GetDB(ctx, nil).Raw(`
-	SELECT cd.dependency_id as purl, 
+	SELECT cd.dependency_id as purl,
 	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
-  	1.0 * COUNT(DISTINCT (cd.asset_id))/(SELECT COUNT(*) FROM assets) as relative_amount
+  	COALESCE(1.0 * COUNT(DISTINCT (cd.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
 	FROM component_dependencies cd
 	GROUP BY cd.dependency_id
 	ORDER BY total_amount DESC, cd.dependency_id ASC
@@ -639,4 +639,14 @@ func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.C
 	JOIN
 		organizations o ON p.organization_id = o.id;`).Find(&packages).Error
 	return packages, err
+}
+
+func (r *statisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error) {
+	var average float32
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT COALESCE( -- add division by 0 guards
+    	((SELECT COUNT(*) FROM first_party_vulnerabilities WHERE state = 'open') * 1.0) /
+    	NULLIF((SELECT COUNT(*) FROM projects), 0)
+	, 0);`).Find(&average).Error
+	return average, err
 }
