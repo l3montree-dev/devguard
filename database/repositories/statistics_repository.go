@@ -650,3 +650,32 @@ func (r *statisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Con
 	, 0);`).Find(&average).Error
 	return average, err
 }
+
+func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error) {
+	projects := []dtos.ProjectVulnDistribution{}
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT sub.pslug, sub.pname,
+		COUNT(*) as total,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 4 AND sub.raw_risk_assessment < 7) AS medium_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 7 AND sub.raw_risk_assessment < 9) AS high_risk,
+		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 9 AND sub.raw_risk_assessment <= 10) AS critical_risk,
+		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
+	FROM (
+		SELECT DISTINCT ON (dv.component_purl, dv.cve_id, p.id)
+			dv.raw_risk_assessment, cves.cvss, p.id as pid, p.name as pname, p.slug as pslug
+		FROM dependency_vulns dv
+		JOIN cves ON cves.cve = dv.cve_id
+		JOIN assets a ON dv.asset_id = a.id
+		JOIN projects p ON a.project_id = p.id
+		AND dv.state = 'open'
+		ORDER BY p.id, dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
+	) sub
+	GROUP BY sub.pid, sub.pslug,sub.pname
+	ORDER BY total DESC
+	LIMIT ?;`, limit).Find(&projects).Error
+	return projects, err
+}

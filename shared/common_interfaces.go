@@ -589,6 +589,7 @@ type StatisticsRepository interface {
 	GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)
 	FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error)
 	GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error)
+	GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
