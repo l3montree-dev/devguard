@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devguard.org/schemas/asset-attestation/v1",
+  "title": "DevguardAssetAttestation",
+  "description": "Security attestation for a DevGuard asset. Captures measurable metrics about how quickly vulnerabilities are being addressed.",
+  "type": "object",
+  "required": [
+    "type",
+    "generatedAt",
+    "schemaVersion",
+    "meanTimeToRemediate"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Predicate type URI identifying this attestation format.",
+      "const": "https://devguard.org/attestation/asset-metrics/v1"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this attestation was generated."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "description": "Version of the attestation schema (semver).",
+      "example": "1.0.0"
+    },
+    "meanTimeToRemediate": {
+      "type": "object",
+      "description": "Average time in hours to close (fix/accept/false-positive) vulnerabilities, grouped by severity.",
+      "required": [
+        "riskLowAvgHours",
+        "riskMediumAvgHours",
+        "riskHighAvgHours",
+        "riskCriticalAvgHours",
+        "cvssLowAvgHours",
+        "cvsssMediumAvgHours",
+        "cvssHighAvgHours",
+        "cvssCriticalAvgHours"
+      ],
+      "properties": {
+        "riskLowAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate low-risk vulnerabilities (DevGuard risk score)."
+        },
+        "riskMediumAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate medium-risk vulnerabilities (DevGuard risk score)."
+        },
+        "riskHighAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate high-risk vulnerabilities (DevGuard risk score)."
+        },
+        "riskCriticalAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate critical-risk vulnerabilities (DevGuard risk score)."
+        },
+        "cvssLowAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate low-CVSS vulnerabilities."
+        },
+        "cvsssMediumAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate medium-CVSS vulnerabilities."
+        },
+        "cvssHighAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate high-CVSS vulnerabilities."
+        },
+        "cvssCriticalAvgHours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Average hours to remediate critical-CVSS vulnerabilities."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

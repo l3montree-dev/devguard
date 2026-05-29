@@ -61,6 +61,7 @@ func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid
 	ch = runner.SyncTickets(ch, errChan)
 	ch = runner.ResolveDifferencesInTicketState(ch, errChan)
 	ch = runner.CollectStats(ch, errChan)
+	ch = runner.GenerateDevguardAttestations(ch, errChan)
 	utils.WaitForChannelDrain(ch)
 	// we can close the error channel now
 	// since it is a chan<-pipelineError we can be sure that all errors have been sent

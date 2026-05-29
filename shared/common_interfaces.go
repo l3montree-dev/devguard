@@ -44,6 +44,7 @@ type DaemonRunner interface {
 	UpdateFixedVersions(ctx context.Context) error
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
+	GenerateAndStoreDevguardAttestation(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 
 	Start(ctx context.Context)
 }
@@ -157,6 +158,7 @@ type AttestationRepository interface {
 	utils.Repository[string, models.Attestation, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Attestation, error)
 	GetByAssetVersionAndAssetID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
 }
 
 type ArtifactRepository interface {

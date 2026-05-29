@@ -96,6 +96,7 @@ type TestApp struct {
 	VulnEventRepository         shared.VulnEventRepository
 	ComponentProjectRepository  shared.ComponentProjectRepository
 	StatisticsRepository        shared.StatisticsRepository
+	AttestationRepository       shared.AttestationRepository
 	LicenseRiskRepository       shared.LicenseRiskRepository
 	GitLabOauth2TokenRepository shared.GitLabOauth2TokenRepository
 	GitlabIntegrationRepository shared.GitlabIntegrationRepository
