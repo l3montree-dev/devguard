@@ -674,6 +674,7 @@ type AdminService interface {
 	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
 	GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error)
 	GetInstanceUsageStatistics(ctx context.Context, tx DB, authClient AdminClient) (dtos.InstanceUsageStatistics, error)
+	GetInstanceVulnStatistics(ctx context.Context, topCVEsLimit, topComponentsLimit, topProjectsLimit int) (dtos.InstanceOverview, error)
 }
 
 type AdminRepository interface {

@@ -270,6 +270,15 @@ type OrgOverview struct {
 	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`
 }
 
+type InstanceOverview struct {
+	TopCVEs                []CVEOccurrence                     `json:"topCVEs"`
+	TopComponents          []ComponentOccurrenceAcrossInstance `json:"topComponents"`
+	MaliciousPackages      []MaliciousPackage                  `json:"maliciousPackages"`
+	AverageOpenCodeRisks   float32                             `json:"averageOpenCodeRisks"`
+	TopVulnerableProjects  []ProjectVulnDistribution           `json:"topVulnerableProjects"`
+	AverageOpenVulnsPerOrg OrgVulnAverage                      `json:"averageOpenVulnsPerOrg"`
+}
+
 type InstanceUsageStatistics struct {
 	NumberOfUsers                         int `gorm:"column:number_of_users"`
 	NumberOfOrganizations                 int `gorm:"column:number_of_organizations"`

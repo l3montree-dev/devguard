@@ -266,6 +266,68 @@ func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndR
 	return _c
 }
 
+// FindMaliciousPackagesAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindMaliciousPackagesAcrossInstance")
+	}
+
+	var r0 []dtos.MaliciousPackage
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]dtos.MaliciousPackage, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []dtos.MaliciousPackage); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dtos.MaliciousPackage)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindMaliciousPackagesAcrossInstance'
+type StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call struct {
+	*mock.Call
+}
+
+// FindMaliciousPackagesAcrossInstance is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesAcrossInstance(ctx interface{}) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+	return &StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call{Call: _e.mock.On("FindMaliciousPackagesAcrossInstance", ctx)}
+}
+
+func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) Return(maliciousPackages []dtos.MaliciousPackage, err error) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+	_c.Call.Return(maliciousPackages, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) ([]dtos.MaliciousPackage, error)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindMaliciousPackagesInOrg provides a mock function for the type StatisticsRepository
 func (_mock *StatisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
 	ret := _mock.Called(ctx, tx, orgID)
@@ -484,74 +546,62 @@ func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_C
 	return _c
 }
 
-// GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error) {
-	ret := _mock.Called(ctx, tx, orgID)
+// GetAverageOpenVulnsPerOrgAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error) {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg")
+		panic("no return value specified for GetAverageOpenVulnsPerOrgAcrossInstance")
 	}
 
-	var r0 dtos.ProjectVulnCountAverageBySeverity
+	var r0 dtos.OrgVulnAverage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)); ok {
-		return returnFunc(ctx, tx, orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (dtos.OrgVulnAverage, error)); ok {
+		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) dtos.ProjectVulnCountAverageBySeverity); ok {
-		r0 = returnFunc(ctx, tx, orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) dtos.OrgVulnAverage); ok {
+		r0 = returnFunc(ctx)
 	} else {
-		r0 = ret.Get(0).(dtos.ProjectVulnCountAverageBySeverity)
+		r0 = ret.Get(0).(dtos.OrgVulnAverage)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg'
-type StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call struct {
+// StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAverageOpenVulnsPerOrgAcrossInstance'
+type StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call struct {
 	*mock.Call
 }
 
-// GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg is a helper method to define mock.On call
+// GetAverageOpenVulnsPerOrgAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
-//   - tx shared.DB
-//   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
-	return &StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg", ctx, tx, orgID)}
+func (_e *StatisticsRepository_Expecter) GetAverageOpenVulnsPerOrgAcrossInstance(ctx interface{}) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+	return &StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call{Call: _e.mock.On("GetAverageOpenVulnsPerOrgAcrossInstance", ctx)}
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
 		run(
 			arg0,
-			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) Return(projectVulnCountAverageBySeverity dtos.ProjectVulnCountAverageBySeverity, err error) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
-	_c.Call.Return(projectVulnCountAverageBySeverity, err)
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Return(v dtos.OrgVulnAverage, err error) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)) *StatisticsRepository_GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg_Call {
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) (dtos.OrgVulnAverage, error)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -624,6 +674,66 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) Return(
 }
 
 func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAvgOpenCodeRisksAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAvgOpenCodeRisksAcrossInstance")
+	}
+
+	var r0 float32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (float32, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) float32); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(float32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAvgOpenCodeRisksAcrossInstance'
+type StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call struct {
+	*mock.Call
+}
+
+// GetAvgOpenCodeRisksAcrossInstance is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *StatisticsRepository_Expecter) GetAvgOpenCodeRisksAcrossInstance(ctx interface{}) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+	return &StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call{Call: _e.mock.On("GetAvgOpenCodeRisksAcrossInstance", ctx)}
+}
+
+func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) Return(f float32, err error) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+	_c.Call.Return(f, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) (float32, error)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -838,8 +948,8 @@ func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Run(run func(ctx con
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Return(cVEOccurrencesAcrossOrgs []dtos.CVEOccurrence, err error) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
-	_c.Call.Return(cVEOccurrencesAcrossOrgs, err)
+func (_c *StatisticsRepository_GetMostCommonCVEsInOrg_Call) Return(cVEOccurrences []dtos.CVEOccurrence, err error) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+	_c.Call.Return(cVEOccurrences, err)
 	return _c
 }
 
@@ -918,8 +1028,8 @@ func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Run(run func(ctx
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Return(componentUsageAcrossOrgs []dtos.ComponentOccurrenceAcrossOrg, err error) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
-	_c.Call.Return(componentUsageAcrossOrgs, err)
+func (_c *StatisticsRepository_GetMostUsedComponentsInOrg_Call) Return(componentOccurrenceAcrossOrgs []dtos.ComponentOccurrenceAcrossOrg, err error) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+	_c.Call.Return(componentOccurrenceAcrossOrgs, err)
 	return _c
 }
 
@@ -1084,6 +1194,74 @@ func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) Return(assetVu
 }
 
 func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetMostVulnerableProjectsAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMostVulnerableProjectsAcrossInstance")
+	}
+
+	var r0 []dtos.ProjectVulnDistribution
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.ProjectVulnDistribution, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.ProjectVulnDistribution); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dtos.ProjectVulnDistribution)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMostVulnerableProjectsAcrossInstance'
+type StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call struct {
+	*mock.Call
+}
+
+// GetMostVulnerableProjectsAcrossInstance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+	return &StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call{Call: _e.mock.On("GetMostVulnerableProjectsAcrossInstance", ctx, limit)}
+}
+
+func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) Return(projectVulnDistributions []dtos.ProjectVulnDistribution, err error) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+	_c.Call.Return(projectVulnDistributions, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1310,6 +1488,142 @@ func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) Ret
 }
 
 func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetTopCVEsAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTopCVEsAcrossInstance")
+	}
+
+	var r0 []dtos.CVEOccurrence
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.CVEOccurrence, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.CVEOccurrence); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dtos.CVEOccurrence)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_GetTopCVEsAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTopCVEsAcrossInstance'
+type StatisticsRepository_GetTopCVEsAcrossInstance_Call struct {
+	*mock.Call
+}
+
+// GetTopCVEsAcrossInstance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *StatisticsRepository_Expecter) GetTopCVEsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+	return &StatisticsRepository_GetTopCVEsAcrossInstance_Call{Call: _e.mock.On("GetTopCVEsAcrossInstance", ctx, limit)}
+}
+
+func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) Return(cVEOccurrences []dtos.CVEOccurrence, err error) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+	_c.Call.Return(cVEOccurrences, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetTopComponentsAcrossInstance provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTopComponentsAcrossInstance")
+	}
+
+	var r0 []dtos.ComponentOccurrenceAcrossInstance
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.ComponentOccurrenceAcrossInstance, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.ComponentOccurrenceAcrossInstance); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dtos.ComponentOccurrenceAcrossInstance)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_GetTopComponentsAcrossInstance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTopComponentsAcrossInstance'
+type StatisticsRepository_GetTopComponentsAcrossInstance_Call struct {
+	*mock.Call
+}
+
+// GetTopComponentsAcrossInstance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *StatisticsRepository_Expecter) GetTopComponentsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+	return &StatisticsRepository_GetTopComponentsAcrossInstance_Call{Call: _e.mock.On("GetTopComponentsAcrossInstance", ctx, limit)}
+}
+
+func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) Return(componentOccurrenceAcrossInstances []dtos.ComponentOccurrenceAcrossInstance, err error) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+	_c.Call.Return(componentOccurrenceAcrossInstances, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }

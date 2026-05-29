@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -241,6 +242,36 @@ func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context
 		return echo.NewHTTPError(500, "could not calculate instance statistics").WithInternal(err)
 	}
 	return ctx.JSON(200, usageStatistics)
+}
+
+func (controller *AdminController) GetInstanceVulnStatistics(ctx shared.Context) error {
+	topCVEsLimit, topComponentsLimit, topProjectsLimit := evaluateInstanceStatisticsParams(ctx)
+
+	instanceStatistics, err := controller.adminService.GetInstanceVulnStatistics(ctx.Request().Context(), topCVEsLimit, topComponentsLimit, topProjectsLimit)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get instance statistics").WithInternal(err)
+	}
+	return ctx.JSON(200, instanceStatistics)
+}
+
+func evaluateInstanceStatisticsParams(ctx shared.Context) (topCVEsLimit, topComponentsLimit, topProjectsLimit int) {
+	defaultValue := 5
+	queryParams := []string{"topCVEsLimit", "topComponentsLimit", "topProjectsLimit"}
+	queryValues := []int{}
+	for _, paramName := range queryParams {
+		if ctx.QueryParam(paramName) != "" {
+			limit, err := strconv.Atoi(ctx.QueryParam(paramName))
+			if err == nil {
+				queryValues = append(queryValues, limit)
+			} else {
+				slog.Warn("invalid value for query param detected, using default value", "param", paramName)
+				queryValues = append(queryValues, defaultValue)
+			}
+		} else {
+			queryValues = append(queryValues, defaultValue)
+		}
+	}
+	return queryValues[0], queryValues[1], queryValues[2]
 }
 
 func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) error {
