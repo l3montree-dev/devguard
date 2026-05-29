@@ -256,7 +256,9 @@ func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {
 
 	orgComponentsLimit, topCVEsLimit, topComponentsLimit, _ := evaluateOrgStatisticsParams(ctx)
 
-	orgStatistics, err := c.statisticsService.GetOrgStatistics(ctx.Request().Context(), org.ID, orgComponentsLimit, topCVEsLimit, topComponentsLimit)
+	forceRefresh, _ := strconv.ParseBool(ctx.QueryParam("forceRefresh")) // nolint
+
+	orgStatistics, err := c.statisticsService.GetOrgStatistics(ctx.Request().Context(), org.ID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not calculate organization statistics").WithInternal(err)
 	}

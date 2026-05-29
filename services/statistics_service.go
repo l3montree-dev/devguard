@@ -460,7 +460,7 @@ func (s *statisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uui
 	return distribution, nil
 }
 
-func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int) (dtos.OrgOverview, error) {
+func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error) {
 	// test if org is empty
 	amount, err := s.assetVersionRepository.GetAmountOfAssetVersionsInOrg(ctx, nil, orgID)
 	if err != nil {
@@ -471,17 +471,21 @@ func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUI
 		return dtos.OrgOverview{}, fmt.Errorf("organization has no vulnerability data yet: %w", err)
 	}
 
-	if overview, found := s.getOrgStatisticFromCache(orgID); found {
-		return overview, nil
+	if !forceRefresh {
+		if overview, found := s.getOrgStatisticFromCache(orgID); found {
+			return overview, nil
+		}
 	}
 
 	// use singleflight to avoid concurrent statistics computations
 	result, err, _ := s.orgStatisticsGroup.Do(orgID.String(), func() (any, error) {
-		// check if the stats are in cache
-		overview, found := s.getOrgStatisticFromCache(orgID)
-		if found {
-			// they are; we can just return them
-			return overview, nil
+		if !forceRefresh {
+			// check if the stats are in cache
+			overview, found := s.getOrgStatisticFromCache(orgID)
+			if found {
+				// they are; we can just return them
+				return overview, nil
+			}
 		}
 		// otherwise compute the new statistics ONCE
 		return s.computeOrgStatistics(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit)
