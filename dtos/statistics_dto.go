@@ -124,6 +124,8 @@ type RiskHistoryDTO struct {
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
+type OrgVulnAverage = RemediationTimeAverages
+
 type RemediationTimeAverages struct {
 	RiskAvgLow      float64 `json:"riskAvgLow"`
 	RiskAvgMedium   float64 `json:"riskAvgMedium"`

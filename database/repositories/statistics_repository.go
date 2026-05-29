@@ -679,3 +679,21 @@ func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx conte
 	LIMIT ?;`, limit).Find(&projects).Error
 	return projects, err
 }
+
+func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error) {
+	average := dtos.OrgVulnAverage{}
+	err := r.GetDB(ctx, nil).Raw(`
+	SELECT
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 4 AND dv.raw_risk_assessment < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_medium,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 7 AND dv.raw_risk_assessment < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_high,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 9 AND dv.raw_risk_assessment <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_critical,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 4 AND c.cvss < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_medium,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 7 AND c.cvss < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_high,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 9 AND c.cvss <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_critical
+	FROM dependency_vulns dv
+	LEFT JOIN cves c ON c.cve = dv.cve_id
+	WHERE dv.state = 'open';`).Find(&average).Error
+	return average, err
+}
