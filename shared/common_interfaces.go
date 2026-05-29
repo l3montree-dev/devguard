@@ -613,6 +613,7 @@ type StatisticsService interface {
 	// CVSS-based average fixing time methods
 	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
+	GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int) (dtos.OrgOverview, error)
 }
 
 type OpenSourceInsightService interface {

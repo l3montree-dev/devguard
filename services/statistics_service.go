@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -449,4 +451,219 @@ func (s *statisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uui
 	}
 
 	return distribution, nil
+}
+
+func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int) (dtos.OrgOverview, error) {
+	// test if org is empty
+	amount, err := s.assetVersionRepository.GetAmountOfAssetVersionsInOrg(ctx, nil, orgID)
+	if err != nil {
+		return dtos.OrgOverview{}, fmt.Errorf("could not query total amount of asset versions for org: %w", err)
+	}
+
+	if amount == 0 {
+		return dtos.OrgOverview{}, fmt.Errorf("organization has no vulnerability data yet: %w", err)
+	}
+
+	overview, found := GetOrgStatisticFromCache(orgID)
+	if found {
+		return overview, nil
+	}
+
+	now := time.Now()
+
+	res := utils.Concurrently(
+		func() (any, error) { // 0: distribution
+			results, err := s.statisticsRepository.VulnClassificationByOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get vuln classification: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 1: structure
+			results, err := s.statisticsRepository.GetOrgStructureDistribution(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get org structure distribution: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 2: projects
+			results, err := s.statisticsRepository.GetMostVulnerableProjectsInOrg(ctx, nil, orgID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable projects: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 3: assets
+			results, err := s.statisticsRepository.GetMostVulnerableAssetsInOrg(ctx, nil, orgID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable assets: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 4: artifacts
+			results, err := s.statisticsRepository.GetMostVulnerableArtifactsInOrg(ctx, nil, orgID, orgComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most vulnerable artifacts: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 5: topComponents
+			results, err := s.statisticsRepository.GetMostUsedComponentsInOrg(ctx, nil, orgID, topComponentsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most used components: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 6: topCVEs
+			results, err := s.statisticsRepository.GetMostCommonCVEsInOrg(ctx, nil, orgID, topCVEsLimit)
+			if err != nil {
+				return results, fmt.Errorf("could not get most common CVEs: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 7: vulnEventAverages
+			results, err := s.statisticsRepository.GetWeeklyAveragePerVulnEventType(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get weekly average per vuln event type: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 8: riskHistory
+			results, err := s.artifactRiskHistoryRepository.GetRiskHistoryForOrg(ctx, nil, orgID, now.Add(-30*time.Hour*24), now)
+			if err != nil {
+				return results, fmt.Errorf("could not get risk history: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 9: openCodeRiskAverage
+			results, err := s.statisticsRepository.GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get open code risk average: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 10: topEcosystems
+			results, err := s.GetTopEcosystemsInOrg(ctx, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get top ecosystems: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 11: maliciousPackages
+			results, err := s.statisticsRepository.FindMaliciousPackagesInOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get malicious packages: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 12: averageAge
+			results, err := s.statisticsRepository.GetAverageAgeOfDependenciesAcrossOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get average age of dependencies: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 13: averageRemediations
+			results, err := s.statisticsRepository.GetAverageRemediationTimesAcrossOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get average remediation times: %w", err)
+			}
+			return results, nil
+		},
+		func() (any, error) { // 14: remediationTypeDistributionRows
+			results, err := s.statisticsRepository.GetRemediationTypeDistributionAcrossOrg(ctx, nil, orgID)
+			if err != nil {
+				return results, fmt.Errorf("could not get remediation type distribution: %w", err)
+			}
+			return results, nil
+		},
+	)
+
+	if res.HasErrors() {
+		slog.Error("could not get org statistics", "errors", res.Errors())
+		return dtos.OrgOverview{}, fmt.Errorf("could not get org statistics")
+	}
+
+	vulnEventAverageDistribution := dtos.AverageVulnEventsPerWeek{}
+	for _, average := range res.GetValue(7).([]dtos.VulnEventAverage) {
+		switch average.VulnEventType {
+		case dtos.EventTypeDetected:
+			vulnEventAverageDistribution.AverageDetectedEvents = average.Average
+		case dtos.EventTypeAccepted:
+			vulnEventAverageDistribution.AverageAcceptedEvents = average.Average
+		case dtos.EventTypeFalsePositive:
+			vulnEventAverageDistribution.AverageFalsePositiveEvents = average.Average
+		case dtos.EventTypeFixed:
+			vulnEventAverageDistribution.AverageFixedEvents = average.Average
+		case dtos.EventTypeReopened:
+			vulnEventAverageDistribution.AverageReopenedEvents = average.Average
+		}
+	}
+
+	remediationTypeDistribution := dtos.RemediationTypeDistribution{}
+	for _, row := range res.GetValue(14).([]dtos.RemediationTypeDistributionRow) {
+		switch row.Type {
+		case string(dtos.EventTypeAccepted):
+			remediationTypeDistribution.AcceptedPercentage = row.Percentage
+		case string(dtos.EventTypeFixed):
+			remediationTypeDistribution.FixedPercentage = row.Percentage
+		case string(dtos.EventTypeFalsePositive):
+			remediationTypeDistribution.FalsePositivePercentage = row.Percentage
+		}
+	}
+
+	orgStatistics := dtos.OrgOverview{
+		VulnEventAverage:               vulnEventAverageDistribution,
+		VulnDistribution:               res.GetValue(0).(dtos.VulnSeverityDistribution),
+		OrgStructure:                   res.GetValue(1).(dtos.OrgStructureDistribution),
+		TopProjects:                    res.GetValue(2).([]dtos.ProjectVulnDistribution),
+		TopAssets:                      res.GetValue(3).([]dtos.AssetVulnDistribution),
+		TopArtifacts:                   res.GetValue(4).([]dtos.ArtifactVulnDistribution),
+		TopComponents:                  res.GetValue(5).([]dtos.ComponentOccurrenceAcrossOrg),
+		TopCVEs:                        res.GetValue(6).([]dtos.CVEOccurrence),
+		OrgRiskHistory:                 res.GetValue(8).([]dtos.OrgRiskHistory),
+		AverageOpenCodeRisksPerProject: res.GetValue(9).(float32),
+		TopEcosystems:                  res.GetValue(10).([]dtos.EcosystemUsage),
+		MaliciousPackages:              res.GetValue(11).([]dtos.MaliciousPackageInOrg),
+		AverageAgeOfDependencies:       res.GetValue(12).(time.Duration),
+		AverageRemediationTimes:        res.GetValue(13).(dtos.AverageRemediationTimes),
+		RemediationTypeDistribution:    remediationTypeDistribution,
+	}
+	CacheOrgStatistics(orgID, orgStatistics)
+
+	return orgStatistics, nil
+}
+
+type orgStatisticsEntry struct {
+	statistics dtos.OrgOverview
+	expiryTime time.Time
+}
+
+const StatisticsExpiryTime = 15 * time.Minute
+
+var statisticsCache = make(map[uuid.UUID]orgStatisticsEntry)
+var cacheMutex sync.RWMutex
+
+func GetOrgStatisticFromCache(orgID uuid.UUID) (dtos.OrgOverview, bool) {
+	cacheMutex.RLock()
+	entry, ok := statisticsCache[orgID]
+	cacheMutex.RUnlock()
+	if !ok || entry.expiryTime.Before(time.Now()) {
+		if ok {
+			cacheMutex.Lock()
+			delete(statisticsCache, orgID)
+			cacheMutex.Unlock()
+		}
+		return dtos.OrgOverview{}, false
+	}
+	return entry.statistics, true
+}
+
+func CacheOrgStatistics(orgID uuid.UUID, stats dtos.OrgOverview) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+	statisticsCache[orgID] = orgStatisticsEntry{
+		statistics: stats,
+		expiryTime: time.Now().Add(StatisticsExpiryTime),
+	}
 }
