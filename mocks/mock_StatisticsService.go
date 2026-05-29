@@ -213,6 +213,96 @@ func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// GetOrgStatistics provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error) {
+	ret := _mock.Called(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrgStatistics")
+	}
+
+	var r0 dtos.OrgOverview
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int, int, bool) (dtos.OrgOverview, error)); ok {
+		return returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int, int, bool) dtos.OrgOverview); ok {
+		r0 = returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	} else {
+		r0 = ret.Get(0).(dtos.OrgOverview)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, int, int, bool) error); ok {
+		r1 = returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetOrgStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgStatistics'
+type StatisticsService_GetOrgStatistics_Call struct {
+	*mock.Call
+}
+
+// GetOrgStatistics is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orgID uuid.UUID
+//   - orgComponentsLimit int
+//   - topCVEsLimit int
+//   - topComponentsLimit int
+//   - forceRefresh bool
+func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx interface{}, orgID interface{}, orgComponentsLimit interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, forceRefresh interface{}) *StatisticsService_GetOrgStatistics_Call {
+	return &StatisticsService_GetOrgStatistics_Call{Call: _e.mock.On("GetOrgStatistics", ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)}
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) Run(run func(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool)) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		var arg5 bool
+		if args[5] != nil {
+			arg5 = args[5].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) Return(orgOverview dtos.OrgOverview, err error) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Return(orgOverview, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error)) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetReleaseRiskHistory provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(ctx, releaseID, start, end)

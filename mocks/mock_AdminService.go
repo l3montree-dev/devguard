@@ -229,84 +229,6 @@ func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(orgID uuid.UU
 	return _c
 }
 
-// GetInstanceStatistics provides a mock function for the type AdminService
-func (_mock *AdminService) GetInstanceStatistics(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int) (dtos.InstanceOverview, error) {
-	ret := _mock.Called(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetInstanceStatistics")
-	}
-
-	var r0 dtos.InstanceOverview
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, int) (dtos.InstanceOverview, error)); ok {
-		return returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, int) dtos.InstanceOverview); ok {
-		r0 = returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
-	} else {
-		r0 = ret.Get(0).(dtos.InstanceOverview)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int, int) error); ok {
-		r1 = returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// AdminService_GetInstanceStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstanceStatistics'
-type AdminService_GetInstanceStatistics_Call struct {
-	*mock.Call
-}
-
-// GetInstanceStatistics is a helper method to define mock.On call
-//   - ctx context.Context
-//   - topCVEsLimit int
-//   - topComponentsLimit int
-//   - topProjectsLimit int
-func (_e *AdminService_Expecter) GetInstanceStatistics(ctx interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, topProjectsLimit interface{}) *AdminService_GetInstanceStatistics_Call {
-	return &AdminService_GetInstanceStatistics_Call{Call: _e.mock.On("GetInstanceStatistics", ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)}
-}
-
-func (_c *AdminService_GetInstanceStatistics_Call) Run(run func(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int)) *AdminService_GetInstanceStatistics_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 int
-		if args[1] != nil {
-			arg1 = args[1].(int)
-		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
-		var arg3 int
-		if args[3] != nil {
-			arg3 = args[3].(int)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *AdminService_GetInstanceStatistics_Call) Return(instanceOverview dtos.InstanceOverview, err error) *AdminService_GetInstanceStatistics_Call {
-	_c.Call.Return(instanceOverview, err)
-	return _c
-}
-
-func (_c *AdminService_GetInstanceStatistics_Call) RunAndReturn(run func(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int) (dtos.InstanceOverview, error)) *AdminService_GetInstanceStatistics_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetInstanceUsageStatistics provides a mock function for the type AdminService
 func (_mock *AdminService) GetInstanceUsageStatistics(ctx context.Context, tx shared.DB, authClient shared.AdminClient) (dtos.InstanceUsageStatistics, error) {
 	ret := _mock.Called(ctx, tx, authClient)
@@ -375,6 +297,84 @@ func (_c *AdminService_GetInstanceUsageStatistics_Call) Return(instanceUsageStat
 }
 
 func (_c *AdminService_GetInstanceUsageStatistics_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, authClient shared.AdminClient) (dtos.InstanceUsageStatistics, error)) *AdminService_GetInstanceUsageStatistics_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetInstanceVulnStatistics provides a mock function for the type AdminService
+func (_mock *AdminService) GetInstanceVulnStatistics(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int) (dtos.InstanceOverview, error) {
+	ret := _mock.Called(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInstanceVulnStatistics")
+	}
+
+	var r0 dtos.InstanceOverview
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, int) (dtos.InstanceOverview, error)); ok {
+		return returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, int) dtos.InstanceOverview); ok {
+		r0 = returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
+	} else {
+		r0 = ret.Get(0).(dtos.InstanceOverview)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int, int) error); ok {
+		r1 = returnFunc(ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AdminService_GetInstanceVulnStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInstanceVulnStatistics'
+type AdminService_GetInstanceVulnStatistics_Call struct {
+	*mock.Call
+}
+
+// GetInstanceVulnStatistics is a helper method to define mock.On call
+//   - ctx context.Context
+//   - topCVEsLimit int
+//   - topComponentsLimit int
+//   - topProjectsLimit int
+func (_e *AdminService_Expecter) GetInstanceVulnStatistics(ctx interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, topProjectsLimit interface{}) *AdminService_GetInstanceVulnStatistics_Call {
+	return &AdminService_GetInstanceVulnStatistics_Call{Call: _e.mock.On("GetInstanceVulnStatistics", ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)}
+}
+
+func (_c *AdminService_GetInstanceVulnStatistics_Call) Run(run func(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int)) *AdminService_GetInstanceVulnStatistics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AdminService_GetInstanceVulnStatistics_Call) Return(instanceOverview dtos.InstanceOverview, err error) *AdminService_GetInstanceVulnStatistics_Call {
+	_c.Call.Return(instanceOverview, err)
+	return _c
+}
+
+func (_c *AdminService_GetInstanceVulnStatistics_Call) RunAndReturn(run func(ctx context.Context, topCVEsLimit int, topComponentsLimit int, topProjectsLimit int) (dtos.InstanceOverview, error)) *AdminService_GetInstanceVulnStatistics_Call {
 	_c.Call.Return(run)
 	return _c
 }
