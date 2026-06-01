@@ -136,6 +136,12 @@ type DependencyProxySecretService interface {
 	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
 }
 
+type DBEncryptionService interface {
+	LoadDBEncryptionKey()
+	MaybeDecryptData(data string) (string, error)
+	EncryptAndWrapData(data string) (string, error)
+}
+
 type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)

@@ -151,6 +151,14 @@ func main() {
 				},
 			})
 		}),
+		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					encryptionService.LoadDBEncryptionKey()
+					return nil
+				},
+			})
+		}),
 		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

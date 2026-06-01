@@ -37,4 +37,5 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewVEXRuleService, fx.As(new(shared.VEXRuleService)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyService, fx.As(new(shared.DependencyProxySecretService)))),
 	fx.Provide(fx.Annotate(NewCrowdsourcedVexingService, fx.As(new(shared.CrowdSourcedVexingService)))),
+	fx.Provide(fx.Annotate(NewDBEncryptionService, fx.As(new(shared.DBEncryptionService)))),
 )
