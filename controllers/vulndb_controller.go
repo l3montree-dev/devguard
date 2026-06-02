@@ -257,8 +257,8 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	cveResults := make([]ecosystemRow, 0, 1024)
 	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 
-	// get the amount of CVEs in affected packages per ecosystem
-	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM cve_affected_component a
+	// count distinct CVEs per ecosystem (not cve_affected_component rows)
+	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(DISTINCT a.cve_id) FROM cve_affected_component a
 	LEFT JOIN affected_components b ON b.id = a.affected_component_id
 	GROUP BY LOWER(b.ecosystem);`
 	err := c.affectedComponentRepository.GetDB(ctx.Request().Context(), nil).Raw(cveSQL).Find(&cveResults).Error

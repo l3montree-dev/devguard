@@ -128,25 +128,35 @@ func (g *cveRepository) Save(ctx context.Context, tx *gorm.DB, cve *models.CVE) 
 	).Save(cve).Error
 }
 
+func applyFilters(q *gorm.DB, filter []shared.FilterQuery) (*gorm.DB, bool) {
+	hasEcosystemJoin := false
+	for _, f := range filter {
+		if f.Field == "ecosystem" {
+			if !hasEcosystemJoin {
+				q = q.Joins("JOIN cve_affected_component ON cve_affected_component.cve_id = cves.id").
+					Joins("JOIN affected_components ON affected_components.id = cve_affected_component.affected_component_id").
+					Distinct()
+				hasEcosystemJoin = true
+			}
+			q = q.Where("affected_components.ecosystem ILIKE ?", f.FieldValue)
+		} else {
+			q = q.Where(f.SQL(), f.Value())
+		}
+	}
+	return q, hasEcosystemJoin
+}
+
 func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	var count int64
 	var cves = []models.CVE{}
 
 	q := g.GetDB(ctx, tx).Model(&models.CVE{})
-
-	// apply filters
-	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
-	}
+	q, _ = applyFilters(q, filter)
 	q.Count(&count)
 
 	// get all cves
 	q = pageInfo.ApplyOnDB(g.GetDB(ctx, tx))
-
-	// apply filters
-	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
-	}
+	q, _ = applyFilters(q, filter)
 
 	// apply sorting
 	if len(sort) > 0 {
@@ -173,7 +183,7 @@ func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) 
 
 	q = q.Where("LOWER(cve) = LOWER(?)", cveID)
 
-	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cve).Error
+	err := q.Preload("AffectedComponents").Preload("Exploits").Preload("Relationships.TargetCVEData").First(&cve).Error
 	if err != nil {
 		return models.CVE{}, err
 	}
