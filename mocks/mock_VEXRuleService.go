@@ -1381,3 +1381,60 @@ func (_c *VEXRuleService_Update_Call) RunAndReturn(run func(ctx context.Context,
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateSystemVEXRulesFromStaticSources provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error {
+	ret := _mock.Called(ctx, reports)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSystemVEXRulesFromStaticSources")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []*normalize.VexReportOpenVEX) error); ok {
+		r0 = returnFunc(ctx, reports)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSystemVEXRulesFromStaticSources'
+type VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call struct {
+	*mock.Call
+}
+
+// UpdateSystemVEXRulesFromStaticSources is a helper method to define mock.On call
+//   - ctx context.Context
+//   - reports []*normalize.VexReportOpenVEX
+func (_e *VEXRuleService_Expecter) UpdateSystemVEXRulesFromStaticSources(ctx interface{}, reports interface{}) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	return &VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call{Call: _e.mock.On("UpdateSystemVEXRulesFromStaticSources", ctx, reports)}
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) Run(run func(ctx context.Context, reports []*normalize.VexReportOpenVEX)) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []*normalize.VexReportOpenVEX
+		if args[1] != nil {
+			arg1 = args[1].([]*normalize.VexReportOpenVEX)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) Return(err error) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) RunAndReturn(run func(ctx context.Context, reports []*normalize.VexReportOpenVEX) error) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	_c.Call.Return(run)
+	return _c
+}
