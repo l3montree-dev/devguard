@@ -5,9 +5,11 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -15,13 +17,42 @@ import (
 type jiraIntegrationRepository struct {
 	db *gorm.DB
 	utils.Repository[uuid.UUID, models.JiraIntegration, *gorm.DB]
+	encryptionService shared.DBEncryptionService
 }
 
-func NewJiraIntegrationRepository(db *gorm.DB) *jiraIntegrationRepository {
+func NewJiraIntegrationRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *jiraIntegrationRepository {
 	return &jiraIntegrationRepository{
-		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.JiraIntegration](db),
+		db:                db,
+		Repository:        newGormRepository[uuid.UUID, models.JiraIntegration](db),
+		encryptionService: encryptionService,
 	}
+}
+
+// Save encrypts the access token on a copy before delegating to the embedded function
+func (r *jiraIntegrationRepository) Save(ctx context.Context, tx *gorm.DB, integration *models.JiraIntegration) error {
+	encrypted := *integration
+	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(integration.AccessToken)
+	if err != nil {
+		return fmt.Errorf("could not encrypt access token before saving to db: %w", err)
+	}
+	encrypted.AccessToken = encryptedAccessToken
+
+	return r.Repository.Save(ctx, tx, &encrypted)
+}
+
+func (r *jiraIntegrationRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.JiraIntegration, error) {
+	integration, err := r.Repository.Read(ctx, tx, id)
+	if err != nil {
+		return integration, err
+	}
+
+	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(integration.AccessToken)
+	if err != nil {
+		return integration, fmt.Errorf("could not decrypt fetched access token: %w", err)
+	}
+	integration.AccessToken = decryptedAccessToken
+
+	return integration, nil
 }
 
 func (r *jiraIntegrationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.JiraIntegration, error) {
@@ -29,6 +60,15 @@ func (r *jiraIntegrationRepository) FindByOrganizationID(ctx context.Context, tx
 	if err := r.GetDB(ctx, tx).Find(&integrations, "org_id = ?", orgID).Error; err != nil {
 		return nil, err
 	}
+
+	for i := range integrations {
+		decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(integrations[i].AccessToken)
+		if err != nil {
+			return nil, fmt.Errorf("could not decrypt fetched access token: %w", err)
+		}
+		integrations[i].AccessToken = decryptedAccessToken
+	}
+
 	return integrations, nil
 }
 
@@ -37,5 +77,12 @@ func (r *jiraIntegrationRepository) GetClientByIntegrationID(ctx context.Context
 	if err := r.GetDB(ctx, tx).First(&integration, "id = ?", integrationID).Error; err != nil {
 		return models.JiraIntegration{}, err
 	}
+
+	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(integration.AccessToken)
+	if err != nil {
+		return models.JiraIntegration{}, fmt.Errorf("could not decrypt fetched access token: %w", err)
+	}
+	integration.AccessToken = decryptedAccessToken
+
 	return integration, nil
 }
