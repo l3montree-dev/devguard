@@ -25,6 +25,12 @@ func (r *systemVEXRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.
 	return r.db.WithContext(ctx)
 }
 
+func (r *systemVEXRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.SystemVEXRule, error) {
+	var rules []models.SystemVEXRule
+	err := r.GetDB(ctx, tx).Preload("CVE").Where("LOWER(cve_id) = LOWER(?)", cveID).Find(&rules).Error
+	return rules, err
+}
+
 func (r *systemVEXRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules []models.SystemVEXRule) error {
 	if len(rules) == 0 {
 		return nil
