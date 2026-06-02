@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -22,8 +21,7 @@ type WebhookController struct {
 
 var _ shared.ThirdPartyIntegration = &WebhookController{}
 
-func NewWebhookController(db shared.DB) *WebhookController {
-	webhookRepository := repositories.NewWebhookRepository(db)
+func NewWebhookController(webhookRepository shared.WebhookIntegrationRepository) *WebhookController {
 	return &WebhookController{
 		webhookRepository: webhookRepository,
 	}
