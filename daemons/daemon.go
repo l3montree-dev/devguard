@@ -101,4 +101,10 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	}); err != nil {
 		slog.Error("could not resolve direct depend	ency fixed versions", "err", err)
 	}
+
+	if err := runner.maybeRunAndMark(ctx, "openvex.updateSystemVEXRules", func() error {
+		return runner.UpdateSystemVEXRulesFromOpenVEXSources(ctx)
+	}); err != nil {
+		slog.Error("could not update system vex rules from openvex sources", "err", err)
+	}
 }

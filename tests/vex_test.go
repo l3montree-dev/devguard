@@ -34,10 +34,12 @@ func TestVEXRuleServiceUpdate(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	err := service.Update(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
@@ -57,12 +59,14 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("Delete", mock.Anything, mock.Anything, mock.MatchedBy(func(r models.VEXRule) bool {
 		return r.ID == "test-rule-1"
 	})).Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	err := service.Delete(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
@@ -76,10 +80,12 @@ func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("DeleteByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	err := service.DeleteByAssetVersion(context.Background(), nil, assetID, "v1.0")
 
 	assert.NoError(t, err)
@@ -107,10 +113,12 @@ func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("FindByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(rules, nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	found, err := service.FindByAssetVersion(context.Background(), nil, assetID, "v1.0")
 
 	assert.NoError(t, err)
@@ -133,10 +141,12 @@ func TestVEXRuleServiceFindByID(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("FindByID", mock.Anything, mock.Anything, "test-rule-1").Return(rule, nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	found, err := service.FindByID(context.Background(), nil, "test-rule-1")
 
 	assert.NoError(t, err)
@@ -185,6 +195,8 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	depVulnRepo.On("GetDependencyVulnsByAssetVersion",
 		mock.Anything,
@@ -194,7 +206,7 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 		mock.Anything,
 	).Return(vulns, nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	counts, err := service.CountMatchingVulnsForRules(context.Background(), nil, rules)
 
 	assert.NoError(t, err)
@@ -235,6 +247,8 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	depVulnRepo.On("GetDependencyVulnsByAssetVersion",
 		mock.Anything,
@@ -244,7 +258,7 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 		mock.Anything,
 	).Return(vulns, nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
@@ -267,10 +281,12 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	vexRuleRepo.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 	err := service.Create(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
@@ -309,6 +325,8 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
+	systemVexRuleRepo := mocks.NewSystemVEXRuleRepository(t)
+	cveRepo := mocks.NewCveRepository(t)
 
 	// Track how many events are saved across all calls
 	var totalEventsSaved int
@@ -320,7 +338,7 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 		}).
 		Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo)
 
 	// First call — should create 1 event
 	vulns := []models.DependencyVuln{vuln}

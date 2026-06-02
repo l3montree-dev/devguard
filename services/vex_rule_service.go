@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 
 	"github.com/google/uuid"
@@ -32,26 +33,33 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
 type VEXRuleService struct {
 	vexRuleRepository        shared.VEXRuleRepository
+	systemVEXRuleRepository  shared.SystemVEXRuleRepository
 	dependencyVulnRepository shared.DependencyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
+	cveRepository            shared.CveRepository
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
+	systemVEXRuleRepository shared.SystemVEXRuleRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	vulnEventRepository shared.VulnEventRepository,
+	cveRepository shared.CveRepository,
 ) *VEXRuleService {
 	return &VEXRuleService{
 		vexRuleRepository:        vexRuleRepository,
+		systemVEXRuleRepository:  systemVEXRuleRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
+		cveRepository:            cveRepository,
 	}
 }
 
@@ -492,17 +500,13 @@ func (s *VEXRuleService) parseVEXRulesInBOM(ctx context.Context, assetID uuid.UU
 
 		var pattern dtos.PathPattern
 
-		if componentPurl.String() != "" {
-			componentPurlStr, err := normalize.PURLToString(componentPurl)
-			if err != nil {
-				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
-				componentPurlStr = componentPurl.String()
-			}
-			pattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
-		} else {
-			// If no metadata component PURL, use the affected package directly
-			pattern = dtos.PathPattern{purlString}
+		componentPurlStr, err := normalize.PURLToString(componentPurl)
+		if err != nil {
+			slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
+			componentPurlStr = componentPurl.String()
 		}
+
+		pattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
 
 		rule := models.VEXRule{
 			AssetID:          assetID,
@@ -519,6 +523,135 @@ func (s *VEXRuleService) parseVEXRulesInBOM(ctx context.Context, assetID uuid.UU
 	}
 
 	return rules, nil
+}
+
+func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, assetID uuid.UUID, assetVersionName string, report *normalize.VexReportOpenVEX) ([]models.VEXRule, error) {
+	vex := report.Report
+
+	if vex.Statements == nil {
+		return nil, fmt.Errorf("no statements inside OpenVex Report")
+	}
+
+	rules := make([]models.VEXRule, 0, len(vex.Statements))
+	for _, statement := range vex.Statements {
+		if statement.Status == "" {
+			slog.Info("statement does not status, skipping component for VEX rule creation", "openVEXReport", vex.ID)
+			continue
+		}
+		cveID := string(statement.Vulnerability.Name)
+		if cveID == "" {
+			slog.Info("statment does not contain vulnerability name or identifier, skipping component for VEX rule creation", "statement", statement.ID)
+			continue
+		}
+		if statement.Products == nil {
+			slog.Info("no products inside of statement, skipping component for VEX rule creation", "statement", statement.ID, "cveID", cveID)
+			continue
+		}
+
+		for _, product := range statement.Products {
+			var err error
+			var componentPurl packageurl.PackageURL
+			if product.Identifiers != nil && product.Identifiers[ov.PURL] != "" {
+				componentPurl, err = packageurl.FromString(product.Identifiers[ov.PURL])
+			} else if product.ID != "" {
+				componentPurl, err = packageurl.FromString(product.ID)
+			} else {
+				slog.Info("product identifier is not present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
+			if err != nil {
+				slog.Info("failed to parse product identifier therefore no identifier present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
+			var justification string
+			switch statement.Status {
+			case ov.StatusAffected:
+				justification = statement.ActionStatement
+			case ov.StatusNotAffected:
+				justification = statement.ImpactStatement
+			}
+
+			mechanicalJustification := dtos.MechanicalJustificationType(statement.Justification)
+
+			eventType, err := mapOpenVEXToEventType(&statement)
+			if err != nil {
+				slog.Info("unable to map OpenVEX Statement to event type, skipping VEX rule creation for this vuln", "cveID", cveID, "error", err)
+				continue
+			}
+
+			componentPurlStr, err := normalize.PURLToString(componentPurl)
+			if err != nil {
+				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
+				componentPurlStr = componentPurl.String()
+			}
+
+			if len(product.Subcomponents) > 0 {
+				for _, subcomponent := range product.Subcomponents {
+					var subcomponentPurl packageurl.PackageURL
+					subcomponentPurl, err = packageurl.FromString(subcomponent.ID)
+					if err != nil {
+						slog.Info("failed to parse product subcomponent identifier therefore no identifier present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID, "product", componentPurlStr)
+						continue
+					}
+					subcomponentPurlStr, err := normalize.PURLToString(subcomponentPurl)
+					if err != nil {
+						subcomponentPurlStr = subcomponentPurl.String()
+						slog.Info("failed to unescape subcomponent purl for path pattern, continuing anyway", "purl", subcomponentPurlStr, "error", err)
+					}
+					pattern := dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, subcomponentPurlStr}
+
+					rule := models.VEXRule{
+						AssetID:                 assetID,
+						AssetVersionName:        assetVersionName,
+						CVEID:                   cveID,
+						VexSource:               report.Source,
+						Justification:           justification,
+						EventType:               eventType,
+						PathPattern:             pattern,
+						MechanicalJustification: mechanicalJustification,
+						CreatedByID:             "system",
+					}
+					rule.SetPathPattern(rule.PathPattern)
+					rules = append(rules, rule)
+				}
+			} else {
+				pattern := dtos.PathPattern{componentPurlStr}
+				rule := models.VEXRule{
+					AssetID:                 assetID,
+					AssetVersionName:        assetVersionName,
+					CVEID:                   cveID,
+					VexSource:               report.Source,
+					Justification:           justification,
+					MechanicalJustification: mechanicalJustification,
+					EventType:               eventType,
+					PathPattern:             pattern,
+					CreatedByID:             "system",
+				}
+				rule.SetPathPattern(rule.PathPattern)
+				rules = append(rules, rule)
+			}
+		}
+	}
+	return rules, nil
+}
+
+func mapOpenVEXToEventType(s *ov.Statement) (dtos.VulnEventType, error) {
+	if s == nil {
+		return "", fmt.Errorf("statement is nil")
+	}
+	switch s.Status {
+	case ov.StatusNotAffected:
+		return dtos.EventTypeFalsePositive, nil
+	case ov.StatusAffected:
+		if s.ActionStatement != "" {
+			return dtos.EventTypeComment, nil
+		}
+		return "", fmt.Errorf("vulnerability analysis state is exploitable, no event type mapping")
+	default:
+		return "", fmt.Errorf("unsupported OpenVEX vulnerability analysis state: %s", s.Status)
+	}
 }
 
 // SyncVEXRulesFromSource syncs VEX rules from a specific source.
@@ -657,4 +790,90 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 		}
 	}
 	return result
+}
+
+func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error {
+	systemVEXRulesMap := make(map[string]bool)
+	var systemVEXRules []models.SystemVEXRule
+	includedCVEsMap := make(map[string]bool)
+	var includedCVEs []string
+
+	for _, report := range reports {
+		if report.Source == "" {
+			slog.Info("OpenVEX report contains no source. Skipping this report")
+			continue
+		}
+		if report.Report == nil {
+			slog.Info("OpenVEX report contains no report information. Skipping this report")
+			continue
+		}
+
+		parsedVEXRules, err := s.parseVEXRulesFromOpenVEXReport(ctx, uuid.Nil, "main", report)
+		if err != nil {
+			slog.Info("Error while parsing OpenVEX report", "error", err, "report", report.Report.ID)
+			continue
+		}
+		for _, parsedRule := range parsedVEXRules {
+			// This clause uses a map for deduplication
+			if _, exists := systemVEXRulesMap[parsedRule.ID]; !exists {
+				systemVEXRule := transformer.VEXRuleToSystemVEXRule(parsedRule)
+				systemVEXRulesMap[parsedRule.ID] = true
+				systemVEXRules = append(systemVEXRules, systemVEXRule)
+				if _, cveExists := includedCVEsMap[parsedRule.CVEID]; !cveExists {
+					includedCVEs = append(includedCVEs, parsedRule.CVEID)
+				}
+			}
+		}
+	}
+	//Check if CVEs are already in database since database can take some time to be established
+	// If there are a lot of CVEs in a project, the lookup might fail for having
+	// more than 65535 keys
+	const cveBatchSize = 1000
+
+	existingCVEMap := make(map[string]models.CVE)
+
+	for start := 0; start < len(includedCVEs); start += cveBatchSize {
+		end := start + cveBatchSize
+		if end > len(includedCVEs) {
+			end = len(includedCVEs)
+		}
+
+		batch := includedCVEs[start:end]
+		found, err := s.cveRepository.FindCVEs(ctx, nil, batch)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing CVEs: %w", err)
+		}
+
+		for _, cve := range found {
+			existingCVEMap[strings.ToLower(strings.TrimSpace(cve.CVE))] = cve
+		}
+	}
+
+	filteredRules := make([]models.SystemVEXRule, 0, len(systemVEXRules))
+	for _, rule := range systemVEXRules {
+		cveKey := strings.ToLower(strings.TrimSpace(rule.CVEID))
+		if _, exists := existingCVEMap[cveKey]; !exists {
+			slog.Info("skipping system VEX rule because CVE does not exist in database yet",
+				"cveID", rule.CVEID,
+				"vexSource", rule.VexSource,
+				"ruleID", rule.ID,
+			)
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+
+	if len(filteredRules) == 0 {
+		slog.Info("no system VEX rules left after CVE filtering")
+		return nil
+	}
+
+	//Bulk Upload of valid VEXRules
+	err := s.systemVEXRuleRepository.UpsertBatch(ctx, nil, filteredRules)
+	if err != nil {
+		return fmt.Errorf("Error while inserting extracted VEXRules into database: %s", err)
+	}
+	slog.Info("updated system VEXRules", "fetched", len(systemVEXRules), "filtered", len(filteredRules))
+
+	return nil
 }
