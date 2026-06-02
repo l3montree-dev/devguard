@@ -33,26 +33,33 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
 type VEXRuleService struct {
 	vexRuleRepository        shared.VEXRuleRepository
+	systemVEXRuleRepository  shared.SystemVEXRuleRepository
 	dependencyVulnRepository shared.DependencyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
+	cveRepository            shared.CveRepository
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
+	systemVEXRuleRepository shared.SystemVEXRuleRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	vulnEventRepository shared.VulnEventRepository,
+	cveRepository shared.CveRepository,
 ) *VEXRuleService {
 	return &VEXRuleService{
 		vexRuleRepository:        vexRuleRepository,
+		systemVEXRuleRepository:  systemVEXRuleRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
+		cveRepository:            cveRepository,
 	}
 }
 
@@ -527,8 +534,8 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 
 	rules := make([]models.VEXRule, 0, len(vex.Statements))
 	for _, statement := range vex.Statements {
-		if statement.ID == "" {
-			slog.Info("statement does not contain ID, skipping component for VEX rule creation", "openVEXReport", vex.ID)
+		if statement.Status == "" {
+			slog.Info("statement does not status, skipping component for VEX rule creation", "openVEXReport", vex.ID)
 			continue
 		}
 		cveID := string(statement.Vulnerability.Name)
@@ -783,4 +790,90 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 		}
 	}
 	return result
+}
+
+func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error {
+	systemVEXRulesMap := make(map[string]bool)
+	var systemVEXRules []models.SystemVEXRule
+	includedCVEsMap := make(map[string]bool)
+	var includedCVEs []string
+
+	for _, report := range reports {
+		if report.Source == "" {
+			slog.Info("OpenVEX report contains no source. Skipping this report")
+			continue
+		}
+		if report.Report == nil {
+			slog.Info("OpenVEX report contains no report information. Skipping this report")
+			continue
+		}
+
+		parsedVEXRules, err := s.parseVEXRulesFromOpenVEXReport(ctx, uuid.Nil, "main", report)
+		if err != nil {
+			slog.Info("Error while parsing OpenVEX report", "error", err, "report", report.Report.ID)
+			continue
+		}
+		for _, parsedRule := range parsedVEXRules {
+			// This clause uses a map for deduplication
+			if _, exists := systemVEXRulesMap[parsedRule.ID]; !exists {
+				systemVEXRule := transformer.VEXRuleToSystemVEXRule(parsedRule)
+				systemVEXRulesMap[parsedRule.ID] = true
+				systemVEXRules = append(systemVEXRules, systemVEXRule)
+				if _, cveExists := includedCVEsMap[parsedRule.CVEID]; !cveExists {
+					includedCVEs = append(includedCVEs, parsedRule.CVEID)
+				}
+			}
+		}
+	}
+	//Check if CVEs are already in database since database can take some time to be established
+	// If there are a lot of CVEs in a project, the lookup might fail for having
+	// more than 65535 keys
+	const cveBatchSize = 1000
+
+	existingCVEMap := make(map[string]models.CVE)
+
+	for start := 0; start < len(includedCVEs); start += cveBatchSize {
+		end := start + cveBatchSize
+		if end > len(includedCVEs) {
+			end = len(includedCVEs)
+		}
+
+		batch := includedCVEs[start:end]
+		found, err := s.cveRepository.FindCVEs(ctx, nil, batch)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing CVEs: %w", err)
+		}
+
+		for _, cve := range found {
+			existingCVEMap[strings.ToLower(strings.TrimSpace(cve.CVE))] = cve
+		}
+	}
+
+	filteredRules := make([]models.SystemVEXRule, 0, len(systemVEXRules))
+	for _, rule := range systemVEXRules {
+		cveKey := strings.ToLower(strings.TrimSpace(rule.CVEID))
+		if _, exists := existingCVEMap[cveKey]; !exists {
+			slog.Info("skipping system VEX rule because CVE does not exist in database yet",
+				"cveID", rule.CVEID,
+				"vexSource", rule.VexSource,
+				"ruleID", rule.ID,
+			)
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+
+	if len(filteredRules) == 0 {
+		slog.Info("no system VEX rules left after CVE filtering")
+		return nil
+	}
+
+	//Bulk Upload of valid VEXRules
+	err := s.systemVEXRuleRepository.UpsertBatch(ctx, nil, filteredRules)
+	if err != nil {
+		return fmt.Errorf("Error while inserting extracted VEXRules into database: %s", err)
+	}
+	slog.Info("updated system VEXRules", "fetched", len(systemVEXRules), "filtered", len(filteredRules))
+
+	return nil
 }

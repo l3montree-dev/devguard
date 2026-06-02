@@ -62,6 +62,10 @@ type VEXRule struct {
 	// When false, the rule exists but does not create events or modify vulnerability state.
 	// Rules are disabled when uploaded in ParanoidMode, requiring manual review/enabling.
 	Enabled bool `json:"enabled" gorm:"default:true;not null;"`
+
+	// IsSystemVEXRule is used to indicate if the VEXRule was created/imported into the system
+	// with not relation to any other Asset
+	IsSystemVEXRule bool `json:"isSystemVEXRule" gorm:"default:false;not null;"`
 }
 
 func (VEXRule) TableName() string {

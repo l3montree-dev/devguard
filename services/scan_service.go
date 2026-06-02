@@ -949,6 +949,7 @@ func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL stri
 	if err != nil {
 		return nil, fmt.Errorf("could not read obtained zip: %w", err)
 	}
+	defer resp.Body.Close()
 
 	for _, fileEntry := range repoZip.File {
 		if fileEntry.FileInfo().IsDir() {
@@ -971,17 +972,23 @@ func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL stri
 			continue
 		}
 
-		var openVEX ov.VEX
-		err = json.Unmarshal(data, &openVEX)
-		if err != nil {
-			slog.Info("could not unmarshal openVEX failed", "err", err)
+		if !json.Valid(data) {
+			slog.Info("skipping non-JSON file in OpenVEX repo", "filename", fileEntry.Name)
 			continue
 		}
 
-		vexReports = append(vexReports, &normalize.VexReportOpenVEX{
-			Report: &openVEX,
-			Source: targetURL,
-		})
+		var openVEX ov.VEX
+		err = json.Unmarshal(data, &openVEX)
+		if err != nil {
+			slog.Info("could not unmarshal openVEX failed", "err", err, "filename", filename)
+			continue
+		}
+		newVexReport, err := normalize.NewVexReportOpenVEX(&openVEX, targetURL)
+		if err != nil {
+			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
+			continue
+		}
+		vexReports = append(vexReports, newVexReport)
 	}
 	return vexReports, nil
 }
@@ -1016,14 +1023,20 @@ func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*
 		repo,
 		branch,
 	)
-	resp, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	switch resp.Response.StatusCode {
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
 	case http.StatusOK:
-		return resp.Response, nil
+		return resp, nil
 	case http.StatusNotFound:
 		return nil, fmt.Errorf("404 Source not found")
 	case http.StatusUnauthorized:
@@ -1031,6 +1044,6 @@ func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*
 	case http.StatusInternalServerError:
 		return nil, fmt.Errorf("500 Internal Server error")
 	default:
-		return nil, fmt.Errorf("Unexpected status: %d\n", resp.Response.StatusCode)
+		return nil, fmt.Errorf("Unexpected status: %d\n", resp.StatusCode)
 	}
 }

@@ -339,6 +339,11 @@ type VEXRuleRepository interface {
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 }
 
+type SystemVEXRuleRepository interface {
+	GetDB(ctx context.Context, db DB) DB
+	UpsertBatch(ctx context.Context, tx DB, rules []models.SystemVEXRule) error
+}
+
 type OrganizationRepository interface {
 	utils.Repository[uuid.UUID, models.Org, DB]
 	ReadBySlug(ctx context.Context, tx DB, slug string) (models.Org, error)
@@ -468,6 +473,7 @@ type ScanService interface {
 	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
+	FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*normalize.VexReportOpenVEX, err error)
 }
 
 type ConfigRepository interface {
@@ -494,6 +500,7 @@ type VEXRuleService interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
+	UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error
 }
 
 type CrowdSourcedVexingService interface {
