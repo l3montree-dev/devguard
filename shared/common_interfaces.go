@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
+	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -158,6 +159,7 @@ type AttestationRepository interface {
 	utils.Repository[string, models.Attestation, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Attestation, error)
 	GetByAssetVersionAndAssetID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+	GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error)
 	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
 }
 
@@ -169,6 +171,10 @@ type ArtifactRepository interface {
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID uuid.UUID) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 	CleanupOrphanedRecords(ctx context.Context) error
+}
+
+type ComplianceService interface {
+	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]compliance.PolicyEvaluation, error)
 }
 
 type ReleaseRepository interface {
