@@ -20,6 +20,15 @@ func NewDBEncryptionService() *DBEncryptionService {
 	return &DBEncryptionService{}
 }
 
+// builds a service from an explicit key; used for the key rotation
+func NewDBEncryptionServiceFromKey(key []byte) (*DBEncryptionService, error) {
+	gcm, err := buildGCM(key)
+	if err != nil {
+		return nil, fmt.Errorf("could not build new encryption service from key: %w", err)
+	}
+	return &DBEncryptionService{gcm: gcm}, nil
+}
+
 // load the key and build the gcm from it on start up once; then reuse it for every operation
 func (service *DBEncryptionService) LoadDBEncryptionKey() {
 	keyPath := os.Getenv("APP_SIDE_ENCRYPTION_KEY_PATH")
@@ -30,22 +39,33 @@ func (service *DBEncryptionService) LoadDBEncryptionKey() {
 	if err != nil {
 		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable 'APP_SIDE_ENCRYPTION_KEY_PATH'.\nFound the following path in the env variable: %s. Ran into the following error: %s", keyPath, err.Error()))
 	}
-	key = bytes.TrimSpace(key)
-	if len(key) != 32 {
-		panic("invalid key format; the key needs to be exactly 256 bit in size")
-	}
 
-	aesCipher, err := aes.NewCipher(key)
+	gcm, err := buildGCM(key)
 	if err != nil {
-		panic(fmt.Sprintf("could not create AES cipher using the loaded key: %s", err.Error()))
-	}
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		panic(fmt.Sprintf("could not create GCM cipher using the AES cipher: %s", err.Error()))
+		panic(err.Error())
 	}
 
 	service.gcm = gcm
 	slog.Info("successfully loaded encryption key")
+}
+
+// validates the key and builds the AES-GCM cipher from it
+func buildGCM(key []byte) (cipher.AEAD, error) {
+	key = bytes.TrimSpace(key)
+	if len(key) != 32 {
+		return nil, fmt.Errorf("invalid key format; the key needs to be exactly 256 bit in size")
+	}
+
+	aesCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("could not create AES cipher using the loaded key: %w", err)
+	}
+	gcm, err := cipher.NewGCM(aesCipher)
+	if err != nil {
+		return nil, fmt.Errorf("could not create GCM cipher using the AES cipher: %w", err)
+	}
+
+	return gcm, nil
 }
 
 // checks if the data is encrypted (wrapped) and decrypts if its the case
