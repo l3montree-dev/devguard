@@ -1,9 +1,11 @@
 package services
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,13 +13,14 @@ import (
 )
 
 type DBEncryptionService struct {
-	key []byte
+	gcm cipher.AEAD // the gcm module to encrypt and decrypt using the provided key
 }
 
 func NewDBEncryptionService() *DBEncryptionService {
 	return &DBEncryptionService{}
 }
 
+// load the key and build the gcm from it on start up once; then reuse it for every operation
 func (service *DBEncryptionService) LoadDBEncryptionKey() {
 	keyPath := os.Getenv("APP_SIDE_ENCRYPTION_KEY_PATH")
 	if keyPath == "" {
@@ -25,9 +28,23 @@ func (service *DBEncryptionService) LoadDBEncryptionKey() {
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
-		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable 'APP_SIDE_ENCRYPTION_KEY_PATH'.\nFound the following path in the env variable: %s. Ran into the following error: %w", keyPath, err))
+		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable 'APP_SIDE_ENCRYPTION_KEY_PATH'.\nFound the following path in the env variable: %s. Ran into the following error: %s", keyPath, err.Error()))
 	}
-	service.key = key
+	key = bytes.TrimSpace(key)
+	if len(key) != 32 {
+		panic("invalid key format; the key needs to be exactly 256 bit in size")
+	}
+
+	aesCipher, err := aes.NewCipher(key)
+	if err != nil {
+		panic(fmt.Sprintf("could not create AES cipher using the loaded key: %s", err.Error()))
+	}
+	gcm, err := cipher.NewGCM(aesCipher)
+	if err != nil {
+		panic(fmt.Sprintf("could not create GCM cipher using the AES cipher: %s", err.Error()))
+	}
+
+	service.gcm = gcm
 	slog.Info("successfully loaded encryption key")
 }
 
@@ -37,22 +54,18 @@ func (service *DBEncryptionService) MaybeDecryptData(data string) (string, error
 		return "", nil
 	}
 
-	aesCipher, err := aes.NewCipher(service.key)
+	rawData, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return "", fmt.Errorf("could not create AES cipher using existing key: %w", err)
-	}
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return "", fmt.Errorf("could not create GCM cipher using AES cipher: %w", err)
+		return "", fmt.Errorf("could not base64 decode the encrypted data: %w", err)
 	}
 
-	nonceSize := gcm.NonceSize()
-	if len(data) < nonceSize {
+	nonceSize := service.gcm.NonceSize()
+	if len(rawData) < nonceSize+service.gcm.Overhead() {
 		return "", fmt.Errorf("invalid data format;unable to decrypt")
 	}
 
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, []byte(nonce), []byte(ciphertext), nil)
+	nonce, ciphertext := rawData[:nonceSize], rawData[nonceSize:]
+	plaintext, err := service.gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not decrypt the data: %w", err)
 	}
@@ -66,24 +79,14 @@ func (service *DBEncryptionService) EncryptAndWrapData(data string) (string, err
 		return "", nil
 	}
 
-	aesCipher, err := aes.NewCipher(service.key)
-	if err != nil {
-		return "", fmt.Errorf("could not create AES cipher using existing key: %w", err)
-	}
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return "", fmt.Errorf("could not create GCM cipher using AES cipher: %w", err)
-	}
-
-	nonce := make([]byte, gcm.NonceSize())
-	_, err = io.ReadFull(rand.Reader, nonce)
+	nonce := make([]byte, service.gcm.NonceSize())
+	_, err := io.ReadFull(rand.Reader, nonce)
 	if err != nil {
 		return "", fmt.Errorf("could not generate a new nonce from random pool: %w", err)
 	}
 
-	encryptedData := gcm.Seal(nil, nonce, []byte(data), nil)
-	if len(encryptedData) == 0 {
-		return "", fmt.Errorf("could not successfully encrypt the provided data")
-	}
-	return string(encryptedData), nil
+	// prepend the nonce to the encrypted text
+	encryptedData := service.gcm.Seal(nonce, nonce, []byte(data), nil)
+
+	return base64.StdEncoding.EncodeToString(encryptedData), nil
 }
