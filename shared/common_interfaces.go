@@ -341,6 +341,7 @@ type VEXRuleRepository interface {
 
 type SystemVEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
+	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.SystemVEXRule, error)
 	UpsertBatch(ctx context.Context, tx DB, rules []models.SystemVEXRule) error
 }
 

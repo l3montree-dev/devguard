@@ -72,3 +72,28 @@ func VEXRuleToSystemVEXRule(rule models.VEXRule) models.SystemVEXRule {
 		UpdatedAt:               rule.UpdatedAt,
 	}
 }
+
+func SystemVEXRuleToVEXRule(systemRule models.SystemVEXRule) models.VEXRule {
+	return models.VEXRule{
+		ID: systemRule.ID,
+
+		// Composite key components
+		CVEID:     systemRule.CVEID,
+		VexSource: systemRule.VexSource,
+
+		CreatedAt: systemRule.CreatedAt,
+		UpdatedAt: systemRule.UpdatedAt,
+
+		CVE: systemRule.CVE,
+
+		// Rule data
+		Justification:           systemRule.Justification,
+		MechanicalJustification: systemRule.MechanicalJustification,
+		EventType:               systemRule.EventType,
+
+		PathPattern: dtos.PathPattern(systemRule.PathPattern),
+		CreatedByID: systemRule.CreatedByID,
+
+		Enabled: false,
+	}
+}
