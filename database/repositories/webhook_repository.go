@@ -43,7 +43,7 @@ func (r *webhookRepository) encryptSecret(webhook models.WebhookIntegration) (mo
 	return webhook, nil
 }
 
-// decryptSecret decrypts the secret of a freshly fetched webhook in place.
+// decryptSecret decrypts the secret of a fetched webhook in place
 func (r *webhookRepository) decryptSecret(webhook *models.WebhookIntegration) error {
 	if webhook.Secret == nil {
 		return nil
@@ -58,8 +58,7 @@ func (r *webhookRepository) decryptSecret(webhook *models.WebhookIntegration) er
 	return nil
 }
 
-// Save encrypts the secret on a copy before delegating to the embedded generic
-// repository, so the caller's in-memory model keeps its plaintext secret.
+// Save encrypts the secret on a copy before delegating to the embedded function
 func (r *webhookRepository) Save(ctx context.Context, tx *gorm.DB, webhook *models.WebhookIntegration) error {
 	encrypted, err := r.encryptSecret(*webhook)
 	if err != nil {
