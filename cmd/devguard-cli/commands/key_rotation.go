@@ -44,7 +44,7 @@ func NewKeyRotationCommand() *cobra.Command {
 				return fmt.Errorf("could not rotate keys: %w", err)
 			}
 
-			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(newKey), os.FileMode(os.O_WRONLY))
+			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(newKey), 0o600)
 			if err != nil {
 				return fmt.Errorf("fatal: could not update the key in your key file, to resolve this update the key manually under the specified filename in the %s environment variable in your .env", services.KeyFilePathENVName)
 			}
@@ -195,6 +195,9 @@ func encryptSecrets(secrets secretsInDB, encryptionService services.DBEncryption
 	}
 
 	for i := range secrets.WebhookIntegrations {
+		if secrets.WebhookIntegrations[i].Secret == nil {
+			continue
+		}
 		encryptedSecret, err := encryptionService.EncryptAndWrapData(*secrets.WebhookIntegrations[i].Secret)
 		if err != nil {
 			return secretsInDB{}, fmt.Errorf("could not encrypt webhook integration secret: %w", err)
