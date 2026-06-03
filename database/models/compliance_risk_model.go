@@ -16,6 +16,7 @@ package models
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -26,7 +27,9 @@ import (
 type ComplianceRisk struct {
 	Vulnerability
 
-	PolicyID string `json:"policyId" gorm:"type:text;"`
+	PolicyID      string     `json:"policyId" gorm:"type:text;"`
+	PredicateType string     `json:"predicateType" gorm:"type:text;"`
+	AttestationUpdatedAt *time.Time `json:"attestationUpdatedAt" gorm:"type:timestamptz;"`
 
 	Events []VulnEvent `gorm:"foreignKey:ComplianceRiskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
@@ -42,7 +45,7 @@ func (complianceRisk ComplianceRisk) GetType() dtos.VulnType {
 }
 
 func (complianceRisk *ComplianceRisk) CalculateHash() uuid.UUID {
-	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s", complianceRisk.PolicyID, complianceRisk.AssetVersionName, complianceRisk.AssetID))
+	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s/%s", complianceRisk.PolicyID, complianceRisk.PredicateType, complianceRisk.AssetVersionName, complianceRisk.AssetID))
 }
 
 func (complianceRisk *ComplianceRisk) BeforeSave(tx *gorm.DB) error {

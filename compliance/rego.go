@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
@@ -48,9 +49,10 @@ type PolicyFS struct {
 
 type PolicyEvaluation struct {
 	models.Policy
-	Compliant           *bool          `json:"compliant"`
-	Violations          []string       `json:"violations"`
-	RawEvaluationResult map[string]any `json:"rawEvaluationResult"`
+	Compliant            *bool          `json:"compliant"`
+	Violations           []string       `json:"violations"`
+	RawEvaluationResult  map[string]any `json:"rawEvaluationResult"`
+	AttestationUpdatedAt *time.Time     `json:"attestationUpdatedAt"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)

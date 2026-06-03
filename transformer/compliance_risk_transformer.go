@@ -26,6 +26,8 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 		TicketURL:            r.TicketURL,
 		ManualTicketCreation: r.ManualTicketCreation,
 		PolicyID:             r.PolicyID,
+		PredicateType:        r.PredicateType,
+		AttestationUpdatedAt: r.AttestationUpdatedAt,
 		Artifacts:            artifacts,
 	}
 }

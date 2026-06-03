@@ -53,7 +53,9 @@ foundMatch:
 			if attestation.PredicateType != policy.PredicateType {
 				continue
 			}
-			results = append(results, compliance.Eval(policy, attestation.Content))
+			eval := compliance.Eval(policy, attestation.Content)
+			eval.AttestationUpdatedAt = &attestation.UpdatedAt
+			results = append(results, eval)
 			continue foundMatch
 		}
 		results = append(results, compliance.Eval(policy, nil))

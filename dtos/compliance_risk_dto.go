@@ -23,8 +23,10 @@ type ComplianceRiskDTO struct {
 	TicketURL        *string   `json:"ticketUrl"`
 	ManualTicketCreation bool  `json:"manualTicketCreation"`
 
-	PolicyID  string `json:"policyId"`
-	Artifacts []ComplianceRiskArtifactDTO `json:"artifacts"`
+	PolicyID             string     `json:"policyId"`
+	PredicateType        string     `json:"predicateType"`
+	AttestationUpdatedAt *time.Time `json:"attestationUpdatedAt"`
+	Artifacts            []ComplianceRiskArtifactDTO `json:"artifacts"`
 }
 
 type DetailedComplianceRiskDTO struct {

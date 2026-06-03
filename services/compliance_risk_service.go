@@ -52,7 +52,9 @@ func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx
 				State:            state,
 				LastDetected:     time.Now(),
 			},
-			PolicyID: eval.Policy.ID.String(),
+			PolicyID:             eval.Policy.ID.String(),
+			PredicateType:        eval.Policy.PredicateType,
+			AttestationUpdatedAt: eval.AttestationUpdatedAt,
 		})
 	}
 
