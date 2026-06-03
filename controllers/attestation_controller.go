@@ -46,6 +46,21 @@ func (a *AttestationController) List(ctx shared.Context) error {
 	return ctx.JSON(200, attestationList)
 }
 
+func (a *AttestationController) ListByArtifact(ctx shared.Context) error {
+
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+
+	artifact := shared.GetArtifact(ctx)
+
+	attestationList, err := a.attestationService.GetByArtifactAndAssetVersionAndAssetID(ctx.Request().Context(), nil, artifact.ArtifactName, assetVersion.Name, asset.GetID())
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, attestationList)
+}
+
 // @Summary Create attestation
 // @Tags Attestations
 // @Security CookieAuth
