@@ -54,6 +54,7 @@ func init() {
 	commands.GetRootCmd().AddCommand(commands.NewSBOMCommand())
 	commands.GetRootCmd().AddCommand(commands.NewTrustScoreCommand())
 	commands.GetRootCmd().AddCommand(commands.NewKeyRotationCommand())
+	commands.GetRootCmd().AddCommand(commands.NewMigrationCommand())
 }
 
 func main() {
