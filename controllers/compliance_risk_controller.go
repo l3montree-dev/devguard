@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
+	"io"
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -15,12 +19,24 @@ import (
 type ComplianceRiskController struct {
 	complianceRiskRepository shared.ComplianceRiskRepository
 	complianceRiskService    shared.ComplianceRiskService
+	complianceService        shared.ComplianceService
+	attestationRepository    shared.AttestationRepository
+	artifactRepository       shared.ArtifactRepository
 }
 
-func NewComplianceRiskController(repo shared.ComplianceRiskRepository, svc shared.ComplianceRiskService) *ComplianceRiskController {
+func NewComplianceRiskController(
+	repo shared.ComplianceRiskRepository,
+	svc shared.ComplianceRiskService,
+	complianceService shared.ComplianceService,
+	attestationRepository shared.AttestationRepository,
+	artifactRepository shared.ArtifactRepository,
+) *ComplianceRiskController {
 	return &ComplianceRiskController{
 		complianceRiskRepository: repo,
 		complianceRiskService:    svc,
+		complianceService:        complianceService,
+		attestationRepository:    attestationRepository,
+		artifactRepository:       artifactRepository,
 	}
 }
 
@@ -151,4 +167,111 @@ func (c *ComplianceRiskController) Mitigate(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find compliance risk")
 	}
 	return ctx.JSON(200, convertComplianceRiskToDetailedDTO(risk))
+}
+
+// RecalculateFromService fetches evaluations via complianceService.ArtifactCompliance and recalculates risks.
+func (c *ComplianceRiskController) RecalculateFromService(ctx shared.Context) error {
+	assetVersion := shared.GetAssetVersion(ctx)
+	artifact := shared.GetArtifact(ctx)
+	project := shared.GetProject(ctx)
+	userAgent := ctx.Request().UserAgent()
+	userID := shared.GetSession(ctx).GetUserID()
+
+	evaluations, err := c.complianceService.ArtifactCompliance(ctx.Request().Context(), project.ID, assetVersion, artifact)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not evaluate artifact compliance").WithInternal(err)
+	}
+
+	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, evaluations); err != nil {
+		return echo.NewHTTPError(500, "could not handle artifact compliance risks").WithInternal(err)
+	}
+
+	return ctx.JSON(200, evaluations)
+}
+
+// UploadZip accepts a ZIP file containing attestation files and an evaluations.json.
+// It saves each attestation and then recalculates compliance risks based on the evaluations.
+func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
+	assetVersion := shared.GetAssetVersion(ctx)
+	artifact := shared.GetArtifact(ctx)
+	userAgent := ctx.Request().UserAgent()
+	userID := shared.GetSession(ctx).GetUserID()
+
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		return echo.NewHTTPError(400, "missing zip file").WithInternal(err)
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not open zip file").WithInternal(err)
+	}
+	defer src.Close()
+
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read zip file").WithInternal(err)
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid zip file").WithInternal(err)
+	}
+
+	var evaluations []compliance.PolicyEvaluation
+
+	for _, f := range zr.File {
+		rc, err := f.Open()
+		if err != nil {
+			slog.Warn("could not open file in zip", "name", f.Name, "err", err)
+			continue
+		}
+		content, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			slog.Warn("could not read file in zip", "name", f.Name, "err", err)
+			continue
+		}
+
+		if f.Name == "evaluations.json" {
+			if err := json.Unmarshal(content, &evaluations); err != nil {
+				return echo.NewHTTPError(400, "invalid evaluations.json in zip").WithInternal(err)
+			}
+			continue
+		}
+
+		// treat remaining files as attestations; predicateType is read from the JSON content
+		var contentMap map[string]any
+		if err := json.Unmarshal(content, &contentMap); err != nil {
+			slog.Warn("skipping non-JSON attestation file in zip", "name", f.Name, "err", err)
+			continue
+		}
+
+		predicateType, ok := contentMap["predicateType"].(string)
+		if !ok || predicateType == "" {
+			slog.Warn("attestation file missing predicateType field, skipping", "name", f.Name)
+			continue
+		}
+
+		attestation := models.Attestation{
+			AssetID:          assetVersion.AssetID,
+			AssetVersionName: assetVersion.Name,
+			ArtifactName:     artifact.ArtifactName,
+			PredicateType:    predicateType,
+			Content:          contentMap,
+		}
+		if err := c.attestationRepository.Create(ctx.Request().Context(), nil, &attestation); err != nil {
+			slog.Error("could not save attestation from zip", "name", f.Name, "err", err)
+		}
+	}
+
+	if evaluations == nil {
+		return echo.NewHTTPError(400, "evaluations.json not found in zip")
+	}
+
+	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, evaluations); err != nil {
+		return echo.NewHTTPError(500, "could not handle artifact compliance risks").WithInternal(err)
+	}
+
+	return ctx.JSON(200, evaluations)
 }

@@ -94,6 +94,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewAttestationController),
 	fx.Provide(NewInToToController),
 	fx.Provide(NewPolicyController),
+	fx.Provide(NewComplianceRiskController),
 
 	// Integrations
 	fx.Provide(NewIntegrationController),
