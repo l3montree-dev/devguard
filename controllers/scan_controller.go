@@ -585,7 +585,10 @@ func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		scannerID = "unknown"
+		slog.Error("no X-Scanner header found")
+		return echo.NewHTTPError(400, map[string]string{
+			"error": "no X-Scanner header found",
+		})
 	}
 
 	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)

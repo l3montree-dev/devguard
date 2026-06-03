@@ -279,9 +279,9 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		slog.Info("Uploading SARIF report", "scannerID", scannerID)
 
-		endpoint := fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL)
+		endpoint := fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL)
 		if config.RuntimeBaseConfig.Token == "" {
-			endpoint = fmt.Sprintf("%s/api/v1/sarif-scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
+			endpoint = fmt.Sprintf("%s/api/v1/sarif-scan-unauthenticated/", config.RuntimeBaseConfig.APIURL)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(b))

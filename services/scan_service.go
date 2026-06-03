@@ -849,10 +849,10 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 			}
 			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
 			ruleProperties := map[string]any{}
-			if rule.Properties != nil {
+			if rule.Properties != nil && rule.Properties.AdditionalProperties != nil {
 				ruleProperties = rule.Properties.AdditionalProperties
 			}
-
+			msg := utils.OrDefault(&result.Message.Text, "")
 			vuln := dtos.FirstPartyVulnDTO{
 				ScannerIDs:      scannerID,
 				RuleID:          utils.OrDefault(result.RuleID, ""),
@@ -861,10 +861,10 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  ruleProperties,
 				State:           dtos.VulnStateOpen,
-				Message:         &result.Message.Text,
+				Message:         &msg,
 				Date:            time.Now().Format(time.RFC3339),
 			}
-			if result.Locations != nil && len(result.Locations) > 0 {
+			if len(result.Locations) > 0 {
 				loc := result.Locations[0]
 				vuln.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 			}
