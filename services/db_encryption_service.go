@@ -12,6 +12,8 @@ import (
 	"os"
 )
 
+const KeyFilePathENVName = "APP_SIDE_ENCRYPTION_KEY_PATH"
+
 type DBEncryptionService struct {
 	gcm cipher.AEAD // the gcm module to encrypt and decrypt using the provided key
 }
@@ -31,14 +33,7 @@ func NewDBEncryptionServiceFromKey(key []byte) (*DBEncryptionService, error) {
 
 // load the key and build the gcm from it on start up once; then reuse it for every operation
 func (service *DBEncryptionService) LoadDBEncryptionKey() {
-	keyPath := os.Getenv("APP_SIDE_ENCRYPTION_KEY_PATH")
-	if keyPath == "" {
-		panic("could not resolve encryption key path. Make sure to have the env variable 'APP_SIDE_ENCRYPTION_KEY_PATH' set in your .env. See the .env-example for the default path.")
-	}
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable 'APP_SIDE_ENCRYPTION_KEY_PATH'.\nFound the following path in the env variable: %s. Ran into the following error: %s", keyPath, err.Error()))
-	}
+	key := ReadCurrentKey()
 
 	gcm, err := buildGCM(key)
 	if err != nil {
@@ -47,6 +42,18 @@ func (service *DBEncryptionService) LoadDBEncryptionKey() {
 
 	service.gcm = gcm
 	slog.Info("successfully loaded encryption key")
+}
+
+func ReadCurrentKey() []byte {
+	keyPath := os.Getenv(KeyFilePathENVName)
+	if keyPath == "" {
+		panic(fmt.Sprintf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env-example for the default path.", KeyFilePathENVName))
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable '%s'.\nFound the following path in the env variable: %s. Ran into the following error: %s", KeyFilePathENVName, keyPath, err.Error()))
+	}
+	return key
 }
 
 // validates the key and builds the AES-GCM cipher from it
