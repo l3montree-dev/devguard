@@ -64,6 +64,8 @@ type DaemonRunner struct {
 	vexRuleService               shared.VEXRuleService
 	attestationRepository        shared.AttestationRepository
 	statisticsRepository         shared.StatisticsRepository
+	complianceService            shared.ComplianceService
+	complianceRiskService        shared.ComplianceRiskService
 
 	debugOptions         DebugOptions
 	fixedVersionResolver shared.FixedVersionResolver
@@ -110,6 +112,8 @@ func NewDaemonRunner(
 	fixedVersionResolver shared.FixedVersionResolver,
 	attestationRepository shared.AttestationRepository,
 	statisticsRepository shared.StatisticsRepository,
+	complianceService shared.ComplianceService,
+	complianceRiskService shared.ComplianceRiskService,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -143,6 +147,8 @@ func NewDaemonRunner(
 		fixedVersionResolver:         fixedVersionResolver,
 		attestationRepository:        attestationRepository,
 		statisticsRepository:         statisticsRepository,
+		complianceService:            complianceService,
+		complianceRiskService:        complianceRiskService,
 	}
 }
 

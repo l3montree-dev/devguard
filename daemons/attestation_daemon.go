@@ -12,6 +12,49 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 )
 
+func (runner *DaemonRunner) CheckArtifactCompliance(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+	out := make(chan assetWithProjectAndOrg)
+
+	go func() {
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("check artifact compliance panic")
+		}()
+
+		for assetWithDetails := range input {
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.check-artifact-compliance")
+
+			for _, assetVersion := range assetWithDetails.assetVersions {
+				for _, artifact := range assetVersion.Artifacts {
+					evaluations, err := runner.complianceService.ArtifactCompliance(stageCtx, assetWithDetails.project.ID, assetVersion, artifact)
+					if err != nil {
+						slog.Error("could not evaluate artifact compliance",
+							"assetID", assetWithDetails.asset.ID,
+							"assetVersion", assetVersion.Name,
+							"artifactName", artifact.ArtifactName,
+							"err", err,
+						)
+						continue
+					}
+					if err := runner.complianceRiskService.HandleArtifactCompliance(stageCtx, nil, "system", nil, assetVersion, artifact, evaluations); err != nil {
+						slog.Error("could not handle artifact compliance risks",
+							"assetID", assetWithDetails.asset.ID,
+							"assetVersion", assetVersion.Name,
+							"artifactName", artifact.ArtifactName,
+							"err", err,
+						)
+					}
+				}
+			}
+
+			span.End()
+			out <- assetWithDetails
+		}
+	}()
+
+	return out
+}
+
 const secondsPerHour = 3600.0
 
 // GenerateDevguardAttestations is a pipeline stage that computes the DevGuard asset

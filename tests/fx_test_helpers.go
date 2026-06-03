@@ -182,6 +182,8 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.FixedVersionResolver,
 		f.App.AttestationRepository,
 		f.App.StatisticsRepository,
+		f.App.ComplianceService,
+		f.App.ComplianceRiskService,
 	)
 }
 

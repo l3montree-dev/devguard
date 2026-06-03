@@ -97,6 +97,9 @@ type TestApp struct {
 	ComponentProjectRepository  shared.ComponentProjectRepository
 	StatisticsRepository        shared.StatisticsRepository
 	AttestationRepository       shared.AttestationRepository
+	ComplianceService           shared.ComplianceService
+	ComplianceRiskService       shared.ComplianceRiskService
+	ComplianceRiskRepository    shared.ComplianceRiskRepository
 	LicenseRiskRepository       shared.LicenseRiskRepository
 	GitLabOauth2TokenRepository shared.GitLabOauth2TokenRepository
 	GitlabIntegrationRepository shared.GitlabIntegrationRepository

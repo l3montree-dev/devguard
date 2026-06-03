@@ -292,6 +292,21 @@ type LicenseRiskRepository interface {
 	ApplyAndSave(ctx context.Context, tx DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error
 }
 
+type ComplianceRiskRepository interface {
+	utils.Repository[uuid.UUID, models.ComplianceRisk, DB]
+	GetAllComplianceRisksForAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.ComplianceRisk, error)
+	GetAllComplianceRisksForAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComplianceRisk], error)
+	GetComplianceRisksByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComplianceRisk, error)
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.ComplianceRisk, error)
+	ApplyAndSave(ctx context.Context, tx DB, risk *models.ComplianceRisk, ev *models.VulnEvent) error
+	SaveBatch(ctx context.Context, tx DB, risks []models.ComplianceRisk) error
+}
+
+type ComplianceRiskService interface {
+	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []compliance.PolicyEvaluation) error
+	UpdateComplianceRiskState(ctx context.Context, tx DB, userID string, risk *models.ComplianceRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
+}
+
 type InTotoLinkRepository interface {
 	utils.Repository[uuid.UUID, models.InTotoLink, DB]
 	FindByAssetAndSupplyChainID(ctx context.Context, tx DB, assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)

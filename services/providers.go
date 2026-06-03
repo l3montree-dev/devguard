@@ -18,6 +18,8 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewConfigService, fx.As(new(shared.ConfigService)))),
 	fx.Provide(fx.Annotate(NewFirstPartyVulnService, fx.As(new(shared.FirstPartyVulnService)))),
 	fx.Provide(fx.Annotate(NewLicenseRiskService, fx.As(new(shared.LicenseRiskService)))),
+	fx.Provide(fx.Annotate(NewComplianceService, fx.As(new(shared.ComplianceService)))),
+	fx.Provide(fx.Annotate(NewComplianceRiskService, fx.As(new(shared.ComplianceRiskService)))),
 	fx.Provide(fx.Annotate(NewProjectService, fx.As(new(shared.ProjectService)))),
 	fx.Provide(fx.Annotate(NewAssetService, fx.As(new(shared.AssetService)))),
 	fx.Provide(fx.Annotate(NewComponentService, fx.As(new(shared.ComponentService)))),
