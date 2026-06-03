@@ -39,7 +39,7 @@ func NewKeyRotationCommand() *cobra.Command {
 				return fmt.Errorf("could not build new encryption module from key: %w", err)
 			}
 
-			err = runKeyRotation(cmd.Context(), currentEnc, newEnc)
+			err = reEncryptAllSecrets(cmd.Context(), currentEnc, newEnc)
 			if err != nil {
 				return fmt.Errorf("could not rotate keys: %w", err)
 			}
@@ -51,7 +51,7 @@ func NewKeyRotationCommand() *cobra.Command {
 			return nil
 		},
 	}
-	rotationCmd.Flags().StringP("key", "k", "", "The new AES-256 bit key which will be used for encryption")
+	rotationCmd.Flags().StringP("key", "k", "", "The new hex encoded AES-256 key (64 hex characters) which will be used for encryption")
 	err := rotationCmd.MarkFlagRequired("key")
 	if err != nil {
 		slog.Error("a new key needs to be provided")
@@ -61,8 +61,8 @@ func NewKeyRotationCommand() *cobra.Command {
 	return rotationCmd
 }
 
-func runKeyRotation(ctx context.Context, currentEnc, newEnc *services.DBEncryptionService) error {
-	var rotationErr error
+func reEncryptAllSecrets(ctx context.Context, decryptEnc, encryptEnc *services.DBEncryptionService) error {
+	var pipelineErr error
 
 	app := fx.New(
 		fx.NopLogger,
@@ -74,14 +74,14 @@ func runKeyRotation(ctx context.Context, currentEnc, newEnc *services.DBEncrypti
 				return fmt.Errorf("could not fetch existing secrets: %w", err)
 			}
 
-			decryptedSecrets, err := decryptSecrets(secrets, *currentEnc)
+			decryptedSecrets, err := decryptSecrets(secrets, *decryptEnc)
 			if err != nil {
-				return fmt.Errorf("could not decrypt existing secrets with the current key: %w", err)
+				return fmt.Errorf("could not decrypt existing secrets: %w", err)
 			}
 
-			reEncryptedSecrets, err := encryptSecrets(decryptedSecrets, *newEnc)
+			reEncryptedSecrets, err := encryptSecrets(decryptedSecrets, *encryptEnc)
 			if err != nil {
-				return fmt.Errorf("could not re-encrypt existing secrets with the new key: %w", err)
+				return fmt.Errorf("could not re-encrypt existing secrets: %w", err)
 			}
 
 			err = updateSecretsInDB(db, reEncryptedSecrets)
@@ -94,16 +94,16 @@ func runKeyRotation(ctx context.Context, currentEnc, newEnc *services.DBEncrypti
 	)
 
 	if err := app.Start(ctx); err != nil {
-		rotationErr = err
+		pipelineErr = err
 	}
 
 	if err := app.Stop(ctx); err != nil {
-		if rotationErr == nil {
-			rotationErr = err
+		if pipelineErr == nil {
+			pipelineErr = err
 		}
 	}
 
-	return rotationErr
+	return pipelineErr
 }
 
 type secretsInDB struct {

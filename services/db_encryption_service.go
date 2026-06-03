@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -60,14 +61,21 @@ func ReadCurrentKey() []byte {
 	return key
 }
 
-// validates the key and builds the AES-GCM cipher from it
+// validates the hex encoded key and builds the AES-GCM cipher from it
 func buildGCM(key []byte) (cipher.AEAD, error) {
 	key = bytes.TrimSpace(key)
-	if len(key) != 32 {
-		return nil, fmt.Errorf("invalid key format; the key needs to be exactly 256 bit in size")
+
+	decodedKey := make([]byte, hex.DecodedLen(len(key)))
+	n, err := hex.Decode(decodedKey, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not hex decode the key; it needs to be a hex encoded 256 bit AES key (64 hex characters): %w", err)
+	}
+	decodedKey = decodedKey[:n]
+	if len(decodedKey) != 32 {
+		return nil, fmt.Errorf("invalid key format; the key needs to be exactly 256 bit in size (64 hex characters)")
 	}
 
-	aesCipher, err := aes.NewCipher(key)
+	aesCipher, err := aes.NewCipher(decodedKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create AES cipher using the loaded key: %w", err)
 	}
