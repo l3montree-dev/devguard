@@ -16,7 +16,65 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func NewKeyRotationCommand() *cobra.Command {
+func NewEncryptionCommand() *cobra.Command {
+	encryptionCmd := &cobra.Command{
+		Use:   "encryption",
+		Short: "Manage app side encryption of the secrets stored in the database.",
+		Long:  "Bundles the app side encryption maintenance modes. Use the 'migration' mode to encrypt currently plaintext secrets for the first time and the 'keyRotation' mode to switch all secrets to a new key. Both modes only work while the application is offline.",
+	}
+
+	encryptionCmd.AddCommand(newMigrationCommand())
+	encryptionCmd.AddCommand(newKeyRotationCommand())
+
+	return encryptionCmd
+}
+
+func newMigrationCommand() *cobra.Command {
+	migrationCmd := &cobra.Command{
+		Use:   "migration",
+		Short: "Encrypts all existing plaintext secrets in the database with the provided key.",
+		Long:  "One-off migration that wraps all currently unencrypted secrets in the database using the provided key and stores that key at the configured key file path (creating the file if it does not exist yet). Already encrypted values are left untouched, so it is safe to re-run. It only works while the application is offline.",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			key, err := cmd.Flags().GetString("key")
+			if err != nil {
+				return fmt.Errorf("could not get the key, make sure its set and properly formatted: %w", err)
+			}
+			shared.LoadConfig() // nolint
+
+			enc, err := services.NewDBEncryptionServiceFromKey([]byte(key))
+			if err != nil {
+				return fmt.Errorf("could not build encryption module from the provided key: %w", err)
+			}
+
+			// write the key first: plaintext is read back regardless of the key
+			// file, so a crash after this still leaves the app working and the
+			// migration re-runnable
+			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(key), 0o600)
+			if err != nil {
+				return fmt.Errorf("could not write the key to the key file under the path in the %s environment variable: %w", services.KeyFilePathENVName, err)
+			}
+
+			err = reEncryptAllSecrets(cmd.Context(), enc, enc)
+			if err != nil {
+				return fmt.Errorf("could not encrypt existing data: %w", err)
+			}
+
+			slog.Info("successfully encrypted all existing secrets")
+			return nil
+		},
+	}
+	migrationCmd.Flags().StringP("key", "k", "", "The hex encoded AES-256 key (64 hex characters) which will be used to encrypt the existing data")
+	err := migrationCmd.MarkFlagRequired("key")
+	if err != nil {
+		slog.Error("a key needs to be provided")
+		return nil
+	}
+
+	return migrationCmd
+}
+
+func newKeyRotationCommand() *cobra.Command {
 	rotationCmd := &cobra.Command{
 		Use:   "keyRotation",
 		Short: "Rotates the current db encryption symmetric key to a new one.",
@@ -44,6 +102,8 @@ func NewKeyRotationCommand() *cobra.Command {
 				return fmt.Errorf("could not rotate keys: %w", err)
 			}
 
+			// write the key last: data stays encrypted under the old key until the
+			// transaction commits, so the old key must remain on disk until then
 			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(newKey), 0o600)
 			if err != nil {
 				return fmt.Errorf("fatal: could not update the key in your key file, to resolve this update the key manually under the specified filename in the %s environment variable in your .env", services.KeyFilePathENVName)
