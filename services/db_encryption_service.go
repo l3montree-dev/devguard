@@ -10,9 +10,13 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 const KeyFilePathENVName = "APP_SIDE_ENCRYPTION_KEY_PATH"
+
+// use a versioned prefix to tell cipher text apart from plaintext
+const encryptionPrefix = "dgenc:v1:"
 
 type DBEncryptionService struct {
 	gcm cipher.AEAD // the gcm module to encrypt and decrypt using the provided key
@@ -75,12 +79,21 @@ func buildGCM(key []byte) (cipher.AEAD, error) {
 	return gcm, nil
 }
 
-// checks if the data is encrypted (wrapped) and decrypts if its the case
+// returns the data untouched if it carries no encryption prefix (plaintext) and otherwise strips the prefix and decrypts.
 func (service *DBEncryptionService) MaybeDecryptData(data string) (string, error) {
 	if len(data) == 0 {
 		return "", nil
 	}
 
+	if !strings.HasPrefix(data, encryptionPrefix) {
+		return data, nil
+	}
+
+	return service.decryptData(strings.TrimPrefix(data, encryptionPrefix))
+}
+
+// decrypts a base64 encoded nonce+ciphertext blob using the loaded key
+func (service *DBEncryptionService) decryptData(data string) (string, error) {
 	rawData, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return "", fmt.Errorf("could not base64 decode the encrypted data: %w", err)
@@ -115,5 +128,5 @@ func (service *DBEncryptionService) EncryptAndWrapData(data string) (string, err
 	// prepend the nonce to the encrypted text
 	encryptedData := service.gcm.Seal(nonce, nonce, []byte(data), nil)
 
-	return base64.StdEncoding.EncodeToString(encryptedData), nil
+	return encryptionPrefix + base64.StdEncoding.EncodeToString(encryptedData), nil
 }
