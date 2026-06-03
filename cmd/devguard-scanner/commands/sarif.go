@@ -248,6 +248,8 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		scanner.WarnIfUnauthenticated()
+
 		sarifResult, err := executeCodeScan(cmd.Context(), scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
@@ -277,14 +279,21 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		slog.Info("Uploading SARIF report", "scannerID", scannerID)
 
-		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
+		endpoint := fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL)
+		if config.RuntimeBaseConfig.Token == "" {
+			endpoint = fmt.Sprintf("%s/api/v1/sarif-scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
 
-		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
-		if err != nil {
-			return errors.Wrap(err, "could not sign request")
+		if config.RuntimeBaseConfig.Token != "" {
+			err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+			if err != nil {
+				return errors.Wrap(err, "could not sign request")
+			}
 		}
 
 		req.Header.Set("Content-Type", "application/json")

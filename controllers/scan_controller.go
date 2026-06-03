@@ -561,6 +561,43 @@ func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error
 	return c.JSON(200, scanResults)
 }
 
+// @Summary Scan for first-party vulnerabilities without authentication (scan-only, results are not saved)
+// @Tags Scanning
+// @Param body body object true "SARIF scan result"
+// @Param X-Scanner header string true "Scanner ID"
+// @Success 200 {object} dtos.FirstPartyScanResponse
+// @Router /sarif-scan-unauthenticated [post]
+func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error {
+	reqCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.FirstPartyVulnScanUnauthenticated")
+	defer span.End()
+
+	var sarifScan sarif.SarifSchema210Json
+
+	var maxSize int64 = 16 * 1024 * 1024
+	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxSize)
+	defer c.Request().Body.Close()
+
+	if err := c.Bind(&sarifScan); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return echo.NewHTTPError(400, "Invalid SARIF format").WithInternal(err)
+	}
+
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
+		scannerID = "unknown"
+	}
+
+	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not do an unauthenticated sarif scan: %s", err.Error())).WithInternal(err)
+	}
+
+	return c.JSON(200, scanResults)
+}
+
 // @Summary Scan SBOM file
 // @Tags Scanning
 // @Security CookieAuth
