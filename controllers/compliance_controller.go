@@ -12,21 +12,21 @@ import (
 
 type ComplianceController struct {
 	assetVersionRepository shared.AssetVersionRepository
-	attestationRepository  shared.AttestationRepository
+	attestationService     shared.AttestationService
 	policyRepository       shared.PolicyRepository
 }
 
-func NewComplianceController(assetVersionRepository shared.AssetVersionRepository, attestationRepository shared.AttestationRepository, policyRepository shared.PolicyRepository) *ComplianceController {
+func NewComplianceController(assetVersionRepository shared.AssetVersionRepository, attestationService shared.AttestationService, policyRepository shared.PolicyRepository) *ComplianceController {
 	return &ComplianceController{
 		assetVersionRepository: assetVersionRepository,
 		policyRepository:       policyRepository,
-		attestationRepository:  attestationRepository,
+		attestationService:     attestationService,
 	}
 }
 
 func (c *ComplianceController) getAssetVersionCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
 	// get the attestation
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx, nil, assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationService.GetByAssetVersionAndAssetID(ctx, nil, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 		return ctx.JSON(404, nil)
 	}
 
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationService.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
 
 	if err != nil {
 		return ctx.JSON(500, nil)

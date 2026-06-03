@@ -27,6 +27,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(func() http.Client { return utils.EgressClient }),
 	fx.Provide(fx.Annotate(NewCSAFService, fx.As(new(shared.CSAFService)))),
 	fx.Provide(fx.Annotate(NewArtifactService, fx.As(new(shared.ArtifactService)))),
+	fx.Provide(fx.Annotate(NewAttestationService, fx.As(new(shared.AttestationService)))),
 	fx.Provide(fx.Annotate(NewStatisticsService, fx.As(new(shared.StatisticsService)))),
 	fx.Provide(fx.Annotate(NewInTotoService, fx.As(new(shared.InTotoVerifierService)))),
 	fx.Provide(fx.Annotate(NewOrgService, fx.As(new(shared.OrgService)))),

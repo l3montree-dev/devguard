@@ -12,14 +12,14 @@ import (
 )
 
 type AttestationController struct {
-	attestationRepository shared.AttestationRepository
-	artifactRepository    shared.ArtifactRepository
+	attestationService shared.AttestationService
+	artifactRepository shared.ArtifactRepository
 }
 
-func NewAttestationController(repository shared.AttestationRepository, artifactRepository shared.ArtifactRepository) *AttestationController {
+func NewAttestationController(attestationService shared.AttestationService, artifactRepository shared.ArtifactRepository) *AttestationController {
 	return &AttestationController{
-		attestationRepository: repository,
-		artifactRepository:    artifactRepository,
+		attestationService: attestationService,
+		artifactRepository: artifactRepository,
 	}
 }
 
@@ -38,7 +38,7 @@ func (a *AttestationController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	attestationList, err := a.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, asset.GetID(), assetVersion.Name)
+	attestationList, err := a.attestationService.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, asset.GetID(), assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	attestation.Content = jsonContent
-	err = a.attestationRepository.Create(ctx.Request().Context(), nil, &attestation)
+	err = a.attestationService.Create(ctx.Request().Context(), nil, &attestation)
 	if err != nil {
 		return err
 	}

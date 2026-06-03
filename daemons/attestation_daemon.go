@@ -134,5 +134,5 @@ func (runner *DaemonRunner) GenerateAndStoreDevguardAttestation(ctx context.Cont
 		Content:          contentMap,
 	}
 
-	return runner.attestationRepository.Create(ctx, nil, &attestation)
+	return runner.attestationService.Create(ctx, nil, &attestation)
 }

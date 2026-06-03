@@ -163,6 +163,13 @@ type AttestationRepository interface {
 	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
 }
 
+type AttestationService interface {
+	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Attestation, error)
+	GetByAssetVersionAndAssetID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+	GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error)
+	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
+}
+
 type ArtifactRepository interface {
 	utils.Repository[string, models.Artifact, DB]
 	GetByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)

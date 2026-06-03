@@ -180,7 +180,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.VulnDBService,
 		f.App.VexRuleService,
 		f.App.FixedVersionResolver,
-		f.App.AttestationRepository,
+		f.App.AttestationService,
 		f.App.StatisticsRepository,
 		f.App.ComplianceService,
 		f.App.ComplianceRiskService,

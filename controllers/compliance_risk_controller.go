@@ -20,7 +20,7 @@ type ComplianceRiskController struct {
 	complianceRiskRepository shared.ComplianceRiskRepository
 	complianceRiskService    shared.ComplianceRiskService
 	complianceService        shared.ComplianceService
-	attestationRepository    shared.AttestationRepository
+	attestationService       shared.AttestationService
 	artifactRepository       shared.ArtifactRepository
 }
 
@@ -28,14 +28,14 @@ func NewComplianceRiskController(
 	repo shared.ComplianceRiskRepository,
 	svc shared.ComplianceRiskService,
 	complianceService shared.ComplianceService,
-	attestationRepository shared.AttestationRepository,
+	attestationService shared.AttestationService,
 	artifactRepository shared.ArtifactRepository,
 ) *ComplianceRiskController {
 	return &ComplianceRiskController{
 		complianceRiskRepository: repo,
 		complianceRiskService:    svc,
 		complianceService:        complianceService,
-		attestationRepository:    attestationRepository,
+		attestationService:       attestationService,
 		artifactRepository:       artifactRepository,
 	}
 }
@@ -260,7 +260,7 @@ func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 			PredicateType:    predicateType,
 			Content:          contentMap,
 		}
-		if err := c.attestationRepository.Create(ctx.Request().Context(), nil, &attestation); err != nil {
+		if err := c.attestationService.Create(ctx.Request().Context(), nil, &attestation); err != nil {
 			slog.Error("could not save attestation from zip", "name", f.Name, "err", err)
 		}
 	}
