@@ -268,6 +268,7 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
+	apiV1Router.POST("/sarif-scan-unauthenticated/", scanController.FirstPartyVulnScanUnauthenticated)
 	apiV1Router.GET("/renovate/recommendation/", dependencyVulnController.GetRecommendation)
 
 	apiV1Router.GET("/instance-settings/", func(ctx echo.Context) error {

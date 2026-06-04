@@ -54,6 +54,8 @@ type baseConfig struct {
 	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
 	WebUI      string `json:"webUI" mapstructure:"webUI"`
 
+	IsDirScan bool `json:"dir" mapstructure:"dir"`
+
 	Username string `json:"username" mapstructure:"username"`
 	Password string `json:"password" mapstructure:"password"`
 	Registry string `json:"registry" mapstructure:"registry"`

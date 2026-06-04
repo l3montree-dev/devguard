@@ -58,8 +58,9 @@ func PrintFirstPartyScanResults(scanResponse compat.FirstPartyScanResponse, asse
 
 	link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
 	//wrappedLink := text.WrapText(link, rowLengthLimit)
-	fmt.Printf("See all code risks at:\n%s\n", link)
-
+	if assetName != "" {
+		fmt.Printf("See all code risks at:\n%s\n", link)
+	}
 	if len(openVulns) > 0 {
 		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
 	}
@@ -196,7 +197,10 @@ func PrintScaResults(scanResponse compat.ScanResponse, failOnRisk, failOnCVSS, a
 
 	if len(scanResponse.DependencyVulns) > 0 {
 		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
-		fmt.Printf("Showing deduplicated vulnerabilities grouped by package.\nSee all dependency risks at:\n%s\n", clickableLink)
+		fmt.Printf("Showing deduplicated vulnerabilities grouped by package.\n")
+		if assetName != "" {
+			fmt.Printf("See all dependency vulnerabilities at:\n%s\n", text.FgBlue.Sprint(clickableLink))
+		}
 	}
 
 	riskThreshold := ""

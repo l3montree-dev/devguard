@@ -39,6 +39,7 @@ You may pass the target as the first positional argument instead of using --path
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)
+	secretScanningCommand.Flags().Bool("dir", false, "Scan a directory instead of the git history.")
 	return secretScanningCommand
 }
 
@@ -66,7 +67,16 @@ func secretScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	if config.RuntimeBaseConfig.ConfigFilePath != "" {
 		configFileArgs = []string{"--config", config.RuntimeBaseConfig.ConfigFilePath}
 	}
-	args := []string{"git", "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0"}
+
+	args := []string{}
+
+	if config.RuntimeBaseConfig.IsDirScan {
+		args = append(args, "dir")
+	} else {
+		args = append(args, "git")
+	}
+
+	args = append(args, "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0")
 	args = append(args, configFileArgs...)
 
 	scannerCmd = exec.Command("gitleaks", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
