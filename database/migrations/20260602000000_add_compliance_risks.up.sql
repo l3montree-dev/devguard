@@ -37,6 +37,9 @@ ALTER TABLE public.vuln_events
     ADD COLUMN IF NOT EXISTS compliance_risk_id uuid;
 
 ALTER TABLE public.vuln_events
+    DROP CONSTRAINT IF EXISTS fk_vuln_events_compliance_risk;
+
+ALTER TABLE public.vuln_events
     ADD CONSTRAINT fk_vuln_events_compliance_risk FOREIGN KEY (compliance_risk_id)
         REFERENCES public.compliance_risks (id) ON DELETE CASCADE;
 

@@ -6,12 +6,12 @@ import (
 )
 
 func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
-	artifacts := make([]dtos.ComplianceRiskArtifactDTO, len(r.Artifacts))
+	artifacts := make([]dtos.ArtifactDTO, len(r.Artifacts))
 	for i, a := range r.Artifacts {
-		artifacts[i] = dtos.ComplianceRiskArtifactDTO{
+		artifacts[i] = dtos.ArtifactDTO{
 			ArtifactName:     a.ArtifactName,
 			AssetVersionName: a.AssetVersionName,
-			AssetID:          a.AssetID.String(),
+			AssetID:          a.AssetID,
 		}
 	}
 
