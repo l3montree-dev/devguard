@@ -833,6 +833,55 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	return normalizedBom, vexReports, dependencyVulns, nil
 }
 
+func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error) {
+	ruleMap := make(map[string]sarif.ReportingDescriptor)
+	for _, run := range sarifScan.Runs {
+		for _, rule := range run.Tool.Driver.Rules {
+			ruleMap[rule.ID] = rule
+		}
+	}
+
+	var vulns []dtos.FirstPartyVulnDTO
+	for _, run := range sarifScan.Runs {
+		for _, result := range run.Results {
+			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, string(result.Kind)) {
+				continue
+			}
+			rule := ruleMap[utils.OrDefault(result.RuleID, "")]
+			ruleProperties := map[string]any{}
+			if rule.Properties != nil && rule.Properties.AdditionalProperties != nil {
+				ruleProperties = rule.Properties.AdditionalProperties
+			}
+			msg := utils.OrDefault(&result.Message.Text, "")
+			vuln := dtos.FirstPartyVulnDTO{
+				ScannerIDs:      scannerID,
+				RuleID:          utils.OrDefault(result.RuleID, ""),
+				RuleName:        utils.OrDefault(rule.Name, ""),
+				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
+				RuleDescription: getBestDescription(rule),
+				RuleProperties:  ruleProperties,
+				State:           dtos.VulnStateOpen,
+				Message:         &msg,
+				Date:            time.Now().Format(time.RFC3339),
+			}
+			if len(result.Locations) > 0 {
+				loc := result.Locations[0]
+				vuln.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
+			}
+			vulns = append(vulns, vuln)
+		}
+	}
+
+	if vulns == nil {
+		vulns = []dtos.FirstPartyVulnDTO{}
+	}
+
+	return dtos.FirstPartyScanResponse{
+		AmountOpened:    len(vulns),
+		FirstPartyVulns: vulns,
+	}, nil
+}
+
 func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
 	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT", false)
 	if err != nil {
