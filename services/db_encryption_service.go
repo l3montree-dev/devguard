@@ -52,7 +52,7 @@ func (service *DBEncryptionService) LoadDBEncryptionKey() {
 func ReadCurrentKey() []byte {
 	keyPath := os.Getenv(KeyFilePathENVName)
 	if keyPath == "" {
-		panic(fmt.Sprintf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env-example for the default path.", KeyFilePathENVName))
+		panic(fmt.Sprintf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env.example for the default path.", KeyFilePathENVName))
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
