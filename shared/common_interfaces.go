@@ -25,7 +25,6 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
-	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -181,7 +180,7 @@ type ArtifactRepository interface {
 }
 
 type ComplianceService interface {
-	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]compliance.PolicyEvaluation, error)
+	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error)
 }
 
 type ReleaseRepository interface {
@@ -310,7 +309,7 @@ type ComplianceRiskRepository interface {
 }
 
 type ComplianceRiskService interface {
-	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []compliance.PolicyEvaluation) error
+	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error
 	UpdateComplianceRiskState(ctx context.Context, tx DB, userID string, risk *models.ComplianceRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 }
 

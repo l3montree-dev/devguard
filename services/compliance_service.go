@@ -20,7 +20,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ComplianceService struct {
@@ -35,18 +38,18 @@ func NewComplianceService(attestationRepository shared.AttestationRepository, po
 	}
 }
 
-func (s *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]compliance.PolicyEvaluation, error) {
+func (s *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error) {
 	attestations, err := s.attestationRepository.GetByArtifactAndAssetVersionAndAssetID(ctx, nil, artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return nil, err
 	}
 
-	policies, err := s.policyRepository.FindByProjectID(ctx, nil, projectID)
+	policies, err := s.policyRepository.FindCommunityManagedPolicies(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]compliance.PolicyEvaluation, 0, len(policies))
+	evals := make([]compliance.PolicyEvaluation, 0, len(policies))
 foundMatch:
 	for _, policy := range policies {
 		for _, attestation := range attestations {
@@ -55,11 +58,11 @@ foundMatch:
 			}
 			eval := compliance.Eval(policy, attestation.Content)
 			eval.AttestationUpdatedAt = &attestation.UpdatedAt
-			results = append(results, eval)
+			evals = append(evals, eval)
 			continue foundMatch
 		}
-		results = append(results, compliance.Eval(policy, nil))
+		evals = append(evals, compliance.Eval(policy, nil))
 	}
 
-	return results, nil
+	return utils.Map(evals, transformer.PolicyEvaluationToDTO), nil
 }

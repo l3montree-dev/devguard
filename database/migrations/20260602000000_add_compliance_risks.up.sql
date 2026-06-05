@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS public.compliance_risks (
     asset_version_name text NOT NULL,
     asset_id uuid NOT NULL,
     message text,
-    scanner_ids text NOT NULL DEFAULT '',
     state text DEFAULT 'open' NOT NULL,
     last_detected timestamp with time zone DEFAULT now() NOT NULL,
     ticket_id text,
@@ -13,7 +12,10 @@ CREATE TABLE IF NOT EXISTS public.compliance_risks (
     updated_at timestamp with time zone,
     deleted_at timestamp with time zone,
     policy_id text NOT NULL,
+    policy_title text NOT NULL DEFAULT '',
+    policy_description text,
     predicate_type text NOT NULL DEFAULT '',
+    attestation_violations text[],
     attestation_updated_at timestamp with time zone,
     CONSTRAINT compliance_risks_pkey PRIMARY KEY (id),
     CONSTRAINT fk_compliance_risks_asset_versions FOREIGN KEY (asset_version_name, asset_id)

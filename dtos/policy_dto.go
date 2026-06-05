@@ -15,10 +15,25 @@
 
 package dtos
 
+import "time"
+
 type PolicyDTO struct {
 	Title         string `json:"title"`
 	Description   string `json:"description"`
 	Priority      int    `json:"priority"`
 	PredicateType string `json:"predicateType"`
 	Rego          string `json:"rego"`
+}
+
+type PolicyEvaluationDTO struct {
+	PolicyID          string  `json:"policyId"`
+	PolicyTitle       string  `json:"policyTitle"`
+	PolicyDescription *string `json:"policyDescription"`
+
+	State     VulnState `json:"state"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	PredicateType         string     `json:"predicateType"`
+	AttestationUpdatedAt  *time.Time `json:"attestationUpdatedAt"`
+	AttestationViolations []string   `json:"attestationViolations"`
 }

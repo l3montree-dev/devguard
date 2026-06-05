@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -29,7 +28,7 @@ func NewComplianceRiskService(complianceRiskRepository shared.ComplianceRiskRepo
 
 // HandleArtifactCompliance processes policy evaluations for an artifact and manages the
 // lifecycle of compliance risks: new detections, branch-diffing, artifact association, and fixes.
-func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []compliance.PolicyEvaluation) error {
+func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error {
 	// fetch all existing compliance risks for this asset version (across all artifacts)
 	existingRisks, err := s.complianceRiskRepository.GetAllComplianceRisksForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
@@ -39,22 +38,20 @@ func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx
 	// build risks for every evaluation — compliant ones start fixed, non-compliant ones open
 	foundRisks := make([]models.ComplianceRisk, 0, len(evaluations))
 	for _, eval := range evaluations {
-		compliant := eval.Compliant != nil && *eval.Compliant
-		state := dtos.VulnStateOpen
-		if compliant {
-			state = dtos.VulnStateFixed
-		}
 		foundRisks = append(foundRisks, models.ComplianceRisk{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				AssetVersion:     assetVersion,
-				State:            state,
+				State:            eval.State,
 				LastDetected:     time.Now(),
 			},
-			PolicyID:             eval.Policy.ID.String(),
-			PredicateType:        eval.Policy.PredicateType,
-			AttestationUpdatedAt: eval.AttestationUpdatedAt,
+			PolicyID:              eval.PolicyID,
+			PolicyTitle:           eval.PolicyTitle,
+			PolicyDescription:     eval.PolicyDescription,
+			PredicateType:         eval.PredicateType,
+			AttestationViolations: eval.AttestationViolations,
+			AttestationUpdatedAt:  eval.AttestationUpdatedAt,
 		})
 	}
 

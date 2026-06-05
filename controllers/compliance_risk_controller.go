@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -218,7 +217,7 @@ func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid zip file").WithInternal(err)
 	}
 
-	var evaluations []compliance.PolicyEvaluation
+	var evaluations []dtos.PolicyEvaluationDTO
 
 	for _, f := range zr.File {
 		rc, err := f.Open()

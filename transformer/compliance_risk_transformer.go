@@ -16,18 +16,20 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 	}
 
 	return dtos.ComplianceRiskDTO{
-		ID:                   r.ID,
-		Message:              r.Message,
-		AssetVersionName:     r.AssetVersionName,
-		AssetID:              r.AssetID.String(),
-		State:                r.State,
-		CreatedAt:            r.CreatedAt,
-		TicketID:             r.TicketID,
-		TicketURL:            r.TicketURL,
-		ManualTicketCreation: r.ManualTicketCreation,
-		PolicyID:             r.PolicyID,
-		PredicateType:        r.PredicateType,
-		AttestationUpdatedAt: r.AttestationUpdatedAt,
-		Artifacts:            artifacts,
+		ID:                    r.ID,
+		AssetVersionName:      r.AssetVersionName,
+		AssetID:               r.AssetID.String(),
+		State:                 r.State,
+		CreatedAt:             r.CreatedAt,
+		TicketID:              r.TicketID,
+		TicketURL:             r.TicketURL,
+		ManualTicketCreation:  r.ManualTicketCreation,
+		PolicyID:              r.PolicyID,
+		PolicyTitle:           r.PolicyTitle,
+		PolicyDescription:     r.PolicyDescription,
+		PredicateType:         r.PredicateType,
+		AttestationViolations: r.AttestationViolations,
+		AttestationUpdatedAt:  r.AttestationUpdatedAt,
+		Artifacts:             artifacts,
 	}
 }
