@@ -58,14 +58,18 @@ func (r *webhookRepository) decryptSecret(webhook *models.WebhookIntegration) er
 	return nil
 }
 
-// Save encrypts the secret on a copy before delegating to the embedded function
+// Save encrypts the secret in place so GORM writes DB-generated fields back onto the caller's model, then restores the plaintext.
 func (r *webhookRepository) Save(ctx context.Context, tx *gorm.DB, webhook *models.WebhookIntegration) error {
 	encrypted, err := r.encryptSecret(*webhook)
 	if err != nil {
 		return err
 	}
 
-	return r.Repository.Save(ctx, tx, &encrypted)
+	originalSecret := webhook.Secret
+	webhook.Secret = encrypted.Secret
+	defer func() { webhook.Secret = originalSecret }()
+
+	return r.Repository.Save(ctx, tx, webhook)
 }
 
 func (r *webhookRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.WebhookIntegration, error) {

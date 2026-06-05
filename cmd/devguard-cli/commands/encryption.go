@@ -334,8 +334,8 @@ func updateSecretsInDB(db *gorm.DB, secrets secretsInDB) error {
 
 	err := tx.Commit().Error
 	if err != nil {
-		return fmt.Errorf("could not commit updated secrets, rolling back transaction")
+		return fmt.Errorf("could not commit updated secrets: %w, rolling back transaction", err)
 	}
-	slog.Info("successfully update all secrets in the database")
+	slog.Info("successfully updated all secrets in the database")
 	return nil
 }

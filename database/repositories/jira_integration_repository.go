@@ -28,16 +28,17 @@ func NewJiraIntegrationRepository(db *gorm.DB, encryptionService shared.DBEncryp
 	}
 }
 
-// Save encrypts the access token on a copy before delegating to the embedded function
+// Save encrypts the token in place so GORM writes DB-generated fields back onto the caller's model, then restores the plaintext.
 func (r *jiraIntegrationRepository) Save(ctx context.Context, tx *gorm.DB, integration *models.JiraIntegration) error {
-	encrypted := *integration
-	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(integration.AccessToken)
+	originalAccessToken := integration.AccessToken
+	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(originalAccessToken)
 	if err != nil {
 		return fmt.Errorf("could not encrypt access token before saving to db: %w", err)
 	}
-	encrypted.AccessToken = encryptedAccessToken
+	integration.AccessToken = encryptedAccessToken
+	defer func() { integration.AccessToken = originalAccessToken }()
 
-	return r.Repository.Save(ctx, tx, &encrypted)
+	return r.Repository.Save(ctx, tx, integration)
 }
 
 func (r *jiraIntegrationRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.JiraIntegration, error) {
