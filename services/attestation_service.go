@@ -17,21 +17,28 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
+const secondsPerHour = 3600.0
+
 type AttestationService struct {
 	attestationRepository shared.AttestationRepository
+	statisticsRepository  shared.StatisticsRepository
 }
 
 var _ shared.AttestationService = (*AttestationService)(nil)
 
-func NewAttestationService(attestationRepository shared.AttestationRepository) *AttestationService {
+func NewAttestationService(attestationRepository shared.AttestationRepository, statisticsRepository shared.StatisticsRepository) *AttestationService {
 	return &AttestationService{
 		attestationRepository: attestationRepository,
+		statisticsRepository:  statisticsRepository,
 	}
 }
 
@@ -49,4 +56,47 @@ func (s *AttestationService) GetByArtifactAndAssetVersionAndAssetID(ctx context.
 
 func (s *AttestationService) Create(ctx context.Context, tx shared.DB, attestation *models.Attestation) error {
 	return s.attestationRepository.Create(ctx, tx, attestation)
+}
+
+func (s *AttestationService) GenerateAndStoreDevguardAttestation(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {
+	averages, err := s.statisticsRepository.AverageFixingTimes(ctx, nil, assetVersionName, assetID)
+	if err != nil {
+		return err
+	}
+
+	attestationDTO := dtos.DevguardAssetAttestationDTO{
+		Type:          dtos.DevguardAssetAttestationPredicateType,
+		GeneratedAt:   time.Now().UTC(),
+		SchemaVersion: "1.0.0",
+		MeanTimeToRemediate: dtos.MeanTimeToRemediateDTO{
+			RiskLowAvgHours:      averages.RiskAvgLow / secondsPerHour,
+			RiskMediumAvgHours:   averages.RiskAvgMedium / secondsPerHour,
+			RiskHighAvgHours:     averages.RiskAvgHigh / secondsPerHour,
+			RiskCriticalAvgHours: averages.RiskAvgCritical / secondsPerHour,
+			CVSSLowAvgHours:      averages.CVSSAvgLow / secondsPerHour,
+			CVSSMediumAvgHours:   averages.CVSSAvgMedium / secondsPerHour,
+			CVSSHighAvgHours:     averages.CVSSAvgHigh / secondsPerHour,
+			CVSSCriticalAvgHours: averages.CVSSAvgCritical / secondsPerHour,
+		},
+	}
+
+	content, err := json.Marshal(attestationDTO)
+	if err != nil {
+		return err
+	}
+
+	var contentMap map[string]any
+	if err := json.Unmarshal(content, &contentMap); err != nil {
+		return err
+	}
+
+	attestation := models.Attestation{
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		ArtifactName:     artifactName,
+		PredicateType:    dtos.DevguardAssetAttestationPredicateType,
+		Content:          contentMap,
+	}
+
+	return s.attestationRepository.Create(ctx, nil, &attestation)
 }
