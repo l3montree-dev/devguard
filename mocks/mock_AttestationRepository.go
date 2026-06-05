@@ -277,8 +277,8 @@ func (_c *AttestationRepository_CleanupOrphanedRecords_Call) RunAndReturn(run fu
 }
 
 // Create provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) Create(ctx context.Context, tx shared.DB, t *models.Attestation) error {
-	ret := _mock.Called(ctx, tx, t)
+func (_mock *AttestationRepository) Create(ctx context.Context, tx shared.DB, attestation *models.Attestation) error {
+	ret := _mock.Called(ctx, tx, attestation)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -286,7 +286,7 @@ func (_mock *AttestationRepository) Create(ctx context.Context, tx shared.DB, t 
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Attestation) error); ok {
-		r0 = returnFunc(ctx, tx, t)
+		r0 = returnFunc(ctx, tx, attestation)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -301,12 +301,12 @@ type AttestationRepository_Create_Call struct {
 // Create is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - t *models.Attestation
-func (_e *AttestationRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *AttestationRepository_Create_Call {
-	return &AttestationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
+//   - attestation *models.Attestation
+func (_e *AttestationRepository_Expecter) Create(ctx interface{}, tx interface{}, attestation interface{}) *AttestationRepository_Create_Call {
+	return &AttestationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, attestation)}
 }
 
-func (_c *AttestationRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.Attestation)) *AttestationRepository_Create_Call {
+func (_c *AttestationRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, attestation *models.Attestation)) *AttestationRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -334,7 +334,7 @@ func (_c *AttestationRepository_Create_Call) Return(err error) *AttestationRepos
 	return _c
 }
 
-func (_c *AttestationRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.Attestation) error) *AttestationRepository_Create_Call {
+func (_c *AttestationRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, attestation *models.Attestation) error) *AttestationRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -524,6 +524,92 @@ func (_c *AttestationRepository_DeleteBatch_Call) Return(err error) *Attestation
 }
 
 func (_c *AttestationRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.Attestation) error) *AttestationRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByArtifactAndAssetVersionAndAssetID provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx shared.DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, artifactName, assetVersion, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByArtifactAndAssetVersionAndAssetID")
+	}
+
+	var r0 []models.Attestation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, artifactName, assetVersion, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, artifactName, assetVersion, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Attestation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, artifactName, assetVersion, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByArtifactAndAssetVersionAndAssetID'
+type AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call struct {
+	*mock.Call
+}
+
+// GetByArtifactAndAssetVersionAndAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - artifactName string
+//   - assetVersion string
+//   - assetID uuid.UUID
+func (_e *AttestationRepository_Expecter) GetByArtifactAndAssetVersionAndAssetID(ctx interface{}, tx interface{}, artifactName interface{}, assetVersion interface{}, assetID interface{}) *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call {
+	return &AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call{Call: _e.mock.On("GetByArtifactAndAssetVersionAndAssetID", ctx, tx, artifactName, assetVersion, assetID)}
+}
+
+func (_c *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, artifactName string, assetVersion string, assetID uuid.UUID)) *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call) Return(attestations []models.Attestation, err error) *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call {
+	_c.Call.Return(attestations, err)
+	return _c
+}
+
+func (_c *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error)) *AttestationRepository_GetByArtifactAndAssetVersionAndAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
