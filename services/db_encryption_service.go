@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 )
 
 const KeyFilePathENVName = "APP_SIDE_ENCRYPTION_KEY_PATH"
@@ -20,6 +21,7 @@ const KeyFilePathENVName = "APP_SIDE_ENCRYPTION_KEY_PATH"
 const encryptionPrefix = "dgenc:v1:"
 
 type DBEncryptionService struct {
+	mu  sync.RWMutex
 	gcm cipher.AEAD // the gcm module to encrypt and decrypt using the provided key
 }
 
@@ -36,30 +38,61 @@ func NewDBEncryptionServiceFromKey(key []byte) (*DBEncryptionService, error) {
 	return &DBEncryptionService{gcm: gcm}, nil
 }
 
-// load the key and build the gcm from it on start up once; then reuse it for every operation
+// eagerly loads the key on startup so misconfiguration fails fast; lazy loading covers callers that skip this
 func (service *DBEncryptionService) LoadDBEncryptionKey() {
-	key := ReadCurrentKey()
-
-	gcm, err := buildGCM(key)
-	if err != nil {
+	if _, err := service.loadGCM(); err != nil {
 		panic(err.Error())
 	}
-
-	service.gcm = gcm
 	slog.Info("successfully loaded encryption key")
 }
 
-// reads the current key from the key file specified in the .env file
+// loadGCM returns the gcm, lazily building it from the key file on first use so the service is usable
+// in every fx app that provides it, not only those that call LoadDBEncryptionKey on startup
+func (service *DBEncryptionService) loadGCM() (cipher.AEAD, error) {
+	service.mu.RLock()
+	gcm := service.gcm
+	service.mu.RUnlock()
+	if gcm != nil {
+		return gcm, nil
+	}
+
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if service.gcm != nil {
+		return service.gcm, nil
+	}
+
+	key, err := readCurrentKey()
+	if err != nil {
+		return nil, err
+	}
+	gcm, err = buildGCM(key)
+	if err != nil {
+		return nil, err
+	}
+	service.gcm = gcm
+	return gcm, nil
+}
+
+// reads the current key from the key file specified in the .env file, panicking if it is unavailable
 func ReadCurrentKey() []byte {
+	key, err := readCurrentKey()
+	if err != nil {
+		panic(err.Error())
+	}
+	return key
+}
+
+func readCurrentKey() ([]byte, error) {
 	keyPath := os.Getenv(KeyFilePathENVName)
 	if keyPath == "" {
-		panic(fmt.Sprintf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env.example for the default path.", KeyFilePathENVName))
+		return nil, fmt.Errorf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env.example for the default path", KeyFilePathENVName)
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
-		panic(fmt.Sprintf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable '%s'.\nFound the following path in the env variable: %s. Ran into the following error: %s", KeyFilePathENVName, keyPath, err.Error()))
+		return nil, fmt.Errorf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable '%s'. Found the following path in the env variable: %s: %w", KeyFilePathENVName, keyPath, err)
 	}
-	return key
+	return key, nil
 }
 
 // validates the hex encoded key and builds the AES-GCM cipher from it
@@ -104,8 +137,9 @@ func (service *DBEncryptionService) MaybeDecryptData(data string) (string, error
 
 // decrypts a base64 encoded nonce+ciphertext blob using the loaded key
 func (service *DBEncryptionService) decryptData(data string) (string, error) {
-	if service.gcm == nil {
-		return "", fmt.Errorf("encryption key not loaded; cannot decrypt data")
+	gcm, err := service.loadGCM()
+	if err != nil {
+		return "", fmt.Errorf("could not load encryption key: %w", err)
 	}
 
 	rawData, err := base64.StdEncoding.DecodeString(data)
@@ -113,13 +147,13 @@ func (service *DBEncryptionService) decryptData(data string) (string, error) {
 		return "", fmt.Errorf("could not base64 decode the encrypted data: %w", err)
 	}
 
-	nonceSize := service.gcm.NonceSize()
-	if len(rawData) < nonceSize+service.gcm.Overhead() {
+	nonceSize := gcm.NonceSize()
+	if len(rawData) < nonceSize+gcm.Overhead() {
 		return "", fmt.Errorf("invalid data format;unable to decrypt")
 	}
 
 	nonce, ciphertext := rawData[:nonceSize], rawData[nonceSize:]
-	plaintext, err := service.gcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return "", fmt.Errorf("could not decrypt the data: %w", err)
 	}
@@ -133,18 +167,19 @@ func (service *DBEncryptionService) EncryptAndWrapData(data string) (string, err
 		return "", nil
 	}
 
-	if service.gcm == nil {
-		return "", fmt.Errorf("encryption key not loaded; cannot encrypt data")
+	gcm, err := service.loadGCM()
+	if err != nil {
+		return "", fmt.Errorf("could not load encryption key: %w", err)
 	}
 
-	nonce := make([]byte, service.gcm.NonceSize())
-	_, err := io.ReadFull(rand.Reader, nonce)
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
 		return "", fmt.Errorf("could not generate a new nonce from random pool: %w", err)
 	}
 
 	// prepend the nonce to the encrypted text
-	encryptedData := service.gcm.Seal(nonce, nonce, []byte(data), nil)
+	encryptedData := gcm.Seal(nonce, nonce, []byte(data), nil)
 
 	return encryptionPrefix + base64.StdEncoding.EncodeToString(encryptedData), nil
 }

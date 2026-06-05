@@ -33,7 +33,7 @@ func newMigrationCommand() *cobra.Command {
 	migrationCmd := &cobra.Command{
 		Use:   "migration",
 		Short: "Encrypts all existing plaintext secrets in the database with the provided key.",
-		Long:  "One-off migration that wraps all currently unencrypted secrets in the database using the provided key and stores that key at the configured key file path (creating the file if it does not exist yet). Already encrypted values are left untouched, so it is safe to re-run. It only works while the application is offline.",
+		Long:  "One-off migration that wraps all currently unencrypted secrets in the database using the provided key and stores that key at the configured key file path (creating the file if it does not exist yet). It only works while the application is offline.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key, err := cmd.Flags().GetString("key")
@@ -140,12 +140,12 @@ func reEncryptAllSecrets(ctx context.Context, decryptEnc, encryptEnc *services.D
 				return fmt.Errorf("could not fetch existing secrets: %w", err)
 			}
 
-			decryptedSecrets, err := decryptSecrets(secrets, *decryptEnc)
+			decryptedSecrets, err := decryptSecrets(secrets, decryptEnc)
 			if err != nil {
 				return fmt.Errorf("could not decrypt existing secrets: %w", err)
 			}
 
-			reEncryptedSecrets, err := encryptSecrets(decryptedSecrets, *encryptEnc)
+			reEncryptedSecrets, err := encryptSecrets(decryptedSecrets, encryptEnc)
 			if err != nil {
 				return fmt.Errorf("could not re-encrypt existing secrets: %w", err)
 			}
@@ -207,7 +207,7 @@ func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 }
 
 // iterates over all secrets and calls maybe decrypt on all existing values
-func decryptSecrets(secrets secretsInDB, decryptionService services.DBEncryptionService) (secretsInDB, error) {
+func decryptSecrets(secrets secretsInDB, decryptionService *services.DBEncryptionService) (secretsInDB, error) {
 	for i := range secrets.GitlabIntegrations {
 		decryptedAccessToken, err := decryptionService.MaybeDecryptData(secrets.GitlabIntegrations[i].AccessToken)
 		if err != nil {
@@ -254,7 +254,7 @@ func decryptSecrets(secrets secretsInDB, decryptionService services.DBEncryption
 }
 
 // iterate over all secrets and calls encrypt and wrap data on all existing values
-func encryptSecrets(secrets secretsInDB, encryptionService services.DBEncryptionService) (secretsInDB, error) {
+func encryptSecrets(secrets secretsInDB, encryptionService *services.DBEncryptionService) (secretsInDB, error) {
 	for i := range secrets.GitlabIntegrations {
 		encryptedAccessToken, err := encryptionService.EncryptAndWrapData(secrets.GitlabIntegrations[i].AccessToken)
 		if err != nil {
