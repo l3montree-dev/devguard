@@ -50,9 +50,14 @@ func newMigrationCommand() *cobra.Command {
 			// write the key first: plaintext is read back regardless of the key
 			// file, so a crash after this still leaves the app working and the
 			// migration re-runnable
-			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(key), 0o600)
+			path := os.Getenv(services.KeyFilePathENVName)
+			if path == "" {
+				return fmt.Errorf("environment variable %s is not set.", services.KeyFilePathENVName)
+			}
+
+			err = os.WriteFile(path, []byte(key), 0o600)
 			if err != nil {
-				return fmt.Errorf("could not write the key to the key file under the path in the %s environment variable: %w", services.KeyFilePathENVName, err)
+				return fmt.Errorf("fatal: could not update the key in your key file (%s), to resolve this update the key manually under the specified filename in the %s environment variable in your .env", path, services.KeyFilePathENVName)
 			}
 
 			err = reEncryptAllSecrets(cmd.Context(), enc, enc)
@@ -104,9 +109,14 @@ func newKeyRotationCommand() *cobra.Command {
 
 			// write the key last: data stays encrypted under the old key until the
 			// transaction commits, so the old key must remain on disk until then
-			err = os.WriteFile(os.Getenv(services.KeyFilePathENVName), []byte(newKey), 0o600)
+			path := os.Getenv(services.KeyFilePathENVName)
+			if path == "" {
+				return fmt.Errorf("environment variable %s is not set.", services.KeyFilePathENVName)
+			}
+
+			err = os.WriteFile(path, []byte(newKey), 0o600)
 			if err != nil {
-				return fmt.Errorf("fatal: could not update the key in your key file, to resolve this update the key manually under the specified filename in the %s environment variable in your .env", services.KeyFilePathENVName)
+				return fmt.Errorf("fatal: could not update the key in your key file (%s), to resolve this update the key manually under the specified filename in the %s environment variable in your .env", path, services.KeyFilePathENVName)
 			}
 			return nil
 		},

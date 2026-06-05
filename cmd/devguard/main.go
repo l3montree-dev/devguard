@@ -143,18 +143,18 @@ func main() {
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
-		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					go server.Start() // start in background
-					return nil
-				},
-			})
-		}),
 		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					encryptionService.LoadDBEncryptionKey()
+					return nil
+				},
+			})
+		}),
+		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					go server.Start() // start in background
 					return nil
 				},
 			})

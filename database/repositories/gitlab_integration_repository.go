@@ -41,17 +41,20 @@ func NewGitLabIntegrationRepository(db *gorm.DB, encryptionService shared.DBEncr
 	}
 }
 
-// Save encrypts the access token on a copy before delegating to the embedded
-// generic repository, so the caller's in-memory model keeps its plaintext token.
+// Save encrypts the access token in place before delegating to the embedded
+// generic repository, then restores the plaintext token afterwards. Passing the
+// caller's model lets GORM write back DB-generated fields (e.g. ID), while the
+// deferred restore keeps the caller's in-memory model holding the plaintext token.
 func (r *gitlabIntegrationRepository) Save(ctx context.Context, tx *gorm.DB, integration *models.GitLabIntegration) error {
-	encrypted := *integration
-	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(integration.AccessToken)
+	originalAccessToken := integration.AccessToken
+	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(originalAccessToken)
 	if err != nil {
 		return fmt.Errorf("could not encrypt access token before saving to db: %w", err)
 	}
-	encrypted.AccessToken = encryptedAccessToken
+	integration.AccessToken = encryptedAccessToken
+	defer func() { integration.AccessToken = originalAccessToken }()
 
-	return r.Repository.Save(ctx, tx, &encrypted)
+	return r.Repository.Save(ctx, tx, integration)
 }
 
 func (r *gitlabIntegrationRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.GitLabIntegration, error) {
@@ -71,7 +74,7 @@ func (r *gitlabIntegrationRepository) Read(ctx context.Context, tx *gorm.DB, id 
 
 func (r *gitlabIntegrationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.GitLabIntegration, error) {
 	var integrations []models.GitLabIntegration
-	if err := r.GetDB(ctx, tx).Find(&integrations, "orgID = ?", orgID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Find(&integrations, "org_id = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 

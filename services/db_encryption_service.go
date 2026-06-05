@@ -102,6 +102,10 @@ func (service *DBEncryptionService) MaybeDecryptData(data string) (string, error
 
 // decrypts a base64 encoded nonce+ciphertext blob using the loaded key
 func (service *DBEncryptionService) decryptData(data string) (string, error) {
+	if service.gcm == nil {
+		return "", fmt.Errorf("encryption key not loaded; cannot decrypt data")
+	}
+
 	rawData, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return "", fmt.Errorf("could not base64 decode the encrypted data: %w", err)
@@ -125,6 +129,10 @@ func (service *DBEncryptionService) decryptData(data string) (string, error) {
 func (service *DBEncryptionService) EncryptAndWrapData(data string) (string, error) {
 	if len(data) == 0 {
 		return "", nil
+	}
+
+	if service.gcm == nil {
+		return "", fmt.Errorf("encryption key not loaded; cannot encrypt data")
 	}
 
 	nonce := make([]byte, service.gcm.NonceSize())
