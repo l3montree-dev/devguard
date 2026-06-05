@@ -49,6 +49,7 @@ func (service *DBEncryptionService) LoadDBEncryptionKey() {
 	slog.Info("successfully loaded encryption key")
 }
 
+// reads the current key from the key file specified in the .env file
 func ReadCurrentKey() []byte {
 	keyPath := os.Getenv(KeyFilePathENVName)
 	if keyPath == "" {
@@ -93,6 +94,7 @@ func (service *DBEncryptionService) MaybeDecryptData(data string) (string, error
 		return "", nil
 	}
 
+	// check if the data is encrypted (or plaintext otherwise)
 	if !strings.HasPrefix(data, encryptionPrefix) {
 		return data, nil
 	}
@@ -125,7 +127,7 @@ func (service *DBEncryptionService) decryptData(data string) (string, error) {
 	return string(plaintext), nil
 }
 
-// encrypts the data using AES-GCM and the loaded key and wraps it inside the encryption format
+// encrypts the data using AES-GCM and the loaded key and wraps it inside the encryption format (enc prefix+nonce+cipher)
 func (service *DBEncryptionService) EncryptAndWrapData(data string) (string, error) {
 	if len(data) == 0 {
 		return "", nil

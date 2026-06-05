@@ -47,9 +47,6 @@ func newMigrationCommand() *cobra.Command {
 				return fmt.Errorf("could not build encryption module from the provided key: %w", err)
 			}
 
-			// write the key first: plaintext is read back regardless of the key
-			// file, so a crash after this still leaves the app working and the
-			// migration re-runnable
 			path := os.Getenv(services.KeyFilePathENVName)
 			if path == "" {
 				return fmt.Errorf("environment variable %s is not set.", services.KeyFilePathENVName)
@@ -107,8 +104,6 @@ func newKeyRotationCommand() *cobra.Command {
 				return fmt.Errorf("could not rotate keys: %w", err)
 			}
 
-			// write the key last: data stays encrypted under the old key until the
-			// transaction commits, so the old key must remain on disk until then
 			path := os.Getenv(services.KeyFilePathENVName)
 			if path == "" {
 				return fmt.Errorf("environment variable %s is not set.", services.KeyFilePathENVName)
@@ -131,6 +126,7 @@ func newKeyRotationCommand() *cobra.Command {
 	return rotationCmd
 }
 
+// function to fetch all secrets, decrypt them with the decryptEnc, then encrypting them with the encryptEnc and finally saving the update secrets to the database
 func reEncryptAllSecrets(ctx context.Context, decryptEnc, encryptEnc *services.DBEncryptionService) error {
 	var pipelineErr error
 
@@ -183,6 +179,7 @@ type secretsInDB struct {
 	WebhookIntegrations []models.WebhookIntegration
 }
 
+// fetch all known secrets from the database
 func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 	allSecrets := secretsInDB{}
 
@@ -209,6 +206,7 @@ func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 	return allSecrets, nil
 }
 
+// iterates over all secrets and calls maybe decrypt on all existing values
 func decryptSecrets(secrets secretsInDB, decryptionService services.DBEncryptionService) (secretsInDB, error) {
 	for i := range secrets.GitlabIntegrations {
 		decryptedAccessToken, err := decryptionService.MaybeDecryptData(secrets.GitlabIntegrations[i].AccessToken)
@@ -255,6 +253,7 @@ func decryptSecrets(secrets secretsInDB, decryptionService services.DBEncryption
 	return secrets, nil
 }
 
+// iterate over all secrets and calls encrypt and wrap data on all existing values
 func encryptSecrets(secrets secretsInDB, encryptionService services.DBEncryptionService) (secretsInDB, error) {
 	for i := range secrets.GitlabIntegrations {
 		encryptedAccessToken, err := encryptionService.EncryptAndWrapData(secrets.GitlabIntegrations[i].AccessToken)
@@ -301,6 +300,7 @@ func encryptSecrets(secrets secretsInDB, encryptionService services.DBEncryption
 	return secrets, nil
 }
 
+// save all the (updated) secrets to the database using on conflict update all
 func updateSecretsInDB(db *gorm.DB, secrets secretsInDB) error {
 	tx := db.Begin()
 	defer tx.Rollback()

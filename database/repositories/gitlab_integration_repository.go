@@ -41,10 +41,7 @@ func NewGitLabIntegrationRepository(db *gorm.DB, encryptionService shared.DBEncr
 	}
 }
 
-// Save encrypts the access token in place before delegating to the embedded
-// generic repository, then restores the plaintext token afterwards. Passing the
-// caller's model lets GORM write back DB-generated fields (e.g. ID), while the
-// deferred restore keeps the caller's in-memory model holding the plaintext token.
+// overwrite save function with a custom one using the encryption logic, to make sure all callers encrypt before save
 func (r *gitlabIntegrationRepository) Save(ctx context.Context, tx *gorm.DB, integration *models.GitLabIntegration) error {
 	originalAccessToken := integration.AccessToken
 	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(originalAccessToken)
