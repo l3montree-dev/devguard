@@ -1,0 +1,47 @@
+package router
+
+import (
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
+)
+
+type APIV2Router struct{}
+
+func NewAPIV2Router(
+	srv api.Server,
+	adminClient shared.PublicClient,
+	patService shared.PersonalAccessTokenService,
+	externalEntityProviderService shared.ExternalEntityProviderService,
+	scanController *controllers.ScanController,
+	assetRepository shared.AssetRepository,
+	projectRepository shared.ProjectRepository,
+	assetVersionRepository shared.AssetVersionRepository,
+	casbinRBACProvider shared.RBACProvider,
+	orgService shared.OrgService,
+	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
+) APIV2Router {
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+
+	v2 := srv.Echo.Group("/api/v2",
+		middlewares.SessionMiddleware(adminClient, patService),
+		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
+		middlewares.NeededScope([]string{"scan"}),
+		middlewares.AssetNameMiddleware(),
+		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
+		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
+		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
+		middlewares.ScanMiddleware(assetVersionRepository),
+	)
+
+	v2.POST("/scan/", scanController.ScanSbomFileVex)
+	v2.POST("/sarif-scan/", scanController.ScanSarifFile)
+
+	srv.Echo.POST("/api/v2/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticatedVex)
+	srv.Echo.POST("/api/v2/sarif-scan-unauthenticated/", scanController.SarifScanUnauthenticated)
+
+	return APIV2Router{}
+}

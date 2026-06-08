@@ -134,7 +134,7 @@ func (p *PatController) Delete(c shared.Context) error {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {array} models.PAT
+// @Success 200 {array} dtos.PATDTO
 // @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session

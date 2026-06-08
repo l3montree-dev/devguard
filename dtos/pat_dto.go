@@ -26,3 +26,12 @@ type PatCreateRequest struct {
 	PubKey      string `json:"pubKey"`
 	Scopes      string `json:"scopes"`
 }
+
+type PATDTO struct {
+	ID          string     `json:"id"`
+	CreatedAt   string     `json:"createdAt"`
+	Description string     `json:"description"`
+	Fingerprint string     `json:"fingerprint"`
+	LastUsedAt  *string    `json:"lastUsedAt"`
+	Scopes      string     `json:"scopes"`
+}

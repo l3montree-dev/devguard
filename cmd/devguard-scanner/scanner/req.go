@@ -85,9 +85,9 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 		}
 	}
 
-	endpoint := fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL)
+	endpoint := fmt.Sprintf("%s/api/v2/scan", config.RuntimeBaseConfig.APIURL)
 	if config.RuntimeBaseConfig.Token == "" {
-		endpoint = fmt.Sprintf("%s/api/v1/scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
+		endpoint = fmt.Sprintf("%s/api/v2/scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
@@ -106,6 +106,9 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
+	if config.RuntimeBaseConfig.NoWrite {
+		req.Header.Set("X-No-Write", "1")
+	}
 
 	if config.RuntimeBaseConfig.KeepOriginalSbomRootComponent != nil {
 		// convert bool to number

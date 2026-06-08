@@ -31,7 +31,6 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/utils"
@@ -288,19 +287,7 @@ func scanExternalImage(ctx context.Context) error {
 		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 	}
 
-	// read and parse the body - it should be an array of dependencyVulns
-	// print the dependencyVulns to the console
-	var scanResponse compat.ScanResponse
-	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-	if err != nil {
-		return errors.Wrap(err, "could not parse response")
-	}
-
-	err = scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
-	if err != nil {
-		return err
-	}
-	return nil
+	return handleScanResponse(resp.Body)
 }
 
 func scanLocalFilePath(ctx context.Context) error {
@@ -338,16 +325,27 @@ func scanLocalFilePath(ctx context.Context) error {
 		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 	}
 
-	// read and parse the body - it should be an array of dependencyVulns
-	// print the dependencyVulns to the console
-	var scanResponse compat.ScanResponse
+	return handleScanResponse(resp.Body)
+}
 
-	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
+func handleScanResponse(body io.Reader) error {
+	// Read the body once so we can use it for both output modes.
+	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
-		return errors.Wrap(err, "could not parse response")
+		return errors.Wrap(err, "could not read scan response")
 	}
 
-	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	output := strings.ToLower(config.RuntimeBaseConfig.Output)
+	if output == "cyclonedx" {
+		_, err := os.Stdout.Write(bodyBytes)
+		return err
+	}
+
+	var bom cyclonedx.BOM
+	if err := cyclonedx.NewBOMDecoder(bytes.NewReader(bodyBytes), cyclonedx.BOMFileFormatJSON).Decode(&bom); err != nil {
+		return errors.Wrap(err, "could not parse CycloneDX VEX response")
+	}
+	return scanner.PrintCycloneDXVexResults(bom, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {

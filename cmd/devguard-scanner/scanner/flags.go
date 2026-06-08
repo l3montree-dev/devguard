@@ -70,6 +70,8 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 	cmd.Flags().Bool("ignoreExternalReferences", false, "If an attestation does contain a external reference to an sbom or vex, this will be ignored. Useful when scanning your own image from the registry where your own attestations are attached.")
 	cmd.Flags().Bool("keepOriginalSbomRootComponent", false, "Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies")
+	cmd.Flags().Bool("noWrite", false, "Run the scan and display results (including VEX/false-positive assessments) without persisting anything to DevGuard.")
+	cmd.Flags().String("output", "table", "Output format for scan results. Options: 'table' (default), 'cyclonedx' (CycloneDX VEX JSON).")
 }
 func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)
@@ -79,4 +81,6 @@ func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("outputPath", "", "Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.")
 	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
+	cmd.Flags().Bool("noWrite", false, "Run the scan and display results without persisting anything to DevGuard.")
+	cmd.Flags().String("output", "table", "Output format for scan results. Options: 'table' (default), 'sarif' (enriched SARIF JSON).")
 }
