@@ -4,13 +4,13 @@
 
 buildGoModule rec {
   pname = "trivy";
-  version = "0.70.0";
+  version = "0.71.0";
 
   src = fetchFromGitHub {
     owner = "aquasecurity";
     repo = "trivy";
     rev = "v${version}";
-    hash = "sha256-xMj5xA/q3ekMW8k1aHCKa5hsYZSFShghOO5K6MnDCBo=";
+    hash = "sha256-MMj5xA/q3ekMW8k1aHCKa5hsYZSFShghOO5K6MnDCBo=";
   };
 
   # vendor hash differs across Linux and Darwin builds — bypass the source
