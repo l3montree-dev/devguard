@@ -21,6 +21,7 @@ import (
 )
 
 func TestArtifactControllerDeleteArtifact(t *testing.T) {
+	t.Parallel()
 	factory, client := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
@@ -369,6 +370,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 }
 
 func TestBuildVEX(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
 

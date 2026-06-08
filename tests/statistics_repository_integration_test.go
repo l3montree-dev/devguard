@@ -33,6 +33,7 @@ import (
 // Concretely: both cycles are 1h, so the average must be 3600s — not 7200s
 // (which would happen if the second fix were measured from the original detection).
 func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
+	t.Parallel()
 	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
 
@@ -127,6 +128,7 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 }
 
 func TestAverageRemediationTimesForRelease(t *testing.T) {
+	t.Parallel()
 	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
 

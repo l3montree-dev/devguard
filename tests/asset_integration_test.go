@@ -18,6 +18,7 @@ import (
 )
 
 func TestHandleLookup(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		// Create test data using FX helper
 		_, _, asset1, _ := f.CreateOrgProjectAssetAndVersion()
@@ -73,7 +74,7 @@ func TestHandleLookup(t *testing.T) {
 }
 
 func TestAssetUpdate(t *testing.T) {
-
+	t.Parallel()
 	t.Run("should be possible to enable the ticket range", func(t *testing.T) {
 		// Mock third-party integration
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)

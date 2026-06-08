@@ -35,6 +35,7 @@ func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
 }
 
 func TestMultipleOrigins(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -162,6 +163,7 @@ func TestMultipleOrigins(t *testing.T) {
 }
 
 func TestKeepExistingVulnsClosed(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 
@@ -413,6 +415,7 @@ func TestKeepExistingVulnsClosed(t *testing.T) {
 // across single and multiple artifacts.  Each sub-test is self-contained via a fresh
 // WithTestApp so there is no shared state between scenarios.
 func TestUserAssessmentLifecycle(t *testing.T) {
+	t.Parallel()
 	// ── helpers ──────────────────────────────────────────────────────────────────
 	scan := func(t *testing.T, controller interface{ ScanDependencyVulnFromProject(shared.Context) error }, app *echo.Echo, setupCtx func(shared.Context), artifactName, ref, defaultBranch string, sbomBody func() io.Reader) {
 		t.Helper()
@@ -824,6 +827,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 }
 
 func TestScanning(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1060,6 +1064,7 @@ func TestScanning(t *testing.T) {
 }
 
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1143,6 +1148,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1250,6 +1256,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1484,6 +1491,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1598,6 +1606,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestTicketHandling(t *testing.T) {
+	t.Parallel()
 	testClientFactory, gitlabClientFacade := NewTestClientFactory(t)
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
@@ -1989,6 +1998,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 }
 
 func TestIdempotency(t *testing.T) {
+	t.Parallel()
 	// 1. scan a sbom
 	// 2. Download the sbom from devguard
 	// 3. Scan that sbom
@@ -2089,6 +2099,7 @@ func TestIdempotency(t *testing.T) {
 }
 
 func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		// load small-sbom.json
@@ -2166,6 +2177,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 }
 
 func TestScanWithMultiplePaths(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2214,6 +2226,7 @@ func TestScanWithMultiplePaths(t *testing.T) {
 }
 
 func TestPathPatternVEXRules(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2298,6 +2311,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 }
 
 func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2408,6 +2422,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		artifactController := f.App.ArtifactController
@@ -2536,6 +2551,7 @@ func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		artifactController := f.App.ArtifactController
@@ -2714,6 +2730,7 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 // or evicted by a concurrent transaction), a rescan must still succeed by
 // re-inserting the missing component before creating the dependency edge.
 func TestTrivyDebianSBOMRescan(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		app := echo.New()
@@ -2770,6 +2787,7 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 
@@ -2855,6 +2873,7 @@ func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 }
 
 func TestScanScopedToArtifact(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 

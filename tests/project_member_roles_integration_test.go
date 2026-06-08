@@ -291,6 +291,7 @@ func (f *TestFixture) GetAssetMembers(t testing.TB, e *echo.Echo, org models.Org
 // member (not explicitly invited to project/subproject/asset) has no role at
 // those lower levels.
 func TestMemberRolesAcrossProjectHierarchy(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -352,6 +353,7 @@ func TestMemberRolesAcrossProjectHierarchy(t *testing.T) {
 // automatically gives them admin access at the project, subproject and asset level
 // through role inheritance (org admin → project admin → asset admin).
 func TestOrgAdminRolePropagatesDownHierarchy(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -426,6 +428,7 @@ func TestOrgAdminRolePropagatesDownHierarchy(t *testing.T) {
 // project gives them access in that project. It also logs what role they get in
 // a subproject and asset that they were not explicitly invited to.
 func TestProjectInvitePropagatesDownHierarchy(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -638,6 +641,7 @@ func TestProjectInvitePropagatesDownHierarchy(t *testing.T) {
 // but instead of changing roles it removes the user from each level and checks that
 // roles at lower levels become empty.
 func TestProjectRemovalClearsHierarchyRoles(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -748,6 +752,7 @@ func TestProjectRemovalClearsHierarchyRoles(t *testing.T) {
 // an org (who was previously promoted to admin) removes their access at project,
 // subproject and asset level as well.
 func TestOrgMemberRemovedFromOrgClearsHierarchyRoles(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"

@@ -33,15 +33,6 @@ import (
 )
 
 var _ shared.AccessControl = &casbinRBAC{}
-var casbinEnforcer *casbin.ContextEnforcer
-
-// ResetEnforcer clears the cached enforcer singleton so the next call to
-// NewCasbinRBACProvider builds a fresh one. Intended for use in tests only.
-func ResetEnforcer() {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	casbinEnforcer = nil
-}
 
 // protect against concurrent access on shared rbac structures like maps
 // in practical terms this means that whenever we call a function of the casbin context enforcer, we wrap the call inside a mutex lock and unlock
@@ -439,9 +430,6 @@ func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker) (casbinRBACP
 }
 
 func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.ContextEnforcer, error) {
-	if casbinEnforcer != nil {
-		return casbinEnforcer, nil
-	}
 	a, err := gormadapter.NewAdapterByDB(db)
 	if err != nil {
 		return nil, err
@@ -479,8 +467,6 @@ func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.ContextEnfo
 	if err = e.LoadPolicy(); err != nil {
 		log.Println("LoadPolicy failed, err: ", err)
 	}
-
-	casbinEnforcer = e
 
 	return e, nil
 }

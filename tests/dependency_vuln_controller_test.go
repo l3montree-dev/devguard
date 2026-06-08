@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
@@ -28,6 +27,7 @@ import (
 )
 
 func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
+	t.Parallel()
 	buildController := func(t *testing.T, depVulnRepo *mocks.DependencyVulnRepository) *controllers.DependencyVulnController {
 		return controllers.NewDependencyVulnController(
 			depVulnRepo,
@@ -161,6 +161,7 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 }
 
 func TestDependencyVulnRecommendationRoute(t *testing.T) {
+	t.Parallel()
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
 	}, func(f *TestFixture) {
@@ -205,8 +206,7 @@ func TestDependencyVulnRecommendationRoute(t *testing.T) {
 }
 
 func TestDependencyVulnControllerCreateEvent(t *testing.T) {
-	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-
+	t.Parallel()
 	factory, client := NewTestClientFactory(t)
 
 	externalUserRepository := mocks.NewExternalUserRepository(t)

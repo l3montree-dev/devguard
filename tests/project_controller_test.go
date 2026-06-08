@@ -19,6 +19,7 @@ import (
 )
 
 func TestProjectCreation(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, project, _, _ := f.CreateOrgProjectAssetAndVersion()
 

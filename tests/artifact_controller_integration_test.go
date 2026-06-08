@@ -18,6 +18,7 @@ import (
 )
 
 func TestDeleteArtifactIntegration(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		// Create test organization, project, asset, and asset version using FX helper
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
