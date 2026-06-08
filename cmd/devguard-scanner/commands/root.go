@@ -20,10 +20,13 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	buildconfig "github.com/l3montree-dev/devguard/config"
+	"github.com/l3montree-dev/devguard/telemetry"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lmittmann/tint"
 
@@ -33,6 +36,7 @@ import (
 )
 
 var cfgFile string
+var telemetryOnce sync.Once
 
 // Version information - set via ldflags during build
 var (
@@ -50,7 +54,7 @@ var RootCmd = &cobra.Command{
 	SilenceUsage:      true,
 	Use:               "devguard-scanner",
 	Short:             "Secure your Software Supply Chain",
-	Version:           version,
+	Version:           scannerVersion(),
 	DisableAutoGenTag: true,
 	Long: `Secure your Software Supply Chain
 
@@ -90,7 +94,8 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 			initLogger(slog.LevelInfo)
 		}
 
-		if utils.RunsInCI() {
+		runsInCI := utils.RunsInCI()
+		if runsInCI {
 			slog.Debug("Running in CI")
 			err := utils.GitLister.MarkAllPathsAsSafe()
 			if err != nil {
@@ -102,6 +107,10 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 		if err != nil {
 			return err
 		}
+
+		telemetryOnce.Do(func() {
+			telemetry.SendScannerStartup(cmd.Context(), telemetry.ConfigFromEnv(), nil, scannerVersion(), config.RuntimeBaseConfig.APIURL, runsInCI, cmd.Name())
+		})
 
 		return nil
 	},
@@ -121,9 +130,9 @@ func init() {
 		Short: "Show version information",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("DevGuard Scanner\n")
-			fmt.Printf("Version:    %s\n", version)
-			fmt.Printf("Commit:     %s\n", commit)
-			fmt.Printf("Built:      %s\n", date)
+			fmt.Printf("Version:    %s\n", scannerVersion())
+			fmt.Printf("Commit:     %s\n", firstNonEmpty(buildconfig.Commit, commit))
+			fmt.Printf("Built:      %s\n", firstNonEmpty(buildconfig.BuildDate, date))
 			fmt.Printf("Built by:   %s\n", builtBy)
 		},
 	}
@@ -181,6 +190,19 @@ func initLogger(level slog.Leveler) {
 			AddSource:  true,
 		}),
 	))
+}
+
+func scannerVersion() string {
+	return telemetry.RuntimeVersion(buildconfig.Version, version)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func initializeConfig(cmd *cobra.Command) error {
