@@ -6170,6 +6170,56 @@ paths:
       summary: Accept organization invitation
       tags:
       - Organizations
+  /api/v2/sarif-scan:
+    post:
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Enriched SARIF JSON
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      summary: Scan SARIF file and return enriched SARIF
+      tags:
+      - Scanning
+  /api/v2/sarif-scan-unauthenticated:
+    post:
+      parameters:
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Enriched SARIF JSON
+      summary: Scan SARIF without authentication and return enriched SARIF
+      tags:
+      - Scanning
   /api/v2/scan:
     post:
       requestBody:
@@ -6192,6 +6242,27 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       summary: Scan SBOM file and return CycloneDX VEX
+      tags:
+      - Scanning
+  /api/v2/scan-unauthenticated:
+    post:
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: CycloneDX SBOM
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/cyclonedx.BOM'
+          description: CycloneDX VEX JSON
+      summary: Scan for dependency vulnerabilities without authentication, returns
+        CycloneDX VEX
       tags:
       - Scanning
   /attestations:
@@ -9683,6 +9754,7 @@ paths:
       - Authentication
   /sarif-scan:
     post:
+      deprecated: true
       parameters:
       - description: Asset version name
         in: header
@@ -9726,8 +9798,38 @@ paths:
       summary: Scan for first-party vulnerabilities
       tags:
       - Scanning
+  /sarif-scan-unauthenticated:
+    post:
+      deprecated: true
+      parameters:
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.FirstPartyScanResponse'
+          description: OK
+      summary: Scan for first-party vulnerabilities without authentication (scan-only,
+        results are not saved)
+      tags:
+      - Scanning
   /scan:
     post:
+      deprecated: true
       parameters:
       - description: Asset version name
         in: header
@@ -9782,6 +9884,7 @@ paths:
       - Scanning
   /scan-unauthenticated:
     post:
+      deprecated: true
       requestBody:
         content:
           text/plain:

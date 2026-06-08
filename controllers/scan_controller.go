@@ -396,6 +396,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) ([]m
 }
 
 // @Summary Scan for first-party vulnerabilities
+// @Deprecated Use /api/v2/sarif-scan instead.
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
@@ -503,6 +504,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 }
 
 // @Summary Scan for dependency vulnerabilities
+// @Deprecated Use /api/v2/scan instead.
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
@@ -543,6 +545,7 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 }
 
 // @Summary Scan for dependency vulnerabilities without authentication (scan-only, results are not saved)
+// @Deprecated Use /api/v2/scan-unauthenticated instead.
 // @Tags Scanning
 // @Param body body object true "CycloneDX SBOM"
 // @Success 200 {object} dtos.ScanResponse
@@ -571,6 +574,7 @@ func (s *ScanController) ScanDependencyVulnUnauthenticated(c echo.Context) error
 }
 
 // @Summary Scan for first-party vulnerabilities without authentication (scan-only, results are not saved)
+// @Deprecated Use /api/v2/sarif-scan-unauthenticated instead.
 // @Tags Scanning
 // @Param body body object true "SARIF scan result"
 // @Param X-Scanner header string true "Scanner ID"
