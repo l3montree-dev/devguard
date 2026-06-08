@@ -351,8 +351,8 @@ func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(ctx context
 	for i := range licenseRisks {
 		ev := models.NewLicenseDecisionEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, userID, "Automatically fixed by license refresh", artifactName, licenseRisks[i].NewFinalLicense, userAgent)
 		events[i] = ev
-		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
 		statemachine.Apply(&licenseRisks[i].LicenseRisk, ev)
+		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
 	}
 	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisksToSave); err != nil {
 		return err

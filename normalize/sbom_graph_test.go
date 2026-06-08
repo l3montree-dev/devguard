@@ -1445,6 +1445,43 @@ func TestFindAllComponentOnlyPathsToPURL_ScopeIsolation(t *testing.T) {
 		assert.NotEqual(t, artifact1ID, artifact2ID)
 		assert.NotEqual(t, infoSource1, infoSource2)
 	})
+
+	t.Run("info source with two parent artifacts still returns correct scoped paths", func(t *testing.T) {
+		// Simulate a malformed (but real-world) graph where the same info source
+		// node is reachable from two different artifact nodes. The warning branch
+		// (len(parentArtifact) > 1) must still produce correct results: scoping
+		// to either artifact must find the path, not drop it.
+		g := NewSBOMGraph()
+
+		artifact1ID := g.AddArtifact("app1")
+		artifact2ID := g.AddArtifact("app2")
+
+		// Create an info source under artifact1.
+		infoSourceID := g.AddInfoSource(artifact1ID, "shared/sbom.json", InfoSourceSBOM)
+
+		// Manually wire artifact2 → the same info source, creating the
+		// "multiple parents" condition that triggers the warning.
+		g.AddEdge(artifact2ID, infoSourceID)
+
+		lodash := cdx.Component{BOMRef: "pkg:npm/lodash@4.17.20", PackageURL: "pkg:npm/lodash@4.17.20"}
+		lodashID := g.AddComponent(lodash)
+		g.AddEdge(infoSourceID, lodashID)
+
+		// Scoped to artifact1: path must still be returned despite the warning.
+		err := g.ScopeToArtifact("app1")
+		assert.NoError(t, err)
+		paths1 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, paths1, 1, "scoped to app1 should return the path even with multiple info-source parents")
+		assert.Equal(t, Path([]string{"pkg:npm/lodash@4.17.20"}), paths1[0])
+
+		// Scoped to artifact2: same expectation.
+		g.ClearScope()
+		err = g.ScopeToArtifact("app2")
+		assert.NoError(t, err)
+		paths2 := g.FindAllComponentOnlyPathsToPURL("pkg:npm/lodash@4.17.20", 0)
+		assert.Len(t, paths2, 1, "scoped to app2 should return the path even with multiple info-source parents")
+		assert.Equal(t, Path([]string{"pkg:npm/lodash@4.17.20"}), paths2[0])
+	})
 }
 
 func TestVulnerabilities(t *testing.T) {

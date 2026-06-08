@@ -34,8 +34,8 @@
     inherit src;
     # vendorHash differs per OS because `go mod vendor` applies build constraints.
     vendorHash = if lib.hasSuffix "-darwin" system
-      then "sha256-yH5AUnMgjmV2brIDFUb7VhhzYXFVC8mgff+HHIW1boA="
-      else "sha256-3nrhFRyA7gnVUjlXBrY/TmJCJbEwURfD/vQtQ1D/b9A=";
+      then "sha256-5Wvv5HL25ZJB1lP1kZGBnZMzsSxwE0pNZvxuHwPbZS8="
+      else "sha256-P2lovXAsBOmUMWI3H4J97D2ZcdDXyvyJE5eargi/9y8=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS

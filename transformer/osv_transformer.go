@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -186,6 +187,15 @@ func processRanges(ranges []dtos.Range, ecosystem string, purl packageurl.Packag
 	return components
 }
 
+func incrementPatchVersion(version string) (string, error) {
+	v, err := semver.ParseTolerant(version)
+	if err != nil {
+		return "", err
+	}
+	v.Patch++
+	return v.String(), nil
+}
+
 func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {
 	components := make([]models.AffectedComponent, 0, len(r.Events)/2+1)
 
@@ -194,6 +204,15 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 		fixed := ""
 		if i+1 < len(r.Events) {
 			fixed = r.Events[i+1].Fixed
+			if fixed == "" && r.Events[i+1].LastAffected != "" {
+				incremented, err := incrementPatchVersion(r.Events[i+1].LastAffected)
+				if err != nil {
+					// non-semver last_affected — skip this range entry so the
+					// versions slice fallback in affectedComponentsFromAffected takes over
+					continue
+				}
+				fixed = incremented
+			}
 		}
 
 		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string

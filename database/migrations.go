@@ -61,6 +61,7 @@ func RunMigrations(db shared.DB) error {
 		cfg.MinConns = 0
 		db = NewGormDB(NewPgxConnPool(cfg))
 	}
+
 	// Get the underlying sql.DB from GORM
 	migrator, err := getMigrator(db)
 	if err != nil {
@@ -79,16 +80,20 @@ func RunMigrations(db shared.DB) error {
 			return nil
 		}
 		// Release the migrator's connection (advisory lock + any open tx) before
-		// touching schema_migrations on the same pool — with MaxOpenConns=1 this
-		// would otherwise deadlock.
+		// touching schema_migrations — migrator.Close() also closes the underlying
+		// sql.DB it was given, so we need a fresh connection for the reset.
 		migrator.Close()
 		// clear dirty flag and restore version so the migration can be retried — safe in postgres since DDL is transactional
-		sqlDB, dbErr := db.DB()
-		if dbErr == nil {
-			_, err = sqlDB.Exec("UPDATE schema_migrations SET dirty = false, version = $1", versionBefore)
-			if err != nil {
+		resetCfg := GetPoolConfigFromEnv()
+		resetCfg.MaxOpenConns = 1
+		resetCfg.MinConns = 0
+		resetDB := NewGormDB(NewPgxConnPool(resetCfg))
+		if resetSQLDB, dbErr := resetDB.DB(); dbErr == nil {
+			defer resetSQLDB.Close()
+			if _, err = resetSQLDB.Exec("UPDATE schema_migrations SET dirty = false, version = $1", versionBefore); err != nil {
 				monitoring.Alert("failed to reset migration state after failed migration", err)
 			}
+			slog.Info("successfully reset migration state - feel free to try again")
 		}
 		return fmt.Errorf("failed to run migrations: %w", migrateErr)
 	}

@@ -94,6 +94,12 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := vulndbService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
 				return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
 			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v4: %w", err)
+			}
 		}
 
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)

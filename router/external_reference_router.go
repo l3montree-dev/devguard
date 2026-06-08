@@ -18,6 +18,7 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -28,7 +29,9 @@ type ExternalReferenceRouter struct {
 func NewExternalReferenceRouter(
 	assetVersionRouter AssetVersionRouter,
 	externalReferenceController *controllers.ExternalReferenceController,
+	assetRepository shared.AssetRepository,
 ) ExternalReferenceRouter {
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 	// External references are scoped to asset versions
 	// Read access - anyone who can read the asset version can list references
 	refGroup := assetVersionRouter.Group.Group("/external-references")
@@ -36,9 +39,9 @@ func NewExternalReferenceRouter(
 
 	// Write access - requires asset update permission
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	refWriteGroup.POST("/", externalReferenceController.Create)       // Create reference
-	refWriteGroup.POST("/sync/", externalReferenceController.Sync)    // Sync external sources
-	refWriteGroup.DELETE("/:id/", externalReferenceController.Delete) // Delete reference
+	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))       // Create reference
+	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))    // Sync external sources
+	refWriteGroup.DELETE("/:id/", externalReferenceController.Delete, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate)) // Delete reference
 
 	return ExternalReferenceRouter{Group: refGroup}
 }

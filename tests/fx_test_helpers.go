@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -42,6 +43,10 @@ type TestFixture struct {
 // NewTestFixture creates a complete test environment with database container and FX app
 func NewTestFixture(t testing.TB, sqlInitFile string, options *TestAppOptions) *TestFixture {
 	t.Helper()
+
+	// Reset the global casbin enforcer so each test gets a fresh one
+	// pointing to its own database container.
+	accesscontrol.ResetEnforcer()
 
 	// Initialize database container
 	db, pool, terminate := InitDatabaseContainer(sqlInitFile)

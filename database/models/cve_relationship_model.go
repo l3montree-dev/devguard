@@ -2,12 +2,14 @@ package models
 
 import "github.com/l3montree-dev/devguard/dtos"
 
-// this model is used to save information about the relationship between different CVEs, this data originates from the OSV import
-// where every OSV entry has a set of aliases, related and upstream vulnerabilities
+// CVERelationship stores source/target/type — TargetCVE is a plain string, not a DB FK constraint.
 type CVERelationship struct {
 	SourceCVE        string                `json:"source_cve" gorm:"type:text;primaryKey"`
 	TargetCVE        string                `json:"target_cve" gorm:"type:text;primaryKey"`
 	RelationshipType dtos.RelationshipType `json:"relationship_type" gorm:"type:text;primaryKey"`
+	// TargetCVEData is populated by GORM nested preload. It is nil when the target
+	// CVE does not exist in this database — no DB-level FK constraint is added.
+	TargetCVEData *CVE `json:"target_cve_data,omitempty" gorm:"foreignKey:TargetCVE;references:CVE"`
 }
 
 func (cve CVERelationship) TableName() string {

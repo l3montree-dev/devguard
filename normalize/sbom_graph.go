@@ -929,11 +929,11 @@ func (g *SBOMGraph) FindAllComponentOnlyPathsToPURL(purl string, limit int) []Pa
 					// if not, just discard this path, as it does not belong to the scoped artifact
 					parentArtifact := reverseEdges[parentID]
 					if len(parentArtifact) > 1 {
-						panic("more than one parent, makes no sense")
+						slog.Warn("Info source has multiple parents, which should not happen in a well-formed graph. This may lead to incorrect path results.", "infoSourceID", parentID, "parentArtifacts", parentArtifact)
 					}
 
-					if parentArtifact[0] != g.ScopeID {
-						// this info source does not belong to the scoped artifact, discard path
+					if !slices.Contains(parentArtifact, g.ScopeID) {
+						// parent artifact is not the one we scoped to, so skip this path
 						continue
 					}
 				}
@@ -1846,7 +1846,7 @@ func SBOMGraphFromComponents[T GraphComponent](components []T, licenseOverwrites
 	dependencyMap := make(map[string][]string, len(components))
 	for _, c := range components {
 		parentID := c.GetDependentID()
-		if parentID == "" {
+		if parentID == "ROOT" {
 			parentID = GraphRootNodeID
 		}
 		dependencyMap[parentID] = append(dependencyMap[parentID], c.GetID())

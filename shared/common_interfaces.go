@@ -454,6 +454,7 @@ type ScanService interface {
 	FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)
 	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
+	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
 }
 
 type ConfigRepository interface {
