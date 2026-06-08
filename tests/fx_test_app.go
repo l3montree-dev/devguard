@@ -17,7 +17,6 @@ package tests
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -136,8 +135,6 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 	}
 
 	var app TestApp
-
-	os.Setenv("RBAC_CONFIG_PATH", "../config/rbac_model.conf")
 
 	fxOptions := []fx.Option{
 		// Provide the database

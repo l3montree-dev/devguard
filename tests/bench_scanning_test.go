@@ -159,9 +159,6 @@ func cleanupBenchmarkArtifacts(db shared.DB, assetID uuid.UUID) {
 // Run with: go test -bench=BenchmarkScanLargeSBOMDevDB -benchmem ./tests/benchmark/...
 func BenchmarkScanLargeSBOMDevDB(b *testing.B) {
 
-	// Set required environment variable
-	os.Setenv("FRONTEND_URL", "http://localhost:3000")
-
 	// Load the large SBOM
 	sbomData, err := loadSBOM("testdata/large-sbom2.json")
 	if err != nil {

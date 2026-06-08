@@ -17,6 +17,7 @@ import (
 )
 
 func TestGetAndSaveLicenseInformation(t *testing.T) {
+	t.Parallel()
 	// Set up a mock OSI licenses API server that returns known valid licenses
 	// This avoids external API dependencies in tests
 	mockLicenses := `[
