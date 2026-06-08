@@ -16,7 +16,7 @@ buildGoModule rec {
   # vendor hash differs across Linux and Darwin builds — bypass the source
   # vendor dir entirely and fetch modules via the Go module proxy.
   proxyVendor = true;
-  vendorHash = "sha256-VbkCDzSF8gHxXpzzNxtPVRqUn/4l0AVHNzlsOKmXNG8=";
+  vendorHash = "sha256-n5eWyKpG47LuXPzMO+/tzhFs4F+grWQAThCoGEMQ2S8=";
 
   subPackages = [ "cmd/trivy" ];
 
