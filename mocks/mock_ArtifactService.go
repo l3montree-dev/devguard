@@ -348,16 +348,16 @@ func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(ctx context.C
 }
 
 // SaveArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SaveArtifact(ctx context.Context, artifact *models.Artifact) error {
-	ret := _mock.Called(ctx, artifact)
+func (_mock *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
+	ret := _mock.Called(ctx, tx, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Artifact) error); ok {
-		r0 = returnFunc(ctx, artifact)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, artifact)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -371,24 +371,30 @@ type ArtifactService_SaveArtifact_Call struct {
 
 // SaveArtifact is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - artifact *models.Artifact
-func (_e *ArtifactService_Expecter) SaveArtifact(ctx interface{}, artifact interface{}) *ArtifactService_SaveArtifact_Call {
-	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", ctx, artifact)}
+func (_e *ArtifactService_Expecter) SaveArtifact(ctx interface{}, tx interface{}, artifact interface{}) *ArtifactService_SaveArtifact_Call {
+	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", ctx, tx, artifact)}
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) Run(run func(ctx context.Context, artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Artifact
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Artifact)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -399,7 +405,7 @@ func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_
 	return _c
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(ctx context.Context, artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }

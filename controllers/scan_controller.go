@@ -141,7 +141,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	// save the artifact to the database
-	if err := s.artifactService.SaveArtifact(reqCtx, &artifact); err != nil {
+	if err := s.artifactService.SaveArtifact(reqCtx, nil, &artifact); err != nil {
 		slog.Error("could not save artifact", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -225,7 +225,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	return ctx.JSON(200, nil)
 }
 
-func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) ([]models.DependencyVuln, models.AssetVersion, error) {
+func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {
 	scanCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.DependencyVulnScan")
 	defer span.End()
 
@@ -271,23 +271,33 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) ([]m
 	}
 	// keepOriginalSbomRootComponent DOES NOT MAKE SENSE IF THE root component has no valid purl!
 	if keepOriginalSbomRootComponent && (bom.Metadata == nil || bom.Metadata.Component == nil || bom.Metadata.Component.PackageURL == "") {
-		return nil, empty, echo.NewHTTPError(400, "supplied application as sbom source type is set, but the SBOM does not include a valid metadata.component.purl (root component PURL); keeping the original root requires a root component PURL")
+		return nil, nil, nil, empty, echo.NewHTTPError(400, "supplied application as sbom source type is set, but the SBOM does not include a valid metadata.component.purl (root component PURL); keeping the original root requires a root component PURL")
 	}
 
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, empty, echo.NewHTTPError(400, fmt.Sprintf("Invalid SBOM: %s", err))
+	normalized, normErr := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	if normErr != nil {
+		span.RecordError(normErr)
+		span.SetStatus(codes.Error, normErr.Error())
+		return nil, nil, nil, empty, echo.NewHTTPError(400, fmt.Sprintf("Invalid SBOM: %s", normErr))
 	}
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(scanCtx, nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	noWrite := c.Request().Header.Get("X-No-Write") == "1"
+
+	// When noWrite, start a transaction early so that FindOrCreate is also rolled back.
+	var earlyTx shared.DB
+	findOrCreateTx := shared.DB(nil)
+	if noWrite {
+		earlyTx = s.assetVersionRepository.GetDB(scanCtx, nil).Begin()
+		defer earlyTx.Rollback()
+		findOrCreateTx = earlyTx
+	}
+
+	assetVersion, err = s.assetVersionRepository.FindOrCreate(scanCtx, findOrCreateTx, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, empty, err
+		return nil, nil, nil, empty, err
 	}
 
 	artifact := models.Artifact{
@@ -296,38 +306,47 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) ([]m
 		AssetID:          asset.ID,
 	}
 
-	// save the artifact to the database
-	if err := s.artifactService.SaveArtifact(scanCtx, &artifact); err != nil {
+	// When noWrite, save the artifact within the early transaction so FK constraints are
+	// satisfied; the deferred rollback ensures nothing is actually persisted.
+	var artifactTx shared.DB
+	if noWrite {
+		artifactTx = earlyTx
+	}
+	if err = s.artifactService.SaveArtifact(scanCtx, artifactTx, &artifact); err != nil {
 		slog.Error("could not save artifact", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, empty, err
+		return nil, nil, nil, empty, err
 	}
+
 	// start a transaction for sbom updating AND scanning
-	tx := s.assetVersionRepository.GetDB(scanCtx, nil).Begin()
-	defer tx.Rollback()
+	// when noWrite, reuse the early transaction so everything rolls back together
+	var tx shared.DB
+	if noWrite {
+		tx = earlyTx
+	} else {
+		tx = s.assetVersionRepository.GetDB(scanCtx, nil).Begin()
+		defer tx.Rollback()
+	}
+
 	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifactName, normalized)
 	if err != nil {
-		tx.Rollback()
 		slog.Error("could not update sbom", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, empty, err
+		return nil, nil, nil, empty, err
 	}
 
-	opened, closed, newState, err := s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	opened, closed, newState, err = s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
 	if err != nil {
-		tx.Rollback()
 		slog.Error("could not scan normalized sbom", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, empty, err
+		return nil, nil, nil, empty, err
 	}
 
-	noWrite := c.Request().Header.Get("X-No-Write") == "1"
 	if noWrite {
-		// rollback the transaction — results are returned but nothing is persisted
-		tx.Rollback()
+		// earlyTx deferred Rollback covers everything including FindOrCreate
 	} else {
 		tx.Commit()
 	}
@@ -392,7 +411,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) ([]m
 		})
 	}
 
-	return newState, assetVersion, nil
+	return opened, closed, newState, assetVersion, nil
 }
 
 // @Summary Scan for first-party vulnerabilities
@@ -530,7 +549,7 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 		return echo.NewHTTPError(400, "Invalid SBOM format").WithInternal(err)
 	}
 
-	vulns, _, err := s.DependencyVulnScan(c, bom)
+	opened, closed, vulns, _, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -538,8 +557,8 @@ func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	}
 
 	return c.JSON(200, dtos.ScanResponse{
-		AmountOpened:    len(vulns),
-		AmountClosed:    0,
+		AmountOpened:    len(opened),
+		AmountClosed:    len(closed),
 		DependencyVulns: utils.Map(vulns, transformer.DependencyVulnToDTO),
 	})
 }
@@ -640,6 +659,8 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 		return echo.NewHTTPError(400, fmt.Sprintf("could not do an unauthenticated scan: %s", err.Error())).WithInternal(err)
 	}
 
+	components := make([]cdx.Component, 0)
+	compByPURL := map[string]string{} // purl -> bom-ref
 	vulns := make([]cdx.Vulnerability, 0, len(scanResults.DependencyVulns))
 	for _, v := range scanResults.DependencyVulns {
 		vuln := cdx.Vulnerability{ID: v.CVEID}
@@ -651,13 +672,24 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 			vuln.Recommendation = *v.ComponentFixedVersion
 		}
 		if v.ComponentPurl != "" {
-			ref := v.ComponentPurl
-			vuln.Affects = &[]cdx.Affects{{Ref: ref}}
+			bomRef, exists := compByPURL[v.ComponentPurl]
+			if !exists {
+				bomRef = v.ComponentPurl
+				comp := cdx.Component{
+					BOMRef:     bomRef,
+					PackageURL: v.ComponentPurl,
+					Type:       cdx.ComponentTypeLibrary,
+				}
+				components = append(components, comp)
+				compByPURL[v.ComponentPurl] = bomRef
+			}
+			vuln.Affects = &[]cdx.Affects{{Ref: bomRef}}
 		}
 		vulns = append(vulns, vuln)
 	}
 
 	vexBOM := cdx.NewBOM()
+	vexBOM.Components = &components
 	vexBOM.Vulnerabilities = &vulns
 
 	c.Response().Header().Set("Content-Type", "application/json")
@@ -759,7 +791,7 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 		c.Request().Header.Set("X-Origin", origin)
 	}
 
-	vulns, _, err := s.DependencyVulnScan(c, bom)
+	opened, closed, vulns, _, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -767,8 +799,8 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 	}
 
 	return c.JSON(200, dtos.ScanResponse{
-		AmountOpened:    len(vulns),
-		AmountClosed:    0,
+		AmountOpened:    len(opened),
+		AmountClosed:    len(closed),
 		DependencyVulns: utils.Map(vulns, transformer.DependencyVulnToDTO),
 	})
 
@@ -797,7 +829,7 @@ func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 		c.Request().Header.Set("X-Origin", "sbom-file-upload")
 	}
 
-	vulns, assetVersion, err := s.DependencyVulnScan(c, bom)
+	_, _, vulns, assetVersion, err := s.DependencyVulnScan(c, bom)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -872,15 +904,35 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 
 	noWrite := c.Request().Header.Get("X-No-Write") == "1"
 
-	_, _, newState, err := s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
-	if err != nil {
-		slog.Error("could not handle scan result", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
-	}
-
-	if !noWrite {
+	var newState []models.FirstPartyVuln
+	if noWrite {
+		// When noWrite, scan without persisting anything to the database.
+		scanResults, scanErr := s.ScanSarifWithoutSaving(c.Request().Context(), sarifScan, scannerID)
+		if scanErr != nil {
+			slog.Error("could not scan sarif without saving", "err", scanErr)
+			span.RecordError(scanErr)
+			span.SetStatus(codes.Error, scanErr.Error())
+			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+		}
+		newState = utils.Map(scanResults.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
+			fpv := models.FirstPartyVuln{
+				RuleID:          v.RuleID,
+				RuleName:        v.RuleName,
+				RuleHelpURI:     v.RuleHelpURI,
+				RuleDescription: v.RuleDescription,
+				URI:             v.URI,
+			}
+			fpv.State = v.State
+			return fpv
+		})
+	} else {
+		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
+		if err != nil {
+			slog.Error("could not handle scan result", "err", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+		}
 		linkedCtx := trace.ContextWithSpan(context.Background(), span)
 		s.FireAndForget(func() {
 			if err := s.firstPartyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState, &userAgent); err != nil {
