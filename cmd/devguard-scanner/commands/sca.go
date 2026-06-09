@@ -111,6 +111,9 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning directory", "dir", workDir)
 		prepareTrivyCommand(workDir)
 		args := []string{"fs", ".", "--format", "cyclonedx", "--output", sbomFile}
+		if config.RuntimeBaseConfig.IncludeDevDependencies {
+			args = append(args, "--include-dev-deps")
+		}
 		args = append(args, configFileArgs...)
 		// scanning a directory - we need to switch to the directory first because trivy needs to run in the context of the project to be able to find the dependencies
 		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
@@ -405,5 +408,6 @@ DevGuard and return vulnerability results.`,
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
+	scaCommand.Flags().Bool("include-dev-deps", false, "Pass --include-dev-deps to the underlying trivy fs scan to include development dependencies (supported by some package managers, e.g. npm/yarn). Only applies when scanning a directory.")
 	return scaCommand
 }
