@@ -72,7 +72,7 @@ type baseConfig struct {
 	Timeout                    int  `json:"timeout" mapstructure:"timeout"`
 	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
 	IgnoreUpstreamAttestations bool `json:"ignoreUpstreamAttestations" mapstructure:"ignoreUpstreamAttestations"`
-	IncludeDevDependencies     bool `json:"includeDevDeps" mapstructure:"include-dev-deps"`
+	IncludeDevDependencies     bool `json:"includeDevDeps" mapstructure:"includeDevDeps"`
 
 	Offline bool `json:"offline" mapstructure:"offline"`
 

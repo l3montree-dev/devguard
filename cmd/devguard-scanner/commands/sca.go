@@ -408,6 +408,6 @@ DevGuard and return vulnerability results.`,
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
-	scaCommand.Flags().Bool("include-dev-deps", false, "Pass --include-dev-deps to the underlying trivy fs scan to include development dependencies (supported by some package managers, e.g. npm/yarn). Only applies when scanning a directory.")
+	scaCommand.Flags().Bool("includeDevDeps", false, "Pass --include-dev-deps to the underlying trivy fs scan to include development dependencies (supported by some package managers, e.g. npm/yarn). Only applies when scanning a directory.")
 	return scaCommand
 }

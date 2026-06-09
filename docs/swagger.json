@@ -955,13 +955,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCriticalCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCVSS": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
+                    "cvePurlFixableLowCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCVSS": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -985,13 +997,25 @@
                     "fixableCritical": {
                         "type": "integer"
                     },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
                     "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
                         "type": "integer"
                     },
                     "fixableLow": {
                         "type": "integer"
                     },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
                     "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
                         "type": "integer"
                     },
                     "high": {
@@ -1602,13 +1626,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCriticalCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCVSS": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
+                    "cvePurlFixableLowCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCVSS": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -1635,13 +1671,25 @@
                     "fixableCritical": {
                         "type": "integer"
                     },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
                     "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
                         "type": "integer"
                     },
                     "fixableLow": {
                         "type": "integer"
                     },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
                     "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
                         "type": "integer"
                     },
                     "high": {
@@ -1798,6 +1846,53 @@
                 },
                 "type": "object"
             },
+            "dtos.ProjectAssetDTO": {
+                "properties": {
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "isPublic": {
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parentId": {
+                        "description": "only set for projects, not for assets",
+                        "type": "string"
+                    },
+                    "projectId": {
+                        "type": "string"
+                    },
+                    "resourceType": {
+                        "description": "\"project\" or \"asset\"",
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "subGroupsAndAsset": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.ProjectCreateRequest": {
                 "properties": {
                     "description": {
@@ -1870,6 +1965,13 @@
                     "slug": {
                         "type": "string"
                     },
+                    "subGroupsAndAsset": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "type": {
                         "type": "string"
                     }
@@ -1933,6 +2035,13 @@
                     },
                     "slug": {
                         "type": "string"
+                    },
+                    "subGroupsAndAsset": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "type": {
                         "type": "string"
@@ -2221,13 +2330,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCriticalCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCVSS": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
+                    "cvePurlFixableLowCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCVSS": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -2255,13 +2376,25 @@
                     "fixableCritical": {
                         "type": "integer"
                     },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
                     "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
                         "type": "integer"
                     },
                     "fixableLow": {
                         "type": "integer"
                     },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
                     "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
                         "type": "integer"
                     },
                     "fixedDependencyVulns": {
@@ -2453,13 +2586,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCriticalCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCVSS": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
+                    "cvePurlFixableLowCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCVSS": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -2483,13 +2628,25 @@
                     "fixableCritical": {
                         "type": "integer"
                     },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
                     "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
                         "type": "integer"
                     },
                     "fixableLow": {
                         "type": "integer"
                     },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
                     "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
                         "type": "integer"
                     },
                     "high": {
@@ -2553,6 +2710,9 @@
                         "$ref": "#/components/schemas/dtos.VulnEventType"
                     },
                     "uri": {
+                        "type": "string"
+                    },
+                    "userAgent": {
                         "type": "string"
                     },
                     "userId": {
@@ -2668,36 +2828,15 @@
                         "type": "string"
                     },
                     "id": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "namespace": {
-                        "type": "string"
+                        "type": "integer"
                     },
                     "purl": {
-                        "type": "string"
-                    },
-                    "qualifiers": {
-                        "$ref": "#/components/schemas/databasetypes.JSONB"
-                    },
-                    "scheme": {
                         "type": "string"
                     },
                     "semverEnd": {
                         "type": "string"
                     },
                     "semverStart": {
-                        "type": "string"
-                    },
-                    "source": {
-                        "type": "string"
-                    },
-                    "subpath": {
-                        "type": "string"
-                    },
-                    "type": {
                         "type": "string"
                     },
                     "version": {
@@ -2792,13 +2931,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
+                    "cvePurlFixableCriticalCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCVSS": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
+                    "cvePurlFixableLowCVSS": {
+                        "type": "integer"
+                    },
                     "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCVSS": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -2826,13 +2977,25 @@
                     "fixableCritical": {
                         "type": "integer"
                     },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
                     "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
                         "type": "integer"
                     },
                     "fixableLow": {
                         "type": "integer"
                     },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
                     "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
                         "type": "integer"
                     },
                     "fixedDependencyVulns": {
@@ -3149,8 +3312,8 @@
                     "cisaVulnerabilityName": {
                         "type": "string"
                     },
-                    "createdAt": {
-                        "type": "string"
+                    "contentHash": {
+                        "type": "integer"
                     },
                     "cve": {
                         "type": "string"
@@ -3177,6 +3340,9 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "id": {
+                        "type": "integer"
+                    },
                     "percentile": {
                         "type": "number"
                     },
@@ -3192,9 +3358,6 @@
                     },
                     "risk": {
                         "$ref": "#/components/schemas/dtos.RiskMetrics"
-                    },
-                    "updatedAt": {
-                        "type": "string"
                     },
                     "vector": {
                         "type": "string"
@@ -3219,6 +3382,9 @@
                     },
                     "target_cve": {
                         "type": "string"
+                    },
+                    "target_cve_data": {
+                        "$ref": "#/components/schemas/models.CVE"
                     }
                 },
                 "type": "object"
@@ -3274,16 +3440,13 @@
                         "$ref": "#/components/schemas/models.Component"
                     },
                     "componentPurl": {
-                        "description": "will be nil, for direct dependencies",
+                        "description": "will be ROOT for direct dependencies",
                         "type": "string"
                     },
                     "dependency": {
                         "$ref": "#/components/schemas/models.Component"
                     },
                     "dependencyPurl": {
-                        "type": "string"
-                    },
-                    "id": {
                         "type": "string"
                     }
                 },
@@ -3422,6 +3585,9 @@
                 "properties": {
                     "author": {
                         "type": "string"
+                    },
+                    "contentHash": {
+                        "type": "integer"
                     },
                     "cveID": {
                         "type": "string"
@@ -3992,6 +4158,9 @@
                     "type": {
                         "$ref": "#/components/schemas/dtos.VulnEventType"
                     },
+                    "userAgent": {
+                        "type": "string"
+                    },
                     "userId": {
                         "type": "string"
                     }
@@ -4001,7 +4170,7 @@
             "models.Weakness": {
                 "properties": {
                     "cve": {
-                        "$ref": "#/components/schemas/models.CVE"
+                        "type": "string"
                     },
                     "cwe": {
                         "type": "string"
@@ -6631,6 +6800,74 @@
                 "summary": "Get SBOM in XML format",
                 "tags": [
                     "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Sync external sources for a single artifact",
+                "tags": [
+                    "ExternalReferences"
                 ]
             }
         },
@@ -9907,6 +10144,49 @@
                     }
                 ],
                 "summary": "Scan for first-party vulnerabilities",
+                "tags": [
+                    "Scanning"
+                ]
+            }
+        },
+        "/sarif-scan-unauthenticated": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Scanner ID",
+                        "in": "header",
+                        "name": "X-Scanner",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "SARIF scan result",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.FirstPartyScanResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "Scan for first-party vulnerabilities without authentication (scan-only, results are not saved)",
                 "tags": [
                     "Scanning"
                 ]

@@ -42,6 +42,7 @@ devguard-scanner sca [image|path] [flags]
       --failOnRisk string               The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'. (default "critical")
   -h, --help                            help for sca
       --ignoreExternalReferences        If an attestation does contain a external reference to an sbom or vex, this will be ignored. Useful when scanning your own image from the registry where your own attestations are attached.
+      --includeDevDeps                  Pass --include-dev-deps to the underlying trivy fs scan to include development dependencies (supported by some package managers, e.g. npm/yarn). Only applies when scanning a directory.
       --isTag                           If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
       --keepOriginalSbomRootComponent   Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies
       --origin string                   Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'. (default "DEFAULT")

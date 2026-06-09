@@ -7,8 +7,9 @@ Create and upload an attestation for an image or artifact
 Create and upload an attestation for an OCI image or a local predicate file.
 
 The first argument is a path to a local predicate JSON file that will be used as
-the attestation payload. Optionally provide a container image reference as the
-second argument to attach the attestation to that image.
+the attestation payload. Pass "-" to read the predicate from stdin. Optionally
+provide a container image reference as the second argument to attach the
+attestation to that image.
 
 This command validates the predicate file exists, signs the upload using the
 configured token, and sends it to the DevGuard backend. The HTTP header
@@ -26,6 +27,9 @@ devguard-scanner attest <predicate> [container-image] [flags]
 
   # Attest with SLSA provenance
   devguard-scanner attest provenance.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
+
+  # Pipe curl output directly into attest (no shell needed)
+  devguard-scanner curl https://api.example.com/sbom.json --token=... | devguard-scanner attest - ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom
 
   # Upload attestation without attaching to an image
   devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1

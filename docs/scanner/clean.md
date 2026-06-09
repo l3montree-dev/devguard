@@ -1,18 +1,16 @@
 ## clean
 
-Remove attestations or signatures using cosign
+Remove attestations or signatures from an OCI image
 
 ### Synopsis
 
-Run cosign remove on an image or signature object to clean attestations/signatures.
+Remove attestations and/or signatures from an OCI image.
 
-This command wraps the cosign CLI. If registry credentials are provided they will
-be used for authentication. The command converts your configured token into a key
-and uses it where appropriate. Use --type to limit the cleanup to signatures,
-attestations, SBOMs, or all.
+If registry credentials are provided they will be used for authentication.
+Use --type to limit the cleanup to signatures, attestations, SBOMs, or all.
 
 ```shell
-devguard-scanner clean <image | signature-file> [flags]
+devguard-scanner clean <image> [flags]
 ```
 
 ### Examples

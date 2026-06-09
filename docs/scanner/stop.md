@@ -9,8 +9,11 @@ devguard-scanner intoto stop [flags]
 ### Options
 
 ```shell
-  -h, --help            help for stop
-      --output string   The output file name. Default is the <step>.link.json name
+      --defaultRef string   The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.
+  -h, --help                help for stop
+      --isTag               If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
+      --output string       The output file name. Default is the <step>.link.json name
+      --ref string          The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.
 ```
 
 ### Options inherited from parent commands
