@@ -124,7 +124,8 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
 	tw.SetColumnConfigs([]table.ColumnConfig{{Number: 1, AutoMerge: true}})
 
-	isScanThresholdExceeded := false
+	thresholdViolations := 0
+	prevLibrary := ""
 
 	for _, v := range *vulns {
 		state := "open"
@@ -147,19 +148,23 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 			}
 		}
 
+		exceedsThreshold := false
 		if failOnRisk != "" && state == "open" &&
 			((failOnRisk == "low" && risk > 0.1) ||
 				(failOnRisk == "medium" && risk >= 4) ||
 				(failOnRisk == "high" && risk >= 7) ||
 				(failOnRisk == "critical" && risk >= 9)) {
-			isScanThresholdExceeded = true
+			exceedsThreshold = true
 		}
 		if failOnCVSS != "" && state == "open" &&
 			((failOnCVSS == "low" && cvss > 0.1) ||
 				(failOnCVSS == "medium" && cvss >= 4) ||
 				(failOnCVSS == "high" && cvss >= 7) ||
 				(failOnCVSS == "critical" && cvss >= 9)) {
-			isScanThresholdExceeded = true
+			exceedsThreshold = true
+		}
+		if exceedsThreshold {
+			thresholdViolations++
 		}
 
 		purl := ""
@@ -184,13 +189,31 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 			fixedVersion = v.Recommendation
 		}
 
-		tw.AppendRow(table.Row{libraryName, v.ID, fmt.Sprintf("%.2f", risk), fmt.Sprintf("%.1f", cvss), installedVersion, fixedVersion, state})
+		if libraryName != prevLibrary && prevLibrary != "" {
+			tw.AppendSeparator()
+		}
+		prevLibrary = libraryName
+
+		colorRow := func(s string) string { return s }
+		if exceedsThreshold {
+			colorRow = func(s string) string { return text.FgRed.Sprint(s) }
+		}
+
+		tw.AppendRow(table.Row{
+			colorRow(libraryName),
+			colorRow(v.ID),
+			colorRow(fmt.Sprintf("%.2f", risk)),
+			colorRow(fmt.Sprintf("%.1f", cvss)),
+			colorRow(installedVersion),
+			colorRow(fixedVersion),
+			colorRow(state),
+		})
 	}
 
 	fmt.Println(tw.Render())
 
-	if isScanThresholdExceeded {
-		return fmt.Errorf("scan threshold exceeded")
+	if thresholdViolations > 0 {
+		return fmt.Errorf("%d open vulnerabilities exceed the configured risk threshold", thresholdViolations)
 	}
 	return nil
 }

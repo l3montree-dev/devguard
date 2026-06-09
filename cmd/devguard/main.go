@@ -128,6 +128,7 @@ func main() {
 		fixedversion.Module,
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
+		fx.Invoke(func(ProjectRouter router.APIV2Router) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
 		fx.Invoke(func(SessionRouter router.SessionRouter) {}),
 		fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
