@@ -32,33 +32,36 @@ func NewEncryptionCommand() *cobra.Command {
 func newMigrationCommand() *cobra.Command {
 	migrationCmd := &cobra.Command{
 		Use:   "migration",
-		Short: "Encrypts all existing plaintext secrets in the database with the provided key.",
-		Long:  "One-off migration that wraps all currently unencrypted secrets in the database using the provided key and stores that key at the configured key file path (creating the file if it does not exist yet). It only works while the application is offline.",
+		Short: "Encrypts all existing plaintext secrets in the database.",
+		Long:  "One-off migration that wraps all currently unencrypted secrets in the database. Reads the key from the file at APP_SIDE_ENCRYPTION_KEY_PATH. When --key is provided the given key is used and written to the key file first (for local first-time setup). It only works while the application is offline.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			key, err := cmd.Flags().GetString("key")
-			if err != nil {
-				return fmt.Errorf("could not get the key, make sure its set and properly formatted: %w", err)
-			}
 			shared.LoadConfig() // nolint
 
-			enc, err := services.NewDBEncryptionServiceFromKey([]byte(key))
-			if err != nil {
-				return fmt.Errorf("could not build encryption module from the provided key: %w", err)
+			var key []byte
+			if cmd.Flags().Changed("key") {
+				flagKey, err := cmd.Flags().GetString("key")
+				if err != nil {
+					return fmt.Errorf("could not get the key: %w", err)
+				}
+				path := os.Getenv(services.KeyFilePathENVName)
+				if path == "" {
+					return fmt.Errorf("environment variable %s is not set", services.KeyFilePathENVName)
+				}
+				if err := os.WriteFile(path, []byte(flagKey), 0o600); err != nil {
+					return fmt.Errorf("could not write key to %s: %w", path, err)
+				}
+				key = []byte(flagKey)
+			} else {
+				key = services.ReadCurrentKey()
 			}
 
-			path := os.Getenv(services.KeyFilePathENVName)
-			if path == "" {
-				return fmt.Errorf("environment variable %s is not set.", services.KeyFilePathENVName)
+			enc, err := services.NewDBEncryptionServiceFromKey(key)
+			if err != nil {
+				return fmt.Errorf("could not build encryption module from key: %w", err)
 			}
 
-			err = os.WriteFile(path, []byte(key), 0o600)
-			if err != nil {
-				return fmt.Errorf("fatal: could not update the key in your key file (%s), to resolve this update the key manually under the specified filename in the %s environment variable in your .env", path, services.KeyFilePathENVName)
-			}
-
-			err = reEncryptAllSecrets(cmd.Context(), enc, enc)
-			if err != nil {
+			if err := reEncryptAllSecrets(cmd.Context(), enc, enc); err != nil {
 				return fmt.Errorf("could not encrypt existing data: %w", err)
 			}
 
@@ -66,13 +69,7 @@ func newMigrationCommand() *cobra.Command {
 			return nil
 		},
 	}
-	migrationCmd.Flags().StringP("key", "k", "", "The hex encoded AES-256 key (64 hex characters) which will be used to encrypt the existing data")
-	err := migrationCmd.MarkFlagRequired("key")
-	if err != nil {
-		slog.Error("a key needs to be provided")
-		return nil
-	}
-
+	migrationCmd.Flags().StringP("key", "k", "", "The hex encoded AES-256 key (64 hex characters); if omitted the key is read from APP_SIDE_ENCRYPTION_KEY_PATH")
 	return migrationCmd
 }
 
