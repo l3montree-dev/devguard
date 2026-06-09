@@ -693,14 +693,14 @@ func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx conte
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_high,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_critical
 	FROM (
-		SELECT DISTINCT ON (p.organization_id, dv.component_purl, dv.cve_id)	-- count each component_purl + cve_id once per org -> take the highest risk score
+		SELECT DISTINCT ON (p.organization_id,dv.asset_id, dv.component_purl, dv.cve_id)	-- count each component_purl + cve_id once per org -> take the highest risk score
 			dv.raw_risk_assessment, c.cvss
 		FROM dependency_vulns dv
 		LEFT JOIN cves c ON c.cve = dv.cve_id
 		JOIN assets a ON dv.asset_id = a.id
 		JOIN projects p ON a.project_id = p.id
 		WHERE dv.state = 'open'
-		ORDER BY p.organization_id, dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
+		ORDER BY p.organization_id,dv.asset_id, dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
 	) sub;`).Find(&average).Error
 	return average, err
 }
