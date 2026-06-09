@@ -684,16 +684,23 @@ func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx conte
 	average := dtos.OrgVulnAverage{}
 	err := r.GetDB(ctx, nil).Raw(`
 	SELECT
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 4 AND dv.raw_risk_assessment < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_medium,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 7 AND dv.raw_risk_assessment < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_high,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE dv.raw_risk_assessment >= 9 AND dv.raw_risk_assessment <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_critical,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_low,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 4 AND c.cvss < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_medium,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 7 AND c.cvss < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_high,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE c.cvss >= 9 AND c.cvss <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_critical
-	FROM dependency_vulns dv
-	LEFT JOIN cves c ON c.cve = dv.cve_id
-	WHERE dv.state = 'open';`).Find(&average).Error
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 4 AND sub.raw_risk_assessment < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_medium,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 7 AND sub.raw_risk_assessment < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_high,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 9 AND sub.raw_risk_assessment <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_critical,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_medium,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_high,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_critical
+	FROM (
+		SELECT DISTINCT ON (p.organization_id, dv.component_purl, dv.cve_id)	-- count each component_purl + cve_id once per org -> take the highest risk score
+			dv.raw_risk_assessment, c.cvss
+		FROM dependency_vulns dv
+		LEFT JOIN cves c ON c.cve = dv.cve_id
+		JOIN assets a ON dv.asset_id = a.id
+		JOIN projects p ON a.project_id = p.id
+		WHERE dv.state = 'open'
+		ORDER BY p.organization_id, dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
+	) sub;`).Find(&average).Error
 	return average, err
 }
