@@ -36,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/telemetry"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -164,7 +165,7 @@ func main() {
 		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					go telemetry.SendAPIStartup(context.Background(), telemetry.ConfigFromEnv(), nil, telemetry.NewGormAPIStatsCollector(db), apiVersion())
+					go telemetry.SendAPIStartup(context.Background(), telemetry.ConfigFromEnv(), &utils.EgressClient, telemetry.NewGormAPIStatsCollector(db), apiVersion())
 					return nil
 				},
 			})

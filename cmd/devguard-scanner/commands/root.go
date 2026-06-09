@@ -109,7 +109,7 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 		}
 
 		telemetryOnce.Do(func() {
-			telemetry.SendScannerStartup(cmd.Context(), telemetry.ConfigFromEnv(), nil, scannerVersion(), config.RuntimeBaseConfig.APIURL, runsInCI, cmd.Name())
+			telemetry.SendScannerStartup(cmd.Context(), telemetry.ConfigFromEnv(), &utils.EgressClient, scannerVersion(), config.RuntimeBaseConfig.APIURL, runsInCI, cmd.Name())
 		})
 
 		return nil

@@ -41,7 +41,7 @@ const (
 	EventName       = "devguard-instance-start"
 	DefaultEndpoint = "https://umami.l3montree.com/api/send"
 	DefaultTimeout  = 3 * time.Second
-	UserAgent       = "Mozilla/5.0 DevGuardTelemetry/1.0"
+	UserAgent       = "DevguardTelemetry"
 	SchemaVersion   = 1
 
 	EnvDisabled  = "DEVGUARD_TELEMETRY_DISABLED"
