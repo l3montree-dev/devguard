@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.compliance_risks (
     policy_related_resources text[],
     policy_tags text[],
     policy_priority integer,
-    policyControls text[],
+    "policyFrameworks" jsonb,
     evidence_content bytea,
     evidence_violations text[],
     CONSTRAINT compliance_risks_pkey PRIMARY KEY (id),

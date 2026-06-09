@@ -105,6 +105,29 @@ func (r *ComplianceRiskRepository) GetComplianceRisksByOtherAssetVersions(ctx co
 	return risks, nil
 }
 
+func (r *ComplianceRiskRepository) GetDistinctFrameworksForAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]string, error) {
+	type result struct {
+		Framework string
+	}
+	var rows []result
+	err := r.GetDB(ctx, tx).Raw(`
+		SELECT DISTINCT elem->>'framework' AS framework
+		FROM compliance_risks,
+		     jsonb_array_elements("policyFrameworks") AS elem
+		WHERE asset_id = ? AND asset_version_name = ?
+		  AND elem->>'framework' IS NOT NULL
+		ORDER BY framework
+	`, assetID, assetVersionName).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	frameworks := make([]string, len(rows))
+	for i, row := range rows {
+		frameworks[i] = row.Framework
+	}
+	return frameworks, nil
+}
+
 func (r *ComplianceRiskRepository) SaveBatch(ctx context.Context, tx *gorm.DB, risks []models.ComplianceRisk) error {
 	if len(risks) == 0 {
 		return nil

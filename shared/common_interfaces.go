@@ -295,6 +295,7 @@ type ComplianceRiskRepository interface {
 	GetComplianceRisksByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComplianceRisk, error)
 	Read(ctx context.Context, tx DB, id uuid.UUID) (models.ComplianceRisk, error)
 	ApplyAndSave(ctx context.Context, tx DB, risk *models.ComplianceRisk, ev *models.VulnEvent) error
+	GetDistinctFrameworksForAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]string, error)
 	SaveBatch(ctx context.Context, tx DB, risks []models.ComplianceRisk) error
 }
 

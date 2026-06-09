@@ -83,9 +83,22 @@ func (c *ComplianceRiskController) ListPaged(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get compliance risks").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(r models.ComplianceRisk) any {
-		return convertComplianceRiskToDetailedDTO(r)
-	}))
+	frameworks, err := c.complianceRiskRepository.GetDistinctFrameworksForAssetVersion(
+		ctx.Request().Context(), nil,
+		assetVersion.AssetID,
+		assetVersion.Name,
+	)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get frameworks").WithInternal(err)
+	}
+
+	return ctx.JSON(200, struct {
+		shared.Paged[any]
+		Frameworks []string `json:"frameworks"`
+	}{
+		Paged:      pagedResp.Map(func(r models.ComplianceRisk) any { return convertComplianceRiskToDetailedDTO(r) }),
+		Frameworks: frameworks,
+	})
 }
 
 func (c *ComplianceRiskController) Read(ctx shared.Context) error {

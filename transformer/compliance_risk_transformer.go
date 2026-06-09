@@ -30,7 +30,7 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 		PolicyRelatedResources: r.PolicyRelatedResources,
 		PolicyTags:             r.PolicyTags,
 		PolicyPriority:         r.PolicyPriority,
-		PolicyControls:         r.PolicyControls,
+		PolicyFrameworks:       r.PolicyFrameworks,
 		EvidenceType:           r.EvidenceType,
 		Violations:             r.Violations,
 		Artifacts:              artifacts,

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/open-policy-agent/opa/v1/rego"
@@ -25,22 +26,22 @@ type customYaml struct {
 	Priority    int    `yaml:"priority"`
 	Tags        []string
 	// used for mapping from policies to attestations
-	PredicateType    string   `yaml:"predicateType"`
-	RelatedResources []string `yaml:"relatedResources"`
-	Controls         []string `yaml:"controls"`
+	PredicateType    string                  `yaml:"predicateType"`
+	RelatedResources []string                `yaml:"relatedResources"`
+	PolicyFrameworks []dtos.PolicyFrameworks `yaml:"policyFrameworks"`
 }
 
 type PolicyMetadata struct {
-	Title                string   `yaml:"title" json:"title"`
-	Description          string   `yaml:"description" json:"description"`
-	Priority             int      `yaml:"priority" json:"priority"`
-	Tags                 []string `yaml:"tags" json:"tags"`
-	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
-	Controls             []string `yaml:"controls" json:"controls"`
-	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
-	Filename             string   `json:"filename"`
-	Content              string   `json:"content"`
-	PredicateType        string   `yaml:"predicateType" json:"predicateType"`
+	Title                string                  `yaml:"title" json:"title"`
+	Description          string                  `yaml:"description" json:"description"`
+	Priority             int                     `yaml:"priority" json:"priority"`
+	Tags                 []string                `yaml:"tags" json:"tags"`
+	RelatedResources     []string                `yaml:"relatedResources" json:"relatedResources"`
+	PolicyFrameworks     []dtos.PolicyFrameworks `yaml:"policyFrameworks" json:"policyFrameworks"`
+	ComplianceFrameworks []string                `yaml:"complianceFrameworks" json:"complianceFrameworks"`
+	Filename             string                  `json:"filename"`
+	Content              string                  `json:"content"`
+	PredicateType        string                  `yaml:"predicateType" json:"predicateType"`
 }
 type PolicyFS struct {
 	PolicyMetadata
@@ -93,7 +94,7 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 		Priority:         metadata.Custom.Priority,
 		Tags:             metadata.Custom.Tags,
 		RelatedResources: metadata.Custom.RelatedResources,
-		Controls:         metadata.Custom.Controls,
+		PolicyFrameworks: metadata.Custom.PolicyFrameworks,
 		Filename:         fileName,
 		PredicateType:    metadata.Custom.PredicateType,
 	}, nil
@@ -106,7 +107,7 @@ type PolicyEvaluation struct {
 	PolicyRelatedResources []string
 	PolicyTags             []string
 	PolicyPriority         int
-	PolicyControls         []string
+	PolicyFrameworks       []dtos.PolicyFrameworks
 	Compliant              *bool
 	Violations             []string
 	RawEvaluationResult    map[string]any
@@ -163,7 +164,7 @@ func Eval(policy PolicyFS, input any) PolicyEvaluation {
 		PolicyTags:             policy.Tags,
 		PolicyPriority:         policy.Priority,
 		EvidenceType:           "json",
-		PolicyControls:         policy.Controls,
+		PolicyFrameworks:       policy.PolicyFrameworks,
 		Compliant:              compliant,
 		Violations:             violations,
 		RawEvaluationResult:    rawEvalResult,
@@ -257,7 +258,7 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 				AdditionalProperties: map[string]any{
 					"priority":         evaluation.PolicyPriority,
 					"relatedResources": evaluation.PolicyRelatedResources,
-					"controls":         evaluation.PolicyControls,
+					"policyFrameworks": evaluation.PolicyFrameworks,
 				},
 			},
 		}

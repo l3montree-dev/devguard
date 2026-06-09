@@ -255,7 +255,7 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 		relatedResources []string
 		tags             []string
 		priority         int
-		controls         []string
+		policyFrameworks []dtos.PolicyFrameworks
 	}
 	ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
 	for _, rule := range run.Tool.Driver.Rules {
@@ -286,12 +286,23 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			tags = rule.Properties.Tags
 		}
 
-		var controls []string
+		var policyFrameworks []dtos.PolicyFrameworks
 		if rule.Properties != nil {
-			if cf, ok := rule.Properties.AdditionalProperties["controls"].([]any); ok {
+			if cf, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]any); ok {
 				for _, c := range cf {
-					if cStr, ok := c.(string); ok {
-						controls = append(controls, cStr)
+					if cMap, ok := c.(map[string]any); ok {
+						pc := dtos.PolicyFrameworks{}
+						if fw, ok := cMap["framework"].(string); ok {
+							pc.Framework = fw
+						}
+						if ctls, ok := cMap["controls"].([]any); ok {
+							for _, ctl := range ctls {
+								if s, ok := ctl.(string); ok {
+									pc.Controls = append(pc.Controls, s)
+								}
+							}
+						}
+						policyFrameworks = append(policyFrameworks, pc)
 					}
 				}
 			}
@@ -306,7 +317,7 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			}
 		}
 
-		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, relatedResources: relatedResources, tags: tags, priority: priority, controls: controls}
+		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, relatedResources: relatedResources, tags: tags, priority: priority, policyFrameworks: policyFrameworks}
 	}
 
 	type policyResult struct {
@@ -384,7 +395,7 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			PolicyRelatedResources: info.relatedResources,
 			PolicyTags:             info.tags,
 			PolicyPriority:         info.priority,
-			PolicyControls:         info.controls,
+			PolicyFrameworks:       info.policyFrameworks,
 			EvidenceType:           resultMap[ruleID].evidenceType,
 			Violations:             violations,
 			EvidenceContent:        evidenceContent,

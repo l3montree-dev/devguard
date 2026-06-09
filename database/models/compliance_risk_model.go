@@ -26,15 +26,15 @@ import (
 type ComplianceRisk struct {
 	Vulnerability
 
-	PolicyID               string   `json:"policyId" gorm:"type:text;"`
-	PolicyTitle            string   `json:"policyTitle" gorm:"type:text;"`
-	PolicyDescription      *string  `json:"policyDescription" gorm:"type:text;"`
-	PolicyRelatedResources []string `json:"policyRelatedResources" gorm:"type:text[];"`
-	PolicyTags             []string `json:"policyTags" gorm:"type:text[];"`
-	PolicyPriority         int      `json:"policyPriority"`
-	PolicyControls         []string `json:"policyControls" gorm:"type:text[];"`
-	EvidenceType           string   `json:"evidenceType" gorm:"type:text;"`
-	EvidenceContent        []byte   `json:"evidenceContent" gorm:"type:bytea;"`
+	PolicyID               string                  `json:"policyId" gorm:"type:text;"`
+	PolicyTitle            string                  `json:"policyTitle" gorm:"type:text;"`
+	PolicyDescription      *string                 `json:"policyDescription" gorm:"type:text;"`
+	PolicyRelatedResources []string                `json:"policyRelatedResources" gorm:"type:text[];"`
+	PolicyTags             []string                `json:"policyTags" gorm:"type:text[];"`
+	PolicyPriority         int                     `json:"policyPriority"`
+	PolicyFrameworks       []dtos.PolicyFrameworks `json:"policyFrameworks" gorm:"column:policyFrameworks;type:jsonb;serializer:json"`
+	EvidenceType           string                  `json:"evidenceType" gorm:"type:text;"`
+	EvidenceContent        []byte                  `json:"evidenceContent" gorm:"type:bytea;"`
 
 	Violations []string `json:"violations" gorm:"type:text[];"`
 
