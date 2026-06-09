@@ -144,7 +144,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(ctx context.Cont
 		return nil, err
 	}
 
-	if err := r.decryptToken(&token); err != nil {
+	if err := r.decryptTokenInPlace(&token); err != nil {
 		return nil, err
 	}
 
@@ -158,7 +158,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserID(ctx context.Context, tx *gorm
 	}
 
 	for i := range tokens {
-		if err := r.decryptToken(&tokens[i]); err != nil {
+		if err := r.decryptTokenInPlace(&tokens[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -221,8 +221,8 @@ func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(token *models.GitLabOa
 	}, nil
 }
 
-// decryptToken decrypts the sensitive fields of a fetched token
-func (r *gitlabOauth2TokenRepository) decryptToken(token *models.GitLabOauth2Token) error {
+// decryptTokenInPlace decrypts the sensitive fields of a fetched token
+func (r *gitlabOauth2TokenRepository) decryptTokenInPlace(token *models.GitLabOauth2Token) error {
 	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(token.AccessToken)
 	if err != nil {
 		return fmt.Errorf("could not decrypt fetched access token: %w", err)
