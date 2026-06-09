@@ -185,7 +185,6 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 		return err
 	}
 
-	//config := httpsign.NewSignConfig().SignCreated(false).SetNonce("BADCAB").SetKeyID("my-shared-secret") // SignCreated should be "true" to protect against replay attacks
 	fields := httpsign.Headers("@method", "content-digest")
 
 	signer, _ := httpsign.NewP256Signer(privKey, nil, fields)
@@ -233,10 +232,17 @@ func (p *PatService) markAsLastUsedNow(ctx context.Context, fingerprint string) 
 }
 
 func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
-	verifier, _ := httpsign.NewP256Verifier(p.adminPubKey, nil,
-		httpsign.Headers("@method", "content-digest"))
+	if !p.adminKeyLoaded {
+		slog.Error("no admin public key could be found")
+		return false, fmt.Errorf("cannot verify admin request: no public key was loaded on startup")
+	}
 
-	err := httpsign.VerifyRequest("sig77", *verifier, req)
+	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, nil, httpsign.Headers("@method", "content-digest"))
+	if err != nil {
+		return false, fmt.Errorf("could not build P256Verifier: %w", err)
+	}
+
+	err = httpsign.VerifyRequest("sig77", *verifier, req)
 	if err != nil {
 		return false, fmt.Errorf("could not verify request: %v", err)
 	}
