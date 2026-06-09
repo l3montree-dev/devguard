@@ -271,7 +271,10 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 	// check if the user has a gitlab login
 	// we can even improve the response by checking if the user has a gitlab login
 	// todo this, fetch the kratos user and check if the user has a gitlab login
-	adminClient := shared.GetAuthAdminClient(ctx)
+	adminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
+		return nil, fmt.Errorf("could not get auth admin client")
+	}
 
 	ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 10*time.Second)
 	defer cancel()

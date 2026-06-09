@@ -178,7 +178,10 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 	}
 
 	// get the auth admin client from the context
-	authAdminClient := shared.GetAuthAdminClient(ctx)
+	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
+	if !ok {
+		return nil, fmt.Errorf("could not get auth admin client")
+	}
 	// fetch the users from the auth service
 	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 
@@ -203,4 +206,15 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 	})
 
 	return users, nil
+}
+
+func (s *assetService) UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error {
+	asset, err := s.assetRepository.Read(ctx, nil, assetID)
+	if err != nil {
+		return err
+	}
+
+	asset.Slug = newSlug
+
+	return s.assetRepository.Save(ctx, nil, &asset)
 }

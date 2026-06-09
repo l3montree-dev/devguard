@@ -17,7 +17,6 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -53,7 +52,6 @@ func NewSessionRouter(
 	projectRepository shared.ProjectRepository,
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
-	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 	assetVersionRepository shared.AssetVersionRepository,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
@@ -78,7 +76,7 @@ func NewSessionRouter(
 	fastAccessRoutes := sessionRouter.Group("",
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
+		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
 		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
 		middlewares.ScanMiddleware(assetVersionRepository),

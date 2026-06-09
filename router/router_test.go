@@ -207,7 +207,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		projectRepo,
 		rbacProvider,
 		orgService,
-		map[string]*gitlabint.GitlabOauth2Config{},
 		assetVersionRepo,
 	)
 

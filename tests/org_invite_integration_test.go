@@ -203,7 +203,10 @@ func (f *TestFixture) RemoveMember(t testing.TB, e *echo.Echo, org models.Org, c
 
 	rbac := f.App.RBACProvider.GetDomainRBAC(org.ID.String())
 
-	allowed, err := rbac.IsAllowed(context.Background(), callerUserID, shared.ObjectOrganization, shared.ActionUpdate)
+	callerSession := mocks.NewAuthSession(t)
+	callerSession.On("GetUserID").Return(callerUserID)
+
+	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate)
 	require.NoError(t, err)
 	if !allowed {
 		return echo.NewHTTPError(403, "forbidden")

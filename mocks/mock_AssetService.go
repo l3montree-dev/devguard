@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -304,6 +305,69 @@ func (_c *AssetService_UpdateAssetRequirements_Call) Return(err error) *AssetSer
 }
 
 func (_c *AssetService_UpdateAssetRequirements_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, responsible string, justification string) error) *AssetService_UpdateAssetRequirements_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateAssetSlug provides a mock function for the type AssetService
+func (_mock *AssetService) UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error {
+	ret := _mock.Called(ctx, assetID, newSlug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAssetSlug")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) error); ok {
+		r0 = returnFunc(ctx, assetID, newSlug)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetService_UpdateAssetSlug_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAssetSlug'
+type AssetService_UpdateAssetSlug_Call struct {
+	*mock.Call
+}
+
+// UpdateAssetSlug is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetID uuid.UUID
+//   - newSlug string
+func (_e *AssetService_Expecter) UpdateAssetSlug(ctx interface{}, assetID interface{}, newSlug interface{}) *AssetService_UpdateAssetSlug_Call {
+	return &AssetService_UpdateAssetSlug_Call{Call: _e.mock.On("UpdateAssetSlug", ctx, assetID, newSlug)}
+}
+
+func (_c *AssetService_UpdateAssetSlug_Call) Run(run func(ctx context.Context, assetID uuid.UUID, newSlug string)) *AssetService_UpdateAssetSlug_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetService_UpdateAssetSlug_Call) Return(err error) *AssetService_UpdateAssetSlug_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetService_UpdateAssetSlug_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID, newSlug string) error) *AssetService_UpdateAssetSlug_Call {
 	_c.Call.Return(run)
 	return _c
 }

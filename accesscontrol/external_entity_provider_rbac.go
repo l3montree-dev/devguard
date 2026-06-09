@@ -38,7 +38,10 @@ func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(ctx context.Co
 	return e.rootAccessControl.RevokeAllRolesInAssetForUser(ctx, user, asset)
 }
 
-func (e *externalEntityProviderRBAC) HasAccess(ctx context.Context, userID string) (bool, error) {
+func (e *externalEntityProviderRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
+	if session.IsInstanceAdmin() {
+		return true, nil
+	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 
@@ -98,20 +101,22 @@ func (e *externalEntityProviderRBAC) AllowRole(ctx context.Context, role shared.
 	return e.rootAccessControl.AllowRole(ctx, role, object, action)
 }
 
-func (e *externalEntityProviderRBAC) IsAllowed(ctx context.Context, userID string, object shared.Object, action shared.Action) (bool, error) {
+func (e *externalEntityProviderRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	// ALLOW ORG read access for all users - this is pretty much the same as HasAccess.
 	if object == shared.ObjectOrganization && action == shared.ActionRead {
 		return true, nil
 	}
 
-	return e.rootAccessControl.IsAllowed(ctx, userID, object, action)
+	return e.rootAccessControl.IsAllowed(ctx, session, object, action)
 }
 
-func (e *externalEntityProviderRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, user string, object shared.Object, action shared.Action) (bool, error) {
+func (e *externalEntityProviderRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	// check for external entity provider ids
 	if project.ExternalEntityProviderID == nil || project.ExternalEntityID == nil {
 		return false, nil
 	}
-	return e.rootAccessControl.IsAllowedInProject(ctx, project, user, object, action)
+
+	return e.rootAccessControl.IsAllowedInProject(ctx, project, session, object, action)
 }
 
 func (e *externalEntityProviderRBAC) AllowRoleInProject(ctx context.Context, project string, role shared.Role, object shared.Object, action []shared.Action) error {
@@ -124,6 +129,10 @@ func (e *externalEntityProviderRBAC) GetAllProjectsForUser(user string) ([]strin
 
 func (e *externalEntityProviderRBAC) GetOwnerOfOrganization() (string, error) {
 	return e.rootAccessControl.GetOwnerOfOrganization()
+}
+
+func (e *externalEntityProviderRBAC) GetAdminsOfOrganization() ([]string, error) {
+	return e.rootAccessControl.GetAdminsOfOrganization()
 }
 
 func (e *externalEntityProviderRBAC) GetAllMembersOfOrganization() ([]string, error) {
@@ -154,11 +163,13 @@ func (e *externalEntityProviderRBAC) RevokeRoleInAsset(ctx context.Context, subj
 	return e.rootAccessControl.RevokeRoleInAsset(ctx, subject, role, asset)
 }
 
-func (e *externalEntityProviderRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object shared.Object, action shared.Action) (bool, error) {
+func (e *externalEntityProviderRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	// check for external entity provider ids
 	if asset.ExternalEntityProviderID == nil || asset.ExternalEntityID == nil {
 		return false, nil
 	}
-	return e.rootAccessControl.IsAllowedInAsset(ctx, asset, user, object, action)
+
+	return e.rootAccessControl.IsAllowedInAsset(ctx, asset, session, object, action)
 }
 
 func (e *externalEntityProviderRBAC) AllowRoleInAsset(ctx context.Context, asset string, role shared.Role, object shared.Object, action []shared.Action) error {

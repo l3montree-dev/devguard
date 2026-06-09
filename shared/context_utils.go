@@ -36,6 +36,7 @@ import (
 type AuthSession interface {
 	GetUserID() string
 	GetScopes() []string
+	IsInstanceAdmin() bool
 }
 
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {
@@ -112,8 +113,9 @@ func SetAuthAdminClient(ctx Context, i AdminClient) {
 	ctx.Set("authAdminClient", i)
 }
 
-func GetAuthAdminClient(ctx Context) AdminClient {
-	return ctx.Get("authAdminClient").(AdminClient)
+func GetAuthAdminClient(ctx Context) (AdminClient, bool) {
+	client, ok := ctx.Get("authAdminClient").(AdminClient)
+	return client, ok
 }
 
 func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {

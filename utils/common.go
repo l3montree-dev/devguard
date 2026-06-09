@@ -180,7 +180,19 @@ func CheckIfDeleted(name string) bool {
 	return strings.Contains(name, "-deletion_scheduled-")
 }
 
+var cveRegex, emailRegex *regexp.Regexp
+
 // checks if a given string is a valid CVE
 func IsCVE(str string) bool {
-	return regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$").MatchString(str)
+	if cveRegex == nil {
+		cveRegex = regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$")
+	}
+	return cveRegex.MatchString(str)
+}
+
+func IsEmail(str string) bool {
+	if emailRegex == nil {
+		emailRegex = regexp.MustCompile(`(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}`)
+	}
+	return emailRegex.MatchString(str)
 }
