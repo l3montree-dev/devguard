@@ -25,8 +25,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
-
 	"github.com/in-toto/go-witness/attestation"
 	envAttestor "github.com/in-toto/go-witness/attestation/environment"
 	"github.com/in-toto/go-witness/attestation/git"
@@ -272,65 +270,6 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 	return cmd
 }
 
-func newInTotoSetupCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "setup",
-		Short: "Setup in-toto",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if config.RuntimeInTotoConfig.Disabled {
-				return nil
-			}
-			// set the token to the keyring
-			err := config.StoreTokenInKeyring(config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.Token)
-			if err != nil {
-				return err
-			}
-
-			// use empty materials string to avoid default "." which would result in duplicate materials and products
-			commandString := fmt.Sprintf(`devguard-scanner intoto run --materials="" --step=post-commit --apiURL="%s" --assetName="%s"`, config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName)
-
-			// check if a git post-commit hook exists
-			if _, err := os.Stat(".git/hooks/post-commit"); os.IsNotExist(err) {
-				// create the post-commit hook
-				err = os.WriteFile(".git/hooks/post-commit", []byte(fmt.Sprintf("#!/bin/sh\n%s\n", commandString)), 0755) // nolint:gosec// the file needs to be executable
-				if err != nil {
-					return err
-				}
-			} else {
-				// append the command to the post-commit hook
-				// read the file
-				content, err := os.ReadFile(".git/hooks/post-commit")
-				if err != nil {
-					return err
-				}
-
-				// check if the command is already in the file
-				contentStr := string(content)
-				// split the content by newlines
-				lines := strings.Split(contentStr, "\n")
-				for i, line := range lines {
-					if strings.Contains(line, "devguard-scanner") {
-						// the command is already in the file
-						// lets overwrite that line
-						lines[i] = commandString
-					}
-				}
-
-				// write the content back to the file
-				err = os.WriteFile(".git/hooks/post-commit", []byte(strings.Join(lines, "\n")), 0755) // nolint:gosec// the file needs to be executable
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		},
-	}
-
-	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
-
-	return cmd
-}
 
 func NewInTotoCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -369,7 +308,6 @@ func NewInTotoCommand() *cobra.Command {
 		NewInTotoRecordStartCommand(),
 		NewInTotoRecordStopCommand(),
 		NewInTotoRunCommand(),
-		newInTotoSetupCommand(),
 		NewInTotoVerifyCommand(),
 		newInTotoFetchCommitLinkCommand(),
 	)
