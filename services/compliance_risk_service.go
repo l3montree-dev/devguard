@@ -256,7 +256,6 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 		tags             []string
 		priority         int
 		controls         []string
-		evidenceType     string
 	}
 	ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
 	for _, rule := range run.Tool.Driver.Rules {
