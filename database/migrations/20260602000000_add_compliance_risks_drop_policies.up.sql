@@ -1,3 +1,7 @@
+-- Drop policy tables (data is now embedded in compliance_risks)
+DROP TABLE IF EXISTS public.project_enabled_policies;
+DROP TABLE IF EXISTS public.policies;
+
 CREATE TABLE IF NOT EXISTS public.compliance_risks (
     id uuid NOT NULL,
     asset_version_name text NOT NULL,
@@ -15,6 +19,11 @@ CREATE TABLE IF NOT EXISTS public.compliance_risks (
     policy_title text NOT NULL DEFAULT '',
     policy_description text,
     predicate_type text NOT NULL DEFAULT '',
+    policy_related_resources text[],
+    policy_tags text[],
+    policy_priority integer,
+    compliance_frameworks text[],
+    attestation_content text,
     attestation_violations text[],
     attestation_updated_at timestamp with time zone,
     CONSTRAINT compliance_risks_pkey PRIMARY KEY (id),

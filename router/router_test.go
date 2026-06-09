@@ -238,6 +238,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.StatisticsController),
 		new(controllers.WebhookController),
 		projectRepo,
+		new(controllers.ComponentController),
 	)
 
 	assetRouter := NewAssetRouter(
