@@ -6,15 +6,18 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
 )
 
 type APIV2Router struct{}
 
 func NewAPIV2Router(
 	srv api.Server,
+	oryAdmin shared.AdminClient,
 	adminClient shared.PublicClient,
 	patService shared.PersonalAccessTokenService,
 	externalEntityProviderService shared.ExternalEntityProviderService,
+	thirdPartyIntegration shared.IntegrationAggregate,
 	scanController *controllers.ScanController,
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
@@ -27,6 +30,19 @@ func NewAPIV2Router(
 	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	v2 := srv.Echo.Group("/api/v2",
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(ctx shared.Context) error {
+				// set the ory admin client to the context
+				shared.SetAuthAdminClient(ctx, oryAdmin)
+				return next(ctx)
+			}
+		},
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(ctx shared.Context) error {
+				shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+				return next(ctx)
+			}
+		},
 		middlewares.SessionMiddleware(adminClient, patService),
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 		middlewares.NeededScope([]string{"scan"}),
