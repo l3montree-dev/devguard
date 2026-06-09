@@ -22,7 +22,8 @@ type RevokeByPrivateKeyRequest struct {
 }
 
 type PatCreateRequest struct {
-	Description string `json:"description"`
-	PubKey      string `json:"pubKey"`
-	Scopes      string `json:"scopes"`
+	Description        string `json:"description"`
+	PubKey             string `json:"pubKey"`
+	Scopes             string `json:"scopes"`
+	ExpireAfterSeconds int    `json:"expireAfterSeconds"`
 }

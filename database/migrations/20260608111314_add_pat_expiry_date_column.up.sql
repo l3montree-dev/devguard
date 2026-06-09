@@ -1,0 +1,1 @@
+ALTER TABLE public.pat ADD COLUMN expiry_date TIMESTAMPTZ; 

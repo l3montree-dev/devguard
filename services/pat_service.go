@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -53,6 +54,7 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 		Scopes:      request.Scopes,
 		PubKey:      request.PubKey,
 		Fingerprint: fingerprint,
+		ExpiryDate:  utils.Ptr(time.Now().Add(time.Second * time.Duration(request.ExpireAfterSeconds))), // calculate and set expiry date
 	}
 
 	//pat.Token = pat.HashToken(token)

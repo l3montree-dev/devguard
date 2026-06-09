@@ -59,6 +59,9 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
+	if req.ExpireAfterSeconds <= 0 {
+		return echo.NewHTTPError(400, "invalid expiry date for PAT")
+	}
 	patStruct := p.service.ToModel(c.Request().Context(), req, userID)
 
 	err := p.patRepository.Create(c.Request().Context(), nil, &patStruct)
@@ -74,6 +77,7 @@ func (p *PatController) Create(c shared.Context) error {
 		"fingerprint": patStruct.Fingerprint,
 		"scopes":      patStruct.Scopes,
 		"id":          patStruct.ID.String(),
+		"expiryDate":  patStruct.ExpiryDate.String(),
 	})
 }
 

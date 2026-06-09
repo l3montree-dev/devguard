@@ -17,6 +17,7 @@ type PAT struct {
 	Fingerprint string     `json:"fingerprint"`
 	LastUsedAt  *time.Time `json:"lastUsedAt" gorm:"default:null"`
 	Scopes      string     `json:"scopes" gorm:"type:text"` // whitespace separated scopes manage-project read-project scan-asset manage-all
+	ExpiryDate  *time.Time `json:"expiryDate"`
 }
 
 func (p PAT) TableName() string {

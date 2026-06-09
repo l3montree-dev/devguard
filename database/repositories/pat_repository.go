@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +38,17 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
+// overwrite internal save function with a custom one to guarantee expiry date checks on each operation
+func (g *gormPatRepository) Save(ctx context.Context, tx *gorm.DB, pat *models.PAT) error {
+	if pat == nil {
+		return fmt.Errorf("no token provided")
+	}
+	if pat.ExpiryDate == nil || pat.ExpiryDate.Before(time.Now()) {
+		return fmt.Errorf("could not save PAT, token is expired!")
+	}
+	return g.Repository.Save(ctx, tx, pat)
+}
+
 func (g *gormPatRepository) MarkAsLastUsedNow(ctx context.Context, tx *gorm.DB, fingerprint string) error {
 	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
 }
@@ -49,7 +61,13 @@ func (g *gormPatRepository) ReadByToken(ctx context.Context, tx *gorm.DB, token 
 	var t models.PAT
 	// make sure to hash the token before querying
 	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
-	return t, err
+	if err != nil {
+		return t, err
+	}
+	if t.ExpiryDate == nil || t.ExpiryDate.Before(time.Now()) {
+		return t, fmt.Errorf("PAT is expired!")
+	}
+	return t, nil
 }
 
 func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userID string) ([]models.PAT, error) {
@@ -61,6 +79,9 @@ func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userI
 func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, token string) (string, error) {
 	var t models.PAT
 	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
+	if t.ExpiryDate == nil || t.ExpiryDate.Before(time.Now()) {
+		return "", fmt.Errorf("PAT is expired!")
+	}
 	return t.UserID.String(), err
 }
 
