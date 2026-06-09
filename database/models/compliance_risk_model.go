@@ -32,12 +32,11 @@ type ComplianceRisk struct {
 	PolicyRelatedResources []string `json:"policyRelatedResources" gorm:"type:text[];"`
 	PolicyTags             []string `json:"policyTags" gorm:"type:text[];"`
 	PolicyPriority         int      `json:"policyPriority"`
-	ComplianceFrameworks   []string `json:"complianceFrameworks" gorm:"type:text[];"`
-	PredicateType          string   `json:"predicateType" gorm:"type:text;"`
+	PolicyControls         []string `json:"policyControls" gorm:"type:text[];"`
+	EvidenceType           string   `json:"evidenceType" gorm:"type:text;"`
+	EvidenceContent        []byte   `json:"evidenceContent" gorm:"type:bytea;"`
 
-	AttestationContent *string `json:"attestationContent" gorm:"type:text;"`
-
-	AttestationViolations []string `json:"attestationViolations" gorm:"type:text[];"`
+	Violations []string `json:"violations" gorm:"type:text[];"`
 
 	Events []VulnEvent `gorm:"foreignKey:ComplianceRiskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
@@ -53,7 +52,7 @@ func (complianceRisk ComplianceRisk) GetType() dtos.VulnType {
 }
 
 func (complianceRisk *ComplianceRisk) CalculateHash() uuid.UUID {
-	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s/%s", complianceRisk.PolicyID, complianceRisk.PredicateType, complianceRisk.AssetVersionName, complianceRisk.AssetID))
+	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s", complianceRisk.PolicyID, complianceRisk.AssetVersionName, complianceRisk.AssetID))
 }
 
 func (complianceRisk *ComplianceRisk) BeforeSave(tx *gorm.DB) error {

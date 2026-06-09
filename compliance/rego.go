@@ -25,9 +25,9 @@ type customYaml struct {
 	Priority    int    `yaml:"priority"`
 	Tags        []string
 	// used for mapping from policies to attestations
-	PredicateType        string   `yaml:"predicateType"`
-	RelatedResources     []string `yaml:"relatedResources"`
-	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
+	PredicateType    string   `yaml:"predicateType"`
+	RelatedResources []string `yaml:"relatedResources"`
+	Controls         []string `yaml:"controls"`
 }
 
 type PolicyMetadata struct {
@@ -36,6 +36,7 @@ type PolicyMetadata struct {
 	Priority             int      `yaml:"priority" json:"priority"`
 	Tags                 []string `yaml:"tags" json:"tags"`
 	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
+	Controls             []string `yaml:"controls" json:"controls"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
 	Filename             string   `json:"filename"`
 	Content              string   `json:"content"`
@@ -87,15 +88,14 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	}
 
 	return PolicyMetadata{
-		Title:                metadata.Title,
-		Description:          metadata.Custom.Description,
-		Priority:             metadata.Custom.Priority,
-		Tags:                 metadata.Custom.Tags,
-		RelatedResources:     metadata.Custom.RelatedResources,
-		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
-		Filename:             fileName,
-		PredicateType:        metadata.Custom.PredicateType,
-		Content:              content,
+		Title:            metadata.Title,
+		Description:      metadata.Custom.Description,
+		Priority:         metadata.Custom.Priority,
+		Tags:             metadata.Custom.Tags,
+		RelatedResources: metadata.Custom.RelatedResources,
+		Controls:         metadata.Custom.Controls,
+		Filename:         fileName,
+		PredicateType:    metadata.Custom.PredicateType,
 	}, nil
 }
 
@@ -106,12 +106,12 @@ type PolicyEvaluation struct {
 	PolicyRelatedResources []string
 	PolicyTags             []string
 	PolicyPriority         int
-	PredicateType          string
-	ComplianceFrameworks   []string
+	PolicyControls         []string
 	Compliant              *bool
 	Violations             []string
 	RawEvaluationResult    map[string]any
-	AttestationContent     *string
+	EvidenceType           string
+	EvidenceContent        *string
 }
 
 func Eval(policy PolicyFS, input any) PolicyEvaluation {
@@ -162,12 +162,12 @@ func Eval(policy PolicyFS, input any) PolicyEvaluation {
 		PolicyRelatedResources: policy.RelatedResources,
 		PolicyTags:             policy.Tags,
 		PolicyPriority:         policy.Priority,
-		PredicateType:          policy.PredicateType,
-		ComplianceFrameworks:   policy.ComplianceFrameworks,
+		EvidenceType:           "json",
+		PolicyControls:         policy.Controls,
 		Compliant:              compliant,
 		Violations:             violations,
 		RawEvaluationResult:    rawEvalResult,
-		AttestationContent:     nil,
+		EvidenceContent:        &policy.Content,
 	}
 }
 
@@ -255,10 +255,9 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 			Properties: &sarif.PropertyBag{
 				Tags: evaluation.PolicyTags,
 				AdditionalProperties: map[string]any{
-					"priority":             evaluation.PolicyPriority,
-					"relatedResources":     evaluation.PolicyRelatedResources,
-					"complianceFrameworks": evaluation.ComplianceFrameworks,
-					"predicateType":        evaluation.PredicateType,
+					"priority":         evaluation.PolicyPriority,
+					"relatedResources": evaluation.PolicyRelatedResources,
+					"controls":         evaluation.PolicyControls,
 				},
 			},
 		}
@@ -267,11 +266,13 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 
 		artifactLocation := sarif.ArtifactLocation{URI: &srcPath}
 		additionalProps := map[string]any{
-			"precision": "high",
+			"precision":    "high",
+			"evidenceType": evaluation.EvidenceType,
 		}
-		if evaluation.AttestationContent != nil {
-			additionalProps["attestationContent"] = *evaluation.AttestationContent
+		if evaluation.EvidenceContent != nil {
+			additionalProps["evidenceContent"] = *evaluation.EvidenceContent
 		}
+
 		props := &sarif.PropertyBag{
 			Tags:                 evaluation.PolicyTags,
 			AdditionalProperties: additionalProps,

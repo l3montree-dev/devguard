@@ -100,6 +100,27 @@ func (c *ComplianceRiskController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, convertComplianceRiskToDetailedDTO(risk))
 }
 
+func (c *ComplianceRiskController) GetEvidence(ctx shared.Context) error {
+	riskID, _, err := shared.GetVulnID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not get compliance risk ID")
+	}
+	risk, err := c.complianceRiskRepository.Read(ctx.Request().Context(), nil, riskID)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find compliance risk")
+	}
+	if len(risk.EvidenceContent) == 0 {
+		return echo.NewHTTPError(404, "no evidence available")
+	}
+
+	contentType := risk.EvidenceType
+	if contentType == "" || contentType == "json" {
+		contentType = "application/json"
+	}
+
+	return ctx.Blob(200, contentType, risk.EvidenceContent)
+}
+
 func (c *ComplianceRiskController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	riskID, _, err := shared.GetVulnID(ctx)

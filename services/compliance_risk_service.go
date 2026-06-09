@@ -250,13 +250,13 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 	run := sarifDoc.Runs[0]
 
 	type ruleInfo struct {
-		title                string
-		description          *string
-		predicateType        string
-		relatedResources     []string
-		tags                 []string
-		priority             int
-		complianceFrameworks []string
+		title            string
+		description      *string
+		relatedResources []string
+		tags             []string
+		priority         int
+		controls         []string
+		evidenceType     string
 	}
 	ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
 	for _, rule := range run.Tool.Driver.Rules {
@@ -265,12 +265,7 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			d := rule.FullDescription.Text
 			desc = &d
 		}
-		var predicateType string
-		if rule.Properties != nil {
-			if pt, ok := rule.Properties.AdditionalProperties["predicateType"].(string); ok {
-				predicateType = pt
-			}
-		}
+
 		title := rule.ID
 		if rule.ShortDescription != nil {
 			title = rule.ShortDescription.Text
@@ -292,12 +287,12 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			tags = rule.Properties.Tags
 		}
 
-		var complianceFrameworks []string
+		var controls []string
 		if rule.Properties != nil {
-			if cf, ok := rule.Properties.AdditionalProperties["complianceFrameworks"].([]any); ok {
+			if cf, ok := rule.Properties.AdditionalProperties["controls"].([]any); ok {
 				for _, c := range cf {
 					if cStr, ok := c.(string); ok {
-						complianceFrameworks = append(complianceFrameworks, cStr)
+						controls = append(controls, cStr)
 					}
 				}
 			}
@@ -312,13 +307,14 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			}
 		}
 
-		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, predicateType: predicateType, relatedResources: relatedResources, tags: tags, priority: priority, complianceFrameworks: complianceFrameworks}
+		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, relatedResources: relatedResources, tags: tags, priority: priority, controls: controls}
 	}
 
 	type policyResult struct {
-		kind               sarif.ResultKind
-		violations         []string
-		attestationContent *string
+		kind            sarif.ResultKind
+		violations      []string
+		evidenceContent []byte
+		evidenceType    string
 	}
 	resultMap := make(map[string]*policyResult, len(ruleMap))
 
@@ -334,8 +330,11 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 		}
 
 		if result.Properties != nil {
-			if ac, ok := result.Properties.AdditionalProperties["attestationContent"].(string); ok && pr.attestationContent == nil {
-				pr.attestationContent = &ac
+			if ac, ok := result.Properties.AdditionalProperties["evidenceContent"].(string); ok && pr.evidenceContent == nil {
+				pr.evidenceContent = []byte(ac)
+			}
+			if et, ok := result.Properties.AdditionalProperties["evidenceType"].(string); ok {
+				pr.evidenceType = et
 			}
 		}
 
@@ -359,10 +358,10 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 	for ruleID, info := range ruleMap {
 		state := dtos.VulnStateOpen
 		var violations []string
-		var attestationContent *string
+		var evidenceContent []byte
 
 		if pr := resultMap[ruleID]; pr != nil {
-			attestationContent = pr.attestationContent
+			evidenceContent = pr.evidenceContent
 			switch pr.kind {
 			case sarif.ResultKindPass:
 				state = dtos.VulnStateFixed
@@ -386,10 +385,10 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			PolicyRelatedResources: info.relatedResources,
 			PolicyTags:             info.tags,
 			PolicyPriority:         info.priority,
-			ComplianceFrameworks:   info.complianceFrameworks,
-			PredicateType:          info.predicateType,
-			AttestationViolations:  violations,
-			AttestationContent:     attestationContent,
+			PolicyControls:         info.controls,
+			EvidenceType:           resultMap[ruleID].evidenceType,
+			Violations:             violations,
+			EvidenceContent:        evidenceContent,
 		})
 	}
 

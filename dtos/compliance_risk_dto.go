@@ -18,7 +18,7 @@ type ComplianceRiskDTO struct {
 	PolicyRelatedResources []string `json:"policyRelatedResources"`
 	PolicyTags             []string `json:"policyTags"`
 	PolicyPriority         int      `json:"policyPriority"`
-	ComplianceFrameworks   []string `json:"complianceFrameworks"`
+	PolicyControls         []string `json:"policyControls"`
 
 	State                VulnState `json:"state"`
 	CreatedAt            time.Time `json:"createdAt"`
@@ -26,9 +26,8 @@ type ComplianceRiskDTO struct {
 	TicketURL            *string   `json:"ticketUrl"`
 	ManualTicketCreation bool      `json:"manualTicketCreation"`
 
-	PredicateType         string   `json:"predicateType"`
-	AttestationContent    *string  `json:"attestationContent"`
-	AttestationViolations []string `json:"attestationViolations"`
+	EvidenceType string   `json:"evidenceType"`
+	Violations   []string `json:"Violations"`
 }
 
 type DetailedComplianceRiskDTO struct {

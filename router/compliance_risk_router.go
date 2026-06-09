@@ -17,6 +17,7 @@ func NewComplianceRiskRouter(
 	complianceRisksRouter := assetVersionGroup.Group.Group("/compliance-risks")
 	complianceRisksRouter.GET("/", controller.ListPaged)
 	complianceRisksRouter.GET("/:complianceRiskID/", controller.Read)
+	complianceRisksRouter.GET("/:complianceRiskID/evidence/", controller.GetEvidence)
 	complianceRisksRouter.POST("/:complianceRiskID/", controller.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	complianceRisksRouter.POST("/:complianceRiskID/mitigate/", controller.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 

@@ -18,14 +18,13 @@ CREATE TABLE IF NOT EXISTS public.compliance_risks (
     policy_id text NOT NULL,
     policy_title text NOT NULL DEFAULT '',
     policy_description text,
-    predicate_type text NOT NULL DEFAULT '',
+    evidence_type text NOT NULL DEFAULT '',
     policy_related_resources text[],
     policy_tags text[],
     policy_priority integer,
-    compliance_frameworks text[],
-    attestation_content text,
-    attestation_violations text[],
-    attestation_updated_at timestamp with time zone,
+    policyControls text[],
+    evidence_content bytea,
+    evidence_violations text[],
     CONSTRAINT compliance_risks_pkey PRIMARY KEY (id),
     CONSTRAINT fk_compliance_risks_asset_versions FOREIGN KEY (asset_version_name, asset_id)
         REFERENCES public.asset_versions (name, asset_id) ON DELETE CASCADE
