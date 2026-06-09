@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -41,16 +42,16 @@ func (_m *ComplianceRiskService) EXPECT() *ComplianceRiskService_Expecter {
 }
 
 // HandleArtifactCompliance provides a mock function for the type ComplianceRiskService
-func (_mock *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error {
-	ret := _mock.Called(ctx, tx, userID, userAgent, assetVersion, artifact, evaluations)
+func (_mock *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json) error {
+	ret := _mock.Called(ctx, tx, userID, userAgent, assetVersion, artifact, sarifDoc)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleArtifactCompliance")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, models.AssetVersion, models.Artifact, []dtos.PolicyEvaluationDTO) error); ok {
-		r0 = returnFunc(ctx, tx, userID, userAgent, assetVersion, artifact, evaluations)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, models.AssetVersion, models.Artifact, sarif.SarifSchema210Json) error); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, assetVersion, artifact, sarifDoc)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -69,12 +70,12 @@ type ComplianceRiskService_HandleArtifactCompliance_Call struct {
 //   - userAgent *string
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
-//   - evaluations []dtos.PolicyEvaluationDTO
-func (_e *ComplianceRiskService_Expecter) HandleArtifactCompliance(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, assetVersion interface{}, artifact interface{}, evaluations interface{}) *ComplianceRiskService_HandleArtifactCompliance_Call {
-	return &ComplianceRiskService_HandleArtifactCompliance_Call{Call: _e.mock.On("HandleArtifactCompliance", ctx, tx, userID, userAgent, assetVersion, artifact, evaluations)}
+//   - sarifDoc sarif.SarifSchema210Json
+func (_e *ComplianceRiskService_Expecter) HandleArtifactCompliance(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, assetVersion interface{}, artifact interface{}, sarifDoc interface{}) *ComplianceRiskService_HandleArtifactCompliance_Call {
+	return &ComplianceRiskService_HandleArtifactCompliance_Call{Call: _e.mock.On("HandleArtifactCompliance", ctx, tx, userID, userAgent, assetVersion, artifact, sarifDoc)}
 }
 
-func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO)) *ComplianceRiskService_HandleArtifactCompliance_Call {
+func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json)) *ComplianceRiskService_HandleArtifactCompliance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -100,9 +101,9 @@ func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) Run(run func(ctx 
 		if args[5] != nil {
 			arg5 = args[5].(models.Artifact)
 		}
-		var arg6 []dtos.PolicyEvaluationDTO
+		var arg6 sarif.SarifSchema210Json
 		if args[6] != nil {
-			arg6 = args[6].([]dtos.PolicyEvaluationDTO)
+			arg6 = args[6].(sarif.SarifSchema210Json)
 		}
 		run(
 			arg0,
@@ -122,7 +123,7 @@ func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) Return(err error)
 	return _c
 }
 
-func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error) *ComplianceRiskService_HandleArtifactCompliance_Call {
+func (_c *ComplianceRiskService_HandleArtifactCompliance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json) error) *ComplianceRiskService_HandleArtifactCompliance_Call {
 	_c.Call.Return(run)
 	return _c
 }

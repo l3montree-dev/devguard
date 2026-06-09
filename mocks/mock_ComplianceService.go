@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -41,24 +41,22 @@ func (_m *ComplianceService) EXPECT() *ComplianceService_Expecter {
 }
 
 // ArtifactCompliance provides a mock function for the type ComplianceService
-func (_mock *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error) {
+func (_mock *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
 	ret := _mock.Called(ctx, projectID, assetVersion, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ArtifactCompliance")
 	}
 
-	var r0 []dtos.PolicyEvaluationDTO
+	var r0 sarif.SarifSchema210Json
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, models.AssetVersion, models.Artifact) ([]dtos.PolicyEvaluationDTO, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, models.AssetVersion, models.Artifact) (sarif.SarifSchema210Json, error)); ok {
 		return returnFunc(ctx, projectID, assetVersion, artifact)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, models.AssetVersion, models.Artifact) []dtos.PolicyEvaluationDTO); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, models.AssetVersion, models.Artifact) sarif.SarifSchema210Json); ok {
 		r0 = returnFunc(ctx, projectID, assetVersion, artifact)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.PolicyEvaluationDTO)
-		}
+		r0 = ret.Get(0).(sarif.SarifSchema210Json)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, models.AssetVersion, models.Artifact) error); ok {
 		r1 = returnFunc(ctx, projectID, assetVersion, artifact)
@@ -110,12 +108,12 @@ func (_c *ComplianceService_ArtifactCompliance_Call) Run(run func(ctx context.Co
 	return _c
 }
 
-func (_c *ComplianceService_ArtifactCompliance_Call) Return(policyEvaluationDTOs []dtos.PolicyEvaluationDTO, err error) *ComplianceService_ArtifactCompliance_Call {
-	_c.Call.Return(policyEvaluationDTOs, err)
+func (_c *ComplianceService_ArtifactCompliance_Call) Return(sarifSchema210Json sarif.SarifSchema210Json, err error) *ComplianceService_ArtifactCompliance_Call {
+	_c.Call.Return(sarifSchema210Json, err)
 	return _c
 }
 
-func (_c *ComplianceService_ArtifactCompliance_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error)) *ComplianceService_ArtifactCompliance_Call {
+func (_c *ComplianceService_ArtifactCompliance_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)) *ComplianceService_ArtifactCompliance_Call {
 	_c.Call.Return(run)
 	return _c
 }
