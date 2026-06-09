@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,39 +29,17 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create a new policy
-	policy, err := NewPolicy("", string(policyContent))
+	metadata, err := parseMetadata("", string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	model := ConvertPolicyFsToModel(*policy)
+	policy := PolicyFS{PolicyMetadata: metadata, Content: string(policyContent)}
 
 	// evaluate the policy
-	res := Eval(model, input)
+	res := Eval(policy, input)
 	if res.Compliant == nil || *res.Compliant != true {
 		t.Fatal(res)
 	}
-}
-
-func TestNewPolicy(t *testing.T) {
-	t.Run("should parse the metadata", func(t *testing.T) {
-		// read the example-policy.rego file
-		policyContent, err := os.ReadFile("testfiles/example-policy.rego")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// create a new policy
-		policy, err := NewPolicy("", string(policyContent))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		assert.Equal(t, "Build from signed source", policy.Title)
-		assert.Equal(t, "This policy checks if the build was done from a signed commit.", policy.Description)
-		assert.Equal(t, []string{"iso27001", "A.8 Access Control"}, policy.Tags)
-	})
 }
 
 func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
@@ -74,10 +53,11 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policy, err := NewPolicy("", string(policyContent))
+	metadata, err := parseMetadata("", string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
+	policy := PolicyFS{PolicyMetadata: metadata, Content: string(policyContent)}
 
 	// parse the sbom
 	var input any
@@ -86,11 +66,9 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	model := ConvertPolicyFsToModel(*policy)
-	result := Eval(model, input)
+	result := Eval(policy, input)
 
 	expectedResult := &PolicyEvaluation{
-		Policy:    model,
 		Compliant: utils.Ptr(false),
 		Violations: []string{
 			"Component \"github.com/cloudflare/circl\" uses non-OSI approved license \"non-standard\"",
@@ -128,4 +106,102 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 	assert.Equal(t, expectedResult.Compliant, result.Compliant)
 	assert.Subset(t, expectedResult.Violations, result.Violations)
 	assert.Subset(t, result.Violations, expectedResult.Violations)
+}
+
+func resultKey(r sarif.Result) string {
+	return string(r.Kind) + "|" + r.Message.Text
+}
+
+func hasDuplicateResults(results []sarif.Result) bool {
+	seen := make(map[string]bool, len(results))
+	for _, r := range results {
+		k := resultKey(r)
+		if seen[k] {
+			return true
+		}
+		seen[k] = true
+	}
+	return false
+}
+
+func makeEvaluations(policy PolicyFS, evals []PolicyEvaluation) []PolicyEvaluation {
+	for i := range evals {
+		evals[i].PolicyID = policy.Filename
+		evals[i].PolicyTitle = policy.Title
+		evals[i].PolicyDescription = policy.Description
+		evals[i].PolicyTags = policy.Tags
+	}
+	return evals
+}
+
+func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
+	policy := PolicyFS{
+		PolicyMetadata: PolicyMetadata{
+			Filename:    "test-policy.rego",
+			Title:       "Test Policy",
+			Description: "A test policy",
+			Tags:        []string{"test"},
+		},
+	}
+
+	t.Run("duplicate violations across evaluations produce no duplicates", func(t *testing.T) {
+		compliant := false
+		evaluations := makeEvaluations(policy, []PolicyEvaluation{
+			{Compliant: &compliant, Violations: []string{"missing signature", "untrusted source"}},
+			{Compliant: &compliant, Violations: []string{"missing signature", "untrusted source"}},
+		})
+		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		if hasDuplicateResults(results) {
+			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+		}
+	})
+
+	t.Run("same violation repeated within one evaluation produces no duplicates", func(t *testing.T) {
+		compliant := false
+		evaluations := makeEvaluations(policy, []PolicyEvaluation{
+			{Compliant: &compliant, Violations: []string{"missing signature", "missing signature"}},
+		})
+		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		if hasDuplicateResults(results) {
+			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+		}
+	})
+
+	t.Run("multiple compliant evaluations produce no duplicate pass results", func(t *testing.T) {
+		compliant := true
+		evaluations := makeEvaluations(policy, []PolicyEvaluation{
+			{Compliant: &compliant},
+			{Compliant: &compliant},
+			{Compliant: &compliant},
+		})
+		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		if hasDuplicateResults(results) {
+			t.Errorf("BuildSarifFromPolicies returned duplicate pass result entries: %v", results)
+		}
+	})
+
+	t.Run("mix of compliant and non-compliant evaluations with overlapping violations", func(t *testing.T) {
+		compliant := true
+		notCompliant := false
+		evaluations := makeEvaluations(policy, []PolicyEvaluation{
+			{Compliant: &compliant},
+			{Compliant: &notCompliant, Violations: []string{"missing signature"}},
+			{Compliant: &notCompliant, Violations: []string{"missing signature"}},
+			{Compliant: &compliant},
+		})
+		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		if hasDuplicateResults(results) {
+			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+		}
+	})
+
+	t.Run("single evaluation with no violations produces no results", func(t *testing.T) {
+		evaluations := makeEvaluations(policy, []PolicyEvaluation{
+			{Compliant: utils.Ptr(true)},
+		})
+		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		if hasDuplicateResults(results) {
+			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+		}
+	})
 }

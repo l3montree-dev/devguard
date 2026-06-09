@@ -426,21 +426,6 @@ func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm
 	return projects, err
 }
 
-func (g *projectRepository) EnablePolicyForProject(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
-	return g.GetDB(ctx, tx).Model(&models.Project{
-		Model: models.Model{
-			ID: projectID,
-		},
-	}).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
-}
-func (g *projectRepository) DisablePolicyForProject(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
-	return g.GetDB(ctx, tx).Model(&models.Project{
-		Model: models.Model{
-			ID: projectID,
-		},
-	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
-}
-
 func (g *projectRepository) EnableCommunityManagedPolicies(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) error {
 	// community policies can be identified by their "organization_id" being nil
 	return g.GetDB(ctx, tx).Exec(`

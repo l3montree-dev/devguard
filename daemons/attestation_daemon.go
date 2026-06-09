@@ -20,7 +20,7 @@ func (runner *DaemonRunner) CheckArtifactCompliance(input <-chan assetWithProjec
 
 			for _, assetVersion := range assetWithDetails.assetVersions {
 				for _, artifact := range assetVersion.Artifacts {
-					evaluations, err := runner.complianceService.ArtifactCompliance(stageCtx, assetWithDetails.project.ID, assetVersion, artifact)
+					sarifDoc, err := runner.complianceService.ArtifactCompliance(stageCtx, assetWithDetails.project.ID, assetVersion, artifact)
 					if err != nil {
 						slog.Error("could not evaluate artifact compliance",
 							"assetID", assetWithDetails.asset.ID,
@@ -30,7 +30,7 @@ func (runner *DaemonRunner) CheckArtifactCompliance(input <-chan assetWithProjec
 						)
 						continue
 					}
-					if err := runner.complianceRiskService.HandleArtifactCompliance(stageCtx, nil, "system", nil, assetVersion, artifact, evaluations); err != nil {
+					if err := runner.complianceRiskService.HandleArtifactCompliance(stageCtx, nil, "system", nil, assetVersion, artifact, sarifDoc); err != nil {
 						slog.Error("could not handle artifact compliance risks",
 							"assetID", assetWithDetails.asset.ID,
 							"assetVersion", assetVersion.Name,

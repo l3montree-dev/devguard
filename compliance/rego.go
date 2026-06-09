@@ -8,9 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gopkg.in/yaml.v2"
@@ -45,14 +44,6 @@ type PolicyMetadata struct {
 type PolicyFS struct {
 	PolicyMetadata
 	Content string
-}
-
-type PolicyEvaluation struct {
-	models.Policy
-	Compliant            *bool          `json:"compliant"`
-	Violations           []string       `json:"violations"`
-	RawEvaluationResult  map[string]any `json:"rawEvaluationResult"`
-	AttestationUpdatedAt *time.Time     `json:"attestationUpdatedAt"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
@@ -108,66 +99,47 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	}, nil
 }
 
-func ConvertPolicyFsToModel(policy PolicyFS) models.Policy {
-	return models.Policy{
-		Rego:           policy.Content,
-		Description:    policy.Description,
-		Title:          policy.Title,
-		PredicateType:  policy.PredicateType,
-		OpaqueID:       &policy.Filename,
-		OrganizationID: nil,
-	}
+type PolicyEvaluation struct {
+	PolicyID               string
+	PolicyTitle            string
+	PolicyDescription      string
+	PolicyRelatedResources []string
+	PolicyTags             []string
+	PolicyPriority         int
+	PredicateType          string
+	ComplianceFrameworks   []string
+	Compliant              *bool
+	Violations             []string
+	RawEvaluationResult    map[string]any
+	AttestationContent     *string
 }
 
-func NewPolicy(filename string, content string) (*PolicyFS, error) {
-	metadata, err := parseMetadata(filename, content)
-	if err != nil {
-		return nil, err
-	}
-
-	return &PolicyFS{
-		PolicyMetadata: metadata,
-		Content:        content,
-	}, nil
-}
-
-func Eval(p models.Policy, input any) PolicyEvaluation {
-
+func Eval(policy PolicyFS, input any) PolicyEvaluation {
 	if input == nil {
-		return PolicyEvaluation{
-			Policy:    p,
-			Compliant: nil,
-		}
+		return PolicyEvaluation{Compliant: nil}
 	}
 
 	r := rego.New(
 		rego.Query("data.compliance"),
-		rego.Module("", p.Rego),
+		rego.Module(policy.Filename, policy.Content),
 	)
 
 	ctx := context.TODO()
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
-		return PolicyEvaluation{
-			Policy:    p,
-			Compliant: nil,
-		}
+		return PolicyEvaluation{Compliant: nil}
 	}
 
-	rs, err := query.Eval(context.TODO(), rego.EvalInput(input))
+	rs, err := query.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
-		return PolicyEvaluation{
-			Policy:    p,
-			Compliant: nil,
-		}
+		return PolicyEvaluation{Compliant: nil}
 	}
 
-	var violations = []string{}
+	var violations []string
 	var rawEvalResult map[string]any
 	var compliant *bool
 	if len(rs) > 0 {
 		value := rs[0].Expressions[0].Value
-		// cast value to map
 		if v, ok := value.(map[string]any); ok {
 			rawEvalResult = v
 			if v["compliant"] != nil {
@@ -184,10 +156,18 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 	}
 
 	return PolicyEvaluation{
-		Policy:              p,
-		Compliant:           compliant,
-		Violations:          violations,
-		RawEvaluationResult: rawEvalResult,
+		PolicyID:               policy.Filename,
+		PolicyTitle:            policy.Title,
+		PolicyDescription:      policy.Description,
+		PolicyRelatedResources: policy.RelatedResources,
+		PolicyTags:             policy.Tags,
+		PolicyPriority:         policy.Priority,
+		PredicateType:          policy.PredicateType,
+		ComplianceFrameworks:   policy.ComplianceFrameworks,
+		Compliant:              compliant,
+		Violations:             violations,
+		RawEvaluationResult:    rawEvalResult,
+		AttestationContent:     nil,
 	}
 }
 
@@ -196,26 +176,31 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 //go:embed attestation-compliance-policies/policies/*.rego
 var policiesFs embed.FS
 
-func GetCommunityManagedPoliciesFromFS() []PolicyFS {
+func GetPoliciesFromFS(policyDir string) ([]PolicyFS, error) {
 	// fetch all policies
-	policyFiles, err := policiesFs.ReadDir("attestation-compliance-policies/policies")
+	policyFiles, err := policiesFs.ReadDir(policyDir)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	var policies []PolicyFS
 	for _, file := range policyFiles {
-		content, err := policiesFs.ReadFile(filepath.Join("attestation-compliance-policies/policies", file.Name()))
+		content, err := policiesFs.ReadFile(filepath.Join(policyDir, file.Name()))
 		if err != nil {
 			continue
 		}
 
-		policy, err := NewPolicy(file.Name(), string(content))
+		metadata, err := parseMetadata(file.Name(), string(content))
 		if err != nil {
-			continue
+			return nil, err
 		}
 
-		policies = append(policies, *policy)
+		policy := PolicyFS{
+			PolicyMetadata: metadata,
+			Content:        string(content),
+		}
+
+		policies = append(policies, policy)
 	}
 
 	// sort the policies by priority - use a stable sort
@@ -223,5 +208,123 @@ func GetCommunityManagedPoliciesFromFS() []PolicyFS {
 		return policies[i].Priority < policies[j].Priority
 	})
 
-	return policies
+	return policies, nil
+}
+
+func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sarif.SarifSchema210Json {
+	rules := make([]sarif.ReportingDescriptor, 0, len(evaluations))
+	results := make([]sarif.Result, 0)
+	seenResults := make(map[string]bool)
+	addResult := func(r sarif.Result) {
+		key := string(r.Kind) + "|" + r.Message.Text
+		if !seenResults[key] {
+			seenResults[key] = true
+			results = append(results, r)
+		}
+	}
+	for _, evaluation := range evaluations {
+		ruleID := evaluation.PolicyID
+		ruleName := evaluation.PolicyTitle
+
+		var helpURI *string
+		if len(evaluation.PolicyRelatedResources) > 0 {
+			helpURI = &evaluation.PolicyRelatedResources[0]
+		}
+
+		rule := sarif.ReportingDescriptor{
+			ID:   ruleID,
+			Name: &ruleName,
+			ShortDescription: &sarif.MultiformatMessageString{
+				Text: evaluation.PolicyTitle,
+			},
+			FullDescription: &sarif.MultiformatMessageString{
+				Text: evaluation.PolicyDescription,
+			},
+			Help: &sarif.MultiformatMessageString{
+				Text: evaluation.PolicyDescription,
+			},
+			HelpURI: helpURI,
+			Properties: &sarif.PropertyBag{
+				Tags: evaluation.PolicyTags,
+				AdditionalProperties: map[string]any{
+					"priority":             evaluation.PolicyPriority,
+					"relatedResources":     evaluation.PolicyRelatedResources,
+					"complianceFrameworks": evaluation.ComplianceFrameworks,
+					"predicateType":        evaluation.PredicateType,
+				},
+			},
+		}
+
+		rules = append(rules, rule)
+
+		artifactLocation := sarif.ArtifactLocation{URI: &srcPath}
+		props := &sarif.PropertyBag{
+			Tags: evaluation.PolicyTags,
+			AdditionalProperties: map[string]any{
+				"precision": "high",
+			},
+		}
+
+		if evaluation.Compliant == nil {
+			addResult(sarif.Result{
+				Kind:   sarif.ResultKindOpen,
+				RuleID: &ruleID,
+				Message: sarif.Message{
+					Text: "No attestation found for policy — compliance could not be determined.",
+				},
+				Locations: []sarif.Location{
+					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
+				},
+				Properties: props,
+			})
+			continue
+		}
+
+		if *evaluation.Compliant {
+			addResult(sarif.Result{
+				Kind:   sarif.ResultKindPass,
+				RuleID: &ruleID,
+				Message: sarif.Message{
+					Text: "Policy compliant",
+				},
+				Locations: []sarif.Location{
+					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
+				},
+				Properties: props,
+			})
+			continue
+		}
+
+		for _, violation := range evaluation.Violations {
+			addResult(sarif.Result{
+				Kind:   sarif.ResultKindFail,
+				RuleID: &ruleID,
+				Message: sarif.Message{
+					Text: violation,
+				},
+				Locations: []sarif.Location{
+					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
+				},
+				Properties: props,
+			})
+		}
+	}
+
+	driver := sarif.ToolComponent{
+		Name:  "devguard-attestations",
+		Rules: rules,
+	}
+
+	return sarif.SarifSchema210Json{
+		Version: sarif.SarifSchema210JsonVersionA210,
+		Schema:  utils.Ptr("https://json.schemastore.org/sarif-2.1.0.json"),
+		Runs: []sarif.Run{
+			{
+				Tool: sarif.Tool{
+					Driver: driver,
+				},
+				Results: results,
+			},
+		},
+	}
 }

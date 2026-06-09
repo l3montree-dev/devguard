@@ -20,33 +20,29 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 )
 
 type ComplianceService struct {
 	attestationRepository shared.AttestationRepository
-	policyRepository      shared.PolicyRepository
 }
 
-func NewComplianceService(attestationRepository shared.AttestationRepository, policyRepository shared.PolicyRepository) *ComplianceService {
+func NewComplianceService(attestationRepository shared.AttestationRepository) *ComplianceService {
 	return &ComplianceService{
 		attestationRepository: attestationRepository,
-		policyRepository:      policyRepository,
 	}
 }
 
-func (s *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error) {
+func (s *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
 	attestations, err := s.attestationRepository.GetByArtifactAndAssetVersionAndAssetID(ctx, nil, artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
-		return nil, err
+		return sarif.SarifSchema210Json{}, err
 	}
 
-	policies, err := s.policyRepository.FindCommunityManagedPolicies(ctx, nil)
+	policies, err := compliance.GetPoliciesFromFS("attestation-compliance-policies/policies")
 	if err != nil {
-		return nil, err
+		return sarif.SarifSchema210Json{}, err
 	}
 
 	evals := make([]compliance.PolicyEvaluation, 0, len(policies))
@@ -57,12 +53,11 @@ foundMatch:
 				continue
 			}
 			eval := compliance.Eval(policy, attestation.Content)
-			eval.AttestationUpdatedAt = &attestation.UpdatedAt
 			evals = append(evals, eval)
 			continue foundMatch
 		}
 		evals = append(evals, compliance.Eval(policy, nil))
 	}
 
-	return utils.Map(evals, transformer.PolicyEvaluationToDTO), nil
+	return compliance.BuildSarifFromPolicies("", evals), nil
 }

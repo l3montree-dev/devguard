@@ -97,8 +97,6 @@ type ProjectRepository interface {
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
-	EnablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
-	DisablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(ctx context.Context, tx DB, projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
@@ -109,13 +107,6 @@ type ProjectRepository interface {
 
 type Verifier interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
-}
-
-type PolicyRepository interface {
-	utils.Repository[uuid.UUID, models.Policy, DB]
-	FindByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Policy, error)
-	FindByOrganizationID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Policy, error)
-	FindCommunityManagedPolicies(ctx context.Context, tx DB) ([]models.Policy, error)
 }
 
 type DependencyProxySecretRepository interface {
@@ -179,7 +170,7 @@ type ArtifactRepository interface {
 }
 
 type ComplianceService interface {
-	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) ([]dtos.PolicyEvaluationDTO, error)
+	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)
 }
 
 type ReleaseRepository interface {
@@ -308,7 +299,7 @@ type ComplianceRiskRepository interface {
 }
 
 type ComplianceRiskService interface {
-	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error
+	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json) error
 	UpdateComplianceRiskState(ctx context.Context, tx DB, userID string, risk *models.ComplianceRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 }
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -168,24 +169,24 @@ func (c *ComplianceRiskController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, convertComplianceRiskToDetailedDTO(risk))
 }
 
-// RecalculateFromService fetches evaluations via complianceService.ArtifactCompliance and recalculates risks.
-func (c *ComplianceRiskController) RecalculateFromService(ctx shared.Context) error {
+// EvaluateArtifactCompliance fetches evaluations via complianceService.ArtifactCompliance and recalculates risks.
+func (c *ComplianceRiskController) EvaluateArtifactCompliance(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := shared.GetArtifact(ctx)
 	project := shared.GetProject(ctx)
 	userAgent := ctx.Request().UserAgent()
 	userID := shared.GetSession(ctx).GetUserID()
 
-	evaluations, err := c.complianceService.ArtifactCompliance(ctx.Request().Context(), project.ID, assetVersion, artifact)
+	sarifDoc, err := c.complianceService.ArtifactCompliance(ctx.Request().Context(), project.ID, assetVersion, artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not evaluate artifact compliance").WithInternal(err)
 	}
 
-	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, evaluations); err != nil {
+	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, sarifDoc); err != nil {
 		return echo.NewHTTPError(500, "could not handle artifact compliance risks").WithInternal(err)
 	}
 
-	return ctx.JSON(200, evaluations)
+	return ctx.JSON(200, sarifDoc)
 }
 
 // UploadZip accepts a ZIP file containing attestation files and an evaluations.json.
@@ -217,7 +218,7 @@ func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid zip file").WithInternal(err)
 	}
 
-	var evaluations []dtos.PolicyEvaluationDTO
+	var sarifDoc *sarif.SarifSchema210Json
 
 	for _, f := range zr.File {
 		rc, err := f.Open()
@@ -232,10 +233,12 @@ func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 			continue
 		}
 
-		if f.Name == "evaluations.json" {
-			if err := json.Unmarshal(content, &evaluations); err != nil {
-				return echo.NewHTTPError(400, "invalid evaluations.json in zip").WithInternal(err)
+		if f.Name == "sarif.json" {
+			var doc sarif.SarifSchema210Json
+			if err := json.Unmarshal(content, &doc); err != nil {
+				return echo.NewHTTPError(400, "invalid sarif.json in zip").WithInternal(err)
 			}
+			sarifDoc = &doc
 			continue
 		}
 
@@ -264,13 +267,13 @@ func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 		}
 	}
 
-	if evaluations == nil {
-		return echo.NewHTTPError(400, "evaluations.json not found in zip")
+	if sarifDoc == nil {
+		return echo.NewHTTPError(400, "sarif.json not found in zip")
 	}
 
-	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, evaluations); err != nil {
+	if err := c.complianceRiskService.HandleArtifactCompliance(ctx.Request().Context(), nil, userID, &userAgent, assetVersion, artifact, *sarifDoc); err != nil {
 		return echo.NewHTTPError(500, "could not handle artifact compliance risks").WithInternal(err)
 	}
 
-	return ctx.JSON(200, evaluations)
+	return ctx.JSON(200, sarifDoc)
 }

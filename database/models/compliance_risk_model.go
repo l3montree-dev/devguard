@@ -16,7 +16,6 @@ package models
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -27,12 +26,18 @@ import (
 type ComplianceRisk struct {
 	Vulnerability
 
-	PolicyID              string     `json:"policyId" gorm:"type:text;"`
-	PolicyTitle           string     `json:"policyTitle" gorm:"type:text;"`
-	PolicyDescription     *string    `json:"policyDescription" gorm:"type:text;"`
-	PredicateType         string     `json:"predicateType" gorm:"type:text;"`
-	AttestationViolations []string   `json:"attestationViolations" gorm:"type:text[];"`
-	AttestationUpdatedAt  *time.Time `json:"attestationUpdatedAt" gorm:"type:timestamptz;"`
+	PolicyID               string   `json:"policyId" gorm:"type:text;"`
+	PolicyTitle            string   `json:"policyTitle" gorm:"type:text;"`
+	PolicyDescription      *string  `json:"policyDescription" gorm:"type:text;"`
+	PolicyRelatedResources []string `json:"policyRelatedResources" gorm:"type:text[];"`
+	PolicyTags             []string `json:"policyTags" gorm:"type:text[];"`
+	PolicyPriority         int      `json:"policyPriority"`
+	ComplianceFrameworks   []string `json:"complianceFrameworks" gorm:"type:text[];"`
+	PredicateType          string   `json:"predicateType" gorm:"type:text;"`
+
+	AttestationContent *string `json:"attestationContent" gorm:"type:text;"`
+
+	AttestationViolations []string `json:"attestationViolations" gorm:"type:text[];"`
 
 	Events []VulnEvent `gorm:"foreignKey:ComplianceRiskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 

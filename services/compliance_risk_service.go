@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -26,34 +27,16 @@ func NewComplianceRiskService(complianceRiskRepository shared.ComplianceRiskRepo
 	}
 }
 
-// HandleArtifactCompliance processes policy evaluations for an artifact and manages the
+// HandleArtifactCompliance processes a SARIF compliance report for an artifact and manages the
 // lifecycle of compliance risks: new detections, branch-diffing, artifact association, and fixes.
-func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, evaluations []dtos.PolicyEvaluationDTO) error {
+func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json) error {
 	// fetch all existing compliance risks for this asset version (across all artifacts)
 	existingRisks, err := s.complianceRiskRepository.GetAllComplianceRisksForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}
 
-	// build risks for every evaluation — compliant ones start fixed, non-compliant ones open
-	foundRisks := make([]models.ComplianceRisk, 0, len(evaluations))
-	for _, eval := range evaluations {
-		foundRisks = append(foundRisks, models.ComplianceRisk{
-			Vulnerability: models.Vulnerability{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-				AssetVersion:     assetVersion,
-				State:            eval.State,
-				LastDetected:     time.Now(),
-			},
-			PolicyID:              eval.PolicyID,
-			PolicyTitle:           eval.PolicyTitle,
-			PolicyDescription:     eval.PolicyDescription,
-			PredicateType:         eval.PredicateType,
-			AttestationViolations: eval.AttestationViolations,
-			AttestationUpdatedAt:  eval.AttestationUpdatedAt,
-		})
-	}
+	foundRisks := sarifToComplianceRisks(sarifDoc, assetVersion)
 
 	// compare found risks with existing ones using hash-based identity
 	comparison := utils.CompareSlices(foundRisks, existingRisks, func(r models.ComplianceRisk) string {
@@ -253,4 +236,145 @@ func (s *ComplianceRiskService) updateComplianceRiskState(ctx context.Context, t
 	}
 	err := s.complianceRiskRepository.ApplyAndSave(ctx, tx, risk, &ev)
 	return ev, err
+}
+
+// sarifToComplianceRisks converts a SARIF document into ComplianceRisk models for the given asset version.
+// Each SARIF rule becomes one risk; its state is derived from the result kinds (pass/fail/open).
+func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion models.AssetVersion) []models.ComplianceRisk {
+	if len(sarifDoc.Runs) == 0 {
+		return nil
+	}
+	run := sarifDoc.Runs[0]
+
+	type ruleInfo struct {
+		title                string
+		description          *string
+		predicateType        string
+		relatedResources     []string
+		tags                 []string
+		priority             int
+		complianceFrameworks []string
+	}
+	ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
+	for _, rule := range run.Tool.Driver.Rules {
+		var desc *string
+		if rule.FullDescription != nil && rule.FullDescription.Text != "" {
+			d := rule.FullDescription.Text
+			desc = &d
+		}
+		var predicateType string
+		if rule.Properties != nil {
+			if pt, ok := rule.Properties.AdditionalProperties["predicateType"].(string); ok {
+				predicateType = pt
+			}
+		}
+		title := rule.ID
+		if rule.ShortDescription != nil {
+			title = rule.ShortDescription.Text
+		}
+
+		relatedResources := make([]string, 0)
+		if rule.Properties != nil {
+			if rr, ok := rule.Properties.AdditionalProperties["relatedResources"].([]any); ok {
+				for _, r := range rr {
+					if rStr, ok := r.(string); ok {
+						relatedResources = append(relatedResources, rStr)
+					}
+				}
+			}
+		}
+
+		var tags []string
+		if rule.Properties != nil {
+			tags = rule.Properties.Tags
+		}
+
+		var complianceFrameworks []string
+		if rule.Properties != nil {
+			if cf, ok := rule.Properties.AdditionalProperties["complianceFrameworks"].([]any); ok {
+				for _, c := range cf {
+					if cStr, ok := c.(string); ok {
+						complianceFrameworks = append(complianceFrameworks, cStr)
+					}
+				}
+			}
+		}
+
+		var priority int
+		if rule.Properties != nil {
+			if p, ok := rule.Properties.AdditionalProperties["priority"].(int); ok {
+				priority = p
+			} else if pFloat, ok := rule.Properties.AdditionalProperties["priority"].(float64); ok {
+				priority = int(pFloat)
+			}
+		}
+
+		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, predicateType: predicateType, relatedResources: relatedResources, tags: tags, priority: priority, complianceFrameworks: complianceFrameworks}
+	}
+
+	type policyResult struct {
+		kind       sarif.ResultKind
+		violations []string
+	}
+	resultMap := make(map[string]*policyResult, len(ruleMap))
+
+	for _, result := range run.Results {
+		if result.RuleID == nil {
+			continue
+		}
+		ruleID := *result.RuleID
+		pr := resultMap[ruleID]
+		if pr == nil {
+			pr = &policyResult{}
+			resultMap[ruleID] = pr
+		}
+
+		switch result.Kind {
+		case sarif.ResultKindFail:
+			pr.kind = sarif.ResultKindFail
+			pr.violations = append(pr.violations, result.Message.Text)
+		case sarif.ResultKindOpen:
+			if pr.kind != sarif.ResultKindFail {
+				pr.kind = sarif.ResultKindOpen
+			}
+		case sarif.ResultKindPass:
+			if pr.kind == "" {
+				pr.kind = sarif.ResultKindPass
+			}
+		}
+
+	}
+
+	risks := make([]models.ComplianceRisk, 0, len(ruleMap))
+	for ruleID, info := range ruleMap {
+		state := dtos.VulnStateOpen
+		var violations []string
+
+		if pr := resultMap[ruleID]; pr != nil {
+			switch pr.kind {
+			case sarif.ResultKindPass:
+				state = dtos.VulnStateFixed
+			case sarif.ResultKindFail:
+				state = dtos.VulnStateOpen
+				violations = pr.violations
+			}
+		}
+
+		risks = append(risks, models.ComplianceRisk{
+			Vulnerability: models.Vulnerability{
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+				AssetVersion:     assetVersion,
+				State:            state,
+				LastDetected:     time.Now(),
+			},
+			PolicyID:              ruleID,
+			PolicyTitle:           info.title,
+			PolicyDescription:     info.description,
+			PredicateType:         info.predicateType,
+			AttestationViolations: violations,
+		})
+	}
+
+	return risks
 }
