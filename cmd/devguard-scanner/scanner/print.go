@@ -18,259 +18,179 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
-	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/package-url/packageurl-go"
 )
 
 // Set to gitlab output size limit
 var rowLengthLimit = 80
 
-func PrintFirstPartyScanResults(scanResponse compat.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
-
-	if len(scanResponse.FirstPartyVulns) == 0 {
-		return nil
-	}
-
-	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v compat.FirstPartyVulnDTO) bool {
-		return v.State == dtos.VulnStateOpen
-	})
-
+func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, webUI, assetVersionName string) error {
 	tw := table.NewWriter()
 	tw.SetAllowedRowLength(rowLengthLimit)
 
-	switch scannerID {
-	case "secret-scanning":
-		PrintSecretScanResults(openVulns, webUI, assetName, assetVersionName, tw)
-	default:
-		PrintSastScanResults(openVulns, webUI, assetName, assetVersionName, tw)
-	}
-
-	fmt.Println(tw.Render())
-
-	link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
-	//wrappedLink := text.WrapText(link, rowLengthLimit)
-	if assetName != "" {
-		fmt.Printf("See all code risks at:\n%s\n", link)
-	}
-	if len(openVulns) > 0 {
-		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
-	}
-
-	return nil
-}
-
-func PrintSecretScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string, tw table.Writer) {
-	for _, vuln := range firstPartyVulns {
-		raw := []table.Row{
-			{"RuleID:", vuln.RuleID},
-			{"File:", text.FgGreen.Sprint(vuln.URI)},
-		}
-		tw.AppendRows(raw)
-		for _, snippet := range vuln.SnippetContents {
-			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
-		}
-		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, rowLengthLimit)},
-
-			{"Commit:", vuln.Commit},
-			{"Author:", vuln.Author},
-			{"Email:", vuln.Email},
-			{"Date:", vuln.Date}}
-
-		tw.AppendRows(raw)
-		tw.AppendSeparator()
-	}
-}
-
-func PrintSastScanResults(firstPartyVulns []compat.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string, tw table.Writer) {
-
-	for _, vuln := range firstPartyVulns {
-		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
-		for _, snippet := range vuln.SnippetContents {
-			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
-		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, rowLengthLimit)})
-		if vuln.URI != "" {
-			tw.AppendRow(table.Row{"File", text.FgGreen.Sprint(vuln.URI)})
-
-		}
-		tw.AppendSeparator()
-	}
-
-}
-
-// can be reused for container scanning as well.
-func PrintScaResults(scanResponse compat.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
-	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
-
-	if len(scanResponse.DependencyVulns) == 0 {
-		return nil
-	}
-	// group the dependencyVulns by their purl
-	dependencyVulnsByPurl := map[string][]compat.DependencyVulnDTO{}
-	for _, v := range scanResponse.DependencyVulns {
-		purlKey := strings.TrimSpace(v.ComponentPurl)
-		if purlKey == "" {
-			slog.Warn("Dependency vulnerability has empty ComponentPurl; skipping grouping", "cveID", v.CVEID, "state", v.State)
-
-		}
-		if _, ok := dependencyVulnsByPurl[purlKey]; !ok {
-			dependencyVulnsByPurl[purlKey] = []compat.DependencyVulnDTO{}
-		}
-		dependencyVulnsByPurl[purlKey] = append(dependencyVulnsByPurl[purlKey], v)
-	}
-
-	// delete the duplicates in each group
-	for purl, vulns := range dependencyVulnsByPurl {
-		uniqueVulns := map[string]compat.DependencyVulnDTO{}
-		for _, v := range vulns {
-			uniqueVulns[fmt.Sprintf("%s:%.2f:%s", v.CVEID, v.CVE.CVSS, v.State)] = v
-		}
-		dependencyVulnsByPurl[purl] = utils.Values(uniqueVulns)
-	}
-
-	isScanThresholdExceeded := false
-
-	tw := table.NewWriter()
-	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status", "Path"})
-	tw.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, AutoMerge: true},
-		{Number: 8, AutoMerge: true},
-	})
-	for _, v := range dependencyVulnsByPurl {
-		//order the vulnerabilities in each group by their risk
-		slices.SortFunc(v, func(a, b compat.DependencyVulnDTO) int {
-			return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
-		})
-
-		//First check which vulnerability in this group has failed
-		groupHasFailed := false
-		vulnFailed := map[string]bool{}
-
-		for _, vuln := range v {
-			if vuln.State != dtos.VulnStateOpen {
+	openCount := 0
+	for _, run := range report.Runs {
+		for _, result := range run.Results {
+			suppressed := len(result.Suppressions) > 0
+			if suppressed {
 				continue
 			}
-			risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
-			cvss := vuln.CVE.CVSS
-			if (failOnRisk != "" && ((failOnRisk == "low" && risk > 0.1) ||
-				(failOnRisk == "medium" && risk >= 4) ||
-				(failOnRisk == "high" && risk >= 7) ||
-				(failOnRisk == "critical" && risk >= 9))) ||
-				(failOnCVSS != "" && ((failOnCVSS == "low" && cvss > 0.1) ||
-					(failOnCVSS == "medium" && cvss >= 4) ||
-					(failOnCVSS == "high" && cvss >= 7) ||
-					(failOnCVSS == "critical" && cvss >= 9))) {
-				groupHasFailed = true
-				vulnFailed[vuln.CVEID] = true
+			openCount++
 
-				isScanThresholdExceeded = true
+			ruleID := ""
+			if result.RuleID != nil {
+				ruleID = *result.RuleID
 			}
-		}
 
-		for _, vuln := range v {
-			// extract package name and version from purl
-			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(vuln.ComponentPurl)
-			if err != nil {
-				slog.Warn("could not parse purl, using fallback representation", "err", err, "purl", vuln.ComponentPurl)
-				// Fall back to a minimal PackageURL so the vulnerability is still shown
-				pURL = packageurl.PackageURL{
-					Name: vuln.ComponentPurl,
+			uri := ""
+			snippet := ""
+			if len(result.Locations) > 0 {
+				loc := result.Locations[0]
+				if loc.PhysicalLocation.ArtifactLocation.URI != nil {
+					uri = *loc.PhysicalLocation.ArtifactLocation.URI
+				}
+				if loc.PhysicalLocation.Region != nil && loc.PhysicalLocation.Region.Snippet != nil && loc.PhysicalLocation.Region.Snippet.Text != nil {
+					snippet = *loc.PhysicalLocation.Region.Snippet.Text
 				}
 			}
 
-			tw.AppendRow(dependencyVulnToTableRow(pURL, vuln, vulnFailed[vuln.CVEID], groupHasFailed))
+			if scannerID == "secret-scanning" {
+				tw.AppendRows([]table.Row{
+					{"RuleID:", ruleID},
+					{"File:", text.FgGreen.Sprint(uri)},
+				})
+				if snippet != "" {
+					tw.AppendRow(table.Row{"Snippet", snippet})
+				}
+				tw.AppendRow(table.Row{"Message:", text.WrapText(result.Message.Text, rowLengthLimit)})
+			} else {
+				tw.AppendRow(table.Row{"RuleID", ruleID})
+				if snippet != "" {
+					tw.AppendRow(table.Row{"Snippet", snippet})
+				}
+				tw.AppendRow(table.Row{"Message", text.WrapText(result.Message.Text, rowLengthLimit)})
+				if uri != "" {
+					tw.AppendRow(table.Row{"File", text.FgGreen.Sprint(uri)})
+				}
+			}
+			tw.AppendSeparator()
 		}
-		tw.AppendSeparator()
 	}
+
+	if tw.Length() == 0 {
+		slog.Info("No open vulnerabilities found")
+		return nil
+	}
+
 	fmt.Println(tw.Render())
 
-	if len(scanResponse.DependencyVulns) > 0 {
-		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(scanResponse.DependencyVulns[0].AssetVersionName))
-		fmt.Printf("Showing deduplicated vulnerabilities grouped by package.\n")
-		if assetName != "" {
-			fmt.Printf("See all dependency vulnerabilities at:\n%s\n", text.FgBlue.Sprint(clickableLink))
-		}
+	if assetName != "" {
+		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
+		fmt.Printf("See all code risks at:\n%s\n", link)
 	}
 
-	riskThreshold := ""
-	switch failOnRisk {
-	case "low":
-		riskThreshold = "> 0.1"
-	case "medium":
-		riskThreshold = ">= 4"
-	case "high":
-		riskThreshold = ">= 7"
-	case "critical":
-		riskThreshold = ">= 9"
+	if openCount > 0 {
+		return fmt.Errorf("found %d unhandled vulnerabilities", openCount)
 	}
-
-	cvssThreshold := ""
-	switch failOnCVSS {
-	case "low":
-		cvssThreshold = "> 0.1"
-	case "medium":
-		cvssThreshold = ">= 4"
-	case "high":
-		cvssThreshold = ">= 7"
-	case "critical":
-		cvssThreshold = ">= 9"
-	}
-
-	if isScanThresholdExceeded {
-		return fmt.Errorf("one or more dependency vulnerabilities exceeded the defined threshold (risk: %s, cvss: %s)", riskThreshold, cvssThreshold)
-	}
-
 	return nil
 }
 
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v compat.DependencyVulnDTO, failed bool, groupHasFailed bool) table.Row {
-	var cvss string
-	if v.CVE.CVSS == -1 {
-		cvss = "N/A"
-	} else {
-		cvss = fmt.Sprintf("%.1f", v.CVE.CVSS)
+
+// PrintCycloneDXVexResults prints a table from a CycloneDX BOM VEX response.
+// Columns match PrintScaResults but without the Path column.
+func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI string) error {
+	vulns := bom.Vulnerabilities
+	if vulns == nil || len(*vulns) == 0 {
+		slog.Info("No vulnerabilities found")
+		return nil
 	}
 
-	var risk string
-	if v.RawRiskAssessment == nil {
-		risk = "N/A"
-	} else {
-		risk = fmt.Sprintf("%.1f", *v.RawRiskAssessment)
-	}
-
-	// Keep vulnPath plain so AutoMerge can collapse identical paths across rows in the same group.
-	vulnPath := strings.Join(v.VulnerabilityPath, "\n v \n")
-
-	var libraryName string
-	if pURL.Namespace == "" {
-		libraryName = fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name)
-	} else {
-		libraryName = fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name)
-	}
-
-	if failed {
-		return table.Row{
-			text.FgRed.Sprint(libraryName),
-			text.FgRed.Sprint(v.CVEID),
-			text.FgRed.Sprint(risk),
-			text.FgRed.Sprint(cvss),
-			text.FgRed.Sprint(strings.TrimPrefix(pURL.Version, "v")),
-			text.FgRed.Sprint(utils.SafeDereference(v.ComponentFixedVersion)),
-			text.FgRed.Sprint(v.State),
-			vulnPath,
+	// build bom-ref -> component index
+	compByRef := map[string]cdx.Component{}
+	if bom.Components != nil {
+		for _, c := range *bom.Components {
+			compByRef[c.BOMRef] = c
 		}
 	}
 
-	return table.Row{libraryName, v.CVEID, risk, cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, vulnPath}
+	tw := table.NewWriter()
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
+	tw.SetColumnConfigs([]table.ColumnConfig{{Number: 1, AutoMerge: true}})
+
+	isScanThresholdExceeded := false
+
+	for _, v := range *vulns {
+		state := "open"
+		if v.Analysis != nil && v.Analysis.State != "" {
+			state = string(v.Analysis.State)
+		}
+
+		risk := 0.0
+		cvss := 0.0
+		if v.Ratings != nil {
+			for _, r := range *v.Ratings {
+				if r.Score != nil {
+					if r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31 {
+						cvss = *r.Score
+					}
+					if *r.Score > risk {
+						risk = *r.Score
+					}
+				}
+			}
+		}
+
+		if failOnRisk != "" && state == "open" &&
+			((failOnRisk == "low" && risk > 0.1) ||
+				(failOnRisk == "medium" && risk >= 4) ||
+				(failOnRisk == "high" && risk >= 7) ||
+				(failOnRisk == "critical" && risk >= 9)) {
+			isScanThresholdExceeded = true
+		}
+		if failOnCVSS != "" && state == "open" &&
+			((failOnCVSS == "low" && cvss > 0.1) ||
+				(failOnCVSS == "medium" && cvss >= 4) ||
+				(failOnCVSS == "high" && cvss >= 7) ||
+				(failOnCVSS == "critical" && cvss >= 9)) {
+			isScanThresholdExceeded = true
+		}
+
+		purl := ""
+		installedVersion := ""
+		if v.Affects != nil && len(*v.Affects) > 0 {
+			ref := (*v.Affects)[0].Ref
+			if comp, ok := compByRef[ref]; ok {
+				purl = comp.PackageURL
+				installedVersion = comp.Version
+			}
+		}
+		libraryName := purl
+		if p, err := packageurl.FromString(purl); err == nil {
+			libraryName = p.Name
+			if installedVersion == "" {
+				installedVersion = strings.TrimPrefix(p.Version, "v")
+			}
+		}
+
+		fixedVersion := ""
+		if v.Recommendation != "" {
+			fixedVersion = v.Recommendation
+		}
+
+		tw.AppendRow(table.Row{libraryName, v.ID, fmt.Sprintf("%.2f", risk), fmt.Sprintf("%.1f", cvss), installedVersion, fixedVersion, state})
+	}
+
+	fmt.Println(tw.Render())
+
+	if isScanThresholdExceeded {
+		return fmt.Errorf("scan threshold exceeded")
+	}
+	return nil
 }

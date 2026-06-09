@@ -283,7 +283,7 @@ func TestUploadBOM(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		assert.Equal(t, "/api/v1/scan-unauthenticated", capturedPath)
+		assert.Equal(t, "/api/v2/scan-unauthenticated", capturedPath)
 	})
 
 	t.Run("should use authenticated endpoint when token is set", func(t *testing.T) {
@@ -323,7 +323,7 @@ func TestUploadBOM(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		assert.Equal(t, "/api/v1/scan", capturedPath)
+		assert.Equal(t, "/api/v2/scan", capturedPath)
 	})
 
 	t.Run("should not include auth headers when no token is set", func(t *testing.T) {
