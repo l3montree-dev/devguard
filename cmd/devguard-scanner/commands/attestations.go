@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -79,7 +78,7 @@ func attestationsCmd(cmd *cobra.Command, args []string) error {
 		defer os.Remove(policyPath)
 	}
 
-	sarifResult, evals, err := scanner.EvaluatePolicyAgainstAttestations(fmt.Sprintf("oci://%s", image), filepath.Dir(policyPath), attestations)
+	sarifResult, evals, err := scanner.EvaluatePolicyAgainstAttestations(fmt.Sprintf("oci://%s", image), policyPath, attestations)
 	if err != nil {
 		return err
 	}

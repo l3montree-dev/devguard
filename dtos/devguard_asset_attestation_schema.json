@@ -65,7 +65,7 @@
           "minimum": 0,
           "description": "Average hours to remediate low-CVSS vulnerabilities."
         },
-        "cvsssMediumAvgHours": {
+        "cvssMediumAvgHours": {
           "type": "number",
           "minimum": 0,
           "description": "Average hours to remediate medium-CVSS vulnerabilities."

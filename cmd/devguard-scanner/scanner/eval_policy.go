@@ -17,6 +17,8 @@ package scanner
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -25,35 +27,39 @@ import (
 
 func EvaluatePolicyAgainstAttestations(srcPath string, policyPath string, attestations []map[string]any) (*sarif.SarifSchema210Json, []compliance.PolicyEvaluation, error) {
 
-	policies, err := compliance.GetPoliciesFromFS(policyPath)
+	content, err := os.ReadFile(policyPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not load policies from FS: %w", err)
+		return nil, nil, fmt.Errorf("could not read policy file: %w", err)
+	}
+
+	policy, err := compliance.PolicyFSFromContent(filepath.Base(policyPath), string(content))
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not parse policy: %w", err)
 	}
 
 	evaluations := make([]compliance.PolicyEvaluation, 0)
 
 foundMatch:
-	for _, policy := range policies {
-		for _, attestation := range attestations {
-			predicateType, _ := attestation["predicateType"].(string)
-			if predicateType != policy.PredicateType {
-				continue
-			}
-			raw, err := json.Marshal(attestation)
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not marshal attestation: %w", err)
-			}
-			input, err := utils.ExtractAttestationPayload(string(raw))
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not extract attestation payload: %w", err)
-			}
-			eval := compliance.Eval(policy, input)
-			evaluations = append(evaluations, eval)
-			continue foundMatch
+
+	for _, attestation := range attestations {
+		predicateType, _ := attestation["predicateType"].(string)
+		if predicateType != policy.PredicateType {
+			continue
 		}
-		eval := compliance.Eval(policy, nil)
+		raw, err := json.Marshal(attestation)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not marshal attestation: %w", err)
+		}
+		input, err := utils.ExtractAttestationPayload(string(raw))
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not extract attestation payload: %w", err)
+		}
+		eval := compliance.Eval(policy, input)
 		evaluations = append(evaluations, eval)
+		continue foundMatch
 	}
+	eval := compliance.Eval(policy, nil)
+	evaluations = append(evaluations, eval)
 
 	sarifResult := compliance.BuildSarifFromPolicies(srcPath, evaluations)
 	return &sarifResult, evaluations, nil

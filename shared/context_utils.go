@@ -168,6 +168,23 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		return id, dtos.VulnTypeLicenseRisk, nil
 	}
 
+	ComplianceRiskID := ctx.Param("complianceRiskID")
+	if ComplianceRiskID != "" {
+		id, err := uuid.Parse(ComplianceRiskID)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid compliance risk id: %w", err)
+		}
+		return id, dtos.VulnTypeComplianceRisk, nil
+	}
+	ComplianceRiskIDFromGet, ok := ctx.Get("complianceRiskID").(string)
+	if ok && ComplianceRiskIDFromGet != "" {
+		id, err := uuid.Parse(ComplianceRiskIDFromGet)
+		if err != nil {
+			return uuid.Nil, "", fmt.Errorf("invalid compliance risk id: %w", err)
+		}
+		return id, dtos.VulnTypeComplianceRisk, nil
+	}
+
 	return uuid.Nil, "", fmt.Errorf("could not get vuln id")
 }
 

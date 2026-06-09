@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -233,6 +234,8 @@ func (s *ComplianceRiskService) updateComplianceRiskState(ctx context.Context, t
 		ev = models.NewReopenedEvent(risk.CalculateHash(), dtos.VulnTypeComplianceRisk, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
 		ev = models.NewCommentEvent(risk.CalculateHash(), dtos.VulnTypeComplianceRisk, userID, justification, false, userAgent)
+	default:
+		return models.VulnEvent{}, fmt.Errorf("unsupported event type: %s", statusType)
 	}
 	err := s.complianceRiskRepository.ApplyAndSave(ctx, tx, risk, &ev)
 	return ev, err
@@ -313,8 +316,9 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 	}
 
 	type policyResult struct {
-		kind       sarif.ResultKind
-		violations []string
+		kind               sarif.ResultKind
+		violations         []string
+		attestationContent *string
 	}
 	resultMap := make(map[string]*policyResult, len(ruleMap))
 
@@ -327,6 +331,12 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 		if pr == nil {
 			pr = &policyResult{}
 			resultMap[ruleID] = pr
+		}
+
+		if result.Properties != nil {
+			if ac, ok := result.Properties.AdditionalProperties["attestationContent"].(string); ok && pr.attestationContent == nil {
+				pr.attestationContent = &ac
+			}
 		}
 
 		switch result.Kind {
@@ -349,8 +359,10 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 	for ruleID, info := range ruleMap {
 		state := dtos.VulnStateOpen
 		var violations []string
+		var attestationContent *string
 
 		if pr := resultMap[ruleID]; pr != nil {
+			attestationContent = pr.attestationContent
 			switch pr.kind {
 			case sarif.ResultKindPass:
 				state = dtos.VulnStateFixed
@@ -368,11 +380,16 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 				State:            state,
 				LastDetected:     time.Now(),
 			},
-			PolicyID:              ruleID,
-			PolicyTitle:           info.title,
-			PolicyDescription:     info.description,
-			PredicateType:         info.predicateType,
-			AttestationViolations: violations,
+			PolicyID:               ruleID,
+			PolicyTitle:            info.title,
+			PolicyDescription:      info.description,
+			PolicyRelatedResources: info.relatedResources,
+			PolicyTags:             info.tags,
+			PolicyPriority:         info.priority,
+			ComplianceFrameworks:   info.complianceFrameworks,
+			PredicateType:          info.predicateType,
+			AttestationViolations:  violations,
+			AttestationContent:     attestationContent,
 		})
 	}
 

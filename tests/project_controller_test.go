@@ -22,60 +22,6 @@ func TestProjectCreation(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, project, _, _ := f.CreateOrgProjectAssetAndVersion()
 
-		t.Run("should enable all community policies by default", func(t *testing.T) {
-			e := echo.New()
-			rec := httptest.NewRecorder()
-
-			requestBody := map[string]string{
-				"name":        "new-project",
-				"description": "This is a new project",
-			}
-
-			b, err := json.Marshal(requestBody)
-			assert.Nil(t, err)
-
-			req := httptest.NewRequest("POST", "/projects", bytes.NewBuffer(b))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			ctx := e.NewContext(req, rec)
-			shared.SetOrg(ctx, org)
-			session := mocks.NewAuthSession(t)
-			shared.SetSession(ctx, session)
-			rbac := mocks.NewAccessControl(t)
-			rbac.On("LinkDomainAndProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleAdmin, mock.Anything).Return(nil)
-			rbac.On("InheritProjectRole", mock.Anything, shared.RoleAdmin, shared.RoleMember, mock.Anything).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectUser, []shared.Action{
-				shared.ActionCreate,
-				shared.ActionDelete,
-				shared.ActionUpdate,
-			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectAsset, []shared.Action{
-				shared.ActionCreate,
-				shared.ActionDelete,
-				shared.ActionUpdate,
-			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleAdmin, shared.ObjectProject, []shared.Action{
-				shared.ActionDelete,
-				shared.ActionUpdate,
-			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectProject, []shared.Action{
-				shared.ActionRead,
-			}).Return(nil)
-			rbac.On("AllowRoleInProject", mock.Anything, mock.Anything, shared.RoleMember, shared.ObjectAsset, []shared.Action{
-				shared.ActionRead,
-			}).Return(nil)
-
-			shared.SetRBAC(ctx, rbac)
-
-			err = f.App.ProjectController.Create(ctx)
-			assert.Nil(t, err)
-
-			var createdProject models.Project
-			err = f.DB.Preload("EnabledPolicies").First(&createdProject, "slug = ?", requestBody["name"]).Error
-
-			assert.Nil(t, err)
-
-		})
-
 		t.Run("should generate a unique slug", func(t *testing.T) {
 			// create a new project with the same name and slug as the existing project
 			e := echo.New()

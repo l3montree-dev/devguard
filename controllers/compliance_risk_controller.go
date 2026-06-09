@@ -189,8 +189,8 @@ func (c *ComplianceRiskController) EvaluateArtifactCompliance(ctx shared.Context
 	return ctx.JSON(200, sarifDoc)
 }
 
-// UploadZip accepts a ZIP file containing attestation files and an evaluations.json.
-// It saves each attestation and then recalculates compliance risks based on the evaluations.
+// UploadZip accepts a ZIP file containing attestation JSON files and a sarif.json.
+// It saves each attestation and then recalculates compliance risks based on the SARIF.
 func (c *ComplianceRiskController) UploadZip(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := shared.GetArtifact(ctx)

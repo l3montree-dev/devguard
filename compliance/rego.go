@@ -211,6 +211,14 @@ func GetPoliciesFromFS(policyDir string) ([]PolicyFS, error) {
 	return policies, nil
 }
 
+func PolicyFSFromContent(fileName, content string) (PolicyFS, error) {
+	metadata, err := parseMetadata(fileName, content)
+	if err != nil {
+		return PolicyFS{}, err
+	}
+	return PolicyFS{PolicyMetadata: metadata, Content: content}, nil
+}
+
 func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sarif.SarifSchema210Json {
 	rules := make([]sarif.ReportingDescriptor, 0, len(evaluations))
 	results := make([]sarif.Result, 0)
@@ -258,11 +266,15 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 		rules = append(rules, rule)
 
 		artifactLocation := sarif.ArtifactLocation{URI: &srcPath}
+		additionalProps := map[string]any{
+			"precision": "high",
+		}
+		if evaluation.AttestationContent != nil {
+			additionalProps["attestationContent"] = *evaluation.AttestationContent
+		}
 		props := &sarif.PropertyBag{
-			Tags: evaluation.PolicyTags,
-			AdditionalProperties: map[string]any{
-				"precision": "high",
-			},
+			Tags:                 evaluation.PolicyTags,
+			AdditionalProperties: additionalProps,
 		}
 
 		if evaluation.Compliant == nil {

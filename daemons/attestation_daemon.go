@@ -49,8 +49,6 @@ func (runner *DaemonRunner) CheckArtifactCompliance(input <-chan assetWithProjec
 	return out
 }
 
-const secondsPerHour = 3600.0
-
 // GenerateDevguardAttestations is a pipeline stage that computes the DevGuard asset
 // metrics attestation for every asset version and upserts it into the attestations table.
 // It runs after CollectStats so that risk data is already up to date.
