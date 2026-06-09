@@ -86,7 +86,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), "scan threshold exceeded")
+					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
 				} else {
 					assert.Nil(t, err)
 				}
@@ -125,7 +125,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI)
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), "scan threshold exceeded")
+					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
 				} else {
 					assert.Nil(t, err)
 				}
