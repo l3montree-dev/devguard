@@ -44,14 +44,20 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 
 		middleware := InstanceAdminMiddleware(mockPAT)
 
-		// Act
+		// Act: capture the session the middleware sets so we can assert it is elevated
+		var gotSession shared.AuthSession
 		err := middleware(func(ctx echo.Context) error {
+			gotSession = shared.GetSession(ctx)
 			return ctx.JSON(http.StatusOK, "success")
 		})(ctx)
 
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
+		// the whole point of the middleware: elevate to an admin session
+		assert.NotNil(t, gotSession)
+		assert.True(t, gotSession.IsInstanceAdmin())
+		assert.Equal(t, "admin", gotSession.GetUserID())
 	})
 
 	t.Run("denies access when PAT is valid but not an admin", func(t *testing.T) {
