@@ -88,6 +88,11 @@ func (s *ComplianceRiskService) HandleArtifactCompliance(ctx context.Context, tx
 	}
 
 	return s.complianceRiskRepository.Transaction(ctx, func(db shared.DB) error {
+		// update policy/evidence metadata
+		if err := s.complianceRiskRepository.SaveBatch(ctx, db, inBoth); err != nil {
+			return err
+		}
+
 		// risks that exist on other branches: copy event history
 		if err := s.UserDetectedExistingComplianceRiskOnDifferentBranch(ctx, db, artifact.ArtifactName, branchDiff.ExistingOnOtherBranches, assetVersion); err != nil {
 			slog.Error("error processing existing compliance risk on different branch", "err", err)
