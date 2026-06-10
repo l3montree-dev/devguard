@@ -1,1 +1,2 @@
-ALTER TABLE public.pat ADD COLUMN expiry_date TIMESTAMPTZ; 
+ALTER TABLE public.pat
+  ADD COLUMN expiry_date TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '14 days';
