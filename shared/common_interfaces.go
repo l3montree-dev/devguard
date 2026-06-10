@@ -614,7 +614,7 @@ type StatisticsService interface {
 
 type OpenSourceInsightService interface {
 	GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error)
-	GetVersion(ctx context.Context, ecosystem, packageName, version string) (dtos.OpenSourceInsightsVersionResponse, error)
+	GetVersion(ctx context.Context, purl packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error)
 }
 
 type ComponentProjectRepository interface {

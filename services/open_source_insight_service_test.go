@@ -2,11 +2,78 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/package-url/packageurl-go"
 )
+
+func mustPURL(t *testing.T, purlType, name, version string) packageurl.PackageURL {
+	t.Helper()
+	p, err := packageurl.FromString(fmt.Sprintf("pkg:%s/%s@%s", purlType, name, version))
+	if err != nil {
+		t.Fatalf("failed to parse purl: %v", err)
+	}
+	return p
+}
+
+func TestGetVersionGoModuleCanonicalCasing(t *testing.T) {
+	const canonicalPath = "github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider"
+	const lowercasedPath = "github.com/aliyuncontainerservice/ack-ram-tool/pkg/credentials/provider"
+
+	depsDevServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() {
+		case "/systems/go/packages/github.com%2Faliyuncontainerservice%2Fack-ram-tool%2Fpkg%2Fcredentials%2Fprovider/versions/v0.20.0",
+			"/systems/go/packages/github.com%2Faliyuncontainerservice%2Fack-ram-tool%2Fpkg%2Fcredentials%2Fprovider/versions/0.20.0":
+			http.Error(w, "Not Found", http.StatusNotFound)
+		case "/systems/go/packages/github.com%2FAliyunContainerService%2Fack-ram-tool%2Fpkg%2Fcredentials%2Fprovider/versions/v0.20.0":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"versionKey": {"system": "go", "name": "` + canonicalPath + `", "version": "v0.20.0"}, "licenses": ["Apache-2.0"]}`)) // nolint
+		default:
+			t.Errorf("unexpected deps.dev path: %s", r.URL.EscapedPath())
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}
+	}))
+	defer depsDevServer.Close()
+
+	proxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expected := "/" + lowercasedPath + "/@v/v0.20.0.mod"
+		if r.URL.Path != expected {
+			t.Errorf("unexpected proxy path: %s", r.URL.Path)
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "module %s\n\ngo 1.16\n", canonicalPath) // nolint
+	}))
+	defer proxyServer.Close()
+
+	originalDepsDevURL := openSourceInsightsAPIURL
+	originalProxyURL := goModuleProxyURL
+	t.Cleanup(func() {
+		openSourceInsightsAPIURL = originalDepsDevURL
+		goModuleProxyURL = originalProxyURL
+	})
+	openSourceInsightsAPIURL = depsDevServer.URL
+	goModuleProxyURL = proxyServer.URL
+
+	p, err := packageurl.FromString("pkg:golang/" + lowercasedPath + "@v0.20.0")
+	if err != nil {
+		t.Fatalf("failed to parse purl: %v", err)
+	}
+
+	service := NewOpenSourceInsightService()
+	resp, err := service.GetVersion(context.Background(), p)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(resp.Licenses) != 1 || resp.Licenses[0] != "Apache-2.0" {
+		t.Fatalf("expected Apache-2.0 license, got %v", resp.Licenses)
+	}
+}
 
 func TestGetProject(t *testing.T) {
 	t.Run("should escape the project id before making the request", func(t *testing.T) {
@@ -81,7 +148,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		response, err := service.GetVersion(ctx, "composer", "vendor/package", "2.0.0")
+		response, err := service.GetVersion(ctx, mustPURL(t, "composer", "vendor/package", "2.0.0"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -126,7 +193,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		_, err := service.GetVersion(ctx, "composer", "vendor/package", "2.0.0")
+		_, err := service.GetVersion(ctx, mustPURL(t, "composer", "vendor/package", "2.0.0"))
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -167,7 +234,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		_, err := service.GetVersion(ctx, "composer", "vendor/package", "2.0.0")
+		_, err := service.GetVersion(ctx, mustPURL(t, "composer", "vendor/package", "2.0.0"))
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -180,7 +247,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		_, err := service.GetVersion(ctx, "composer", "vendor", "2.0.0")
+		_, err := service.GetVersion(ctx, mustPURL(t, "composer", "vendor", "2.0.0"))
 		if err == nil {
 			t.Fatal("expected an error, got nil")
 		}
@@ -208,7 +275,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		_, err := service.GetVersion(ctx, "golang", "gorm", "1.0.0")
+		_, err := service.GetVersion(ctx, mustPURL(t, "golang", "gorm", "1.0.0"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -237,7 +304,7 @@ func TestGetVersion(t *testing.T) {
 		ctx := context.Background()
 
 		// Test with a Maven package that has slashes in the name
-		_, err := service.GetVersion(ctx, "maven", "com.fasterxml.jackson.core/jackson-core", "2.13.0")
+		_, err := service.GetVersion(ctx, mustPURL(t, "maven", "com.fasterxml.jackson.core/jackson-core", "2.13.0"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -282,7 +349,7 @@ func TestGetVersion(t *testing.T) {
 				service := NewOpenSourceInsightService()
 				ctx := context.Background()
 
-				_, err := service.GetVersion(ctx, tc.ecosystem, tc.packageName, "1.0.0")
+				_, err := service.GetVersion(ctx, mustPURL(t, tc.ecosystem, tc.packageName, "1.0.0"))
 				if err != nil {
 					t.Fatalf("expected no error for %s/%s, got %v", tc.ecosystem, tc.packageName, err)
 				}
@@ -313,7 +380,7 @@ func TestGetVersion(t *testing.T) {
 		ctx := context.Background()
 
 		// Test with a Maven package that has multiple slashes
-		_, err := service.GetVersion(ctx, "maven", "org.springframework/spring-web/core", "5.3.21")
+		_, err := service.GetVersion(ctx, mustPURL(t, "maven", "org.springframework/spring-web/core", "5.3.21"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -343,7 +410,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		response, err := service.GetVersion(ctx, "golang", "github.com/ProtonMail/gopenpgp/v3", "3.4.1")
+		response, err := service.GetVersion(ctx, mustPURL(t, "golang", "github.com/ProtonMail/gopenpgp/v3", "3.4.1"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -384,7 +451,7 @@ func TestGetVersion(t *testing.T) {
 		service := NewOpenSourceInsightService()
 		ctx := context.Background()
 
-		response, err := service.GetVersion(ctx, "golang", "github.com/ProtonMail/gopenpgp/v3", "v3.4.1")
+		response, err := service.GetVersion(ctx, mustPURL(t, "golang", "github.com/ProtonMail/gopenpgp/v3", "v3.4.1"))
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

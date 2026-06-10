@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -105,8 +106,8 @@ func (_c *OpenSourceInsightService_GetProject_Call) RunAndReturn(run func(ctx co
 }
 
 // GetVersion provides a mock function for the type OpenSourceInsightService
-func (_mock *OpenSourceInsightService) GetVersion(ctx context.Context, ecosystem string, packageName string, version string) (dtos.OpenSourceInsightsVersionResponse, error) {
-	ret := _mock.Called(ctx, ecosystem, packageName, version)
+func (_mock *OpenSourceInsightService) GetVersion(ctx context.Context, purl packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error) {
+	ret := _mock.Called(ctx, purl)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVersion")
@@ -114,16 +115,16 @@ func (_mock *OpenSourceInsightService) GetVersion(ctx context.Context, ecosystem
 
 	var r0 dtos.OpenSourceInsightsVersionResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (dtos.OpenSourceInsightsVersionResponse, error)); ok {
-		return returnFunc(ctx, ecosystem, packageName, version)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error)); ok {
+		return returnFunc(ctx, purl)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) dtos.OpenSourceInsightsVersionResponse); ok {
-		r0 = returnFunc(ctx, ecosystem, packageName, version)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL) dtos.OpenSourceInsightsVersionResponse); ok {
+		r0 = returnFunc(ctx, purl)
 	} else {
 		r0 = ret.Get(0).(dtos.OpenSourceInsightsVersionResponse)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
-		r1 = returnFunc(ctx, ecosystem, packageName, version)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, packageurl.PackageURL) error); ok {
+		r1 = returnFunc(ctx, purl)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -137,36 +138,24 @@ type OpenSourceInsightService_GetVersion_Call struct {
 
 // GetVersion is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ecosystem string
-//   - packageName string
-//   - version string
-func (_e *OpenSourceInsightService_Expecter) GetVersion(ctx interface{}, ecosystem interface{}, packageName interface{}, version interface{}) *OpenSourceInsightService_GetVersion_Call {
-	return &OpenSourceInsightService_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx, ecosystem, packageName, version)}
+//   - purl packageurl.PackageURL
+func (_e *OpenSourceInsightService_Expecter) GetVersion(ctx interface{}, purl interface{}) *OpenSourceInsightService_GetVersion_Call {
+	return &OpenSourceInsightService_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx, purl)}
 }
 
-func (_c *OpenSourceInsightService_GetVersion_Call) Run(run func(ctx context.Context, ecosystem string, packageName string, version string)) *OpenSourceInsightService_GetVersion_Call {
+func (_c *OpenSourceInsightService_GetVersion_Call) Run(run func(ctx context.Context, purl packageurl.PackageURL)) *OpenSourceInsightService_GetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 packageurl.PackageURL
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg1 = args[1].(packageurl.PackageURL)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -177,7 +166,7 @@ func (_c *OpenSourceInsightService_GetVersion_Call) Return(openSourceInsightsVer
 	return _c
 }
 
-func (_c *OpenSourceInsightService_GetVersion_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string, version string) (dtos.OpenSourceInsightsVersionResponse, error)) *OpenSourceInsightService_GetVersion_Call {
+func (_c *OpenSourceInsightService_GetVersion_Call) RunAndReturn(run func(ctx context.Context, purl packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error)) *OpenSourceInsightService_GetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }

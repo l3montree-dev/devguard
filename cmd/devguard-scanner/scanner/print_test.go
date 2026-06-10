@@ -28,14 +28,14 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 
 	t.Run("should return nil when no vulnerabilities found", func(t *testing.T) {
 		bom := cdx.BOM{}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI)
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
 	t.Run("should return nil when vulnerabilities slice is empty", func(t *testing.T) {
 		vulns := []cdx.Vulnerability{}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI)
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
@@ -51,7 +51,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "low", "low", assetName, webUI)
+		err := PrintCycloneDXVexResults(bom, "low", "low", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
@@ -83,7 +83,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 					},
 				}
 				bom := cdx.BOM{Vulnerabilities: &vulns}
-				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI)
+				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI, "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
@@ -122,7 +122,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 					},
 				}
 				bom := cdx.BOM{Vulnerabilities: &vulns}
-				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI)
+				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI, "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
@@ -148,7 +148,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			{BOMRef: "comp-1", PackageURL: "pkg:golang/github.com/example/lib@v1.2.3"},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns, Components: &comps}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI)
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
@@ -161,7 +161,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "unknown", "invalid", assetName, webUI)
+		err := PrintCycloneDXVexResults(bom, "unknown", "invalid", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 }
