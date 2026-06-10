@@ -86,11 +86,11 @@ func ReadCurrentKey() []byte {
 func readCurrentKey() ([]byte, error) {
 	keyPath := os.Getenv(KeyFilePathENVName)
 	if keyPath == "" {
-		return nil, fmt.Errorf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env.example for the default path", KeyFilePathENVName)
+		return nil, fmt.Errorf("could not resolve encryption key path. Make sure to have the env variable '%s' set in your .env. See the .env.example for the default path and more instructions", KeyFilePathENVName)
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable '%s'. Found the following path in the env variable: %s: %w", KeyFilePathENVName, keyPath, err)
+		return nil, fmt.Errorf("could not open key file for app side encryption. Make sure that the file exists and matches the environment variable '%s'. For more information read the .env-example. Found the following path in the env variable: %s: %w", KeyFilePathENVName, keyPath, err)
 	}
 	return key, nil
 }
