@@ -18,6 +18,7 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -102,10 +103,9 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 	return nil
 }
 
-
 // PrintCycloneDXVexResults prints a table from a CycloneDX BOM VEX response.
 // Columns match PrintScaResults but without the Path column.
-func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI string) error {
+func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI, ref string) error {
 	vulns := bom.Vulnerabilities
 	if vulns == nil || len(*vulns) == 0 {
 		slog.Info("No vulnerabilities found")
@@ -124,10 +124,22 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
 	tw.SetColumnConfigs([]table.ColumnConfig{{Number: 1, AutoMerge: true}})
 
+	sortedVulns := *vulns
+	sort.Slice(sortedVulns, func(i, j int) bool {
+		refI, refJ := "", ""
+		if sortedVulns[i].Affects != nil && len(*sortedVulns[i].Affects) > 0 {
+			refI = (*sortedVulns[i].Affects)[0].Ref
+		}
+		if sortedVulns[j].Affects != nil && len(*sortedVulns[j].Affects) > 0 {
+			refJ = (*sortedVulns[j].Affects)[0].Ref
+		}
+		return refI < refJ
+	})
+
 	thresholdViolations := 0
 	prevLibrary := ""
 
-	for _, v := range *vulns {
+	for _, v := range sortedVulns {
 		state := "open"
 		if v.Analysis != nil && v.Analysis.State != "" {
 			state = string(v.Analysis.State)
@@ -169,24 +181,33 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 
 		purl := ""
 		installedVersion := ""
+		fixedVersion := ""
 		if v.Affects != nil && len(*v.Affects) > 0 {
-			ref := (*v.Affects)[0].Ref
-			if comp, ok := compByRef[ref]; ok {
+			affectedLib := (*v.Affects)[0]
+			if comp, ok := compByRef[affectedLib.Ref]; ok {
 				purl = comp.PackageURL
 				installedVersion = comp.Version
+			}
+			// check if fixed versions are specified for the library
+			if affectedLib.Range != nil {
+				for _, r := range *affectedLib.Range {
+					if r.Status == cdx.VulnerabilityStatusNotAffected {
+						fixedVersion = r.Version
+						break
+					}
+				}
 			}
 		}
 		libraryName := purl
 		if p, err := packageurl.FromString(purl); err == nil {
-			libraryName = p.Name
+			if p.Namespace != "" {
+				libraryName = p.Namespace + "/" + p.Name
+			} else {
+				libraryName = p.Name
+			}
 			if installedVersion == "" {
 				installedVersion = strings.TrimPrefix(p.Version, "v")
 			}
-		}
-
-		fixedVersion := ""
-		if v.Recommendation != "" {
-			fixedVersion = v.Recommendation
 		}
 
 		if libraryName != prevLibrary && prevLibrary != "" {
@@ -211,6 +232,11 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	}
 
 	fmt.Println(tw.Render())
+
+	if assetName != "" && ref != "" {
+		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(ref)))
+		fmt.Printf("See all dependency risks at:\n%s\n", link)
+	}
 
 	if thresholdViolations > 0 {
 		return fmt.Errorf("%d open vulnerabilities exceed the configured risk threshold", thresholdViolations)
