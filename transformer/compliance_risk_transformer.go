@@ -34,5 +34,6 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 		EvidenceType:           r.EvidenceType,
 		Violations:             r.Violations,
 		Artifacts:              artifacts,
+		Message:                r.Message,
 	}
 }

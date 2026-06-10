@@ -31,6 +31,7 @@ type ComplianceRiskDTO struct {
 	TicketURL            *string   `json:"ticketUrl"`
 	ManualTicketCreation bool      `json:"manualTicketCreation"`
 
+	Message      string   `json:"message"`
 	EvidenceType string   `json:"evidenceType"`
 	Violations   []string `json:"Violations"`
 }

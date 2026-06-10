@@ -9,8 +9,10 @@
 #   tags:
 #   - ISO 27001
 #   - A.8.4 Access to source code
-#   complianceFrameworks:
-#   - ISO 27001
+#   policyFrameworks:
+#   - framework: ISO 27001
+#     controls:
+#     - A.8.4
 package compliance
 
 import rego.v1

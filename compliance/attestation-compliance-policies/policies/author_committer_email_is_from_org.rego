@@ -7,7 +7,7 @@
 #   relatedResources: []
 #   tags:
 #   - Legal
-#   complianceFrameworks: []
+#   policyFrameworks: []
 package compliance
 
 import rego.v1

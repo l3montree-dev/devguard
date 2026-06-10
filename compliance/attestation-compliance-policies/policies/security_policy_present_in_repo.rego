@@ -8,9 +8,9 @@
 #   - https://github.com/ossf/scorecard/blob/main/docs/checks.md#security-policy
 #   tags:
 #   - Best Practices
-#   complianceFrameworks:
-#   - Best Practices
-#   - OpenSSF Scorecard
+#   policyFrameworks:
+#   - framework: Best Practices
+#   - framework: OpenSSF Scorecard
 package compliance
 
 import rego.v1

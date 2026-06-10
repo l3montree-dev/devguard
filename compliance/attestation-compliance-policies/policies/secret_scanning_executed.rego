@@ -9,8 +9,11 @@
 #   tags:
 #   - ISO 27001
 #   - A.5.7 Threat intelligence
-#   complianceFrameworks:
-#   - ISO 27001
+#   policyFrameworks:
+#   - framework: ISO 27001
+#     controls:
+#     - A.5.7
+
 package compliance
 
 import rego.v1

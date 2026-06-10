@@ -247,159 +247,176 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 	if len(sarifDoc.Runs) == 0 {
 		return nil
 	}
-	run := sarifDoc.Runs[0]
 
-	type ruleInfo struct {
-		title            string
-		description      *string
-		relatedResources []string
-		tags             []string
-		priority         int
-		policyFrameworks []dtos.PolicyFrameworks
-	}
-	ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
-	for _, rule := range run.Tool.Driver.Rules {
-		var desc *string
-		if rule.FullDescription != nil && rule.FullDescription.Text != "" {
-			d := rule.FullDescription.Text
-			desc = &d
+	risks := make([]models.ComplianceRisk, 0)
+	for _, run := range sarifDoc.Runs {
+
+		type ruleInfo struct {
+			title            string
+			description      *string
+			relatedResources []string
+			tags             []string
+			priority         int
+			policyFrameworks []dtos.PolicyFrameworks
 		}
+		ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
+		for _, rule := range run.Tool.Driver.Rules {
+			var desc *string
+			if rule.FullDescription != nil && rule.FullDescription.Text != "" {
+				d := rule.FullDescription.Text
+				desc = &d
+			}
 
-		title := rule.ID
-		if rule.ShortDescription != nil {
-			title = rule.ShortDescription.Text
-		}
+			title := rule.ID
+			if rule.ShortDescription != nil {
+				title = rule.ShortDescription.Text
+			}
 
-		relatedResources := make([]string, 0)
-		if rule.Properties != nil {
-			if rr, ok := rule.Properties.AdditionalProperties["relatedResources"].([]any); ok {
-				for _, r := range rr {
-					if rStr, ok := r.(string); ok {
-						relatedResources = append(relatedResources, rStr)
+			var tags []string
+			if rule.Properties != nil {
+				tags = rule.Properties.Tags
+			}
+
+			relatedResources := make([]string, 0)
+			if rule.Properties != nil {
+				if rr, ok := rule.Properties.AdditionalProperties["relatedResources"].([]string); ok {
+					relatedResources = rr
+				} else if rr, ok := rule.Properties.AdditionalProperties["relatedResources"].([]any); ok {
+					for _, r := range rr {
+						if s, ok := r.(string); ok {
+							relatedResources = append(relatedResources, s)
+						}
 					}
 				}
 			}
-		}
 
-		var tags []string
-		if rule.Properties != nil {
-			tags = rule.Properties.Tags
-		}
-
-		var policyFrameworks []dtos.PolicyFrameworks
-		if rule.Properties != nil {
-			if cf, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]any); ok {
-				for _, c := range cf {
-					if cMap, ok := c.(map[string]any); ok {
-						pc := dtos.PolicyFrameworks{}
-						if fw, ok := cMap["framework"].(string); ok {
-							pc.Framework = fw
-						}
-						if ctls, ok := cMap["controls"].([]any); ok {
-							for _, ctl := range ctls {
-								if s, ok := ctl.(string); ok {
-									pc.Controls = append(pc.Controls, s)
+			var policyFrameworks []dtos.PolicyFrameworks
+			if rule.Properties != nil {
+				if direct, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]dtos.PolicyFrameworks); ok {
+					policyFrameworks = direct
+				} else if cf, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]any); ok {
+					for _, c := range cf {
+						if cMap, ok := c.(map[string]any); ok {
+							pc := dtos.PolicyFrameworks{}
+							if fw, ok := cMap["framework"].(string); ok {
+								pc.Framework = fw
+							}
+							if ctls, ok := cMap["controls"].([]any); ok {
+								for _, ctl := range ctls {
+									if s, ok := ctl.(string); ok {
+										pc.Controls = append(pc.Controls, s)
+									}
 								}
 							}
+							policyFrameworks = append(policyFrameworks, pc)
 						}
-						policyFrameworks = append(policyFrameworks, pc)
 					}
 				}
 			}
-		}
 
-		var priority int
-		if rule.Properties != nil {
-			if p, ok := rule.Properties.AdditionalProperties["priority"].(int); ok {
-				priority = p
-			} else if pFloat, ok := rule.Properties.AdditionalProperties["priority"].(float64); ok {
-				priority = int(pFloat)
+			var priority int
+			if rule.Properties != nil {
+				if p, ok := rule.Properties.AdditionalProperties["priority"].(int); ok {
+					priority = p
+				} else if pFloat, ok := rule.Properties.AdditionalProperties["priority"].(float64); ok {
+					priority = int(pFloat)
+				}
 			}
+
+			ruleMap[rule.ID] = ruleInfo{title: title, description: desc, relatedResources: relatedResources, tags: tags, priority: priority, policyFrameworks: policyFrameworks}
 		}
 
-		ruleMap[rule.ID] = ruleInfo{title: title, description: desc, relatedResources: relatedResources, tags: tags, priority: priority, policyFrameworks: policyFrameworks}
-	}
-
-	type policyResult struct {
-		kind            sarif.ResultKind
-		violations      []string
-		evidenceContent []byte
-		evidenceType    string
-	}
-	resultMap := make(map[string]*policyResult, len(ruleMap))
-
-	for _, result := range run.Results {
-		if result.RuleID == nil {
-			continue
+		type policyResult struct {
+			kind            sarif.ResultKind
+			message         sarif.Message
+			violations      []string
+			evidenceContent []byte
+			evidenceType    string
 		}
-		ruleID := *result.RuleID
-		pr := resultMap[ruleID]
-		if pr == nil {
-			pr = &policyResult{}
-			resultMap[ruleID] = pr
-		}
+		resultMap := make(map[string]*policyResult, len(ruleMap))
 
-		if result.Properties != nil {
-			if ac, ok := result.Properties.AdditionalProperties["evidenceContent"].(string); ok && pr.evidenceContent == nil {
-				pr.evidenceContent = []byte(ac)
+		for _, result := range run.Results {
+			if result.RuleID == nil {
+				continue
 			}
-			if et, ok := result.Properties.AdditionalProperties["evidenceType"].(string); ok {
-				pr.evidenceType = et
+			ruleID := *result.RuleID
+			pr := resultMap[ruleID]
+			if pr == nil {
+				pr = &policyResult{}
+				resultMap[ruleID] = pr
 			}
-		}
 
-		switch result.Kind {
-		case sarif.ResultKindFail:
-			pr.kind = sarif.ResultKindFail
-			pr.violations = append(pr.violations, result.Message.Text)
-		case sarif.ResultKindOpen:
-			if pr.kind != sarif.ResultKindFail {
-				pr.kind = sarif.ResultKindOpen
+			pr.message = result.Message
+
+			if result.Properties != nil {
+				if ac, ok := result.Properties.AdditionalProperties["evidenceContent"].(string); ok && pr.evidenceContent == nil {
+					pr.evidenceContent = []byte(ac)
+				}
+				if et, ok := result.Properties.AdditionalProperties["evidenceType"].(string); ok {
+					pr.evidenceType = et
+				}
+				if v, ok := result.Properties.AdditionalProperties["violations"].([]string); ok {
+					pr.violations = v
+				}
 			}
-		case sarif.ResultKindPass:
-			if pr.kind == "" {
-				pr.kind = sarif.ResultKindPass
-			}
-		}
 
-	}
-
-	risks := make([]models.ComplianceRisk, 0, len(ruleMap))
-	for ruleID, info := range ruleMap {
-		state := dtos.VulnStateOpen
-		var violations []string
-		var evidenceContent []byte
-
-		if pr := resultMap[ruleID]; pr != nil {
-			evidenceContent = pr.evidenceContent
-			switch pr.kind {
-			case sarif.ResultKindPass:
-				state = dtos.VulnStateFixed
+			switch result.Kind {
 			case sarif.ResultKindFail:
-				state = dtos.VulnStateOpen
-				violations = pr.violations
+				pr.kind = sarif.ResultKindFail
+			case sarif.ResultKindOpen:
+				if pr.kind != sarif.ResultKindFail {
+					pr.kind = sarif.ResultKindOpen
+				}
+			case sarif.ResultKindPass:
+				if pr.kind == "" {
+					pr.kind = sarif.ResultKindPass
+				}
 			}
+
 		}
 
-		risks = append(risks, models.ComplianceRisk{
-			Vulnerability: models.Vulnerability{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-				AssetVersion:     assetVersion,
-				State:            state,
-				LastDetected:     time.Now(),
-			},
-			PolicyID:               ruleID,
-			PolicyTitle:            info.title,
-			PolicyDescription:      info.description,
-			PolicyRelatedResources: info.relatedResources,
-			PolicyTags:             info.tags,
-			PolicyPriority:         info.priority,
-			PolicyFrameworks:       info.policyFrameworks,
-			EvidenceType:           resultMap[ruleID].evidenceType,
-			Violations:             violations,
-			EvidenceContent:        evidenceContent,
-		})
+		for ruleID, info := range ruleMap {
+			state := dtos.VulnStateOpen
+			var violations []string
+			var evidenceContent []byte
+			var evidenceType string
+			var message string
+
+			if pr := resultMap[ruleID]; pr != nil {
+				evidenceContent = pr.evidenceContent
+				switch pr.kind {
+				case sarif.ResultKindPass:
+					state = dtos.VulnStateFixed
+				case sarif.ResultKindFail:
+					state = dtos.VulnStateOpen
+					violations = pr.violations
+				}
+				evidenceType = pr.evidenceType
+				message = pr.message.Text
+
+			}
+
+			risks = append(risks, models.ComplianceRisk{
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: assetVersion.Name,
+					AssetID:          assetVersion.AssetID,
+					AssetVersion:     assetVersion,
+					State:            state,
+					LastDetected:     time.Now(),
+				},
+				PolicyID:               ruleID,
+				PolicyTitle:            info.title,
+				PolicyDescription:      info.description,
+				PolicyRelatedResources: info.relatedResources,
+				PolicyTags:             info.tags,
+				PolicyPriority:         info.priority,
+				PolicyFrameworks:       info.policyFrameworks,
+				EvidenceType:           evidenceType,
+				Violations:             violations,
+				EvidenceContent:        evidenceContent,
+				Message:                message,
+			})
+		}
 	}
 
 	return risks

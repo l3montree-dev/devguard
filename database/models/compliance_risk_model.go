@@ -29,14 +29,16 @@ type ComplianceRisk struct {
 	PolicyID               string                  `json:"policyId" gorm:"type:text;"`
 	PolicyTitle            string                  `json:"policyTitle" gorm:"type:text;"`
 	PolicyDescription      *string                 `json:"policyDescription" gorm:"type:text;"`
-	PolicyRelatedResources []string                `json:"policyRelatedResources" gorm:"type:text[];"`
-	PolicyTags             []string                `json:"policyTags" gorm:"type:text[];"`
+	PolicyRelatedResources []string                `json:"policyRelatedResources" gorm:"type:jsonb;serializer:json"`
+	PolicyTags             []string                `json:"policyTags" gorm:"type:jsonb;serializer:json"`
 	PolicyPriority         int                     `json:"policyPriority"`
 	PolicyFrameworks       []dtos.PolicyFrameworks `json:"policyFrameworks" gorm:"column:policyFrameworks;type:jsonb;serializer:json"`
 	EvidenceType           string                  `json:"evidenceType" gorm:"type:text;"`
 	EvidenceContent        []byte                  `json:"evidenceContent" gorm:"type:bytea;"`
 
-	Violations []string `json:"violations" gorm:"type:text[];"`
+	Message string `json:"message" gorm:"type:text;"`
+
+	Violations []string `json:"violations" gorm:"type:jsonb;serializer:json"`
 
 	Events []VulnEvent `gorm:"foreignKey:ComplianceRiskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 

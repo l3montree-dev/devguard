@@ -22,9 +22,9 @@ type yamlPolicy struct {
 }
 
 type customYaml struct {
-	Description string `yaml:"description"`
-	Priority    int    `yaml:"priority"`
-	Tags        []string
+	Description string   `yaml:"description"`
+	Priority    int      `yaml:"priority"`
+	Tags        []string `yaml:"tags"`
 	// used for mapping from policies to attestations
 	PredicateType    string                  `yaml:"predicateType"`
 	RelatedResources []string                `yaml:"relatedResources"`
@@ -116,8 +116,19 @@ type PolicyEvaluation struct {
 }
 
 func Eval(policy PolicyFS, input any) PolicyEvaluation {
+	result := PolicyEvaluation{
+		PolicyID:               policy.Filename,
+		PolicyTitle:            policy.Title,
+		PolicyDescription:      policy.Description,
+		PolicyRelatedResources: policy.RelatedResources,
+		PolicyTags:             policy.Tags,
+		PolicyPriority:         policy.Priority,
+		PolicyFrameworks:       policy.PolicyFrameworks,
+		EvidenceType:           "json",
+		EvidenceContent:        &policy.Content,
+	}
 	if input == nil {
-		return PolicyEvaluation{Compliant: nil}
+		return result
 	}
 
 	r := rego.New(
@@ -128,12 +139,12 @@ func Eval(policy PolicyFS, input any) PolicyEvaluation {
 	ctx := context.TODO()
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
-		return PolicyEvaluation{Compliant: nil}
+		return result
 	}
 
 	rs, err := query.Eval(ctx, rego.EvalInput(input))
 	if err != nil {
-		return PolicyEvaluation{Compliant: nil}
+		return result
 	}
 
 	var violations []string
@@ -156,20 +167,11 @@ func Eval(policy PolicyFS, input any) PolicyEvaluation {
 		}
 	}
 
-	return PolicyEvaluation{
-		PolicyID:               policy.Filename,
-		PolicyTitle:            policy.Title,
-		PolicyDescription:      policy.Description,
-		PolicyRelatedResources: policy.RelatedResources,
-		PolicyTags:             policy.Tags,
-		PolicyPriority:         policy.Priority,
-		EvidenceType:           "json",
-		PolicyFrameworks:       policy.PolicyFrameworks,
-		Compliant:              compliant,
-		Violations:             violations,
-		RawEvaluationResult:    rawEvalResult,
-		EvidenceContent:        &policy.Content,
-	}
+	result.Compliant = compliant
+	result.Violations = violations
+	result.RawEvaluationResult = rawEvalResult
+
+	return result
 }
 
 // embed the policies in the binary
@@ -221,16 +223,16 @@ func PolicyFSFromContent(fileName, content string) (PolicyFS, error) {
 }
 
 func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sarif.SarifSchema210Json {
-	rules := make([]sarif.ReportingDescriptor, 0, len(evaluations))
-	results := make([]sarif.Result, 0)
-	seenResults := make(map[string]bool)
-	addResult := func(r sarif.Result) {
-		key := string(r.Kind) + "|" + r.Message.Text
-		if !seenResults[key] {
-			seenResults[key] = true
-			results = append(results, r)
+	rules := make([]sarif.ReportingDescriptor, 0)
+	results := make([]sarif.Result, 0, len(evaluations))
+	seenRules := make(map[string]bool)
+	addRule := func(r sarif.ReportingDescriptor) {
+		if !seenRules[r.ID] {
+			seenRules[r.ID] = true
+			rules = append(rules, r)
 		}
 	}
+
 	for _, evaluation := range evaluations {
 		ruleID := evaluation.PolicyID
 		ruleName := evaluation.PolicyTitle
@@ -263,12 +265,13 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 			},
 		}
 
-		rules = append(rules, rule)
+		addRule(rule)
 
 		artifactLocation := sarif.ArtifactLocation{URI: &srcPath}
 		additionalProps := map[string]any{
 			"precision":    "high",
 			"evidenceType": evaluation.EvidenceType,
+			"violations":   evaluation.Violations,
 		}
 		if evaluation.EvidenceContent != nil {
 			additionalProps["evidenceContent"] = *evaluation.EvidenceContent
@@ -278,50 +281,31 @@ func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sari
 			Tags:                 evaluation.PolicyTags,
 			AdditionalProperties: additionalProps,
 		}
-
-		if evaluation.Compliant == nil {
-			addResult(sarif.Result{
-				Kind:   sarif.ResultKindOpen,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: "No attestation found for policy — compliance could not be determined.",
-				},
-				Locations: []sarif.Location{
-					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
-				},
-				Properties: props,
-			})
-			continue
+		var kind sarif.ResultKind
+		var message sarif.Message
+		var result sarif.Result
+		if evaluation.Compliant != nil && *evaluation.Compliant {
+			kind = sarif.ResultKindPass
+			message = sarif.Message{Text: "Policy compliant"}
+		} else if evaluation.Compliant != nil && !*evaluation.Compliant {
+			kind = sarif.ResultKindFail
+			message = sarif.Message{Text: "Policy not compliant"}
+		} else {
+			kind = sarif.ResultKindOpen
+			message = sarif.Message{Text: "No attestation found for policy — compliance could not be determined."}
 		}
 
-		if *evaluation.Compliant {
-			addResult(sarif.Result{
-				Kind:   sarif.ResultKindPass,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: "Policy compliant",
-				},
-				Locations: []sarif.Location{
-					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
-				},
-				Properties: props,
-			})
-			continue
+		result = sarif.Result{
+			Kind:    kind,
+			RuleID:  &ruleID,
+			Message: message,
+			Locations: []sarif.Location{
+				{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
+			},
+			Properties: props,
 		}
 
-		for _, violation := range evaluation.Violations {
-			addResult(sarif.Result{
-				Kind:   sarif.ResultKindFail,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: violation,
-				},
-				Locations: []sarif.Location{
-					{PhysicalLocation: sarif.PhysicalLocation{ArtifactLocation: artifactLocation}},
-				},
-				Properties: props,
-			})
-		}
+		results = append(results, result)
 	}
 
 	driver := sarif.ToolComponent{
