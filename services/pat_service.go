@@ -57,8 +57,7 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 		ExpiryDate:  utils.Ptr(time.Now().Add(time.Second * time.Duration(request.ExpireAfterSeconds))), // calculate and set expiry date
 	}
 
-	//pat.Token = pat.HashToken(token)
-	return pat // return the unhashed token. This is the token that will be sent to the user
+	return pat
 }
 
 func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {

@@ -46,35 +46,10 @@ func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB
 	return g.GetDB(ctx, tx).Where("fingerprint = ?", fingerprint).Delete(&models.PAT{}).Error
 }
 
-func (g *gormPatRepository) ReadByToken(ctx context.Context, tx *gorm.DB, token string) (models.PAT, error) {
-	var t models.PAT
-	// make sure to hash the token before querying
-	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
-	if err != nil {
-		return t, err
-	}
-	if t.ExpiryDate == nil || t.ExpiryDate.Before(time.Now()) {
-		return t, fmt.Errorf("PAT is expired!")
-	}
-	return t, nil
-}
-
 func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userID string) ([]models.PAT, error) {
 	var pats []models.PAT
 	err := g.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&pats).Error
 	return pats, err
-}
-
-func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, token string) (string, error) {
-	var t models.PAT
-	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
-	if err != nil {
-		return "", err
-	}
-	if t.ExpiryDate == nil || t.ExpiryDate.Before(time.Now()) {
-		return "", fmt.Errorf("PAT is expired!")
-	}
-	return t.UserID.String(), err
 }
 
 // checks if a valid token exists for the fingerprint, this excludes any expired tokens

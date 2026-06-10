@@ -1,8 +1,6 @@
 package models
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,13 +20,6 @@ type PAT struct {
 
 func (p PAT) TableName() string {
 	return "pat"
-}
-
-func (p PAT) HashToken(token string) string {
-	hasher := sha256.New()
-	hasher.Write([]byte(token))
-	// make it base64
-	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
 func (p PAT) GetUserID() string {
