@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/hex"
+	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -135,6 +136,36 @@ func TestSignRequest(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
+	})
+
+	t.Run("rejects a body swapped after signing (content-digest must be bound to the body)", func(t *testing.T) {
+		// An attacker who captures a signed request can keep the Signature + Content-Digest headers
+		// verbatim and ship a different body. Here we swap only the body
+		// and leave every signed header untouched — verification must still fail.
+		var pat = models.PAT{
+			PubKey: "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5",
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+
+		reader := bufio.NewReader(strings.NewReader(`{"role": "viewer"}`))
+		req := httptest.NewRequest("POST", "/scan/", reader)
+
+		if err := SignRequest(privKey, req); err != nil {
+			t.Fatal("error", err)
+		}
+
+		// Attacker swaps the body, keeping the signed Signature + Content-Digest headers.
+		req.Body = io.NopCloser(strings.NewReader(`{"role": "admin"}`))
+
+		if _, err := patService.VerifyRequestSignature(context.Background(), req); err == nil {
+			t.Fatal("expected verification to fail when the body no longer matches the signed Content-Digest")
+		}
 	})
 
 	t.Run("test signing and verifying fails, after having tampered with the method header", func(t *testing.T) {

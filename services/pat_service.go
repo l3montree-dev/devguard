@@ -172,6 +172,11 @@ func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error)
 	return privKeyECDSA, pubKey, nil
 }
 
+// use a helper function for consistency across the code
+func signedFields() httpsign.Fields {
+	return httpsign.Headers("@method", "content-digest")
+}
+
 func SignRequest(hexPrivKey string, req *http.Request) error {
 	privKey, pubKey, err := HexTokenToECDSA(hexPrivKey)
 	if err != nil {
@@ -185,9 +190,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 		return err
 	}
 
-	fields := httpsign.Headers("@method", "content-digest")
-
-	signer, _ := httpsign.NewP256Signer(privKey, nil, fields)
+	signer, _ := httpsign.NewP256Signer(privKey, nil, signedFields())
 
 	req.Header.Set("X-Fingerprint", fingerprint)
 
@@ -237,29 +240,40 @@ func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 		return false, fmt.Errorf("cannot verify admin request: no public key was loaded on startup")
 	}
 
-	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, nil, httpsign.Headers("@method", "content-digest"))
+	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, nil, signedFields())
 	if err != nil {
 		return false, fmt.Errorf("could not build P256Verifier: %w", err)
 	}
 
-	err = httpsign.VerifyRequest("sig77", *verifier, req)
-	if err != nil {
-		return false, fmt.Errorf("could not verify request: %v", err)
+	if err := verifySignedRequest(verifier, req); err != nil {
+		return false, err
 	}
 	return true, nil
 }
 
 func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
-	verifier, err := httpsign.NewP256Verifier(pubKey, nil,
-		httpsign.Headers("@method", "content-digest"))
-
+	verifier, err := httpsign.NewP256Verifier(pubKey, nil, signedFields())
 	if err != nil {
 		return fmt.Errorf("could not create verifier: %v", err)
 	}
 
-	err = httpsign.VerifyRequest("sig77", *verifier, req)
-	if err != nil {
+	return verifySignedRequest(verifier, req)
+}
+
+// verifySignedRequest verifies the HTTP message signature and then validates that the
+// Content-Digest header actually matches the request body
+func verifySignedRequest(verifier *httpsign.Verifier, req *http.Request) error {
+	if err := httpsign.VerifyRequest("sig77", *verifier, req); err != nil {
 		return fmt.Errorf("could not verify request: %v", err)
+	}
+
+	digest := req.Header.Values("Content-Digest")
+	if len(digest) == 0 {
+		return fmt.Errorf("missing Content-Digest header")
+	}
+
+	if err := httpsign.ValidateContentDigestHeader(digest, &req.Body, []string{httpsign.DigestSha256}); err != nil {
+		return fmt.Errorf("content digest does not match request body: %v", err)
 	}
 	return nil
 }
