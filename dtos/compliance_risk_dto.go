@@ -33,7 +33,7 @@ type ComplianceRiskDTO struct {
 
 	Message      string   `json:"message"`
 	EvidenceType string   `json:"evidenceType"`
-	Violations   []string `json:"Violations"`
+	Violations   []string `json:"violations"`
 }
 
 type DetailedComplianceRiskDTO struct {
