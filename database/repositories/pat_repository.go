@@ -77,9 +77,17 @@ func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, t
 	return t.UserID.String(), err
 }
 
+// checks if a valid token exists for the fingerprint, this excludes any expired tokens
 func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {
 	var t models.PAT
 	err := g.GetDB(ctx, tx).First(&t, "fingerprint = ?", fingerprint).Error
+	if err != nil {
+		return t, err
+	}
+	// check if the token expired
+	if t.ExpiryDate == nil || t.ExpiryDate.Before(time.Now()) {
+		return t, fmt.Errorf("token expired")
+	}
 	return t, err
 }
 

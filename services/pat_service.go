@@ -173,7 +173,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
 	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
 	if err != nil {
-		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return ecdsa.PublicKey{}, uuid.UUID{}, "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 	pubKey := pat.PubKey
 
