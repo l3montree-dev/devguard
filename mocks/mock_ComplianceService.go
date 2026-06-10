@@ -40,12 +40,12 @@ func (_m *ComplianceService) EXPECT() *ComplianceService_Expecter {
 	return &ComplianceService_Expecter{mock: &_m.Mock}
 }
 
-// ArtifactCompliance provides a mock function for the type ComplianceService
-func (_mock *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
+// EvaluateArtifactAttestations provides a mock function for the type ComplianceService
+func (_mock *ComplianceService) EvaluateArtifactAttestations(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
 	ret := _mock.Called(ctx, projectID, assetVersion, artifact)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ArtifactCompliance")
+		panic("no return value specified for EvaluateArtifactAttestations")
 	}
 
 	var r0 sarif.SarifSchema210Json
@@ -66,21 +66,21 @@ func (_mock *ComplianceService) ArtifactCompliance(ctx context.Context, projectI
 	return r0, r1
 }
 
-// ComplianceService_ArtifactCompliance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArtifactCompliance'
-type ComplianceService_ArtifactCompliance_Call struct {
+// ComplianceService_EvaluateArtifactAttestations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EvaluateArtifactAttestations'
+type ComplianceService_EvaluateArtifactAttestations_Call struct {
 	*mock.Call
 }
 
-// ArtifactCompliance is a helper method to define mock.On call
+// EvaluateArtifactAttestations is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID uuid.UUID
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
-func (_e *ComplianceService_Expecter) ArtifactCompliance(ctx interface{}, projectID interface{}, assetVersion interface{}, artifact interface{}) *ComplianceService_ArtifactCompliance_Call {
-	return &ComplianceService_ArtifactCompliance_Call{Call: _e.mock.On("ArtifactCompliance", ctx, projectID, assetVersion, artifact)}
+func (_e *ComplianceService_Expecter) EvaluateArtifactAttestations(ctx interface{}, projectID interface{}, assetVersion interface{}, artifact interface{}) *ComplianceService_EvaluateArtifactAttestations_Call {
+	return &ComplianceService_EvaluateArtifactAttestations_Call{Call: _e.mock.On("EvaluateArtifactAttestations", ctx, projectID, assetVersion, artifact)}
 }
 
-func (_c *ComplianceService_ArtifactCompliance_Call) Run(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact)) *ComplianceService_ArtifactCompliance_Call {
+func (_c *ComplianceService_EvaluateArtifactAttestations_Call) Run(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact)) *ComplianceService_EvaluateArtifactAttestations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -108,12 +108,12 @@ func (_c *ComplianceService_ArtifactCompliance_Call) Run(run func(ctx context.Co
 	return _c
 }
 
-func (_c *ComplianceService_ArtifactCompliance_Call) Return(sarifSchema210Json sarif.SarifSchema210Json, err error) *ComplianceService_ArtifactCompliance_Call {
+func (_c *ComplianceService_EvaluateArtifactAttestations_Call) Return(sarifSchema210Json sarif.SarifSchema210Json, err error) *ComplianceService_EvaluateArtifactAttestations_Call {
 	_c.Call.Return(sarifSchema210Json, err)
 	return _c
 }
 
-func (_c *ComplianceService_ArtifactCompliance_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)) *ComplianceService_ArtifactCompliance_Call {
+func (_c *ComplianceService_EvaluateArtifactAttestations_Call) RunAndReturn(run func(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)) *ComplianceService_EvaluateArtifactAttestations_Call {
 	_c.Call.Return(run)
 	return _c
 }

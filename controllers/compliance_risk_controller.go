@@ -203,15 +203,15 @@ func (c *ComplianceRiskController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, convertComplianceRiskToDetailedDTO(risk))
 }
 
-// EvaluateArtifactCompliance fetches evaluations via complianceService.ArtifactCompliance and recalculates risks.
-func (c *ComplianceRiskController) EvaluateArtifactCompliance(ctx shared.Context) error {
+// RunAttestationEvaluation fetches evaluations via complianceService.EvaluateArtifactAttestations and recalculates risks.
+func (c *ComplianceRiskController) RunAttestationEvaluation(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := shared.GetArtifact(ctx)
 	project := shared.GetProject(ctx)
 	userAgent := ctx.Request().UserAgent()
 	userID := shared.GetSession(ctx).GetUserID()
 
-	sarifDoc, err := c.complianceService.ArtifactCompliance(ctx.Request().Context(), project.ID, assetVersion, artifact)
+	sarifDoc, err := c.complianceService.EvaluateArtifactAttestations(ctx.Request().Context(), project.ID, assetVersion, artifact)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not evaluate artifact compliance").WithInternal(err)
 	}

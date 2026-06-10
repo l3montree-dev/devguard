@@ -33,7 +33,7 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy := PolicyFS{PolicyMetadata: metadata, Content: string(policyContent)}
+	policy := Policy{PolicyMetadata: metadata, Content: string(policyContent)}
 
 	// evaluate the policy
 	res := Eval(policy, input)
@@ -57,7 +57,7 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy := PolicyFS{PolicyMetadata: metadata, Content: string(policyContent)}
+	policy := Policy{PolicyMetadata: metadata, Content: string(policyContent)}
 
 	// parse the sbom
 	var input any
@@ -124,7 +124,7 @@ func hasDuplicateResults(results []sarif.Result) bool {
 	return false
 }
 
-func makeEvaluations(policy PolicyFS, evals []PolicyEvaluation) []PolicyEvaluation {
+func makeEvaluations(policy Policy, evals []PolicyEvaluation) []PolicyEvaluation {
 	for i := range evals {
 		evals[i].PolicyID = policy.Filename
 		evals[i].PolicyTitle = policy.Title
@@ -134,8 +134,8 @@ func makeEvaluations(policy PolicyFS, evals []PolicyEvaluation) []PolicyEvaluati
 	return evals
 }
 
-func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
-	policy := PolicyFS{
+func TestBuildSarifFromPoliciesEvaluations_NoDuplicateResults(t *testing.T) {
+	policy := Policy{
 		PolicyMetadata: PolicyMetadata{
 			Filename:    "test-policy.rego",
 			Title:       "Test Policy",
@@ -150,9 +150,9 @@ func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
 			{Compliant: &compliant, Violations: []string{"missing signature", "untrusted source"}},
 			{Compliant: &compliant, Violations: []string{"missing signature", "untrusted source"}},
 		})
-		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		results := BuildSarifFromPoliciesEvaluations("registry.example.com/image:latest", evaluations).Runs[0].Results
 		if hasDuplicateResults(results) {
-			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+			t.Errorf("BuildSarifFromPoliciesEvaluations returned duplicate result entries: %v", results)
 		}
 	})
 
@@ -161,9 +161,9 @@ func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
 		evaluations := makeEvaluations(policy, []PolicyEvaluation{
 			{Compliant: &compliant, Violations: []string{"missing signature", "missing signature"}},
 		})
-		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		results := BuildSarifFromPoliciesEvaluations("registry.example.com/image:latest", evaluations).Runs[0].Results
 		if hasDuplicateResults(results) {
-			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+			t.Errorf("BuildSarifFromPoliciesEvaluations returned duplicate result entries: %v", results)
 		}
 	})
 
@@ -174,9 +174,9 @@ func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
 			{Compliant: &compliant},
 			{Compliant: &compliant},
 		})
-		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		results := BuildSarifFromPoliciesEvaluations("registry.example.com/image:latest", evaluations).Runs[0].Results
 		if hasDuplicateResults(results) {
-			t.Errorf("BuildSarifFromPolicies returned duplicate pass result entries: %v", results)
+			t.Errorf("BuildSarifFromPoliciesEvaluations returned duplicate pass result entries: %v", results)
 		}
 	})
 
@@ -189,9 +189,9 @@ func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
 			{Compliant: &notCompliant, Violations: []string{"missing signature"}},
 			{Compliant: &compliant},
 		})
-		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		results := BuildSarifFromPoliciesEvaluations("registry.example.com/image:latest", evaluations).Runs[0].Results
 		if hasDuplicateResults(results) {
-			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+			t.Errorf("BuildSarifFromPoliciesEvaluations returned duplicate result entries: %v", results)
 		}
 	})
 
@@ -199,9 +199,9 @@ func TestBuildSarifFromPolicies_NoDuplicateResults(t *testing.T) {
 		evaluations := makeEvaluations(policy, []PolicyEvaluation{
 			{Compliant: utils.Ptr(true)},
 		})
-		results := BuildSarifFromPolicies("registry.example.com/image:latest", evaluations).Runs[0].Results
+		results := BuildSarifFromPoliciesEvaluations("registry.example.com/image:latest", evaluations).Runs[0].Results
 		if hasDuplicateResults(results) {
-			t.Errorf("BuildSarifFromPolicies returned duplicate result entries: %v", results)
+			t.Errorf("BuildSarifFromPoliciesEvaluations returned duplicate result entries: %v", results)
 		}
 	})
 }

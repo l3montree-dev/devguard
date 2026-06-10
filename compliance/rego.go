@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/open-policy-agent/opa/v1/rego"
@@ -26,26 +26,41 @@ type customYaml struct {
 	Priority    int      `yaml:"priority"`
 	Tags        []string `yaml:"tags"`
 	// used for mapping from policies to attestations
-	PredicateType    string                  `yaml:"predicateType"`
-	RelatedResources []string                `yaml:"relatedResources"`
-	PolicyFrameworks []dtos.PolicyFrameworks `yaml:"policyFrameworks"`
+	PredicateType    string                    `yaml:"predicateType"`
+	RelatedResources []string                  `yaml:"relatedResources"`
+	PolicyFrameworks []models.PolicyFrameworks `yaml:"policyFrameworks"`
 }
 
 type PolicyMetadata struct {
-	Title                string                  `yaml:"title" json:"title"`
-	Description          string                  `yaml:"description" json:"description"`
-	Priority             int                     `yaml:"priority" json:"priority"`
-	Tags                 []string                `yaml:"tags" json:"tags"`
-	RelatedResources     []string                `yaml:"relatedResources" json:"relatedResources"`
-	PolicyFrameworks     []dtos.PolicyFrameworks `yaml:"policyFrameworks" json:"policyFrameworks"`
-	ComplianceFrameworks []string                `yaml:"complianceFrameworks" json:"complianceFrameworks"`
-	Filename             string                  `json:"filename"`
-	Content              string                  `json:"content"`
-	PredicateType        string                  `yaml:"predicateType" json:"predicateType"`
+	Title                string                    `yaml:"title" json:"title"`
+	Description          string                    `yaml:"description" json:"description"`
+	Priority             int                       `yaml:"priority" json:"priority"`
+	Tags                 []string                  `yaml:"tags" json:"tags"`
+	RelatedResources     []string                  `yaml:"relatedResources" json:"relatedResources"`
+	PolicyFrameworks     []models.PolicyFrameworks `yaml:"policyFrameworks" json:"policyFrameworks"`
+	ComplianceFrameworks []string                  `yaml:"complianceFrameworks" json:"complianceFrameworks"`
+	Filename             string                    `json:"filename"`
+	Content              string                    `json:"content"`
+	PredicateType        string                    `yaml:"predicateType" json:"predicateType"`
 }
-type PolicyFS struct {
+type Policy struct {
 	PolicyMetadata
 	Content string
+}
+
+type PolicyEvaluation struct {
+	PolicyID               string
+	PolicyTitle            string
+	PolicyDescription      string
+	PolicyRelatedResources []string
+	PolicyTags             []string
+	PolicyPriority         int
+	PolicyFrameworks       []models.PolicyFrameworks
+	Compliant              *bool
+	Violations             []string
+	RawEvaluationResult    map[string]any
+	EvidenceType           string
+	EvidenceContent        *string
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
@@ -100,22 +115,7 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	}, nil
 }
 
-type PolicyEvaluation struct {
-	PolicyID               string
-	PolicyTitle            string
-	PolicyDescription      string
-	PolicyRelatedResources []string
-	PolicyTags             []string
-	PolicyPriority         int
-	PolicyFrameworks       []dtos.PolicyFrameworks
-	Compliant              *bool
-	Violations             []string
-	RawEvaluationResult    map[string]any
-	EvidenceType           string
-	EvidenceContent        *string
-}
-
-func Eval(policy PolicyFS, input any) PolicyEvaluation {
+func Eval(policy Policy, input any) PolicyEvaluation {
 	result := PolicyEvaluation{
 		PolicyID:               policy.Filename,
 		PolicyTitle:            policy.Title,
@@ -179,14 +179,14 @@ func Eval(policy PolicyFS, input any) PolicyEvaluation {
 //go:embed attestation-compliance-policies/policies/*.rego
 var policiesFs embed.FS
 
-func GetPoliciesFromFS(policyDir string) ([]PolicyFS, error) {
+func GetPoliciesFromFS(policyDir string) ([]Policy, error) {
 	// fetch all policies
 	policyFiles, err := policiesFs.ReadDir(policyDir)
 	if err != nil {
 		return nil, err
 	}
 
-	var policies []PolicyFS
+	var policies []Policy
 	for _, file := range policyFiles {
 		content, err := policiesFs.ReadFile(filepath.Join(policyDir, file.Name()))
 		if err != nil {
@@ -198,7 +198,7 @@ func GetPoliciesFromFS(policyDir string) ([]PolicyFS, error) {
 			return nil, err
 		}
 
-		policy := PolicyFS{
+		policy := Policy{
 			PolicyMetadata: metadata,
 			Content:        string(content),
 		}
@@ -214,15 +214,15 @@ func GetPoliciesFromFS(policyDir string) ([]PolicyFS, error) {
 	return policies, nil
 }
 
-func PolicyFSFromContent(fileName, content string) (PolicyFS, error) {
+func GetPolicyFromFile(fileName, content string) (Policy, error) {
 	metadata, err := parseMetadata(fileName, content)
 	if err != nil {
-		return PolicyFS{}, err
+		return Policy{}, err
 	}
-	return PolicyFS{PolicyMetadata: metadata, Content: content}, nil
+	return Policy{PolicyMetadata: metadata, Content: content}, nil
 }
 
-func BuildSarifFromPolicies(srcPath string, evaluations []PolicyEvaluation) sarif.SarifSchema210Json {
+func BuildSarifFromPoliciesEvaluations(srcPath string, evaluations []PolicyEvaluation) sarif.SarifSchema210Json {
 	rules := make([]sarif.ReportingDescriptor, 0)
 	results := make([]sarif.Result, 0, len(evaluations))
 	seenRules := make(map[string]bool)

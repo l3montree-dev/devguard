@@ -34,7 +34,7 @@ func NewComplianceService(attestationRepository shared.AttestationRepository) *C
 	}
 }
 
-func (s *ComplianceService) ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
+func (s *ComplianceService) EvaluateArtifactAttestations(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error) {
 	attestations, err := s.attestationRepository.GetByArtifactAndAssetVersionAndAssetID(ctx, nil, artifact.ArtifactName, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return sarif.SarifSchema210Json{}, err
@@ -59,5 +59,5 @@ foundMatch:
 		evals = append(evals, compliance.Eval(policy, nil))
 	}
 
-	return compliance.BuildSarifFromPolicies("", evals), nil
+	return compliance.BuildSarifFromPoliciesEvaluations("", evals), nil
 }

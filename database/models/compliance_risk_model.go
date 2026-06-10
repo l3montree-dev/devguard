@@ -23,18 +23,22 @@ import (
 	"gorm.io/gorm"
 )
 
+type PolicyFrameworks struct {
+	Framework string   `yaml:"framework" json:"framework"`
+	Controls  []string `yaml:"controls"  json:"controls"`
+}
 type ComplianceRisk struct {
 	Vulnerability
 
-	PolicyID               string                  `json:"policyId" gorm:"type:text;"`
-	PolicyTitle            string                  `json:"policyTitle" gorm:"type:text;"`
-	PolicyDescription      *string                 `json:"policyDescription" gorm:"type:text;"`
-	PolicyRelatedResources []string                `json:"policyRelatedResources" gorm:"type:jsonb;serializer:json"`
-	PolicyTags             []string                `json:"policyTags" gorm:"type:jsonb;serializer:json"`
-	PolicyPriority         int                     `json:"policyPriority"`
-	PolicyFrameworks       []dtos.PolicyFrameworks `json:"policyFrameworks" gorm:"column:policyFrameworks;type:jsonb;serializer:json"`
-	EvidenceType           string                  `json:"evidenceType" gorm:"type:text;"`
-	EvidenceContent        []byte                  `json:"evidenceContent" gorm:"type:bytea;"`
+	PolicyID               string             `json:"policyId" gorm:"type:text;"`
+	PolicyTitle            string             `json:"policyTitle" gorm:"type:text;"`
+	PolicyDescription      *string            `json:"policyDescription" gorm:"type:text;"`
+	PolicyRelatedResources []string           `json:"policyRelatedResources" gorm:"type:jsonb;serializer:json"`
+	PolicyTags             []string           `json:"policyTags" gorm:"type:jsonb;serializer:json"`
+	PolicyPriority         int                `json:"policyPriority"`
+	PolicyFrameworks       []PolicyFrameworks `json:"policyFrameworks" gorm:"column:policyFrameworks;type:jsonb;serializer:json"`
+	EvidenceType           string             `json:"evidenceType" gorm:"type:text;"`
+	EvidenceContent        []byte             `json:"evidenceContent" gorm:"type:bytea;"`
 
 	Message string `json:"message" gorm:"type:text;"`
 

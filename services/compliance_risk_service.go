@@ -257,7 +257,7 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 			relatedResources []string
 			tags             []string
 			priority         int
-			policyFrameworks []dtos.PolicyFrameworks
+			policyFrameworks []models.PolicyFrameworks
 		}
 		ruleMap := make(map[string]ruleInfo, len(run.Tool.Driver.Rules))
 		for _, rule := range run.Tool.Driver.Rules {
@@ -290,14 +290,14 @@ func sarifToComplianceRisks(sarifDoc sarif.SarifSchema210Json, assetVersion mode
 				}
 			}
 
-			var policyFrameworks []dtos.PolicyFrameworks
+			var policyFrameworks []models.PolicyFrameworks
 			if rule.Properties != nil {
-				if direct, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]dtos.PolicyFrameworks); ok {
+				if direct, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]models.PolicyFrameworks); ok {
 					policyFrameworks = direct
 				} else if cf, ok := rule.Properties.AdditionalProperties["policyFrameworks"].([]any); ok {
 					for _, c := range cf {
 						if cMap, ok := c.(map[string]any); ok {
-							pc := dtos.PolicyFrameworks{}
+							pc := models.PolicyFrameworks{}
 							if fw, ok := cMap["framework"].(string); ok {
 								pc.Framework = fw
 							}

@@ -170,7 +170,7 @@ type ArtifactRepository interface {
 }
 
 type ComplianceService interface {
-	ArtifactCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)
+	EvaluateArtifactAttestations(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)
 }
 
 type ReleaseRepository interface {

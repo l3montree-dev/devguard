@@ -21,7 +21,7 @@ func NewComplianceRiskRouter(
 	complianceRisksRouter.POST("/:complianceRiskID/", controller.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	complianceRisksRouter.POST("/:complianceRiskID/mitigate/", controller.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
-	complianceRisksRouter.POST("/evaluate/", controller.EvaluateArtifactCompliance, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	complianceRisksRouter.POST("/evaluate/", controller.RunAttestationEvaluation, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	complianceRisksRouter.POST("/upload-zip/", controller.UploadZip, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return ComplianceRiskRouter{Group: complianceRisksRouter}

@@ -15,6 +15,14 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 		}
 	}
 
+	policyFrameworks := make([]dtos.PolicyFrameworks, len(r.PolicyFrameworks))
+	for i, pf := range r.PolicyFrameworks {
+		policyFrameworks[i] = dtos.PolicyFrameworks{
+			Framework: pf.Framework,
+			Controls:  pf.Controls,
+		}
+	}
+
 	return dtos.ComplianceRiskDTO{
 		ID:                     r.ID,
 		AssetVersionName:       r.AssetVersionName,
@@ -30,7 +38,7 @@ func ComplianceRiskToDTO(r models.ComplianceRisk) dtos.ComplianceRiskDTO {
 		PolicyRelatedResources: r.PolicyRelatedResources,
 		PolicyTags:             r.PolicyTags,
 		PolicyPriority:         r.PolicyPriority,
-		PolicyFrameworks:       r.PolicyFrameworks,
+		PolicyFrameworks:       policyFrameworks,
 		EvidenceType:           r.EvidenceType,
 		Violations:             r.Violations,
 		Artifacts:              artifacts,
