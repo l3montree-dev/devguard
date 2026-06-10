@@ -233,6 +233,14 @@ func BuildSarifFromPoliciesEvaluations(srcPath string, evaluations []PolicyEvalu
 		}
 	}
 
+	seenResults := make(map[string]bool)
+	addResult := func(r sarif.Result) {
+		if !seenResults[*r.RuleID] {
+			seenResults[*r.RuleID] = true
+			results = append(results, r)
+		}
+	}
+
 	for _, evaluation := range evaluations {
 		ruleID := evaluation.PolicyID
 		ruleName := evaluation.PolicyTitle
@@ -305,7 +313,7 @@ func BuildSarifFromPoliciesEvaluations(srcPath string, evaluations []PolicyEvalu
 			Properties: props,
 		}
 
-		results = append(results, result)
+		addResult(result)
 	}
 
 	driver := sarif.ToolComponent{
