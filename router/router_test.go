@@ -84,15 +84,15 @@ var intentionallyPublicPaths = map[string]bool{
 // Key format: "METHOD /full/echo/path/template/"
 var memberOnlyPaths = map[string]bool{
 	// Vuln triage actions — any member who can read the asset version may triage findings.
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/sync/":                            true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/batch/":                           true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/":               true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/mitigate/":      true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/":              true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/mitigate/":     true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/":                                    true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/":                     true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/mitigate/":            true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/sync/":                               true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/batch/":                              true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/":                  true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/mitigate/":         true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/":                 true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/mitigate/":        true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/":                                       true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/":                        true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/mitigate/":               true,
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/final-license-decision/": true,
 	// VEX rules — any member may create/edit/delete VEX rules (membership = passed read RBAC).
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/":                 true,
@@ -219,7 +219,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
 		new(controllers.FirstPartyVulnController),
-		new(controllers.PolicyController),
 		new(controllers.IntegrationController),
 		new(controllers.WebhookController),
 		extEntityService,
@@ -235,7 +234,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.AssetController),
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
-		new(controllers.PolicyController),
 		new(controllers.ReleaseController),
 		new(controllers.StatisticsController),
 		new(controllers.WebhookController),
@@ -248,7 +246,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.AssetController),
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.AssetVersionController),
-		new(controllers.ComplianceController),
 		new(controllers.StatisticsController),
 		new(controllers.ComponentController),
 		new(controllers.InToToController),
@@ -261,7 +258,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		assetRouter,
 		new(controllers.AssetVersionController),
 		new(controllers.FirstPartyVulnController),
-		new(controllers.ComplianceController),
 		new(controllers.ComponentController),
 		new(controllers.StatisticsController),
 		new(controllers.AttestationController),
@@ -280,7 +276,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
 	NewVEXRuleRouter(assetVersionRouter, new(controllers.VEXRuleController))
-	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
+	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.ExternalReferenceController), new(controllers.AttestationController), artifactRepo, assetRepo)
 	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo)
 
 	return e

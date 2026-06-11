@@ -62,6 +62,10 @@ type DaemonRunner struct {
 	maliciousPackageChecker      shared.MaliciousPackageChecker
 	vulnDBImportService          shared.VulnDBService
 	vexRuleService               shared.VEXRuleService
+	attestationService           shared.AttestationService
+	statisticsRepository         shared.StatisticsRepository
+	complianceService            shared.ComplianceService
+	complianceRiskService        shared.ComplianceRiskService
 
 	debugOptions         DebugOptions
 	fixedVersionResolver shared.FixedVersionResolver
@@ -106,6 +110,10 @@ func NewDaemonRunner(
 	vulnDBImportService shared.VulnDBService,
 	vexRuleService shared.VEXRuleService,
 	fixedVersionResolver shared.FixedVersionResolver,
+	attestationService shared.AttestationService,
+	statisticsRepository shared.StatisticsRepository,
+	complianceService shared.ComplianceService,
+	complianceRiskService shared.ComplianceRiskService,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -137,6 +145,10 @@ func NewDaemonRunner(
 		vulnDBImportService:          vulnDBImportService,
 		vexRuleService:               vexRuleService,
 		fixedVersionResolver:         fixedVersionResolver,
+		attestationService:           attestationService,
+		statisticsRepository:         statisticsRepository,
+		complianceService:            complianceService,
+		complianceRiskService:        complianceRiskService,
 	}
 }
 

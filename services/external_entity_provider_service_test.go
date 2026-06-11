@@ -191,41 +191,6 @@ func TestUpsertProjects(t *testing.T) {
 	})
 }
 
-func TestEnableCommunityPoliciesForNewProjects(t *testing.T) {
-	t.Run("successful enable", func(t *testing.T) {
-		projectRepo := mocks.NewProjectRepository(t)
-		service := createTestServiceWithRepo(t, projectRepo)
-
-		projects := []models.Project{
-			{Model: models.Model{ID: uuid.New()}, Slug: "project1"},
-			{Model: models.Model{ID: uuid.New()}, Slug: "project2"},
-		}
-
-		for _, project := range projects {
-			projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, mock.Anything, project.ID).Return(nil)
-		}
-
-		err := service.enableCommunityPoliciesForNewProjects(context.Background(), projects)
-
-		assert.NoError(t, err)
-		projectRepo.AssertExpectations(t)
-	})
-
-	t.Run("repository error", func(t *testing.T) {
-		projectRepo := mocks.NewProjectRepository(t)
-		service := createTestServiceWithRepo(t, projectRepo)
-
-		projects := []models.Project{{Model: models.Model{ID: uuid.New()}, Slug: "project1"}}
-
-		projectRepo.On("EnableCommunityManagedPolicies", mock.Anything, mock.Anything, projects[0].ID).Return(errors.New("policy error"))
-
-		err := service.enableCommunityPoliciesForNewProjects(context.Background(), projects)
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "could not enable community managed policies for project project1")
-	})
-}
-
 func TestSyncOrgs(t *testing.T) {
 	t.Run("successful sync with new organizations", func(t *testing.T) {
 		ctx := createTestContext()

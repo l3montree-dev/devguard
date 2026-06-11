@@ -14,6 +14,7 @@ const (
 	VulnTypeDependencyVuln VulnType = "dependencyVuln"
 	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
 	VulnTypeLicenseRisk    VulnType = "licenseRisk"
+	VulnTypeComplianceRisk VulnType = "complianceRisk"
 )
 
 const (

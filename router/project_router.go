@@ -33,7 +33,6 @@ func NewProjectRouter(
 	assetController *controllers.AssetController,
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
-	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
 	webhookIntegration *controllers.WebhookController,
@@ -49,7 +48,6 @@ func NewProjectRouter(
 	projectRouter := organizationGroup.Group.Group("/projects/:projectSlug", projectScopedRBAC(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
-	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
@@ -79,14 +77,12 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
-	projectUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject)
 	projectUpdateAccessControlRequired.DELETE("/", projectController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/members/:userID/", projectController.RemoveMember)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/", releaseController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/items/:itemID/", releaseController.RemoveItem)
 
 	projectUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.Update)
-	projectUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.EnablePolicyForProject)
 	projectUpdateAccessControlRequired.PATCH("/", projectController.Update)
 	projectUpdateAccessControlRequired.PUT("/members/:userID/", projectController.ChangeRole)
 	projectUpdateAccessControlRequired.PATCH("/releases/:releaseID/", releaseController.Update)

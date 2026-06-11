@@ -78,7 +78,7 @@ func attestationsCmd(cmd *cobra.Command, args []string) error {
 		defer os.Remove(policyPath)
 	}
 
-	sarifResult, evals, err := scanner.EvaluatePolicyAgainstAttestations(image, policyPath, attestations)
+	sarifResult, evals, err := scanner.EvaluatePolicyAgainstAttestations(fmt.Sprintf("oci://%s", image), policyPath, attestations)
 	if err != nil {
 		return err
 	}

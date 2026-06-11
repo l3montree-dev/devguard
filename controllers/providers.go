@@ -90,10 +90,9 @@ var ControllerModule = fx.Options(
 
 	// Security & Compliance
 	fx.Provide(NewCSAFController),
-	fx.Provide(NewComplianceController),
 	fx.Provide(NewAttestationController),
 	fx.Provide(NewInToToController),
-	fx.Provide(NewPolicyController),
+	fx.Provide(NewComplianceRiskController),
 
 	// Integrations
 	fx.Provide(NewIntegrationController),

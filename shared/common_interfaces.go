@@ -44,7 +44,6 @@ type DaemonRunner interface {
 	UpdateFixedVersions(ctx context.Context) error
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
-
 	Start(ctx context.Context)
 }
 
@@ -98,10 +97,7 @@ type ProjectRepository interface {
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
-	EnablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
-	DisablePolicyForProject(ctx context.Context, tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(ctx context.Context, tx DB, projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
-	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
@@ -110,13 +106,6 @@ type ProjectRepository interface {
 
 type Verifier interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
-}
-
-type PolicyRepository interface {
-	utils.Repository[uuid.UUID, models.Policy, DB]
-	FindByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Policy, error)
-	FindByOrganizationID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Policy, error)
-	FindCommunityManagedPolicies(ctx context.Context, tx DB) ([]models.Policy, error)
 }
 
 type DependencyProxySecretRepository interface {
@@ -163,6 +152,16 @@ type AttestationRepository interface {
 	utils.Repository[string, models.Attestation, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Attestation, error)
 	GetByAssetVersionAndAssetID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+	GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error)
+	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
+}
+
+type AttestationService interface {
+	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Attestation, error)
+	GetByAssetVersionAndAssetID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+	GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error)
+	Create(ctx context.Context, tx DB, attestation *models.Attestation) error
+	GenerateAndStoreDevguardAttestation(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 }
 
 type ArtifactRepository interface {
@@ -173,6 +172,10 @@ type ArtifactRepository interface {
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID uuid.UUID) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 	CleanupOrphanedRecords(ctx context.Context) error
+}
+
+type ComplianceService interface {
+	EvaluateArtifactAttestations(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion, artifact models.Artifact) (sarif.SarifSchema210Json, error)
 }
 
 type ReleaseRepository interface {
@@ -288,6 +291,22 @@ type LicenseRiskRepository interface {
 	DeleteByComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error
 	ListByArtifactName(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)
 	ApplyAndSave(ctx context.Context, tx DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error
+}
+
+type ComplianceRiskRepository interface {
+	utils.Repository[uuid.UUID, models.ComplianceRisk, DB]
+	GetAllComplianceRisksForAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.ComplianceRisk, error)
+	GetAllComplianceRisksForAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComplianceRisk], error)
+	GetComplianceRisksByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComplianceRisk, error)
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.ComplianceRisk, error)
+	ApplyAndSave(ctx context.Context, tx DB, risk *models.ComplianceRisk, ev *models.VulnEvent) error
+	GetDistinctFrameworksForAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]string, error)
+	SaveBatch(ctx context.Context, tx DB, risks []models.ComplianceRisk) error
+}
+
+type ComplianceRiskService interface {
+	HandleArtifactCompliance(ctx context.Context, tx DB, userID string, userAgent *string, assetVersion models.AssetVersion, artifact models.Artifact, sarifDoc sarif.SarifSchema210Json) error
+	UpdateComplianceRiskState(ctx context.Context, tx DB, userID string, risk *models.ComplianceRisk, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 }
 
 type InTotoLinkRepository interface {

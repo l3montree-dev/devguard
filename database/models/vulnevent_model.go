@@ -17,6 +17,7 @@ type VulnEvent struct {
 	DependencyVulnID         *uuid.UUID                       `json:"dependencyVulnId" gorm:"type:uuid;column:dependency_vuln_id"`
 	LicenseRiskID            *uuid.UUID                       `json:"licenseRiskId" gorm:"type:uuid;column:license_risk_id"`
 	FirstPartyVulnID         *uuid.UUID                       `json:"firstPartyVulnId" gorm:"type:uuid;column:first_party_vuln_id"`
+	ComplianceRiskID         *uuid.UUID                       `json:"complianceRiskId" gorm:"type:uuid;column:compliance_risk_id"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
@@ -45,6 +46,9 @@ func (event VulnEvent) GetVulnID() uuid.UUID {
 	if event.FirstPartyVulnID != nil {
 		return *event.FirstPartyVulnID
 	}
+	if event.ComplianceRiskID != nil {
+		return *event.ComplianceRiskID
+	}
 	return uuid.Nil
 }
 
@@ -59,6 +63,9 @@ func (event VulnEvent) GetVulnType() dtos.VulnType {
 	if event.FirstPartyVulnID != nil {
 		return dtos.VulnTypeFirstPartyVuln
 	}
+	if event.ComplianceRiskID != nil {
+		return dtos.VulnTypeComplianceRisk
+	}
 	return ""
 }
 
@@ -71,6 +78,8 @@ func SetVulnIDOnEvent(event *VulnEvent, vulnID uuid.UUID, vulnType dtos.VulnType
 		event.LicenseRiskID = &vulnID
 	case dtos.VulnTypeFirstPartyVuln:
 		event.FirstPartyVulnID = &vulnID
+	case dtos.VulnTypeComplianceRisk:
+		event.ComplianceRiskID = &vulnID
 	}
 }
 

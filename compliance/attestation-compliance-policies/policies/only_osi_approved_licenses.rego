@@ -9,8 +9,10 @@
 #   tags:
 #   - ISO 27001
 #   - A.5.32 Intellectual property rights
-#   complianceFrameworks:
-#   - ISO 27001
+#   policyFrameworks:
+#   - framework: ISO 27001
+#     controls:
+#     - A.5.32
 package compliance
 
 import rego.v1

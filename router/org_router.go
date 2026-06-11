@@ -36,7 +36,6 @@ func NewOrgRouter(
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	firstPartyVulnController *controllers.FirstPartyVulnController,
-	policyController *controllers.PolicyController,
 	integrationController *controllers.IntegrationController,
 	webhookIntegration *controllers.WebhookController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
@@ -75,8 +74,6 @@ func NewOrgRouter(
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
-	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
-	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
@@ -89,18 +86,14 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.Test)
-	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
-	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
 	organizationUpdateAccessControlRequired.POST("/projects/", projectController.Create)
 
-	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/members/:userID/", orgController.RemoveMember)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
-	organizationUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.UpdatePolicy)
 	organizationUpdateAccessControlRequired.PUT("/members/:userID/", orgController.ChangeRole)
 	organizationUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.Update)
 
