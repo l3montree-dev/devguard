@@ -98,6 +98,8 @@ type OrgDTO struct {
 
 	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
+	TrivyOperatorIntegrations []TrivyOperatorIntegrationDTO `json:"trivyOperatorIntegrations"`
+
 	SharesVulnInformation    bool           `json:"sharesVulnInformation"`
 	IsPublic                 bool           `json:"isPublic" gorm:"default:false;"`
 	ConfigFiles              map[string]any `json:"configFiles"`

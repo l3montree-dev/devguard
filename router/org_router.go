@@ -97,6 +97,8 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/members/:userID/", orgController.RemoveMember)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
+	organizationUpdateAccessControlRequired.POST("/integrations/trivy-operator/", integrationController.CreateTrivyOperatorIntegration)
+	organizationUpdateAccessControlRequired.DELETE("/integrations/trivy-operator/:trivy_operator_integration_id/", integrationController.DeleteTrivyOperatorIntegration)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
