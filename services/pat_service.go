@@ -170,9 +170,9 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 }
 
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
-	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
-	if err != nil {
-		return ecdsa.PublicKey{}, uuid.UUID{}, "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+	pat, found := p.CheckForValidTokenByFingerprint(ctx, fingerprint)
+	if !found {
+		return ecdsa.PublicKey{}, uuid.UUID{}, "", fmt.Errorf("could not find valid public key using fingerprint")
 	}
 	pubKey := pat.PubKey
 
@@ -232,4 +232,17 @@ func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) err
 	}
 
 	return p.patRepository.DeleteByFingerprint(ctx, nil, fingerprint)
+}
+
+func (p *PatService) CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool) {
+	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
+	if err != nil {
+		return models.PAT{}, false
+	}
+
+	// check if the token expired
+	if pat.ExpiryDate == nil || pat.ExpiryDate.Before(time.Now()) {
+		return models.PAT{}, false
+	}
+	return pat, true
 }

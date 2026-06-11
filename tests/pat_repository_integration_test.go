@@ -23,20 +23,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// GetByFingerprint is the only PAT lookup on the real authentication path
-// (session middleware → VerifyRequestSignature → getPubKeyAndUserIDUsingFingerprint).
-// These tests pin its expiry enforcement: a valid token is returned, an expired
-// one is rejected like a missing token, and an unknown fingerprint errors.
-func TestPATGetByFingerprintEnforcesExpiry(t *testing.T) {
+// CheckForValidTokenByFingerprint is the PAT validity check on the real
+// authentication path (session middleware → VerifyRequestSignature →
+// getPubKeyAndUserIDUsingFingerprint). These tests pin its expiry enforcement:
+// a valid token is returned, an expired one is rejected like a missing token,
+// and an unknown fingerprint is rejected too.
+func TestPATCheckForValidTokenByFingerprintEnforcesExpiry(t *testing.T) {
 	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
 
-	repo := repositories.NewPATRepository(db)
+	patService := services.NewPatService(repositories.NewPATRepository(db))
 	ctx := context.Background()
 
 	createPAT := func(fingerprint string, expiry time.Time) {
@@ -55,24 +57,23 @@ func TestPATGetByFingerprintEnforcesExpiry(t *testing.T) {
 	t.Run("returns a token whose expiry is in the future", func(t *testing.T) {
 		createPAT("valid-fp", time.Now().Add(time.Hour))
 
-		pat, err := repo.GetByFingerprint(ctx, nil, "valid-fp")
+		pat, found := patService.CheckForValidTokenByFingerprint(ctx, "valid-fp")
 
-		require.NoError(t, err)
+		require.True(t, found)
 		assert.Equal(t, "valid-fp", pat.Fingerprint)
 	})
 
 	t.Run("rejects a token whose expiry is in the past", func(t *testing.T) {
 		createPAT("expired-fp", time.Now().Add(-time.Hour))
 
-		_, err := repo.GetByFingerprint(ctx, nil, "expired-fp")
+		_, found := patService.CheckForValidTokenByFingerprint(ctx, "expired-fp")
 
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "token expired")
+		require.False(t, found)
 	})
 
-	t.Run("errors for an unknown fingerprint", func(t *testing.T) {
-		_, err := repo.GetByFingerprint(ctx, nil, "does-not-exist")
+	t.Run("rejects an unknown fingerprint", func(t *testing.T) {
+		_, found := patService.CheckForValidTokenByFingerprint(ctx, "does-not-exist")
 
-		require.Error(t, err)
+		require.False(t, found)
 	})
 }

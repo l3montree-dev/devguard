@@ -72,6 +72,7 @@ type PersonalAccessTokenService interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT
+	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
 type CSAFService interface {
