@@ -136,10 +136,6 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 			return nil, err
 		}
 
-		if err := s.enableCommunityPoliciesForNewProjects(ctx.Request().Context(), created); err != nil {
-			return nil, err
-		}
-
 		projectsMap := s.createProjectsMap(ctx.Request().Context(), created, updated)
 
 		assets, err := s.syncProjectsAndAssets(ctx, domainRBAC, user, projects, roles, append(created, updated...))
@@ -197,16 +193,6 @@ func (s externalEntityProviderService) upsertProjects(ctx context.Context, org m
 
 	slog.Info("upserted projects from external entity provider", "created", len(created), "updated", len(updated))
 	return created, updated, nil
-}
-
-func (s externalEntityProviderService) enableCommunityPoliciesForNewProjects(ctx context.Context, created []models.Project) error {
-	for _, project := range created {
-		if err := s.projectRepository.EnableCommunityManagedPolicies(ctx, nil, project.ID); err != nil {
-			return fmt.Errorf("could not enable community managed policies for project %s: %w", project.Slug, err)
-		}
-		slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
-	}
-	return nil
 }
 
 func (s externalEntityProviderService) createProjectsMap(ctx context.Context, created, updated []models.Project) map[string]struct{} {

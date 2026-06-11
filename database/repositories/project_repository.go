@@ -426,16 +426,6 @@ func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm
 	return projects, err
 }
 
-func (g *projectRepository) EnableCommunityManagedPolicies(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) error {
-	// community policies can be identified by their "organization_id" being nil
-	return g.GetDB(ctx, tx).Exec(`
-		INSERT INTO project_enabled_policies (project_id, policy_id)
-		SELECT ?, id
-		FROM policies
-		WHERE organization_id IS NULL
-	`, projectID).Error
-}
-
 func (g *projectRepository) Create(ctx context.Context, tx *gorm.DB, project *models.Project) error {
 	// set the slug if not set
 	slug, err := g.firstFreeSlug(ctx, tx, project.OrganizationID, project.Slug)
