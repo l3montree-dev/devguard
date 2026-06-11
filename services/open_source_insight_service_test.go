@@ -391,7 +391,7 @@ func TestGetVersion(t *testing.T) {
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestedPaths = append(requestedPaths, r.URL.EscapedPath())
 			switch r.URL.EscapedPath() {
-			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1":
+			case "/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/v3.4.1":
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"versionKey": {"system": "go", "name": "github.com/ProtonMail/gopenpgp/v3", "version": "v3.4.1"}, "licenses": ["MIT"]}`)) // nolint
 			default:
@@ -419,7 +419,7 @@ func TestGetVersion(t *testing.T) {
 			t.Fatalf("expected MIT license, got %v", response.Licenses)
 		}
 
-		expectedPaths := []string{"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1"}
+		expectedPaths := []string{"/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/v3.4.1"}
 		if len(requestedPaths) != len(expectedPaths) || requestedPaths[0] != expectedPaths[0] {
 			t.Fatalf("expected deps.dev requests %v, got %v", expectedPaths, requestedPaths)
 		}
@@ -430,9 +430,9 @@ func TestGetVersion(t *testing.T) {
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestedPaths = append(requestedPaths, r.URL.EscapedPath())
 			switch r.URL.EscapedPath() {
-			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1":
+			case "/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/v3.4.1":
 				http.Error(w, "Not Found", http.StatusNotFound)
-			case "/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/3.4.1":
+			case "/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/3.4.1":
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"versionKey": {"system": "go", "name": "github.com/ProtonMail/gopenpgp/v3", "version": "3.4.1"}, "licenses": ["MIT"]}`)) // nolint
 			default:
@@ -461,8 +461,8 @@ func TestGetVersion(t *testing.T) {
 		}
 
 		expectedPaths := []string{
-			"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/v3.4.1",
-			"/systems/go/packages/github.com%2FProtonMail%2Fgopenpgp%2Fv3/versions/3.4.1",
+			"/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/v3.4.1",
+			"/systems/go/packages/github.com%2Fprotonmail%2Fgopenpgp%2Fv3/versions/3.4.1",
 		}
 		if len(requestedPaths) != len(expectedPaths) {
 			t.Fatalf("expected deps.dev requests %v, got %v", expectedPaths, requestedPaths)

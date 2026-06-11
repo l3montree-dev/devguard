@@ -108,17 +108,17 @@ func (s *openSourceInsightService) GetVersion(ctx context.Context, purl packageu
 }
 
 func (s *openSourceInsightService) getGoVersion(ctx context.Context, purl packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error) {
-	if response, err := s.getVersion(ctx, purl); err == nil {
+	// deps.dev expects v-prefixed Go versions; always try that first, then without.
+	vPurl := purl
+	vPurl.Version = "v" + strings.TrimPrefix(purl.Version, "v")
+	if response, err := s.getVersion(ctx, vPurl); err == nil {
 		return response, nil
 	}
 
-	if fallbackVersion, found := strings.CutPrefix(purl.Version, "v"); found {
-		originalVersion := purl.Version
-		purl.Version = fallbackVersion
-		if resp, err := s.getVersion(ctx, purl); err == nil {
-			return resp, nil
-		}
-		purl.Version = originalVersion
+	noVPurl := purl
+	noVPurl.Version = strings.TrimPrefix(purl.Version, "v")
+	if response, err := s.getVersion(ctx, noVPurl); err == nil {
+		return response, nil
 	}
 
 	// deps.dev is case-sensitive for Go module paths, but PURLs lowercase the namespace.
