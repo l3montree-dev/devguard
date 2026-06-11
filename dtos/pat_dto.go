@@ -25,5 +25,5 @@ type PatCreateRequest struct {
 	Description        string `json:"description"`
 	PubKey             string `json:"pubKey"`
 	Scopes             string `json:"scopes"`
-	ExpireAfterSeconds int    `json:"expireAfterSeconds"`
+	ExpireAfterSeconds int    `json:"expireAfterSeconds" validate:"required,gt=0,lte=31536000"` // 31536000 = 1 year in seconds
 }

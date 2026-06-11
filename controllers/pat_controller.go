@@ -59,10 +59,6 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	// expiry interval must exist, be positive and cannot exceed 1 year
-	if req.ExpireAfterSeconds <= 0 || req.ExpireAfterSeconds > 365*24*60*60 {
-		return echo.NewHTTPError(400, "invalid expiry date for PAT")
-	}
 	patStruct := p.service.ToModel(c.Request().Context(), req, userID)
 
 	err := p.patRepository.Create(c.Request().Context(), nil, &patStruct)
