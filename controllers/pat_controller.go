@@ -59,22 +59,26 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct := p.service.ToModel(c.Request().Context(), req, userID)
-
-	err := p.patRepository.Create(c.Request().Context(), nil, &patStruct)
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, userID)
 	if err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
 		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
 	}
 
-	return c.JSON(200, map[string]string{
-		"createdAt":   patStruct.CreatedAt.String(),
-		"description": patStruct.Description,
-		"userID":      patStruct.UserID.String(),
-		"pubKey":      patStruct.PubKey,
-		"fingerprint": patStruct.Fingerprint,
-		"scopes":      patStruct.Scopes,
-		"id":          patStruct.ID.String(),
-	})
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO: dtos.PATDTO{
+			ID:          patStruct.ID.String(),
+			CreatedAt:   patStruct.CreatedAt.String(),
+			Description: patStruct.Description,
+			Fingerprint: patStruct.Fingerprint,
+			Scopes:      patStruct.Scopes,
+		},
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
 }
 
 // @Summary Revoke PAT by private key

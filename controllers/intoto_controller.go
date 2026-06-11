@@ -117,7 +117,10 @@ func (a *InToToController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not load metadata").WithInternal(valid)
 	}
 
-	pubKey, valid := a.inTotoVerifierService.HexPublicKeyToInTotoKey(pat.PubKey)
+	if pat.PubKey == nil {
+		return echo.NewHTTPError(400, "PAT has no public key")
+	}
+	pubKey, valid := a.inTotoVerifierService.HexPublicKeyToInTotoKey(*pat.PubKey)
 	if valid != nil {
 		return echo.NewHTTPError(500, "could not convert public key").WithInternal(valid)
 	}
@@ -211,7 +214,10 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := a.inTotoVerifierService.HexPublicKeyToInTotoKey(pat.PubKey)
+		if pat.PubKey == nil {
+			continue
+		}
+		key, err := a.inTotoVerifierService.HexPublicKeyToInTotoKey(*pat.PubKey)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
 		}

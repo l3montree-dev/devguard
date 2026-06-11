@@ -37,8 +37,8 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
-func (g *gormPatRepository) MarkAsLastUsedNow(ctx context.Context, tx *gorm.DB, fingerprint string) error {
-	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
+func (g *gormPatRepository) MarkAsLastUsedNowByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("id = ?", id).Update("last_used_at", time.Now()).Error
 }
 
 func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) error {
@@ -67,6 +67,12 @@ func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, t
 func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {
 	var t models.PAT
 	err := g.GetDB(ctx, tx).First(&t, "fingerprint = ?", fingerprint).Error
+	return t, err
+}
+
+func (g *gormPatRepository) GetByBearerTokenHash(ctx context.Context, tx *gorm.DB, tokenHash string) (models.PAT, error) {
+	var t models.PAT
+	err := g.GetDB(ctx, tx).First(&t, "bearer_token_hash = ?", tokenHash).Error
 	return t, err
 }
 

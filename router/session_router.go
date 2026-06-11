@@ -42,6 +42,7 @@ func whoami(ctx echo.Context) error {
 func NewSessionRouter(
 	apiV1Router APIV1Router,
 	adminClient shared.PublicClient,
+	configService shared.ConfigService,
 	patService shared.PersonalAccessTokenService,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	integrationController *controllers.IntegrationController,
@@ -57,7 +58,7 @@ func NewSessionRouter(
 	assetVersionRepository shared.AssetVersionRepository,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
-		middlewares.SessionMiddleware(adminClient, patService),
+		middlewares.SessionMiddleware(adminClient, configService, patService),
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 	)
 

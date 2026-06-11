@@ -70,8 +70,11 @@ type ReleaseService interface {
 
 type PersonalAccessTokenService interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
-	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT
+	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
+	// returned as the second value — it must be shown to the user once and is never stored.
+	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
 }
 
 type CSAFService interface {
@@ -110,6 +113,7 @@ type ProjectRepository interface {
 
 type Verifier interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 }
 
 type PolicyRepository interface {
@@ -299,10 +303,11 @@ type InTotoLinkRepository interface {
 type PersonalAccessTokenRepository interface {
 	utils.Repository[uuid.UUID, models.PAT, DB]
 	GetByFingerprint(ctx context.Context, tx DB, fingerprint string) (models.PAT, error)
+	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(ctx context.Context, tx DB, userID string) ([]models.PAT, error)
 	DeleteByFingerprint(ctx context.Context, tx DB, fingerprint string) error
-	MarkAsLastUsedNow(ctx context.Context, tx DB, fingerprint string) error
+	MarkAsLastUsedNowByID(ctx context.Context, tx DB, id uuid.UUID) error
 }
 
 type SupplyChainRepository interface {
@@ -781,5 +786,6 @@ const (
 )
 
 type InstanceSettings struct {
-	SingleOrganizationMode bool `json:"singleOrganizationMode"`
+	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
+	BearerTokenAuthDisabled bool `json:"bearerTokenAuthEnabled"`
 }
