@@ -74,6 +74,7 @@ func (p *PatController) Create(c shared.Context) error {
 			CreatedAt:   patStruct.CreatedAt.String(),
 			Description: patStruct.Description,
 			Fingerprint: patStruct.Fingerprint,
+			ExpiryDate:  patStruct.ExpiryDate.Unix(),
 			Scopes:      patStruct.Scopes,
 		},
 		BearerToken: bearerToken,

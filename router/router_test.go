@@ -178,7 +178,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	// ConfigService: return error so InstanceSettings middleware passes through
 	configService := &mocks.ConfigService{}
 	configService.On("GetInstanceSettings", mock.Anything).
-		Maybe().Return(models.Config{}, fmt.Errorf("not found"))
+		Maybe().Return(shared.InstanceSettings{}, fmt.Errorf("not found"))
 
 	// PublicClient: return error → SessionMiddleware falls through to PAT verifier
 	publicClient := &mocks.PublicClient{}
@@ -196,6 +196,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	sessionRouter := NewSessionRouter(
 		apiV1,
 		publicClient,
+		configService,
 		patService,
 		extEntityService,
 		new(controllers.IntegrationController),

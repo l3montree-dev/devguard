@@ -20,6 +20,7 @@ type PAT struct {
 	Fingerprint     *string    `json:"fingerprint"`
 	BearerTokenHash *string    `json:"-" gorm:"type:text"` // never expose the hash to clients
 	LastUsedAt      *time.Time `json:"lastUsedAt" gorm:"default:null"`
+	ExpiryDate      *time.Time `json:"expiryDate"`
 	Scopes          string     `json:"scopes" gorm:"type:text"`
 }
 
@@ -35,10 +36,13 @@ func (p PAT) IsAsymmetricSecret() bool {
 	return p.Fingerprint != nil && *p.Fingerprint != ""
 }
 
+func (p PAT) IsExpired() bool {
+	return p.ExpiryDate != nil && p.ExpiryDate.Before(time.Now())
+}
+
 func (p PAT) HashToken(token string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(token))
-	// make it base64
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 

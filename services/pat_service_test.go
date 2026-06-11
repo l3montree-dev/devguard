@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -21,7 +22,8 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 	t.Run("test getPubKey Using Fingerprint", func(t *testing.T) {
 
 		var pat = models.PAT{
-			PubKey: utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -120,6 +122,22 @@ func TestVerifyAPIToken(t *testing.T) {
 		}
 	})
 
+	t.Run("returns error when token is expired", func(t *testing.T) {
+		past := time.Now().Add(-time.Hour)
+		pat := models.PAT{Scopes: "scan"}
+		pat.UserID = userID
+		pat.ExpiryDate = &past
+
+		patMock := mocks.NewPersonalAccessTokenRepository(t)
+		patMock.On("GetByBearerTokenHash", mock.Anything, mock.Anything, tokenHash).Return(pat, nil)
+		patService := NewPatService(patMock)
+
+		_, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		if err == nil {
+			t.Fatal("expected error for expired token, got nil")
+		}
+	})
+
 	t.Run("still returns success when MarkAsLastUsedNowByID fails", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000011")
 		pat := models.PAT{Scopes: "scan", Fingerprint: utils.Ptr("fp2")}
@@ -215,7 +233,8 @@ func TestSignRequest(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
 		var pat = models.PAT{
-			PubKey: utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -246,7 +265,8 @@ func TestSignRequest(t *testing.T) {
 	})
 	t.Run("test signing and verifying fails, after having tampered with the request", func(t *testing.T) {
 		var pat = models.PAT{
-			PubKey: utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -275,7 +295,8 @@ func TestSignRequest(t *testing.T) {
 
 	t.Run("test signing and verifying fails, after having tampered with the method header", func(t *testing.T) {
 		var pat = models.PAT{
-			PubKey: utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -307,5 +328,30 @@ func TestSignRequest(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
+	})
+
+	t.Run("rejects a valid signature from an expired PAT", func(t *testing.T) {
+		past := time.Now().Add(-time.Hour)
+		var pat = models.PAT{
+			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: &past,
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
+		req := httptest.NewRequest("GET", "/", reader)
+
+		if err := SignRequest(privKey, req); err != nil {
+			t.Fatal("error signing request", err)
+		}
+
+		_, _, err := patService.VerifyRequestSignature(context.Background(), req)
+		if err == nil {
+			t.Fatal("expected error for expired PAT, got nil")
+		}
 	})
 }

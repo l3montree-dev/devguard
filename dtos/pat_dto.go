@@ -24,9 +24,10 @@ type RevokeByPrivateKeyRequest struct {
 // PatCreateRequest creates either an asymmetric PAT (set PubKey) or a symmetric Bearer token PAT
 // (leave PubKey empty — the server generates the token). Exactly one mode must be used.
 type PatCreateRequest struct {
-	Description string  `json:"description"`
-	PubKey      *string `json:"pubKey"`
-	Scopes      string  `json:"scopes"`
+	Description        string  `json:"description"`
+	PubKey             *string `json:"pubKey"`
+	Scopes             string  `json:"scopes"`
+	ExpireAfterSeconds int     `json:"expireAfterSeconds" validate:"required,gt=0,lte=31536000"` // max 1 year
 }
 
 func (r PatCreateRequest) IsSymmetric() bool {
@@ -43,6 +44,7 @@ type PATDTO struct {
 	Description string  `json:"description"`
 	Fingerprint *string `json:"fingerprint"`
 	LastUsedAt  *string `json:"lastUsedAt"`
+	ExpiryDate  int64   `json:"expiryDateUnix"`
 	Scopes      string  `json:"scopes"`
 }
 

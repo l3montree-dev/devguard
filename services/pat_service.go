@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -36,6 +37,8 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
 
+	expiry := utils.Ptr(time.Now().Add(time.Second * time.Duration(request.ExpireAfterSeconds)))
+
 	if request.IsSymmetric() {
 		cleartext, hash, err := generateBearerToken()
 		if err != nil {
@@ -46,6 +49,7 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 			Description:     request.Description,
 			Scopes:          request.Scopes,
 			BearerTokenHash: &hash,
+			ExpiryDate:      expiry,
 		}, cleartext, nil
 	}
 
@@ -62,6 +66,7 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 		Scopes:      request.Scopes,
 		PubKey:      request.PubKey,
 		Fingerprint: &fingerprint,
+		ExpiryDate:  expiry,
 	}, "", nil
 }
 
@@ -178,7 +183,6 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 		return err
 	}
 
-	//config := httpsign.NewSignConfig().SignCreated(false).SetNonce("BADCAB").SetKeyID("my-shared-secret") // SignCreated should be "true" to protect against replay attacks
 	fields := httpsign.Headers("@method", "content-digest")
 
 	signer, _ := httpsign.NewP256Signer(privKey, nil, fields)
@@ -202,10 +206,18 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 }
 
 func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+	if token == "" {
+		return "", "", fmt.Errorf("invalid token format")
+	}
+
 	pat, err := p.patRepository.GetByBearerTokenHash(ctx, nil, utils.HashString(token))
 	if err != nil {
 		return "", "", fmt.Errorf("could not verify bearer token: %w", err)
 	}
+	if pat.IsExpired() {
+		return "", "", fmt.Errorf("bearer token has expired")
+	}
+
 	if err := p.patRepository.MarkAsLastUsedNowByID(ctx, nil, pat.ID); err != nil {
 		slog.Warn("could not mark pat as last used", "err", err)
 	}
@@ -213,9 +225,15 @@ func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (string, 
 }
 
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, models.PAT, error) {
+	if fingerprint == "" {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("no fingerprint provided")
+	}
 	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
 	if err != nil {
 		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("could not get public key using fingerprint: %v", err)
+	}
+	if pat.IsExpired() {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("PAT has expired")
 	}
 	if pat.PubKey == nil {
 		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("PAT has no public key")
@@ -244,7 +262,6 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 
-	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
 	verifier, _ := httpsign.NewP256Verifier(pubKey, nil,
 		httpsign.Headers("@method", "content-digest"))
 
@@ -274,4 +291,15 @@ func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) err
 	}
 
 	return p.patRepository.DeleteByFingerprint(ctx, nil, fingerprint)
+}
+
+func (p *PatService) CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool) {
+	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
+	if err != nil {
+		return models.PAT{}, false
+	}
+	if pat.IsExpired() {
+		return models.PAT{}, false
+	}
+	return pat, true
 }

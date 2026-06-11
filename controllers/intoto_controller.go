@@ -39,16 +39,18 @@ type InToToController struct {
 	supplyChainRepository  shared.SupplyChainRepository
 	assetVersionRepository shared.AssetVersionRepository
 	patRepository          shared.PersonalAccessTokenRepository
+	patService             shared.PersonalAccessTokenService
 
 	inTotoVerifierService shared.InTotoVerifierService
 }
 
-func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, inTotoVerifierService shared.InTotoVerifierService) *InToToController {
+func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepository shared.SupplyChainRepository, assetVersionRepository shared.AssetVersionRepository, patRepository shared.PersonalAccessTokenRepository, patService shared.PersonalAccessTokenService, inTotoVerifierService shared.InTotoVerifierService) *InToToController {
 	return &InToToController{
 		linkRepository:         repository,
 		supplyChainRepository:  supplyChainRepository,
 		assetVersionRepository: assetVersionRepository,
 		patRepository:          patRepository,
+		patService:             patService,
 		inTotoVerifierService:  inTotoVerifierService,
 	}
 }
@@ -93,9 +95,14 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	}
 
 	// check if valid - get the signed pat
-	pat, valid := a.patRepository.GetByFingerprint(ctx.Request().Context(), nil, ctx.Request().Header.Get("X-Fingerprint"))
-	if valid != nil {
-		return echo.NewHTTPError(401, "could not find pat").WithInternal(valid)
+	fingerprint := ctx.Request().Header.Get("X-Fingerprint")
+	if fingerprint == "" {
+		return echo.NewHTTPError(400, "invalid or missing X-Fingerprint header in request")
+	}
+
+	pat, found := a.patService.CheckForValidTokenByFingerprint(ctx.Request().Context(), fingerprint)
+	if !found {
+		return echo.NewHTTPError(401, "could not find a valid pat for fingerprint")
 	}
 
 	tmpFileName := uuid.NewString()

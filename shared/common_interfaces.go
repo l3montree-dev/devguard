@@ -75,6 +75,7 @@ type PersonalAccessTokenService interface {
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
 	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
+	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
 type CSAFService interface {
