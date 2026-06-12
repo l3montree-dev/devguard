@@ -21,6 +21,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/labstack/echo/v4"
 )
@@ -69,14 +71,7 @@ func (p *PatController) Create(c shared.Context) error {
 	}
 
 	resp := dtos.PATCreateResponseDTO{
-		PATDTO: dtos.PATDTO{
-			ID:          patStruct.ID.String(),
-			CreatedAt:   patStruct.CreatedAt.String(),
-			Description: patStruct.Description,
-			Fingerprint: patStruct.Fingerprint,
-			ExpiryDate:  patStruct.ExpiryDate.Unix(),
-			Scopes:      patStruct.Scopes,
-		},
+		PATDTO:      transformer.PATModelToDTO(patStruct),
 		BearerToken: bearerToken,
 	}
 	return c.JSON(200, resp)
@@ -151,5 +146,5 @@ func (p *PatController) List(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
 	}
 
-	return c.JSON(200, pats)
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
 }

@@ -37,7 +37,7 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
 
-	expiry := utils.Ptr(time.Now().Add(time.Second * time.Duration(request.ExpireAfterSeconds)))
+	expiry := utils.Ptr(time.Unix(request.ExpireDateUnix, 0))
 
 	if request.IsSymmetric() {
 		cleartext, hash, err := generateBearerToken()
@@ -70,13 +70,15 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 	}, "", nil
 }
 
+var BearerTokenPrefix = "dvg_"
+
 // generateBearerToken creates a random dvg_-prefixed token and returns the cleartext and its hash.
 func generateBearerToken() (cleartext, hash string, err error) {
 	raw := make([]byte, 32)
 	if _, err = rand.Read(raw); err != nil {
 		return "", "", err
 	}
-	cleartext = "dvg_" + hex.EncodeToString(raw)
+	cleartext = BearerTokenPrefix + hex.EncodeToString(raw)
 	return cleartext, utils.HashString(cleartext), nil
 }
 
@@ -170,7 +172,20 @@ func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error)
 	return privKeyECDSA, pubKey, nil
 }
 
-func SignRequest(hexPrivKey string, req *http.Request) error {
+func AuthenticateRequestWithToken(token string, req *http.Request) error {
+	if token == "" {
+		return fmt.Errorf("token is empty")
+	}
+
+	if !strings.HasPrefix(token, BearerTokenPrefix) {
+		// assume it's a hex-encoded private key
+		return signRequest(token, req)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	return nil
+}
+
+func signRequest(hexPrivKey string, req *http.Request) error {
 	privKey, pubKey, err := HexTokenToECDSA(hexPrivKey)
 	if err != nil {
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)

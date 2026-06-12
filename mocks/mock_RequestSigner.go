@@ -37,12 +37,12 @@ func (_m *RequestSigner) EXPECT() *RequestSigner_Expecter {
 	return &RequestSigner_Expecter{mock: &_m.Mock}
 }
 
-// SignRequest provides a mock function for the type RequestSigner
-func (_mock *RequestSigner) SignRequest(token string, req *http.Request) error {
+// AuthenticateRequestWithToken provides a mock function for the type RequestSigner
+func (_mock *RequestSigner) AuthenticateRequestWithToken(token string, req *http.Request) error {
 	ret := _mock.Called(token, req)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SignRequest")
+		panic("no return value specified for AuthenticateRequestWithToken")
 	}
 
 	var r0 error
@@ -54,19 +54,19 @@ func (_mock *RequestSigner) SignRequest(token string, req *http.Request) error {
 	return r0
 }
 
-// RequestSigner_SignRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignRequest'
-type RequestSigner_SignRequest_Call struct {
+// RequestSigner_AuthenticateRequestWithToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AuthenticateRequestWithToken'
+type RequestSigner_AuthenticateRequestWithToken_Call struct {
 	*mock.Call
 }
 
-// SignRequest is a helper method to define mock.On call
+// AuthenticateRequestWithToken is a helper method to define mock.On call
 //   - token string
 //   - req *http.Request
-func (_e *RequestSigner_Expecter) SignRequest(token interface{}, req interface{}) *RequestSigner_SignRequest_Call {
-	return &RequestSigner_SignRequest_Call{Call: _e.mock.On("SignRequest", token, req)}
+func (_e *RequestSigner_Expecter) AuthenticateRequestWithToken(token interface{}, req interface{}) *RequestSigner_AuthenticateRequestWithToken_Call {
+	return &RequestSigner_AuthenticateRequestWithToken_Call{Call: _e.mock.On("AuthenticateRequestWithToken", token, req)}
 }
 
-func (_c *RequestSigner_SignRequest_Call) Run(run func(token string, req *http.Request)) *RequestSigner_SignRequest_Call {
+func (_c *RequestSigner_AuthenticateRequestWithToken_Call) Run(run func(token string, req *http.Request)) *RequestSigner_AuthenticateRequestWithToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -84,12 +84,12 @@ func (_c *RequestSigner_SignRequest_Call) Run(run func(token string, req *http.R
 	return _c
 }
 
-func (_c *RequestSigner_SignRequest_Call) Return(err error) *RequestSigner_SignRequest_Call {
+func (_c *RequestSigner_AuthenticateRequestWithToken_Call) Return(err error) *RequestSigner_AuthenticateRequestWithToken_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *RequestSigner_SignRequest_Call) RunAndReturn(run func(token string, req *http.Request) error) *RequestSigner_SignRequest_Call {
+func (_c *RequestSigner_AuthenticateRequestWithToken_Call) RunAndReturn(run func(token string, req *http.Request) error) *RequestSigner_AuthenticateRequestWithToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

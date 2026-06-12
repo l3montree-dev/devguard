@@ -229,7 +229,7 @@ func TestToModel(t *testing.T) {
 	})
 }
 
-func TestSignRequest(t *testing.T) {
+func TestAuthenticateRequestWithToken(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
 		var pat = models.PAT{
@@ -249,7 +249,7 @@ func TestSignRequest(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := SignRequest(privKey, req)
+		err := AuthenticateRequestWithToken(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -280,7 +280,7 @@ func TestSignRequest(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := SignRequest(privKey, req)
+		err := AuthenticateRequestWithToken(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -309,7 +309,7 @@ func TestSignRequest(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := SignRequest(privKey, req)
+		err := AuthenticateRequestWithToken(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -345,7 +345,7 @@ func TestSignRequest(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		if err := SignRequest(privKey, req); err != nil {
+		if err := AuthenticateRequestWithToken(privKey, req); err != nil {
 			t.Fatal("error signing request", err)
 		}
 

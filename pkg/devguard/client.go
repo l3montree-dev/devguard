@@ -9,13 +9,13 @@ import (
 )
 
 type RequestSigner interface {
-	SignRequest(token string, req *http.Request) error
+	AuthenticateRequestWithToken(token string, req *http.Request) error
 }
 
 type simpleRequestSigner struct{}
 
-func (s *simpleRequestSigner) SignRequest(token string, req *http.Request) error {
-	return services.SignRequest(token, req)
+func (s *simpleRequestSigner) AuthenticateRequestWithToken(token string, req *http.Request) error {
+	return services.AuthenticateRequestWithToken(token, req)
 }
 
 // HTTPClient wraps http.Client with automatic request signing and URL handling
@@ -63,7 +63,7 @@ func (t *signedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 
 	// Sign the request
-	if err := t.SignRequest(t.token, req); err != nil {
+	if err := t.AuthenticateRequestWithToken(t.token, req); err != nil {
 		return nil, fmt.Errorf("failed to sign request: %w", err)
 	}
 

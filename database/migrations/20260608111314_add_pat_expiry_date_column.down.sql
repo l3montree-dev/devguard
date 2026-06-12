@@ -1,1 +1,0 @@
-ALTER TABLE public.pat DROP COLUMN expiry_date;
