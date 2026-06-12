@@ -1826,6 +1826,63 @@ func (_c *AccessControl_LinkProjectAndAssetRole_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// RevokeAllRolesInAsset provides a mock function for the type AccessControl
+func (_mock *AccessControl) RevokeAllRolesInAsset(ctx context.Context, asset string) error {
+	ret := _mock.Called(ctx, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllRolesInAsset")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_RevokeAllRolesInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAllRolesInAsset'
+type AccessControl_RevokeAllRolesInAsset_Call struct {
+	*mock.Call
+}
+
+// RevokeAllRolesInAsset is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asset string
+func (_e *AccessControl_Expecter) RevokeAllRolesInAsset(ctx interface{}, asset interface{}) *AccessControl_RevokeAllRolesInAsset_Call {
+	return &AccessControl_RevokeAllRolesInAsset_Call{Call: _e.mock.On("RevokeAllRolesInAsset", ctx, asset)}
+}
+
+func (_c *AccessControl_RevokeAllRolesInAsset_Call) Run(run func(ctx context.Context, asset string)) *AccessControl_RevokeAllRolesInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInAsset_Call) Return(err error) *AccessControl_RevokeAllRolesInAsset_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInAsset_Call) RunAndReturn(run func(ctx context.Context, asset string) error) *AccessControl_RevokeAllRolesInAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RevokeAllRolesInAssetForUser provides a mock function for the type AccessControl
 func (_mock *AccessControl) RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error {
 	ret := _mock.Called(ctx, user, asset)
@@ -1885,6 +1942,63 @@ func (_c *AccessControl_RevokeAllRolesInAssetForUser_Call) Return(err error) *Ac
 }
 
 func (_c *AccessControl_RevokeAllRolesInAssetForUser_Call) RunAndReturn(run func(ctx context.Context, user string, asset string) error) *AccessControl_RevokeAllRolesInAssetForUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeAllRolesInProject provides a mock function for the type AccessControl
+func (_mock *AccessControl) RevokeAllRolesInProject(ctx context.Context, project string) error {
+	ret := _mock.Called(ctx, project)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllRolesInProject")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, project)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_RevokeAllRolesInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAllRolesInProject'
+type AccessControl_RevokeAllRolesInProject_Call struct {
+	*mock.Call
+}
+
+// RevokeAllRolesInProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - project string
+func (_e *AccessControl_Expecter) RevokeAllRolesInProject(ctx interface{}, project interface{}) *AccessControl_RevokeAllRolesInProject_Call {
+	return &AccessControl_RevokeAllRolesInProject_Call{Call: _e.mock.On("RevokeAllRolesInProject", ctx, project)}
+}
+
+func (_c *AccessControl_RevokeAllRolesInProject_Call) Run(run func(ctx context.Context, project string)) *AccessControl_RevokeAllRolesInProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInProject_Call) Return(err error) *AccessControl_RevokeAllRolesInProject_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInProject_Call) RunAndReturn(run func(ctx context.Context, project string) error) *AccessControl_RevokeAllRolesInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

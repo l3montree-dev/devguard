@@ -680,6 +680,9 @@ type AccessControl interface {
 	RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error
 	RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error
 
+	RevokeAllRolesInProject(ctx context.Context, project string) error
+	RevokeAllRolesInAsset(ctx context.Context, asset string) error
+
 	InheritProjectRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 	InheritAssetRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role, asset string) error
 
@@ -717,6 +720,7 @@ type AccessControl interface {
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
+	RevokeAllRolesForDomain(domain uuid.UUID) error
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
