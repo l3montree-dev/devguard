@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -147,6 +148,57 @@ func (_c *RBACProvider_GetDomainRBAC_Call) Return(accessControl shared.AccessCon
 }
 
 func (_c *RBACProvider_GetDomainRBAC_Call) RunAndReturn(run func(domain string) shared.AccessControl) *RBACProvider_GetDomainRBAC_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RevokeAllRolesForDomain provides a mock function for the type RBACProvider
+func (_mock *RBACProvider) RevokeAllRolesForDomain(domain uuid.UUID) error {
+	ret := _mock.Called(domain)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllRolesForDomain")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) error); ok {
+		r0 = returnFunc(domain)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// RBACProvider_RevokeAllRolesForDomain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAllRolesForDomain'
+type RBACProvider_RevokeAllRolesForDomain_Call struct {
+	*mock.Call
+}
+
+// RevokeAllRolesForDomain is a helper method to define mock.On call
+//   - domain uuid.UUID
+func (_e *RBACProvider_Expecter) RevokeAllRolesForDomain(domain interface{}) *RBACProvider_RevokeAllRolesForDomain_Call {
+	return &RBACProvider_RevokeAllRolesForDomain_Call{Call: _e.mock.On("RevokeAllRolesForDomain", domain)}
+}
+
+func (_c *RBACProvider_RevokeAllRolesForDomain_Call) Run(run func(domain uuid.UUID)) *RBACProvider_RevokeAllRolesForDomain_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *RBACProvider_RevokeAllRolesForDomain_Call) Return(err error) *RBACProvider_RevokeAllRolesForDomain_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *RBACProvider_RevokeAllRolesForDomain_Call) RunAndReturn(run func(domain uuid.UUID) error) *RBACProvider_RevokeAllRolesForDomain_Call {
 	_c.Call.Return(run)
 	return _c
 }

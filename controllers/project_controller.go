@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -254,10 +255,40 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug} [delete]
 func (ProjectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
+	ctx := c.Request().Context()
 
-	err := ProjectController.projectRepository.Delete(c.Request().Context(), nil, project.ID)
+	// take care of all rbac rules associated with the project and delete those as well
+	childProjects, err := ProjectController.projectRepository.RecursivelyGetChildProjects(ctx, nil, project.ID)
 	if err != nil {
 		return err
+	}
+	// map projects to their ids
+	projectIDs := append([]uuid.UUID{project.ID}, utils.Map(childProjects, func(p models.Project) uuid.UUID {
+		return p.ID
+	})...)
+
+	// then collect all assets associated with the affected projects
+	assets, err := ProjectController.assetRepository.GetByProjectIDs(ctx, nil, projectIDs)
+	if err != nil {
+		return err
+	}
+
+	err = ProjectController.projectRepository.Delete(ctx, nil, project.ID)
+	if err != nil {
+		return err
+	}
+
+	// lastly iterate over all projects and assets and remove all roles associated with them
+	rbac := shared.GetRBAC(c)
+	for _, projectID := range projectIDs {
+		if err := rbac.RevokeAllRolesInProject(ctx, projectID.String()); err != nil {
+			return err
+		}
+	}
+	for _, asset := range assets {
+		if err := rbac.RevokeAllRolesInAsset(ctx, asset.ID.String()); err != nil {
+			return err
+		}
 	}
 
 	return c.NoContent(200)
