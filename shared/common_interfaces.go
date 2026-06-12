@@ -146,6 +146,7 @@ type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(ctx context.Context, tx DB, name string) (models.Asset, error)
 	FindAssetByExternalProviderID(ctx context.Context, tx DB, externalEntityProviderID string, externalEntityID string) (*models.Asset, error)

@@ -140,6 +140,11 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
 
+	// then delete all RBAC roles associated with this org as well
+	if err := controller.rbacProvider.RevokeAllRolesForDomain(organizationID); err != nil {
+		return echo.NewHTTPError(500, "could not delete organization roles").WithInternal(err)
+	}
+
 	return ctx.NoContent(200)
 }
 
