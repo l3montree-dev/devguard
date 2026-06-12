@@ -175,10 +175,11 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	extEntityService.On("TriggerOrgSync", mock.Anything).Maybe().Return(nil)
 	extEntityService.On("TriggerSync", mock.Anything).Maybe().Return(nil)
 
-	// ConfigService: return error so InstanceSettings middleware passes through
+	// ConfigService: return default settings with nil error so SessionMiddleware can proceed.
+	// The per-route InstanceSettings middleware passes through on error, so nil is equivalent.
 	configService := &mocks.ConfigService{}
 	configService.On("GetInstanceSettings", mock.Anything).
-		Maybe().Return(models.Config{}, fmt.Errorf("not found"))
+		Maybe().Return(shared.InstanceSettings{}, nil)
 
 	// PublicClient: return error → SessionMiddleware falls through to PAT verifier
 	publicClient := &mocks.PublicClient{}
@@ -196,6 +197,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	sessionRouter := NewSessionRouter(
 		apiV1,
 		publicClient,
+		configService,
 		patService,
 		extEntityService,
 		new(controllers.IntegrationController),

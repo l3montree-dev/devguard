@@ -40,6 +40,72 @@ func (_m *PersonalAccessTokenService) EXPECT() *PersonalAccessTokenService_Expec
 	return &PersonalAccessTokenService_Expecter{mock: &_m.Mock}
 }
 
+// CheckForValidTokenByFingerprint provides a mock function for the type PersonalAccessTokenService
+func (_mock *PersonalAccessTokenService) CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool) {
+	ret := _mock.Called(ctx, fingerprint)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckForValidTokenByFingerprint")
+	}
+
+	var r0 models.PAT
+	var r1 bool
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.PAT, bool)); ok {
+		return returnFunc(ctx, fingerprint)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.PAT); ok {
+		r0 = returnFunc(ctx, fingerprint)
+	} else {
+		r0 = ret.Get(0).(models.PAT)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) bool); ok {
+		r1 = returnFunc(ctx, fingerprint)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckForValidTokenByFingerprint'
+type PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call struct {
+	*mock.Call
+}
+
+// CheckForValidTokenByFingerprint is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fingerprint string
+func (_e *PersonalAccessTokenService_Expecter) CheckForValidTokenByFingerprint(ctx interface{}, fingerprint interface{}) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+	return &PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call{Call: _e.mock.On("CheckForValidTokenByFingerprint", ctx, fingerprint)}
+}
+
+func (_c *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call) Run(run func(ctx context.Context, fingerprint string)) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call) Return(pAT models.PAT, b bool) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+	_c.Call.Return(pAT, b)
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call) RunAndReturn(run func(ctx context.Context, fingerprint string) (models.PAT, bool)) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RevokeByPrivateKey provides a mock function for the type PersonalAccessTokenService
 func (_mock *PersonalAccessTokenService) RevokeByPrivateKey(ctx context.Context, privKey string) error {
 	ret := _mock.Called(ctx, privKey)
@@ -98,7 +164,7 @@ func (_c *PersonalAccessTokenService_RevokeByPrivateKey_Call) RunAndReturn(run f
 }
 
 // ToModel provides a mock function for the type PersonalAccessTokenService
-func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT {
+func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
 	ret := _mock.Called(ctx, request, userID)
 
 	if len(ret) == 0 {
@@ -106,12 +172,27 @@ func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dt
 	}
 
 	var r0 models.PAT
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, string) (models.PAT, string, error)); ok {
+		return returnFunc(ctx, request, userID)
+	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, string) models.PAT); ok {
 		r0 = returnFunc(ctx, request, userID)
 	} else {
 		r0 = ret.Get(0).(models.PAT)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, dtos.PatCreateRequest, string) string); ok {
+		r1 = returnFunc(ctx, request, userID)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, dtos.PatCreateRequest, string) error); ok {
+		r2 = returnFunc(ctx, request, userID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // PersonalAccessTokenService_ToModel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ToModel'
@@ -150,12 +231,84 @@ func (_c *PersonalAccessTokenService_ToModel_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *PersonalAccessTokenService_ToModel_Call) Return(pAT models.PAT) *PersonalAccessTokenService_ToModel_Call {
-	_c.Call.Return(pAT)
+func (_c *PersonalAccessTokenService_ToModel_Call) Return(pAT models.PAT, s string, err error) *PersonalAccessTokenService_ToModel_Call {
+	_c.Call.Return(pAT, s, err)
 	return _c
 }
 
-func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT) *PersonalAccessTokenService_ToModel_Call {
+func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)) *PersonalAccessTokenService_ToModel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// VerifyAPIToken provides a mock function for the type PersonalAccessTokenService
+func (_mock *PersonalAccessTokenService) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+	ret := _mock.Called(ctx, token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyAPIToken")
+	}
+
+	var r0 string
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, string, error)); ok {
+		return returnFunc(ctx, token)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, token)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) string); ok {
+		r1 = returnFunc(ctx, token)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = returnFunc(ctx, token)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// PersonalAccessTokenService_VerifyAPIToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAPIToken'
+type PersonalAccessTokenService_VerifyAPIToken_Call struct {
+	*mock.Call
+}
+
+// VerifyAPIToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - token string
+func (_e *PersonalAccessTokenService_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *PersonalAccessTokenService_VerifyAPIToken_Call {
+	return &PersonalAccessTokenService_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
+}
+
+func (_c *PersonalAccessTokenService_VerifyAPIToken_Call) Run(run func(ctx context.Context, token string)) *PersonalAccessTokenService_VerifyAPIToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAPIToken_Call) Return(s string, s1 string, err error) *PersonalAccessTokenService_VerifyAPIToken_Call {
+	_c.Call.Return(s, s1, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_VerifyAPIToken_Call) RunAndReturn(run func(ctx context.Context, token string) (string, string, error)) *PersonalAccessTokenService_VerifyAPIToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
