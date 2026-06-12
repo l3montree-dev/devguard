@@ -37,7 +37,7 @@ func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, u
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
 
-	expiry := utils.Ptr(time.Unix(request.ExpireDateUnix, 0))
+	expiry := utils.Ptr(time.Unix(request.ExpiryDateUnix, 0))
 
 	if request.IsSymmetric() {
 		cleartext, hash, err := generateBearerToken()

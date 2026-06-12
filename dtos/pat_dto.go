@@ -27,7 +27,7 @@ type PatCreateRequest struct {
 	Description    string  `json:"description"`
 	PubKey         *string `json:"pubKey"`
 	Scopes         string  `json:"scopes"`
-	ExpireDateUnix int64   `json:"expireDateUnix" validate:"required,future_max_1y"`
+	ExpiryDateUnix int64   `json:"expiryDateUnix" validate:"required,future_max_1y"`
 }
 
 func (r PatCreateRequest) IsSymmetric() bool {
