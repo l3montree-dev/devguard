@@ -48,7 +48,16 @@ func LoadConfig() error {
 	return godotenv.Load()
 }
 
-var V = validator.New()
+var V = func() *validator.Validate {
+	v := validator.New()
+	// future_max_1y: value must be a Unix timestamp between now and now+1 year
+	v.RegisterValidation("future_max_1y", func(fl validator.FieldLevel) bool { //nolint:errcheck
+		ts := fl.Field().Int()
+		now := time.Now().Unix()
+		return ts > now && ts <= now+31536000
+	})
+	return v
+}()
 
 func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 	return SanitizeEnv(Environmental{

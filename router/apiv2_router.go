@@ -24,6 +24,7 @@ func NewAPIV2Router(
 	assetVersionRepository shared.AssetVersionRepository,
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
+	configService shared.ConfigService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 ) APIV2Router {
 	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
@@ -43,7 +44,7 @@ func NewAPIV2Router(
 				return next(ctx)
 			}
 		},
-		middlewares.SessionMiddleware(adminClient, patService),
+		middlewares.SessionMiddleware(adminClient, configService, patService),
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),

@@ -193,7 +193,7 @@ func runCurl(opts *CurlOptions) error {
 	}
 
 	// Sign the request using DevGuard PAT
-	if err := services.SignRequest(token, req); err != nil {
+	if err := services.AuthenticateRequestWithToken(token, req); err != nil {
 		return fmt.Errorf("failed to sign request: %v", err)
 	}
 

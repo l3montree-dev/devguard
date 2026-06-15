@@ -48,7 +48,7 @@ provided token or the DEVGUARD_TOKEN environment variable.`,
 			if err != nil {
 				return err
 			}
-			err = services.SignRequest(token, req)
+			err = services.AuthenticateRequestWithToken(token, req)
 
 			if err != nil {
 				return err
