@@ -591,3 +591,50 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 
 	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
+
+func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error {
+	query := `
+WITH
+  target AS (
+    SELECT
+      p.id   AS project_id,
+      a.id   AS asset_id,
+      av.name AS asset_version_name
+    FROM projects p
+    JOIN assets         a  ON a.project_id = p.id AND a.name = ?
+    JOIN asset_versions av ON av.asset_id  = a.id AND av.name = ?
+    WHERE p.organization_id = ?
+      AND p.parent_id       = ?
+      AND p.name            = ?
+    LIMIT 1
+  ),
+  del_asset_version AS (
+    DELETE FROM asset_versions
+    WHERE asset_id = (SELECT asset_id FROM target)
+      AND name     = (SELECT asset_version_name FROM target)
+  ),
+  del_asset AS (
+    DELETE FROM assets
+    WHERE id = (SELECT asset_id FROM target)
+      AND NOT EXISTS (
+        SELECT 1 FROM asset_versions
+        WHERE asset_id = (SELECT asset_id FROM target)
+          AND name    != (SELECT asset_version_name FROM target)
+      )
+  ),
+  del_project AS (
+    DELETE FROM projects
+    WHERE id = (SELECT project_id FROM target)
+      AND NOT EXISTS (
+        SELECT 1 FROM assets
+        WHERE project_id = (SELECT project_id FROM target)
+          AND id        != (SELECT asset_id FROM target)
+      )
+  )
+SELECT 1`
+
+	return g.GetDB(ctx, tx).Exec(query,
+		assetName, assetVersionName,
+		organizationID, parentProjectID, projectName,
+	).Error
+}

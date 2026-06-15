@@ -20,12 +20,14 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -43,6 +45,26 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 	}
+}
+
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
+	slug := slug.Make(name)
+	asset, err := s.assetRepository.ReadBySlug(ctx, nil, projectID, slug)
+	if err == nil {
+		return &asset, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	newAsset := models.Asset{
+		Name:      name,
+		Slug:      slug,
+		ProjectID: projectID,
+	}
+
+	return s.CreateAsset(ctx, rbac, currentUser, newAsset)
+
 }
 
 func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {

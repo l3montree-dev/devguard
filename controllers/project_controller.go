@@ -19,9 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -30,18 +33,28 @@ import (
 )
 
 type ProjectController struct {
-	projectRepository shared.ProjectRepository
-	assetRepository   shared.AssetRepository
-	projectService    shared.ProjectService
-	webhookRepository shared.WebhookIntegrationRepository
+	projectRepository      shared.ProjectRepository
+	assetRepository        shared.AssetRepository
+	assetVersionRepository shared.AssetVersionRepository
+	artifactRepository     shared.ArtifactRepository
+	assetVersionService    shared.AssetVersionService
+	assetService           shared.AssetService
+	projectService         shared.ProjectService
+	webhookRepository      shared.WebhookIntegrationRepository
+	scanService            shared.ScanService
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
 	return &ProjectController{
-		projectRepository: repository,
-		assetRepository:   assetRepository,
-		projectService:    projectService,
-		webhookRepository: webhookRepository,
+		projectRepository:      repository,
+		assetRepository:        assetRepository,
+		assetVersionRepository: assetVersionRepository,
+		artifactRepository:     artifactRepository,
+		assetVersionService:    assetVersionService,
+		assetService:           assetService,
+		projectService:         projectService,
+		webhookRepository:      webhookRepository,
+		scanService:            scanService,
 	}
 }
 
@@ -506,4 +519,156 @@ func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
 	}
 	return ctx.String(200, configContent)
+}
+
+type dynamicProjectRequest struct {
+	Verb         string          `json:"verb"`
+	ProjectName  string          `json:"projectName"`
+	AssetName    string          `json:"assetName"`
+	AssetVersion string          `json:"assetVersion"`
+	Sbom         json.RawMessage `json:"sbom,omitempty"`
+}
+
+func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Context) error {
+
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not read request body: %s", err.Error())).WithInternal(err)
+	}
+
+	var probe dynamicProjectRequest
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
+	}
+
+	if probe.ProjectName == "" || probe.AssetName == "" {
+		return echo.NewHTTPError(400, "verb, projectName, and assetName are required")
+	}
+
+	action := probe.Verb
+	projectName := probe.ProjectName
+	assetName := probe.AssetName
+	assetVersionName := probe.AssetVersion
+
+	organization := shared.GetOrg(ctx)
+	parentProject := shared.GetProject(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
+
+	if action == "delete" {
+		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProject.ID, projectName, assetName, assetVersionName)
+		if err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
+		}
+
+		return ctx.JSON(200, map[string]string{"message": "project and asset deleted successfully"})
+	} else if action != "update" {
+		return echo.NewHTTPError(400, "invalid verb, only 'update' and 'delete' are allowed")
+	}
+
+	bom := new(cdx.BOM)
+
+	if probe.Sbom == nil {
+		return echo.NewHTTPError(400, "sbom is required")
+	}
+	if err := json.Unmarshal(probe.Sbom, bom); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
+	}
+
+	project, err := ProjectController.projectService.FindOrCreateProject(ctx, organization.GetID(), projectName, parentProject.ID)
+
+	rbac := shared.GetRBAC(ctx)
+	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, organization.GetID(), project.ID, assetName, userID)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
+	}
+
+	assetVersion, err := ProjectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, assetVersionName, asset.ID, false, nil)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset version: %s", err.Error())).WithInternal(err)
+	}
+
+	artifactName := normalize.ArtifactPurl("operator", fmt.Sprintf("%s/%s/%s", organization.Slug, project.Slug, asset.Name))
+
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+	if err := ProjectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
+		slog.Error("trivy operator: could not save artifact", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not save artifact"})
+	}
+
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, "operator", asset.KeepOriginalSbomRootComponent)
+	if err != nil {
+		slog.Error("trivy operator: failed to normalize BOM", "err", err)
+		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})
+	}
+
+	wholeSBOM, err := ProjectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), nil, organization, *project, *asset, assetVersion, artifactName, normalized)
+	if err != nil {
+		slog.Error("trivy operator: could not update SBOM", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not update SBOM"})
+	}
+
+	tx := ProjectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+	defer tx.Rollback()
+
+	userAgent := ctx.Request().UserAgent()
+	_, _, _, err = ProjectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	if err != nil {
+		slog.Error("trivy operator: scan failed", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "scan failed"})
+	}
+
+	tx.Commit()
+	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
+}
+
+type devGuardAsset struct {
+	ProjectName string `json:"projectName"`
+	Assets      []struct {
+		Name     string   `json:"name"`
+		Versions []string `json:"versions"`
+	} `json:"assets"`
+}
+
+func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+	parentProject := shared.GetProject(ctx)
+
+	//TOD:: we should optimize this by doing it in a single query.
+	projects, err := ProjectController.projectRepository.GetDirectChildProjects(reqCtx, nil, parentProject.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
+	}
+
+	result := make([]devGuardAsset, 0, len(projects))
+	for _, project := range projects {
+		assets, err := ProjectController.assetRepository.GetByProjectID(reqCtx, nil, project.ID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
+		}
+
+		entry := devGuardAsset{ProjectName: project.Name}
+		for _, asset := range assets {
+			versions, err := ProjectController.assetVersionRepository.GetAssetVersionsByAssetID(reqCtx, nil, asset.ID)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
+			}
+
+			assetEntry := struct {
+				Name     string   `json:"name"`
+				Versions []string `json:"versions"`
+			}{Name: asset.Name}
+
+			for _, v := range versions {
+				assetEntry.Versions = append(assetEntry.Versions, v.Name)
+			}
+			entry.Assets = append(entry.Assets, assetEntry)
+		}
+		result = append(result, entry)
+	}
+
+	return ctx.JSON(200, result)
 }

@@ -5,11 +5,14 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type projectService struct {
@@ -34,6 +37,29 @@ func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID
 
 	// check if it is an external entity
 	return project, nil
+}
+
+func (s *projectService) FindOrCreateProject(ctx shared.Context, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error) {
+	slug := slug.Make(name)
+	project, err := s.projectRepository.ReadBySlug(ctx.Request().Context(), nil, orgID, slug)
+	if err == nil {
+		return &project, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	newProject := &models.Project{
+		Name:           name,
+		Slug:           slug,
+		OrganizationID: orgID,
+		ParentID:       &parentID,
+	}
+	err = s.CreateProject(ctx, newProject)
+	if err != nil {
+		return nil, err
+	}
+	return newProject, nil
 }
 
 func (s *projectService) CreateProject(ctx shared.Context, project *models.Project) error {
