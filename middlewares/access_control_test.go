@@ -23,6 +23,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -528,6 +529,79 @@ func TestAssetAccessControl(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
 		mockRBAC.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
+	})
+}
+
+// TestMultiOrganizationMiddlewareRBAC tests the MultiOrganizationMiddlewareRBAC middleware
+func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
+	t.Run("returns 403 when oauth2 token is not valid", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("organization")
+		ctx.SetParamValues("test-org")
+
+		orgID := uuid.New()
+		org := &models.Org{Model: models.Model{ID: orgID}, Slug: "test-org"}
+
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgService := mocks.OrgService{}
+		mockAccessControl := mocks.AccessControl{}
+		mockSession := accesscontrol.NewSession("user-id", []string{})
+
+		mockOrgService.On("ReadBySlug", mock.Anything, "test-org").Return(org, nil)
+		mockRBACProvider.On("GetDomainRBAC", orgID.String()).Return(&mockAccessControl)
+		mockAccessControl.On("HasAccess", mock.Anything, "user-id").Return(false, shared.ErrOauth2TokenNotValidRedirectionRequired)
+
+		ctx.Set("session", mockSession)
+
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, map[string]*gitlabint.GitlabOauth2Config{})
+
+		err := middleware(func(ctx shared.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		mockOrgService.AssertExpectations(t)
+		mockRBACProvider.AssertExpectations(t)
+		mockAccessControl.AssertExpectations(t)
+	})
+
+	t.Run("returns 401 for generic HasAccess error on private org", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("organization")
+		ctx.SetParamValues("test-org")
+
+		orgID := uuid.New()
+		org := &models.Org{Model: models.Model{ID: orgID}, Slug: "test-org"}
+
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgService := mocks.OrgService{}
+		mockAccessControl := mocks.AccessControl{}
+		mockSession := accesscontrol.NewSession("user-id", []string{})
+
+		mockOrgService.On("ReadBySlug", mock.Anything, "test-org").Return(org, nil)
+		mockRBACProvider.On("GetDomainRBAC", orgID.String()).Return(&mockAccessControl)
+		mockAccessControl.On("HasAccess", mock.Anything, "user-id").Return(false, errors.New("some auth error"))
+
+		ctx.Set("session", mockSession)
+
+		middleware := MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService, map[string]*gitlabint.GitlabOauth2Config{})
+
+		err := middleware(func(ctx shared.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		mockOrgService.AssertExpectations(t)
+		mockRBACProvider.AssertExpectations(t)
+		mockAccessControl.AssertExpectations(t)
 	})
 }
 
