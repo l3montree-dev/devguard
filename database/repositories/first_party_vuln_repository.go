@@ -108,7 +108,9 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 		TotalCount int64
 	}
 	var rows []rowWithCount
-	err := q.Select("*, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
@@ -120,6 +122,13 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 	for i, r := range rows {
 		firstPartyVulns[i] = r.FirstPartyVuln
 		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.FirstPartyVuln]{}, nil, err
+		}
 	}
 	//TODO: check it
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
@@ -145,7 +154,9 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx
 		TotalCount int64
 	}
 	var rows []rowWithCount
-	err := q.Select("*, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
@@ -157,6 +168,13 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx
 	for i, r := range rows {
 		firstPartyVulns[i] = r.FirstPartyVuln
 		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.FirstPartyVuln]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil

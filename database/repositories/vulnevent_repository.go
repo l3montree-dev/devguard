@@ -105,7 +105,6 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 
 	q := r.GetDB(ctx, tx).
 		Table("vuln_events AS e").
-		Select("e.*, dv.cve_id, dv.component_purl, fv.uri").
 		Joins("LEFT JOIN dependency_vulns dv ON e.dependency_vuln_id = dv.id").
 		Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
 		Where("(e.dependency_vuln_id IN (?) OR e.first_party_vuln_id IN (?))", dependencyVulnSubQuery, firstPartyVulnSubQuery).
@@ -121,7 +120,9 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 		TotalCount int64
 	}
 	var rows []rowWithCount
-	err := q.Select("e.*, dv.cve_id, dv.component_purl, fv.uri, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("e.*, dv.cve_id, dv.component_purl, fv.uri, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
@@ -133,6 +134,13 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 	for i, r := range rows {
 		events[i] = r.VulnEventDetail
 		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.VulnEventDetail]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, events), nil

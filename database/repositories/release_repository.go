@@ -163,9 +163,11 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 		TotalCount int64
 	}
 	var rows []rowWithCount
-	if err := q.Select("*, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	if err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
-		Scan(&rows).Error; err != nil {
+		Find(&rows).Error; err != nil { // find must be used here so that the preloads of the release model work correctly
 		return shared.Paged[models.Release]{}, err
 	}
 
@@ -174,6 +176,12 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 	for i, r := range rows {
 		releases[i] = r.Release
 		count = r.TotalCount
+	}
+	// the window count rides on each row, so an out-of-range (empty) page carries no count.
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.Release]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, releases), nil

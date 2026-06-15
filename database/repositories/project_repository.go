@@ -337,7 +337,9 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		TotalCount int64
 	}
 	var rows []resultRow
-	err := q.Select("*, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
@@ -349,6 +351,13 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	for i, r := range rows {
 		results[i] = r.ProjectAssetDTO
 		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, results), nil
@@ -392,7 +401,9 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 		TotalCount int64
 	}
 	var rows []rowWithCount
-	err := q.Select("*, COUNT(*) OVER() AS total_count").
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
@@ -404,6 +415,13 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 	for i, r := range rows {
 		projects[i] = r.Project
 		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.Project]{}, err
+		}
 	}
 	return shared.NewPaged(pageInfo, count, projects), nil
 }
