@@ -16,6 +16,7 @@
 package middlewares
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -239,6 +240,10 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			session := shared.GetSession(ctx)
 			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session.GetUserID())
 			if err != nil {
+				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
+					slog.Info("oauth2 token not valid, asking user to reauthorize", "user", session.GetUserID(), "organization", organization)
+					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
+				}
 				if org.IsPublic {
 					shared.SetIsPublicRequest(ctx)
 					shared.SetOrg(ctx, *org)
@@ -246,7 +251,6 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 					shared.SetOrgSlug(ctx, organization)
 					return next(ctx)
 				}
-				slog.Info("asking user to reauthorize", "err", err)
 				return ctx.JSON(401, map[string]string{"error": err.Error()})
 			}
 

@@ -232,7 +232,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 	// check that the token is valid
 	if !g.checkIfTokenIsValid(ctx, *token, 0) {
 		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
-		return false, fmt.Errorf("gitlab oauth2 token is not valid for provider %s", externalEntityProviderID)
+		return false, shared.ErrOauth2TokenNotValidRedirectionRequired
 	}
 
 	return true, nil
