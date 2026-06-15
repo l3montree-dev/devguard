@@ -149,12 +149,6 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 		q = q.Where(f.SQL(), f.Value())
 	}
 
-	// count
-	var count int64
-	if err := q.Count(&count).Error; err != nil {
-		return shared.Paged[models.Release]{}, err
-	}
-
 	// apply sort
 	if len(sort) > 0 {
 		for _, s := range sort {
@@ -164,9 +158,22 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 		q = q.Order("created_at desc")
 	}
 
-	var releases []models.Release
-	if err := q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&releases).Error; err != nil {
+	type rowWithCount struct {
+		models.Release
+		TotalCount int64
+	}
+	var rows []rowWithCount
+	if err := q.Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error; err != nil {
 		return shared.Paged[models.Release]{}, err
+	}
+
+	var count int64
+	releases := make([]models.Release, len(rows))
+	for i, r := range rows {
+		releases[i] = r.Release
+		count = r.TotalCount
 	}
 
 	return shared.NewPaged(pageInfo, count, releases), nil

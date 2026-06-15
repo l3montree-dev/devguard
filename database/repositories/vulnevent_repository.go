@@ -109,24 +109,33 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 		Joins("LEFT JOIN dependency_vulns dv ON e.dependency_vuln_id = dv.id").
 		Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
 		Where("(e.dependency_vuln_id IN (?) OR e.first_party_vuln_id IN (?))", dependencyVulnSubQuery, firstPartyVulnSubQuery).
-		Order("e.created_at DESC").
-		Find(&events)
-
-	var count int64
+		Order("e.created_at DESC")
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
 
-	err := q.Count(&count).Error
+	type rowWithCount struct {
+		models.VulnEventDetail
+		TotalCount int64
+	}
+	var rows []rowWithCount
+	err := q.Select("e.*, dv.cve_id, dv.component_purl, fv.uri, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.VulnEventDetail]{}, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&events).Error
+	var count int64
+	events = make([]models.VulnEventDetail, len(rows))
+	for i, r := range rows {
+		events[i] = r.VulnEventDetail
+		count = r.TotalCount
+	}
 
-	return shared.NewPaged(pageInfo, count, events), err
+	return shared.NewPaged(pageInfo, count, events), nil
 }
 
 func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {

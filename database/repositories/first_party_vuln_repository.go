@@ -91,7 +91,6 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx conte
 
 func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
 
-	var count int64
 	var firstPartyVulns = []models.FirstPartyVuln{}
 
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
@@ -104,15 +103,23 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 		q = q.Where("\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.uri ILIKE ? OR rule_description ILIKE ? OR first_party_vulnerabilities.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Count(&count).Error
+	type rowWithCount struct {
+		models.FirstPartyVuln
+		TotalCount int64
+	}
+	var rows []rowWithCount
+	err := q.Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.FirstPartyVuln]{}, nil, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
-
-	if err != nil {
-		return shared.Paged[models.FirstPartyVuln]{}, nil, err
+	var count int64
+	firstPartyVulns = make([]models.FirstPartyVuln, len(rows))
+	for i, r := range rows {
+		firstPartyVulns[i] = r.FirstPartyVuln
+		count = r.TotalCount
 	}
 	//TODO: check it
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
@@ -133,17 +140,23 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx
 
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
-	var count int64
-
-	err := q.Count(&count).Error
+	type rowWithCount struct {
+		models.FirstPartyVuln
+		TotalCount int64
+	}
+	var rows []rowWithCount
+	err := q.Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.FirstPartyVuln]{}, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
-
-	if err != nil {
-		return shared.Paged[models.FirstPartyVuln]{}, err
+	var count int64
+	firstPartyVulns = make([]models.FirstPartyVuln, len(rows))
+	for i, r := range rows {
+		firstPartyVulns[i] = r.FirstPartyVuln
+		count = r.TotalCount
 	}
 
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil
