@@ -91,8 +91,6 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx conte
 
 func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
 
-	var firstPartyVulns = []models.FirstPartyVuln{}
-
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
 	// apply filters
@@ -118,7 +116,7 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 	}
 
 	var count int64
-	firstPartyVulns = make([]models.FirstPartyVuln, len(rows))
+	firstPartyVulns := make([]models.FirstPartyVuln, len(rows))
 	for i, r := range rows {
 		firstPartyVulns[i] = r.FirstPartyVuln
 		count = r.TotalCount
@@ -145,8 +143,6 @@ func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx
 
 // TODO: change it
 func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx context.Context, tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
-	var firstPartyVulns = []models.FirstPartyVuln{}
-
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
 	type rowWithCount struct {
@@ -164,7 +160,7 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx
 	}
 
 	var count int64
-	firstPartyVulns = make([]models.FirstPartyVuln, len(rows))
+	firstPartyVulns := make([]models.FirstPartyVuln, len(rows))
 	for i, r := range rows {
 		firstPartyVulns[i] = r.FirstPartyVuln
 		count = r.TotalCount
