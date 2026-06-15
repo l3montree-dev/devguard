@@ -649,7 +649,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		})
 	})
 	if err != nil {
-		slog.Error("failed to list projects in group", "err", err)
+		slog.Error("failed to list projects in group", "err", err, "groupID", groupID)
 		return nil, nil, err
 	}
 

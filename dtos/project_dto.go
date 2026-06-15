@@ -82,6 +82,7 @@ type ProjectDetailsDTO struct {
 type ProjectAssetDTO struct {
 	ResourceType string     `json:"resourceType"` // "project" or "asset"
 	ID           uuid.UUID  `json:"id"`
+	Avatar       *string    `json:"avatar,omitempty"` // URL to the asset's avatar
 	Name         string     `json:"name"`
 	Slug         string     `json:"slug"`
 	Description  string     `json:"description"`
