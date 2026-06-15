@@ -817,10 +817,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(ctx, githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
@@ -834,7 +831,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 		Labels: &labels,
 	}
 
-	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
+	_, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
 	return err
 }
 
@@ -988,10 +985,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &github.IssueRequest{
 		Title: github.String(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,

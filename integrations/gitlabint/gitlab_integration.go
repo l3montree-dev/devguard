@@ -1316,11 +1316,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
-
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1470,10 +1466,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
