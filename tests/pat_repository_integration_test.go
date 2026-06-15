@@ -60,7 +60,7 @@ func TestPATCheckForValidTokenByFingerprintEnforcesExpiry(t *testing.T) {
 		pat, found := patService.CheckForValidTokenByFingerprint(ctx, "valid-fp")
 
 		require.True(t, found)
-		assert.Equal(t, "valid-fp", pat.Fingerprint)
+		assert.Equal(t, "valid-fp", *pat.Fingerprint)
 	})
 
 	t.Run("rejects a token whose expiry is in the past", func(t *testing.T) {
