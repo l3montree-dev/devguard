@@ -6299,6 +6299,9 @@
                     "description": {
                         "type": "string"
                     },
+                    "expiryDateUnix": {
+                        "type": "integer"
+                    },
                     "fingerprint": {
                         "type": "string"
                     },
@@ -6319,6 +6322,9 @@
                     "description": {
                         "type": "string"
                     },
+                    "expiryDateUnix": {
+                        "type": "integer"
+                    },
                     "pubKey": {
                         "type": "string"
                     },
@@ -6326,10 +6332,17 @@
                         "type": "string"
                     }
                 },
+                "required": [
+                    "expiryDateUnix"
+                ],
                 "type": "object"
             },
             "dtos.ProjectAssetDTO": {
                 "properties": {
+                    "avatar": {
+                        "description": "URL to the asset's avatar",
+                        "type": "string"
+                    },
                     "createdAt": {
                         "type": "string"
                     },
