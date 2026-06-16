@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -542,9 +541,7 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	projectName := probe.ProjectExternalEntityID
 	assetName := probe.AssetExternalEntityID
 	assetVersionName := probe.AssetVersion
-	providerID := ctx.Param("providerID")
-	//delete the trailing slash if it exists
-	providerID = strings.TrimSuffix(providerID, "/")
+	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
@@ -624,9 +621,7 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
 
-	providerID := ctx.Param("providerID")
-	//delete the trailing slash if it exists
-	providerID = strings.TrimSuffix(providerID, "/")
+	providerID := shared.GetProviderID(ctx)
 
 	//TOD:: we should optimize this by doing it in a single query.
 	projects, err := ProjectController.projectRepository.GetDirectChildProjects(reqCtx, nil, parentProject.ID)

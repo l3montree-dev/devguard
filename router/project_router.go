@@ -18,6 +18,7 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -39,6 +40,7 @@ func NewProjectRouter(
 	webhookIntegration *controllers.WebhookController,
 	projectRepository shared.ProjectRepository,
 	componentController *controllers.ComponentController,
+	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -68,8 +70,8 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
-	projectRouter.POST("/dynamic-project/dn/:providerID", projectController.HandleDynamicProject, middlewares.NeededScope([]string{"manage"}))
-	projectRouter.GET("/dynamic-project/dn/:providerID", projectController.ListDynamicProjects, middlewares.NeededScope([]string{"manage"}))
+	projectRouter.POST("/dynamic-project/dn/:providerID", projectController.HandleDynamicProject, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.GET("/dynamic-project/dn/:providerID", projectController.ListDynamicProjects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 

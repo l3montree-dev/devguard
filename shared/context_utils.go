@@ -366,6 +366,15 @@ func GetProject(ctx Context) models.Project {
 	return ctx.Get("project").(models.Project)
 }
 
+func SetProviderID(ctx Context, providerID string) {
+	ctx.Set("providerID", providerID)
+}
+
+func GetProviderID(ctx Context) string {
+	v, _ := ctx.Get("providerID").(string)
+	return v
+}
+
 func GetRepositoryID(asset *models.Asset) (string, error) {
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
