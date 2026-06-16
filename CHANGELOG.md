@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.6.0] - 2026-06-16
+
+### Added
+
+- **App-side encryption** — integration secrets (GitLab, Jira, webhook tokens) are now encrypted at rest using AES-GCM with an operator-provided key; a `devguard encrypt migrate` CLI command re-encrypts existing plaintext secrets (offline only), and a `devguard encrypt rotate` command swaps to a new key without service downtime; the `--key` flag on the migrate command allows seeding the key file on first-time setup
+- **PAT expiry dates** — Personal Access Tokens now carry a mandatory expiry date (default 365 days); expiry is enforced at authentication time
+- **Bearer token auth for scanner** — the scanner now accepts symmetric bearer tokens (PATs) in addition to session cookies; a new `devguard-scanner auth` command stores the token in the system keyring with a local-file fallback
+- **Scan v2 endpoints** — new `/scan/v2` API routes return VEX and SARIF directly in a single response; v1 scan endpoints are marked deprecated in Swagger docs; scanner CLI updated to invoke v2 by default
+- **Unauthenticated SARIF upload endpoint** — CI pipelines can push SARIF results without a session token; directory scan mode added for secret scanning
+- **Scanner `--noWrite` flag** — scanner runs without persisting results (dry-run mode)
+- **VulnDB relationship data** — `/vulndb` endpoints now include related CVE/GHSA relationships in responses
+- **Golang license case-insensitive fallback** — Go module license resolution retries with a `v`-prefixed version when the bare version returns no result
+
+### Changed
+
+- **Dependency path in integration tickets** — GitHub, GitLab, and Jira tickets now render the component dependency tree directly from the stored `vulnerability_path` field ([#2144](https://github.com/l3montree-dev/devguard/issues/2144)) instead of re-querying the component graph on every ticket update, removing a database round-trip per ticket operation
+- **RBAC mutex** — Casbin enforcer uses `RLock` for read operations instead of a full write-lock, reducing contention under concurrent requests
+- **SCA scanner output** — terminal print output improved; VEX documents now include CVE description, corrected source link, vulnerability path, and `directDependencyFixedVersion`
+- All Go dependencies updated; Go toolchain bumped to v1.26.3
+
+### Fixed
+
+- Reauthorization errors now return HTTP 403 with a specific `reauthorize` error code so clients can distinguish token expiry from other auth failures
+- Missing avatar URLs in sub-project and asset list queries
+- Pull request finding edge case that could miss findings in certain repository states
+
 ## [v1.5.1] - 2026-05-28
 
 ### Fixed
