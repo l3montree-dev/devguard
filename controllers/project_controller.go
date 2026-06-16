@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -521,14 +522,6 @@ func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	return ctx.String(200, configContent)
 }
 
-type dynamicProjectRequest struct {
-	Verb         string          `json:"verb"`
-	ProjectName  string          `json:"projectName"`
-	AssetName    string          `json:"assetName"`
-	AssetVersion string          `json:"assetVersion"`
-	Sbom         json.RawMessage `json:"sbom,omitempty"`
-}
-
 func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Context) error {
 
 	body, err := io.ReadAll(ctx.Request().Body)
@@ -536,20 +529,22 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not read request body: %s", err.Error())).WithInternal(err)
 	}
 
-	var probe dynamicProjectRequest
+	var probe dtos.DynamicProjectRequestDTO
 	if err := json.Unmarshal(body, &probe); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
 	}
 
-	if probe.ProjectName == "" || probe.AssetName == "" {
-		return echo.NewHTTPError(400, "verb, projectName, and assetName are required")
+	if probe.ProjectExternalEntityID == "" || probe.AssetExternalEntityID == "" {
+		return echo.NewHTTPError(400, "verb, projectExternalEntityId, and assetExternalEntityId are required")
 	}
 
 	action := probe.Verb
-	projectName := probe.ProjectName
-	assetName := probe.AssetName
+	projectName := probe.ProjectExternalEntityID
+	assetName := probe.AssetExternalEntityID
 	assetVersionName := probe.AssetVersion
-
+	providerID := ctx.Param("providerID")
+	//delete the trailing slash if it exists
+	providerID = strings.TrimSuffix(providerID, "/")
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
@@ -574,10 +569,10 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
 	}
 
-	project, err := ProjectController.projectService.FindOrCreateProject(ctx, organization.GetID(), projectName, parentProject.ID)
+	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, parentProject.ID)
 
 	rbac := shared.GetRBAC(ctx)
-	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, organization.GetID(), project.ID, assetName, userID)
+	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), project.ID, assetName, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
@@ -625,17 +620,13 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
-type devGuardAsset struct {
-	ProjectName string `json:"projectName"`
-	Assets      []struct {
-		Name     string   `json:"name"`
-		Versions []string `json:"versions"`
-	} `json:"assets"`
-}
-
 func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
+
+	providerID := ctx.Param("providerID")
+	//delete the trailing slash if it exists
+	providerID = strings.TrimSuffix(providerID, "/")
 
 	//TOD:: we should optimize this by doing it in a single query.
 	projects, err := ProjectController.projectRepository.GetDirectChildProjects(reqCtx, nil, parentProject.ID)
@@ -643,24 +634,30 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
 	}
 
-	result := make([]devGuardAsset, 0, len(projects))
+	result := make([]dtos.ProjectsAssetAssetVersionsDTO, 0, len(projects))
 	for _, project := range projects {
+		if project.ExternalEntityProviderID == nil || *project.ExternalEntityProviderID != providerID {
+			continue
+		}
 		assets, err := ProjectController.assetRepository.GetByProjectID(reqCtx, nil, project.ID)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
 		}
 
-		entry := devGuardAsset{ProjectName: project.Name}
+		entry := dtos.ProjectsAssetAssetVersionsDTO{ProjectExternalEntityID: project.Name}
 		for _, asset := range assets {
+			if asset.ExternalEntityProviderID == nil || *asset.ExternalEntityProviderID != providerID {
+				continue
+			}
 			versions, err := ProjectController.assetVersionRepository.GetAssetVersionsByAssetID(reqCtx, nil, asset.ID)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
 			}
 
 			assetEntry := struct {
-				Name     string   `json:"name"`
-				Versions []string `json:"versions"`
-			}{Name: asset.Name}
+				AssetExternalEntityID string   `json:"assetExternalEntityId"`
+				Versions              []string `json:"versions"`
+			}{AssetExternalEntityID: asset.Name}
 
 			for _, v := range versions {
 				assetEntry.Versions = append(assetEntry.Versions, v.Name)

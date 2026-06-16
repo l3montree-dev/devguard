@@ -606,6 +606,7 @@ WITH
     WHERE p.organization_id = ?
       AND p.parent_id       = ?
       AND p.name            = ?
+	  AND p.type            = 'dynamic'
     LIMIT 1
   ),
   del_asset_version AS (

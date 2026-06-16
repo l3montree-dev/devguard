@@ -158,6 +158,8 @@ type AssetRepository interface {
 	GetAllAssetsFromDB(ctx context.Context, tx DB) ([]models.Asset, error)
 	ReadWithAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID) (models.Asset, error)
 	GetAssetsWithVulnSharingEnabled(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.Asset, error)
+	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
+	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -376,7 +378,7 @@ type ProjectService interface {
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
 	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
-	FindOrCreateProject(ctx Context, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error)
+	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error)
 }
 
 type InTotoVerifierService interface {
@@ -391,7 +393,7 @@ type AssetService interface {
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
-	FindOrCreateAsset(ctx context.Context, rbac AccessControl, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error)
+	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)

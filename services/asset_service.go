@@ -27,7 +27,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -47,24 +46,30 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
-	slug := slug.Make(name)
-	asset, err := s.assetRepository.ReadBySlug(ctx, nil, projectID, slug)
-	if err == nil {
-		return &asset, nil
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
+	providerID = "dn:" + providerID
+	externalID := name
+
+	asset := &models.Asset{
+		Name:                     name,
+		Slug:                     slug.Make(name),
+		ProjectID:                projectID,
+		ExternalEntityID:         &externalID,
+		ExternalEntityProviderID: &providerID,
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+
+	newAssets, _, err := s.assetRepository.UpsertSplit(ctx, nil, providerID, []*models.Asset{asset})
+	if err != nil {
 		return nil, err
 	}
 
-	newAsset := models.Asset{
-		Name:      name,
-		Slug:      slug,
-		ProjectID: projectID,
+	if len(newAssets) > 0 {
+		if err := s.BootstrapAsset(ctx, rbac, asset); err != nil {
+			return nil, err
+		}
 	}
 
-	return s.CreateAsset(ctx, rbac, currentUser, newAsset)
-
+	return asset, nil
 }
 
 func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {

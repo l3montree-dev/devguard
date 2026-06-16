@@ -16,6 +16,7 @@
 package dtos
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,4 +94,19 @@ type ProjectAssetDTO struct {
 	UpdatedAt    time.Time  `json:"updatedAt"`
 
 	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset" gorm:"-"`
+}
+
+type ProjectsAssetAssetVersionsDTO struct {
+	ProjectExternalEntityID string `json:"projectExternalEntityId"`
+	Assets                  []struct {
+		AssetExternalEntityID string   `json:"assetExternalEntityId"`
+		Versions              []string `json:"versions"`
+	} `json:"assets"`
+}
+type DynamicProjectRequestDTO struct {
+	Verb                    string          `json:"verb"`
+	ProjectExternalEntityID string          `json:"projectExternalEntityId"`
+	AssetExternalEntityID   string          `json:"assetExternalEntityId"`
+	AssetVersion            string          `json:"assetVersion"`
+	Sbom                    json.RawMessage `json:"sbom,omitempty"`
 }

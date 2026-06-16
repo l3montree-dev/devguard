@@ -285,3 +285,36 @@ func (repository *assetRepository) GetAssetsWithVulnSharingEnabled(ctx context.C
 	).Preload("Project").Find(&assets).Error
 	return assets, err
 }
+
+func (repository *assetRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error) {
+	var existingAssets []models.Asset
+	err := repository.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(assets, func(a *models.Asset) *string { return a.ExternalEntityID }), externalProviderID).Find(&existingAssets).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	existingMap := make(map[string]bool)
+	for _, a := range existingAssets {
+		existingMap[*a.ExternalEntityID] = true
+	}
+
+	err = repository.Upsert(ctx, tx, &assets, []clause.Column{
+		{Name: "external_entity_provider_id"},
+		{Name: "external_entity_id"},
+	}, []string{"name", "description", "project_id", "avatar"})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newAssets := make([]*models.Asset, 0)
+	updatedAssets := make([]*models.Asset, 0)
+	for _, a := range assets {
+		if !existingMap[*a.ExternalEntityID] {
+			newAssets = append(newAssets, a)
+		} else {
+			updatedAssets = append(updatedAssets, a)
+		}
+	}
+
+	return newAssets, updatedAssets, nil
+}

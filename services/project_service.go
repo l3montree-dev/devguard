@@ -11,8 +11,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type projectService struct {
@@ -39,27 +37,31 @@ func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID
 	return project, nil
 }
 
-func (s *projectService) FindOrCreateProject(ctx shared.Context, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error) {
-	slug := slug.Make(name)
-	project, err := s.projectRepository.ReadBySlug(ctx.Request().Context(), nil, orgID, slug)
-	if err == nil {
-		return &project, nil
+func (s *projectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error) {
+	providerID = "dn:" + providerID
+	externalID := name
+	project := &models.Project{
+		Name:                     name,
+		Slug:                     slug.Make(name),
+		OrganizationID:           orgID,
+		ParentID:                 &parentID,
+		Type:                     models.ProjectTypeDynamic,
+		ExternalEntityID:         &externalID,
+		ExternalEntityProviderID: &providerID,
 	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-
-	newProject := &models.Project{
-		Name:           name,
-		Slug:           slug,
-		OrganizationID: orgID,
-		ParentID:       &parentID,
-	}
-	err = s.CreateProject(ctx, newProject)
+	newProjects, _, err := s.projectRepository.UpsertSplit(ctx.Request().Context(), nil, providerID, []*models.Project{project})
 	if err != nil {
 		return nil, err
 	}
-	return newProject, nil
+
+	if len(newProjects) > 0 {
+		domainRBAC := shared.GetRBAC(ctx)
+		if err := s.BootstrapProject(ctx.Request().Context(), domainRBAC, project); err != nil {
+			return nil, err
+		}
+	}
+
+	return project, nil
 }
 
 func (s *projectService) CreateProject(ctx shared.Context, project *models.Project) error {

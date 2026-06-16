@@ -25,10 +25,9 @@ import (
 func ProjectCreateRequestToModel(projectCreate dtos.ProjectCreateRequest) models.Project {
 	// check if valid type
 	projectType := projectCreate.Type
-	if projectType != string(models.ProjectTypeDefault) && projectType != string(models.ProjectTypeKubernetesNamespace) {
+	if projectType == "" {
 		projectType = string(models.ProjectTypeDefault)
 	}
-
 	return models.Project{
 		Name:        projectCreate.Name,
 		Slug:        slug.Make(projectCreate.Name),
