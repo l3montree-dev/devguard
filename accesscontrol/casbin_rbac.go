@@ -255,44 +255,50 @@ func (c *casbinRBAC) getAssetRoleName(role shared.Role, asset string) string {
 }
 
 func (c *casbinRBAC) GrantRole(ctx context.Context, user string, role shared.Role) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) RevokeRole(ctx context.Context, user string, role shared.Role) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) GrantRoleInProject(ctx context.Context, user string, role shared.Role, project string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) GrantRoleInAsset(ctx context.Context, user string, role shared.Role, asset string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) RevokeRoleInProject(ctx context.Context, user string, role shared.Role, project string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) RevokeRoleInAsset(ctx context.Context, user string, role shared.Role, asset string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.DeleteRoleForUserInDomainCtx(ctx, "user::"+user, "asset::"+asset+"|role::"+string(role), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
