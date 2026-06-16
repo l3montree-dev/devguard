@@ -1,25 +1,57 @@
 version: '3.8'
 
-### WARNING: This is for local testing and development only. Do not use in production! ###
-# Review carefully and change passwords and secrets before using in any other environment. 
-#
-# Change:
-# - POSTGRES_PASSWORD in the postgresql service
-# - The kratos users password in initdb.sql / via psql
-# - DSN environment variable in the kratos and kratos-migrate services
-# - POSTGRES_PASSWORD environment variable in the devguard-api service
-###
+### This file is ready to use for local testing and evaluation.
+### To harden it for production, follow the comments marked with [PRODUCTION].
 
 services:
+  devguard-setup:
+    # One-time init container: generates the encryption key and downloads
+    # the Kratos config + DB init script into named volumes.
+    # Runs on every `docker compose up` but skips files that already exist.
+    image: alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
+    volumes:
+      - encryption-key:/keys
+      - kratos-config:/kratos
+      - initdb:/initdb
+    command: >
+      sh -c "
+        BASE=https://raw.githubusercontent.com/l3montree-dev/devguard/refs/heads/main &&
+
+        if [ ! -f /keys/app_side_encryption.key ]; then
+          od -vN 32 -An -tx1 /dev/urandom | tr -d ' \n' > /keys/app_side_encryption.key &&
+          echo 'Generated new encryption key.';
+        else
+          echo 'Encryption key already exists, skipping.';
+        fi &&
+
+        if [ ! -f /kratos/kratos.yml ]; then
+          wget -qO /kratos/kratos.yml $$BASE/.kratos/kratos.example.yml &&
+          echo 'Downloaded kratos.yml.';
+        fi &&
+        if [ ! -f /kratos/identity.schema.json ]; then
+          wget -qO /kratos/identity.schema.json $$BASE/.kratos/identity.schema.json &&
+          echo 'Downloaded identity.schema.json.';
+        fi &&
+
+        if [ ! -f /initdb/init.sql ]; then
+          wget -qO /initdb/init.sql $$BASE/initdb.sql &&
+          echo 'Downloaded initdb.sql.';
+        fi
+      "
+    networks:
+      - devguard-local
+
   postgresql:
     image: ghcr.io/l3montree-dev/devguard/postgresql:v1.6.0
     shm_size: 1g
-    container_name: devguard-postgres
     security_opt:
-      - no-new-privileges:true 
+      - no-new-privileges:true
+    depends_on:
+      devguard-setup:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: change-me-definitely-when-not-testing
+      POSTGRES_PASSWORD: change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD — set a strong random password
       POSTGRES_DB: devguard
     #ports:
     #  - "5432:5432"
@@ -30,7 +62,9 @@ services:
       retries: 5
     volumes:
       - postgres:/var/lib/postgresql/data
-      - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - initdb:/docker-entrypoint-initdb.d:ro
+      # [PRODUCTION] initdb only runs on a fresh database. After first start you can
+      # remove this mount — it has no effect on an existing database.
     tmpfs: /run/postgresql:rw,uid=999,gid=999
     networks:
       - devguard-local
@@ -46,10 +80,14 @@ services:
       postgresql:
         condition: service_healthy
     volumes:
-      - type: bind
-        source: ./kratos
-        target: /etc/config/kratos
+      - kratos-config:/etc/config/kratos:ro
+      # [PRODUCTION] replace the named volume with a bind mount to your customised kratos.yml:
+      # - type: bind
+      #   source: ./kratos
+      #   target: /etc/config/kratos
+      #   read_only: true
     environment:
+      # [PRODUCTION] KRATOS_DB_PASSWORD — set a strong random password (separate from DEVGUARD_DB_PASSWORD)
       - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
     networks:
@@ -57,7 +95,6 @@ services:
 
   kratos:
     image: oryd/kratos:v25.4.0-distroless@sha256:368667ee3713797f86ddec669c36751f6484c7d675c78fd27c795b2e79271c31
-    container_name: devguard-kratos
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -70,17 +107,18 @@ services:
       kratos-migrate:
         condition: service_started
     volumes:
-      - type: bind
-        read_only: true
-        source: ./kratos
-        target: /etc/config/kratos
+      - kratos-config:/etc/config/kratos:ro
+      # [PRODUCTION] same as kratos-migrate: replace with a bind mount to your customised kratos.yml
     #ports:
       #- "4433:4433"  # Public
       #- "4434:4434"  # Admin
     environment:
+      # [PRODUCTION] KRATOS_DB_PASSWORD — same value as in kratos-migrate
       - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=debug  # [PRODUCTION] set to info or warn
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    # [PRODUCTION] remove --dev flag:
+    # command: serve -c /etc/config/kratos/kratos.yml --watch-courier
     networks:
       - devguard-local
 
@@ -97,20 +135,22 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+    volumes:
+      - encryption-key:/keys:ro
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=http://localhost:3000  # [PRODUCTION] set to your public frontend URL
+      - APP_SIDE_ENCRYPTION_KEY_PATH=/keys/app_side_encryption.key
     command: ["devguard-cli", "migrate"]
     networks:
       - devguard-local
 
   devguard-api:
     image: ghcr.io/l3montree-dev/devguard:v1.6.0
-    container_name: devguard-api
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -128,24 +168,27 @@ services:
         condition: service_completed_successfully
     ports:
       - "8080:8080"
+      # [PRODUCTION] put a TLS-terminating reverse proxy (nginx, Caddy, Traefik) in front
+      # and do not expose this port directly to the internet
+    volumes:
+      - encryption-key:/keys:ro
     environment:
-      - DATABASE_URL=postgresql://postgres:password@postgresql:5432/devguard
-      - ORY_KRATOS_PUBLIC=http://kratos:4433
-      - ORY_KRATOS_ADMIN=http://kratos:4434
-      - LOG_LEVEL=debug
-      - INSTANCE_DOMAIN=http://localhost:8080
-      - FRONTEND_URL=http://localhost:3000
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
+      - ORY_KRATOS_PUBLIC=http://kratos:4433
+      - ORY_KRATOS_ADMIN=http://kratos:4434
+      - LOG_LEVEL=debug  # [PRODUCTION] set to info or warn
+      - INSTANCE_DOMAIN=http://localhost:8080  # [PRODUCTION] set to your public API URL (https)
+      - FRONTEND_URL=http://localhost:3000     # [PRODUCTION] set to your public frontend URL (https)
+      - APP_SIDE_ENCRYPTION_KEY_PATH=/keys/app_side_encryption.key
     networks:
       - devguard-local
 
   devguard-web:
     image: ghcr.io/l3montree-dev/devguard-web:v1.6.0
-    container_name: devguard-web
     read_only: true
     tmpfs:
       - /tmp:size=100M
@@ -158,15 +201,19 @@ services:
       - devguard-api
     ports:
       - "3000:3000"
+      # [PRODUCTION] put a TLS-terminating reverse proxy in front
     environment:
       - DEVGUARD_API_URL=http://devguard-api:8080
       - ORY_SDK_URL=http://kratos:4433
-      - ORY_SDK_PUBLIC_URL=http://localhost:3000
+      - ORY_SDK_PUBLIC_URL=http://localhost:3000  # [PRODUCTION] set to your public frontend URL (https)
     networks:
       - devguard-local
 
 volumes:
   postgres:
+  encryption-key:
+  kratos-config:
+  initdb:
 
 networks:
   devguard-local:
