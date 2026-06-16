@@ -46,15 +46,13 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
-	providerID = "dn:" + providerID
-	externalID := name
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error) {
 
 	asset := &models.Asset{
 		Name:                     name,
 		Slug:                     slug.Make(name),
 		ProjectID:                projectID,
-		ExternalEntityID:         &externalID,
+		ExternalEntityID:         &externalEntityID,
 		ExternalEntityProviderID: &providerID,
 	}
 

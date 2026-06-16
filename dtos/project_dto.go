@@ -98,15 +98,19 @@ type ProjectAssetDTO struct {
 
 type ProjectsAssetAssetVersionsDTO struct {
 	ProjectExternalEntityID string `json:"projectExternalEntityId"`
+	ProjectName             string `json:"projectName"`
 	Assets                  []struct {
 		AssetExternalEntityID string   `json:"assetExternalEntityId"`
+		AssetName             string   `json:"assetName"`
 		Versions              []string `json:"versions"`
 	} `json:"assets"`
 }
 type DynamicProjectRequestDTO struct {
 	Verb                    string          `json:"verb"`
 	ProjectExternalEntityID string          `json:"projectExternalEntityId"`
+	ProjectName             string          `json:"projectName"`
 	AssetExternalEntityID   string          `json:"assetExternalEntityId"`
+	AssetName               string          `json:"assetName"`
 	AssetVersion            string          `json:"assetVersion"`
 	Sbom                    json.RawMessage `json:"sbom,omitempty"`
 }

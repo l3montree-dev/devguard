@@ -20,6 +20,7 @@ func ProviderIDMiddleware(gitlabIntegrations map[string]*gitlabint.GitlabOauth2C
 		return func(ctx shared.Context) error {
 			providerID := ctx.Param("providerID")
 			providerID = strings.TrimSuffix(providerID, "/")
+			providerID = "dn:" + providerID // prefix to avoid collisions with other provider IDs in the future
 			if providerID == "" {
 				return echo.NewHTTPError(400, "providerID is required")
 			}

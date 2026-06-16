@@ -592,7 +592,7 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error {
+func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error {
 	query := `
 WITH
   target AS (
@@ -601,11 +601,12 @@ WITH
       a.id   AS asset_id,
       av.name AS asset_version_name
     FROM projects p
-    JOIN assets         a  ON a.project_id = p.id AND a.name = ?
+    JOIN assets         a  ON a.project_id = p.id AND a.external_entity_id = ?
     JOIN asset_versions av ON av.asset_id  = a.id AND av.name = ?
-    WHERE p.organization_id = ?
+    WHERE p.organization_id 	= ?
       AND p.parent_id       = ?
-      AND p.name            = ?
+	  AND p.external_entity_provider_id      = ?
+      AND p.external_entity_id  = ?
 	  AND p.type            = 'dynamic'
     LIMIT 1
   ),
@@ -635,7 +636,7 @@ WITH
 SELECT 1`
 
 	return g.GetDB(ctx, tx).Exec(query,
-		assetName, assetVersionName,
-		organizationID, parentProjectID, projectName,
+		assetExternalEntityID, assetVersionName,
+		organizationID, parentProjectID, providerID, projectExternalEntityID,
 	).Error
 }

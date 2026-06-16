@@ -106,7 +106,7 @@ type ProjectRepository interface {
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
-	CleanupDynamicProject(ctx context.Context, tx DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error
+	CleanupDynamicProject(ctx context.Context, tx DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error
 }
 
 type Verifier interface {
@@ -378,7 +378,7 @@ type ProjectService interface {
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
 	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
-	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error)
+	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID) (*models.Project, error)
 }
 
 type InTotoVerifierService interface {
@@ -393,7 +393,7 @@ type AssetService interface {
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
-	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error)
+	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)

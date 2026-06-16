@@ -37,16 +37,15 @@ func (s *projectService) ReadBySlug(ctx shared.Context, organizationID uuid.UUID
 	return project, nil
 }
 
-func (s *projectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, parentID uuid.UUID) (*models.Project, error) {
-	providerID = "dn:" + providerID
-	externalID := name
+func (s *projectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID) (*models.Project, error) {
+
 	project := &models.Project{
 		Name:                     name,
 		Slug:                     slug.Make(name),
 		OrganizationID:           orgID,
 		ParentID:                 &parentID,
 		Type:                     models.ProjectTypeDynamic,
-		ExternalEntityID:         &externalID,
+		ExternalEntityID:         &externalEntityID,
 		ExternalEntityProviderID: &providerID,
 	}
 	newProjects, _, err := s.projectRepository.UpsertSplit(ctx.Request().Context(), nil, providerID, []*models.Project{project})

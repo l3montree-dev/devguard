@@ -538,8 +538,10 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	}
 
 	action := probe.Verb
-	projectName := probe.ProjectExternalEntityID
-	assetName := probe.AssetExternalEntityID
+	projectName := probe.ProjectName
+	projectExternalEntityID := probe.ProjectExternalEntityID
+	assetName := probe.AssetName
+	assetExternalEntityID := probe.AssetExternalEntityID
 	assetVersionName := probe.AssetVersion
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
@@ -547,7 +549,7 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	userID := shared.GetSession(ctx).GetUserID()
 
 	if action == "delete" {
-		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProject.ID, projectName, assetName, assetVersionName)
+		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProject.ID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName)
 		if err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
 		}
@@ -566,10 +568,10 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
 	}
 
-	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, parentProject.ID)
+	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, projectExternalEntityID, parentProject.ID)
 
 	rbac := shared.GetRBAC(ctx)
-	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), project.ID, assetName, userID)
+	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), project.ID, assetName, assetExternalEntityID, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
@@ -639,7 +641,7 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 			return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
 		}
 
-		entry := dtos.ProjectsAssetAssetVersionsDTO{ProjectExternalEntityID: project.Name}
+		entry := dtos.ProjectsAssetAssetVersionsDTO{ProjectExternalEntityID: *project.ExternalEntityID, ProjectName: project.Name}
 		for _, asset := range assets {
 			if asset.ExternalEntityProviderID == nil || *asset.ExternalEntityProviderID != providerID {
 				continue
@@ -651,8 +653,9 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 
 			assetEntry := struct {
 				AssetExternalEntityID string   `json:"assetExternalEntityId"`
+				AssetName             string   `json:"assetName"`
 				Versions              []string `json:"versions"`
-			}{AssetExternalEntityID: asset.Name}
+			}{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
 
 			for _, v := range versions {
 				assetEntry.Versions = append(assetEntry.Versions, v.Name)
