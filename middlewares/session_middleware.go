@@ -67,20 +67,19 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.Co
 				if userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
 					scopes = "scan manage"
 					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
+					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
 					return next(ctx)
 				}
 			}
 			if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok && !instanceSettings.BearerTokenAuthDisabled {
 				if userID, scopes, err = verifier.VerifyAPIToken(ctx.Request().Context(), token); err == nil {
 					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
+					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
 					return next(ctx)
 				}
 			} else {
-				if userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
-					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray))
+				if session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
+					ctx.Set("session", session)
 					return next(ctx)
 				}
 			}

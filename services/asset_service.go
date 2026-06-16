@@ -204,3 +204,14 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 
 	return users, nil
 }
+
+func (s *assetService) UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error {
+	asset, err := s.assetRepository.Read(ctx, nil, assetID)
+	if err != nil {
+		return err
+	}
+
+	asset.Slug = newSlug
+
+	return s.assetRepository.Save(ctx, nil, &asset)
+}

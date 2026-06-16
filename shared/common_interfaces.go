@@ -69,7 +69,8 @@ type ReleaseService interface {
 }
 
 type PersonalAccessTokenService interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAdminRequest(req *http.Request) (bool, error)
 	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
@@ -113,7 +114,7 @@ type ProjectRepository interface {
 }
 
 type Verifier interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error)
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 }
 
@@ -395,6 +396,7 @@ type AssetService interface {
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
+	UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -577,23 +579,31 @@ type StatisticsRepository interface {
 	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 
 	// CVSS-based average fixing time methods
-	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.Distribution, error)
+	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error)
 	GetOrgStructureDistribution(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.OrgStructureDistribution, error)
-	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
-	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
-	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.VulnDistributionInStructure, error)
-	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentUsageAcrossOrg, error)
-	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrencesAcrossOrg, error)
+	GetMostVulnerableArtifactsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ArtifactVulnDistribution, error)
+	GetMostVulnerableProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ProjectVulnDistribution, error)
+	GetMostVulnerableAssetsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error)
+	GetMostUsedComponentsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrenceAcrossOrg, error)
+	GetMostCommonCVEsInOrg(ctx context.Context, tx DB, orgID uuid.UUID, limit int) ([]dtos.CVEOccurrence, error)
 	GetWeeklyAveragePerVulnEventType(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.VulnEventAverage, error)
 
 	GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (float32, error)
-	GetAverageAmountOfOpenVulnsPerProjectBySeverityInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.ProjectVulnCountAverageBySeverity, error)
-	GetComponentDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.ComponentOccurrenceCount, error)
+	GetEcosystemDistributionInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	FindMaliciousPackagesInOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error)
 	GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (time.Duration, error)
 	GetAverageRemediationTimesAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.AverageRemediationTimes, error)
 	GetRemediationTypeDistributionAcrossOrg(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.RemediationTypeDistributionRow, error)
 	CVESWithKnownExploitsInAssetVersion(ctx context.Context, tx DB, assetVersion models.AssetVersion) ([]models.CVE, error)
+
+	// instance dashboard functions
+	GetInstanceUsageStatistics(ctx context.Context, tx DB) (dtos.InstanceUsageStatistics, error)
+	GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error)
+	GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)
+	FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error)
+	GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error)
+	GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error)
+	GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
@@ -614,8 +624,9 @@ type StatisticsService interface {
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// CVSS-based average fixing time methods
-	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)
+	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
+	GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit, topCVEsLimit, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error)
 }
 
 type OpenSourceInsightService interface {
@@ -667,8 +678,25 @@ type VulnDBService interface {
 	ExportRCWithDiff(ctx context.Context, localArchive bool) error
 }
 
+type AdminService interface {
+	GetAdminsForOrg(orgID uuid.UUID, adminClient AdminClient) ([]dtos.UserDTO, error)
+	AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
+	RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
+	GetUserIDFromMail(ctx context.Context, adminClient AdminClient, email string) (uuid.UUID, error)
+	CheckIfOrgExists(ctx context.Context, orgID uuid.UUID) error
+	GetOwnerForOrg(ctx context.Context, orgID uuid.UUID) (uuid.UUID, error)
+	GetMailFromUserID(ctx context.Context, authClient AdminClient, userID uuid.UUID) (string, error)
+	GetOrgsWhereUserIsOwner(ctx context.Context, userID uuid.UUID) ([]models.Org, error)
+	GetInstanceUsageStatistics(ctx context.Context, tx DB, authClient AdminClient) (dtos.InstanceUsageStatistics, error)
+	GetInstanceVulnStatistics(ctx context.Context, topCVEsLimit, topComponentsLimit, topProjectsLimit int) (dtos.InstanceOverview, error)
+}
+
+type AdminRepository interface {
+	GetAllExternalEntityOrganizations() ([]models.Org, error)
+}
+
 type AccessControl interface {
-	HasAccess(ctx context.Context, subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -695,10 +723,10 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, subject string, object Object, action Action) (bool, error)
+	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action) (bool, error)
 
-	IsAllowedInProject(ctx context.Context, project *models.Project, user string, object Object, action Action) (bool, error)
-	IsAllowedInAsset(ctx context.Context, asset *models.Asset, user string, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
@@ -707,6 +735,7 @@ type AccessControl interface {
 	GetAllAssetsForUser(user string) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
+	GetAdminsOfOrganization() ([]string, error)
 
 	GetAllMembersOfOrganization() ([]string, error)
 
@@ -723,6 +752,8 @@ type AccessControl interface {
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
+	GetOwnerDomainsOfUser(user string) ([]string, error)
+	GetAllUsers() ([]string, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
@@ -788,5 +819,5 @@ const (
 
 type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
-	BearerTokenAuthDisabled bool `json:"bearerTokenAuthEnabled"`
+	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
 }

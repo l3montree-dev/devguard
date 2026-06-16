@@ -4,3 +4,5 @@ Dockerfile*
 **/*.md
 .kratos
 .vscode
+.env
+instance_admin_pub_key.pem

@@ -48,7 +48,7 @@ func NewAPIV2Router(
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService, gitlabOauth2Integrations),
+		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
 		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
 		middlewares.ScanMiddleware(assetVersionRepository),

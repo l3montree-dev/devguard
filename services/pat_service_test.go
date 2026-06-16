@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"io"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -257,7 +258,7 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 		//privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
 
-		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
+		_, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -286,11 +287,41 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 		}
 		req.Header.Set("Content-Digest", "POST")
 
-		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
+		_, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
 
+	})
+
+	t.Run("rejects a body swapped after signing (content-digest must be bound to the body)", func(t *testing.T) {
+		// An attacker who captures a signed request can keep the Signature + Content-Digest headers
+		// verbatim and ship a different body. Here we swap only the body
+		// and leave every signed header untouched — verification must still fail.
+		var pat = models.PAT{
+			PubKey: new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+
+		reader := bufio.NewReader(strings.NewReader(`{"role": "viewer"}`))
+		req := httptest.NewRequest("POST", "/scan/", reader)
+
+		if err := signRequest(privKey, req); err != nil {
+			t.Fatal("error", err)
+		}
+
+		// Attacker swaps the body, keeping the signed Signature + Content-Digest headers.
+		req.Body = io.NopCloser(strings.NewReader(`{"role": "admin"}`))
+
+		if _, err := patService.VerifyRequestSignature(context.Background(), req); err == nil {
+			t.Fatal("expected verification to fail when the body no longer matches the signed Content-Digest")
+		}
 	})
 
 	t.Run("test signing and verifying fails, after having tampered with the method header", func(t *testing.T) {
@@ -323,7 +354,7 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 
 		req.Method = "POST"
 
-		_, _, err = patService.VerifyRequestSignature(context.Background(), req)
+		_, err = patService.VerifyRequestSignature(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -349,9 +380,98 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 			t.Fatal("error signing request", err)
 		}
 
-		_, _, err := patService.VerifyRequestSignature(context.Background(), req)
+		_, err := patService.VerifyRequestSignature(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error for expired PAT, got nil")
+		}
+	})
+}
+
+// adminKeyPair is the keypair the instance admin signs requests with. The public
+// counterpart is what gets loaded into PatService.adminPubKey on startup.
+const adminPrivKey = "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+
+func newAdminPatService(t *testing.T) *PatService {
+	t.Helper()
+	_, adminPubKey, err := HexTokenToECDSA(adminPrivKey)
+	if err != nil {
+		t.Fatal("could not derive admin public key", err)
+	}
+	return &PatService{adminPubKey: adminPubKey, adminKeyLoaded: true}
+}
+
+func TestVerifyAdminRequest(t *testing.T) {
+	t.Run("accepts a request signed with the admin key", func(t *testing.T) {
+		patService := newAdminPatService(t)
+
+		req := httptest.NewRequest("POST", "/admin/", strings.NewReader(`{"action": "ban"}`))
+		if err := signRequest(adminPrivKey, req); err != nil {
+			t.Fatal("could not sign request", err)
+		}
+
+		isAdmin, err := patService.VerifyAdminRequest(req)
+		if err != nil {
+			t.Fatal("expected no error, got", err)
+		}
+		if !isAdmin {
+			t.Fatal("expected request to be verified as admin")
+		}
+	})
+
+	t.Run("rejects a request signed with a non-admin key", func(t *testing.T) {
+		patService := newAdminPatService(t)
+
+		// a valid, well-formed key that simply is not the admin key
+		nonAdminPrivKey := "2c73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+		req := httptest.NewRequest("POST", "/admin/", strings.NewReader(`{"action": "ban"}`))
+		if err := signRequest(nonAdminPrivKey, req); err != nil {
+			t.Fatal("could not sign request", err)
+		}
+
+		isAdmin, err := patService.VerifyAdminRequest(req)
+		if err == nil {
+			t.Fatal("expected verification to fail for a non-admin key")
+		}
+		if isAdmin {
+			t.Fatal("a non-admin key must never be granted admin")
+		}
+	})
+
+	t.Run("rejects when no admin key was loaded on startup", func(t *testing.T) {
+		// adminKeyLoaded defaults to false - simulates an instance started without the key
+		patService := &PatService{}
+
+		req := httptest.NewRequest("POST", "/admin/", strings.NewReader(`{"action": "ban"}`))
+		if err := signRequest(adminPrivKey, req); err != nil {
+			t.Fatal("could not sign request", err)
+		}
+
+		isAdmin, err := patService.VerifyAdminRequest(req)
+		if err == nil {
+			t.Fatal("expected an error when no admin key is loaded")
+		}
+		if isAdmin {
+			t.Fatal("must not grant admin when no admin key is loaded")
+		}
+	})
+
+	t.Run("rejects a tampered admin request", func(t *testing.T) {
+		patService := newAdminPatService(t)
+
+		req := httptest.NewRequest("POST", "/admin/", strings.NewReader(`{"action": "read"}`))
+		if err := signRequest(adminPrivKey, req); err != nil {
+			t.Fatal("could not sign request", err)
+		}
+
+		// swap the body after signing - the signed Content-Digest no longer matches
+		req.Body = io.NopCloser(strings.NewReader(`{"action": "delete-everything"}`))
+
+		isAdmin, err := patService.VerifyAdminRequest(req)
+		if err == nil {
+			t.Fatal("expected verification to fail after the body was tampered with")
+		}
+		if isAdmin {
+			t.Fatal("a tampered request must never be granted admin")
 		}
 	})
 }

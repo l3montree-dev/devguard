@@ -91,6 +91,11 @@ var release string // Will be filled at build time
 // @name						X-Signature
 // @description				Personal Access Token authentication using HTTP request signing. Requires X-Signature and X-Fingerprint headers.
 
+// @securityDefinitions.apikey	AdminSignedAuth
+// @in							header
+// @name						Signature
+// @description				Instance admin authentication using ECDSA P-256 HTTP message signing. Requires Signature, Signature-Input and Content-Digest headers.
+
 // @securityDefinitions.apikey	BearerAuth
 // @in							header
 // @name						Authorization
@@ -132,6 +137,7 @@ func main() {
 		daemons.Module,
 		fixedversion.Module,
 		// we need to invoke all routers to register their routes
+		fx.Invoke(func(AdminRouter router.AdminRouter) {}),
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
 		fx.Invoke(func(ProjectRouter router.APIV2Router) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
