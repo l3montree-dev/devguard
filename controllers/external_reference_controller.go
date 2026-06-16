@@ -75,6 +75,7 @@ type CreateExternalReferenceRequest struct {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -109,6 +110,7 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -207,6 +209,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -240,6 +243,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -258,6 +262,7 @@ func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

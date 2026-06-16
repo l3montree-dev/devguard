@@ -59,6 +59,7 @@ func NewAssetVersionController(
 // @Tags Asset Versions
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -74,6 +75,7 @@ func (a *AssetVersionController) Read(ctx shared.Context) error {
 // @Tags Asset Versions
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -110,6 +112,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 // @Tags Asset Versions
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -130,6 +133,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 // @Tags Asset Versions
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -279,6 +283,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 // @Tags Asset Versions
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

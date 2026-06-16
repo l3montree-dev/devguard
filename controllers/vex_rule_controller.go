@@ -64,6 +64,7 @@ type UpdateVEXRuleRequest struct {
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -126,6 +127,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -165,6 +167,7 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -255,6 +258,7 @@ func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, a
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -342,6 +346,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -390,6 +395,7 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 // @Tags VEXRules
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

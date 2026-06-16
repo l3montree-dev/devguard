@@ -107,6 +107,7 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param tokenID path string true "Token ID"
 // @Success 200
 // @Router /pats/{tokenID} [delete]
@@ -134,6 +135,7 @@ func (p *PatController) Delete(c shared.Context) error {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Success 200 {array} dtos.PATDTO
 // @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {

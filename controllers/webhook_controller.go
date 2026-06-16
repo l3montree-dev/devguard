@@ -31,6 +31,7 @@ func NewWebhookController(webhookRepository shared.WebhookIntegrationRepository)
 // @Tags Webhooks
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param id path string true "Webhook ID"
 // @Success 200
 // @Router /webhooks/{id} [delete]
@@ -61,6 +62,7 @@ func (w *WebhookController) CompareIssueStatesAndResolveDifferences(ctx context.
 // @Tags Webhooks
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /webhooks [put]
@@ -125,6 +127,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 // @Tags Webhooks
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /webhooks [post]
@@ -182,6 +185,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 // @Tags Webhooks
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "Test webhook data"
 // @Success 200 {object} object{message=string,payloadType=string}
 // @Router /webhooks/test [post]

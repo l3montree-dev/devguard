@@ -55,6 +55,7 @@ func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository 
 // @Tags CSAF
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -81,6 +82,7 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 // @Tags CSAF
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -427,6 +429,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 // @Tags CSAF
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/csaf/provider-metadata.json [get]
@@ -488,6 +491,7 @@ func getPublicKeyFingerprint() string {
 // @Tags CSAF
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
