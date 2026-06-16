@@ -39,12 +39,13 @@ type ProjectController struct {
 	artifactRepository     shared.ArtifactRepository
 	assetVersionService    shared.AssetVersionService
 	assetService           shared.AssetService
+	releaseService         shared.ReleaseService
 	projectService         shared.ProjectService
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -52,6 +53,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		artifactRepository:     artifactRepository,
 		assetVersionService:    assetVersionService,
 		assetService:           assetService,
+		releaseService:         releaseService,
 		projectService:         projectService,
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
@@ -594,6 +596,25 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	if err := ProjectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
 		slog.Error("trivy operator: could not save artifact", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not save artifact"})
+	}
+
+	release, err := ProjectController.releaseService.FindOrCreate(ctx.Request().Context(), parentProject.ID, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create release: %s", err.Error())).WithInternal(err)
+	}
+
+	//add or update release item
+	releaseItem := models.ReleaseItem{
+		ReleaseID:        release.ID,
+		ArtifactName:     &artifact.ArtifactName,
+		AssetID:          &asset.ID,
+		AssetVersionName: &assetVersion.Name,
+	}
+
+	err = ProjectController.releaseService.AddItem(ctx.Request().Context(), &releaseItem)
+	if err != nil {
+		slog.Error("could not add release item", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
 	}
 
 	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, "operator", asset.KeepOriginalSbomRootComponent)

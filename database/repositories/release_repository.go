@@ -252,3 +252,22 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 
 	return artifacts, rels, nil
 }
+
+func (r *releaseRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, name string) (models.Release, error) {
+	var rel models.Release
+	err := r.GetDB(ctx, tx).Where("project_id = ? AND name = ?", projectID, name).First(&rel).Error
+	if err == nil {
+		return rel, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return models.Release{}, err
+	}
+
+	rel = models.Release{
+		Name:      name,
+		ProjectID: projectID,
+	}
+
+	err = r.GetDB(ctx, tx).Create(&rel).Error
+	return rel, err
+}

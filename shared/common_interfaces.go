@@ -66,6 +66,7 @@ type ReleaseService interface {
 	AddItem(ctx context.Context, item *models.ReleaseItem) error
 	RemoveItem(ctx context.Context, id uuid.UUID) error
 	ListCandidates(ctx context.Context, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+	FindOrCreate(ctx context.Context, projectID uuid.UUID, name string) (models.Release, error)
 }
 
 type PersonalAccessTokenService interface {
@@ -187,6 +188,7 @@ type ReleaseRepository interface {
 	CreateReleaseItem(ctx context.Context, tx DB, item *models.ReleaseItem) error
 	DeleteReleaseItem(ctx context.Context, tx DB, id uuid.UUID) error
 	GetCandidateItemsForRelease(ctx context.Context, tx DB, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+	FindOrCreate(ctx context.Context, tx DB, projectID uuid.UUID, name string) (models.Release, error)
 }
 
 type CveRepository interface {
