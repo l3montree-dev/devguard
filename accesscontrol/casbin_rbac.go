@@ -324,10 +324,12 @@ func (c *casbinRBAC) revokeAllRolesForPrefix(ctx context.Context, prefix string)
 }
 
 func (c *casbinRBAC) RevokeAllRolesInProject(ctx context.Context, project string) error {
+	// add "|" delimiter to match project id exactly and catch all roles
 	return c.revokeAllRolesForPrefix(ctx, "project::"+project+"|")
 }
 
 func (c *casbinRBAC) RevokeAllRolesInAsset(ctx context.Context, asset string) error {
+	// add "|" delimiter to match asset id exactly and catch all roles
 	return c.revokeAllRolesForPrefix(ctx, "asset::"+asset+"|")
 }
 
