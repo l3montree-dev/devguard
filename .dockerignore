@@ -5,5 +5,4 @@ Dockerfile*
 .kratos
 .vscode
 .env
-.env.*
 instance_admin_pub_key.pem

@@ -16,7 +16,6 @@ package shared
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import (
-	"fmt"
 	"maps"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -83,10 +82,7 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 	users := make([]dtos.UserDTO, 0, len(members))
 	if len(members) > 0 {
 		// get the auth admin client from the context
-		authAdminClient, ok := GetAuthAdminClient(ctx)
-		if !ok {
-			return nil, fmt.Errorf("could not get auth admin client")
-		}
+		authAdminClient := GetAuthAdminClient(ctx)
 		// fetch the users from the auth service
 		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 		if err != nil {

@@ -77,10 +77,7 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 		return echo.NewHTTPError(500, "could not get external organizations")
 	}
 
-	adminClient, ok := shared.GetAuthAdminClient(ctx)
-	if !ok {
-		return echo.NewHTTPError(500, "could not get auth client")
-	}
+	adminClient := shared.GetAuthAdminClient(ctx)
 
 	orgsWithAdmins := make([]dtos.AdminsInOrg, 0, len(orgs))
 	for _, org := range orgs {
@@ -113,10 +110,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a valid mail address")
 	}
 
-	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
-	if !ok {
-		return echo.NewHTTPError(500, "could not get auth client")
-	}
+	authAdminClient := shared.GetAuthAdminClient(ctx)
 
 	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
 	if err != nil {
@@ -177,10 +171,7 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get owner of organization")
 	}
 
-	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
-	if !ok {
-		return echo.NewHTTPError(500, "could not get auth client")
-	}
+	authAdminClient := shared.GetAuthAdminClient(ctx)
 
 	email, err := controller.adminService.GetMailFromUserID(context.Background(), authAdminClient, ownerID)
 	if err != nil {
@@ -232,10 +223,7 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 }
 
 func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context) error {
-	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
-	if !ok {
-		return echo.NewHTTPError(500, "could not get auth client")
-	}
+	authAdminClient := shared.GetAuthAdminClient(ctx)
 
 	usageStatistics, err := controller.adminService.GetInstanceUsageStatistics(context.Background(), nil, authAdminClient)
 	if err != nil {

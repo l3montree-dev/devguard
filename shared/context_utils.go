@@ -113,9 +113,8 @@ func SetAuthAdminClient(ctx Context, i AdminClient) {
 	ctx.Set("authAdminClient", i)
 }
 
-func GetAuthAdminClient(ctx Context) (AdminClient, bool) {
-	client, ok := ctx.Get("authAdminClient").(AdminClient)
-	return client, ok
+func GetAuthAdminClient(ctx Context) AdminClient {
+	return ctx.Get("authAdminClient").(AdminClient)
 }
 
 func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {

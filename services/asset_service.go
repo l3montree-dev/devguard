@@ -178,10 +178,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 	}
 
 	// get the auth admin client from the context
-	authAdminClient, ok := shared.GetAuthAdminClient(ctx)
-	if !ok {
-		return nil, fmt.Errorf("could not get auth admin client")
-	}
+	authAdminClient := shared.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
 	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 

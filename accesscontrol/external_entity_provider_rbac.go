@@ -39,9 +39,6 @@ func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(ctx context.Co
 }
 
 func (e *externalEntityProviderRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
-	if session.IsInstanceAdmin() {
-		return true, nil
-	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 

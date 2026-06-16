@@ -321,44 +321,50 @@ func (c *casbinRBAC) RevokeAllRolesInAssetForUser(ctx context.Context, user stri
 }
 
 func (c *casbinRBAC) InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) InheritProjectRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, project string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(roleWhichGetsPermissions, project), c.getProjectRoleName(roleWhichProvidesPermissions, project), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(roleWhichGetsPermissions, project), c.getProjectRoleName(roleWhichProvidesPermissions, project), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) InheritAssetRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role, asset string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getAssetRoleName(roleWhichGetsPermissions, asset), c.getAssetRoleName(roleWhichProvidesPermissions, asset), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getAssetRoleName(roleWhichGetsPermissions, asset), c.getAssetRoleName(roleWhichProvidesPermissions, asset), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) InheritProjectRolesAcrossProjects(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.ProjectRole) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(roleWhichGetsPermissions.Role, roleWhichGetsPermissions.Project), c.getProjectRoleName(roleWhichProvidesPermissions.Role, roleWhichProvidesPermissions.Project), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(roleWhichGetsPermissions.Role, roleWhichGetsPermissions.Project), c.getProjectRoleName(roleWhichProvidesPermissions.Role, roleWhichProvidesPermissions.Project), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) LinkDomainAndProjectRole(ctx context.Context, domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions shared.Role, project string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "role::"+string(domainRoleWhichGetsPermission), c.getProjectRoleName(projectRoleWhichProvidesPermissions, project), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "role::"+string(domainRoleWhichGetsPermission), c.getProjectRoleName(projectRoleWhichProvidesPermissions, project), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
 func (c *casbinRBAC) LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions shared.Role, project string, asset string) error {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(projectRoleWhichGetsPermission, project), c.getAssetRoleName(assetRoleWhichProvidesPermissions, asset), "domain::"+c.domain)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, c.getProjectRoleName(projectRoleWhichGetsPermission, project), c.getAssetRoleName(assetRoleWhichProvidesPermissions, asset), "domain::"+c.domain)
+		return struct{}{}, err
+	})
 	return err
 }
 
@@ -367,9 +373,10 @@ func (c *casbinRBAC) AllowRole(ctx context.Context, role shared.Role, object sha
 	for i, ac := range action {
 		policies[i] = []string{"role::" + string(role), "domain::" + c.domain, "obj::" + string(object), "act::" + string(ac)}
 	}
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+		return struct{}{}, err
+	})
 	return err
 }
 
@@ -378,9 +385,10 @@ func (c *casbinRBAC) AllowRoleInProject(ctx context.Context, project string, rol
 	for i, ac := range action {
 		policies[i] = []string{"project::" + project + "|role::" + string(role), "domain::" + c.domain, "project::" + project + "|obj::" + string(object), "act::" + string(ac)}
 	}
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+		return struct{}{}, err
+	})
 	return err
 }
 
@@ -389,9 +397,10 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	for i, ac := range action {
 		policies[i] = []string{"asset::" + asset + "|role::" + string(role), "domain::" + c.domain, "asset::" + asset + "|obj::" + string(object), "act::" + string(ac)}
 	}
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+	_, err := withLock(func() (struct{}, error) {
+		_, err := c.enforcer.AddPoliciesCtx(ctx, policies)
+		return struct{}{}, err
+	})
 	return err
 }
 
