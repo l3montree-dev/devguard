@@ -155,6 +155,102 @@ func TestDependencyProxyControllerMaliciousPackageRemoval(t *testing.T) {
 	})
 }
 
+func TestDependencyProxyControllerCacheStats(t *testing.T) {
+	tempDir := t.TempDir()
+
+	config := dependencyfirewall.DependencyProxyCache{
+		CacheDir: tempDir,
+	}
+
+	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	require.NoError(t, err)
+
+	controller := dependencyfirewall.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
+
+	writeFile := func(rel string, size int) {
+		path := filepath.Join(tempDir, filepath.FromSlash(rel))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+		buf := make([]byte, size)
+		require.NoError(t, os.WriteFile(path, buf, 0644))
+	}
+
+	// Layout mirrors what the proxy actually writes:
+	//   <cacheDir>/<eco>/<package-path>[.companion]
+	writeFile("npm/lodash/-/lodash-4.17.21.tgz", 1000)
+	writeFile("npm/lodash/-/lodash-4.17.21.tgz.sha256", 64)
+	writeFile("npm/lodash/-/lodash-4.17.21.tgz.releasetime", 30)
+	writeFile("go/cloud.google.com/go/@v/v0.110.0.zip", 2000)
+	writeFile("pypi/packages/abc/requests-2.31.0.tar.gz", 500)
+	writeFile("oci/docker.io/library/nginx/manifests/latest", 800)
+	writeFile("oci/docker.io/library/nginx/manifests/latest.contenttype", 40)
+	writeFile("oci/docker.io/library/nginx/manifests/latest.digest", 71)
+	writeFile("oci/docker.io/library/nginx/blobs/sha256_aaa", 4000)
+	writeFile("oci/docker.io/library/nginx/blobs/sha256_aaa.sha256", 64)
+
+	stats, err := controller.CollectCacheStats()
+	require.NoError(t, err)
+
+	t.Run("cache dir is reported", func(t *testing.T) {
+		assert.Equal(t, tempDir, stats.CacheDir)
+	})
+
+	t.Run("totals sum every file but count only payloads", func(t *testing.T) {
+		// 1000+64+30 + 2000 + 500 + 800+40+71 + 4000+64 = 8569
+		assert.Equal(t, int64(8569), stats.TotalSize)
+		// payloads: lodash tgz, go zip, requests tar, oci manifest, oci blob = 5
+		assert.Equal(t, 5, stats.TotalEntries)
+	})
+
+	t.Run("per-ecosystem breakdown", func(t *testing.T) {
+		require.Contains(t, stats.ByEcosystem, "npm")
+		require.Contains(t, stats.ByEcosystem, "go")
+		require.Contains(t, stats.ByEcosystem, "pypi")
+		require.Contains(t, stats.ByEcosystem, "oci")
+
+		assert.Equal(t, int64(1094), stats.ByEcosystem["npm"].SizeBytes)
+		assert.Equal(t, 1, stats.ByEcosystem["npm"].Entries)
+
+		assert.Equal(t, int64(2000), stats.ByEcosystem["go"].SizeBytes)
+		assert.Equal(t, 1, stats.ByEcosystem["go"].Entries)
+
+		assert.Equal(t, int64(500), stats.ByEcosystem["pypi"].SizeBytes)
+		assert.Equal(t, 1, stats.ByEcosystem["pypi"].Entries)
+
+		assert.Equal(t, int64(4975), stats.ByEcosystem["oci"].SizeBytes)
+		assert.Equal(t, 2, stats.ByEcosystem["oci"].Entries)
+	})
+
+	t.Run("oci breakdown splits manifests vs blobs", func(t *testing.T) {
+		assert.Equal(t, int64(911), stats.OCIBreakdown.Manifests.SizeBytes)
+		assert.Equal(t, 1, stats.OCIBreakdown.Manifests.Entries)
+		assert.Equal(t, int64(4064), stats.OCIBreakdown.Blobs.SizeBytes)
+		assert.Equal(t, 1, stats.OCIBreakdown.Blobs.Entries)
+	})
+
+	t.Run("oldest and newest entry timestamps are set", func(t *testing.T) {
+		require.NotNil(t, stats.OldestEntry)
+		require.NotNil(t, stats.NewestEntry)
+		assert.False(t, stats.OldestEntry.After(*stats.NewestEntry))
+	})
+}
+
+func TestDependencyProxyControllerCacheStatsMissingDir(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	config := dependencyfirewall.DependencyProxyCache{CacheDir: missing}
+
+	checker, err := vulndb.NewMaliciousPackageChecker(nil)
+	require.NoError(t, err)
+
+	controller := dependencyfirewall.NewDependencyProxyController(nil, config, checker, nil, nil, nil)
+
+	stats, err := controller.CollectCacheStats()
+	require.NoError(t, err)
+	assert.Equal(t, missing, stats.CacheDir)
+	assert.Zero(t, stats.TotalSize)
+	assert.Zero(t, stats.TotalEntries)
+	assert.Empty(t, stats.ByEcosystem)
+}
+
 func TestDependencyProxyControllerExtractNPMVersion(t *testing.T) {
 	tempDir := t.TempDir()
 
