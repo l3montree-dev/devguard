@@ -174,16 +174,16 @@ func (_c *ProjectRepository_All_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // CleanupDynamicProject provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) CleanupDynamicProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error {
-	ret := _mock.Called(ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)
+func (_mock *ProjectRepository) CleanupDynamicProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error {
+	ret := _mock.Called(ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CleanupDynamicProject")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string, string, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -200,14 +200,15 @@ type ProjectRepository_CleanupDynamicProject_Call struct {
 //   - tx shared.DB
 //   - organizationID uuid.UUID
 //   - parentProjectID uuid.UUID
-//   - projectName string
-//   - assetName string
+//   - providerID string
+//   - projectExternalEntityID string
+//   - assetExternalEntityID string
 //   - assetVersionName string
-func (_e *ProjectRepository_Expecter) CleanupDynamicProject(ctx interface{}, tx interface{}, organizationID interface{}, parentProjectID interface{}, projectName interface{}, assetName interface{}, assetVersionName interface{}) *ProjectRepository_CleanupDynamicProject_Call {
-	return &ProjectRepository_CleanupDynamicProject_Call{Call: _e.mock.On("CleanupDynamicProject", ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)}
+func (_e *ProjectRepository_Expecter) CleanupDynamicProject(ctx interface{}, tx interface{}, organizationID interface{}, parentProjectID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}) *ProjectRepository_CleanupDynamicProject_Call {
+	return &ProjectRepository_CleanupDynamicProject_Call{Call: _e.mock.On("CleanupDynamicProject", ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName)}
 }
 
-func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string)) *ProjectRepository_CleanupDynamicProject_Call {
+func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string)) *ProjectRepository_CleanupDynamicProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -237,6 +238,10 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context
 		if args[6] != nil {
 			arg6 = args[6].(string)
 		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -245,6 +250,7 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context
 			arg4,
 			arg5,
 			arg6,
+			arg7,
 		)
 	})
 	return _c
@@ -255,7 +261,7 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Return(err error) *Proje
 	return _c
 }
 
-func (_c *ProjectRepository_CleanupDynamicProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error) *ProjectRepository_CleanupDynamicProject_Call {
+func (_c *ProjectRepository_CleanupDynamicProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error) *ProjectRepository_CleanupDynamicProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -184,8 +184,8 @@ func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // FindOrCreateAsset provides a mock function for the type AssetService
-func (_mock *AssetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
-	ret := _mock.Called(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+func (_mock *AssetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error) {
+	ret := _mock.Called(ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindOrCreateAsset")
@@ -193,18 +193,18 @@ func (_mock *AssetService) FindOrCreateAsset(ctx context.Context, rbac shared.Ac
 
 	var r0 *models.Asset
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) (*models.Asset, error)); ok {
-		return returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string, string) (*models.Asset, error)); ok {
+		return returnFunc(ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) *models.Asset); ok {
-		r0 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string, string) *models.Asset); ok {
+		r0 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) error); ok {
-		r1 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string, string) error); ok {
+		r1 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -223,12 +223,13 @@ type AssetService_FindOrCreateAsset_Call struct {
 //   - orgID uuid.UUID
 //   - projectID uuid.UUID
 //   - name string
+//   - externalEntityID string
 //   - currentUser string
-func (_e *AssetService_Expecter) FindOrCreateAsset(ctx interface{}, rbac interface{}, providerID interface{}, orgID interface{}, projectID interface{}, name interface{}, currentUser interface{}) *AssetService_FindOrCreateAsset_Call {
-	return &AssetService_FindOrCreateAsset_Call{Call: _e.mock.On("FindOrCreateAsset", ctx, rbac, providerID, orgID, projectID, name, currentUser)}
+func (_e *AssetService_Expecter) FindOrCreateAsset(ctx interface{}, rbac interface{}, providerID interface{}, orgID interface{}, projectID interface{}, name interface{}, externalEntityID interface{}, currentUser interface{}) *AssetService_FindOrCreateAsset_Call {
+	return &AssetService_FindOrCreateAsset_Call{Call: _e.mock.On("FindOrCreateAsset", ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser)}
 }
 
-func (_c *AssetService_FindOrCreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string)) *AssetService_FindOrCreateAsset_Call {
+func (_c *AssetService_FindOrCreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string)) *AssetService_FindOrCreateAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -258,6 +259,10 @@ func (_c *AssetService_FindOrCreateAsset_Call) Run(run func(ctx context.Context,
 		if args[6] != nil {
 			arg6 = args[6].(string)
 		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -266,6 +271,7 @@ func (_c *AssetService_FindOrCreateAsset_Call) Run(run func(ctx context.Context,
 			arg4,
 			arg5,
 			arg6,
+			arg7,
 		)
 	})
 	return _c
@@ -276,7 +282,7 @@ func (_c *AssetService_FindOrCreateAsset_Call) Return(asset *models.Asset, err e
 	return _c
 }
 
-func (_c *AssetService_FindOrCreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error)) *AssetService_FindOrCreateAsset_Call {
+func (_c *AssetService_FindOrCreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error)) *AssetService_FindOrCreateAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
