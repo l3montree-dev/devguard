@@ -819,5 +819,5 @@ const (
 
 type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
-	BearerTokenAuthDisabled bool `json:"bearerTokenAuthEnabled"`
+	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
 }

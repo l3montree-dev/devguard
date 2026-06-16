@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -102,7 +103,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
+		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
 	}
 
 	user, err := extractMailFromRequest(ctx)
@@ -114,10 +115,10 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 
 	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
 	if err != nil {
-		switch err.Error() {
-		case dtos.ErrorCouldNotFindUserWithMail:
+		switch {
+		case errors.Is(err, dtos.ErrCouldNotFindUserWithMail):
 			return echo.NewHTTPError(404, "could not find a user associated with this email")
-		case dtos.ErrorCouldNotFindDefinitiveUserWithMail:
+		case errors.Is(err, dtos.ErrCouldNotFindDefinitiveUserWithMail):
 			return echo.NewHTTPError(400, "could not find a definitive user associated with this email")
 		default:
 			return echo.NewHTTPError(500, "could not determine user based on email").WithInternal(err)
@@ -135,13 +136,13 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
+		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
 	}
 
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingUserID)
+		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingUserID.Error())
 	}
 
 	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, parsedUserID)
@@ -155,7 +156,7 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	orgIDParsed, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingOrgID)
+		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
 	}
 
 	err = controller.adminService.CheckIfOrgExists(context.Background(), orgIDParsed)
@@ -185,7 +186,7 @@ func (controller *AdminController) GetUserInformation(ctx shared.Context) error 
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrorInvalidOrMissingUserID)
+		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingUserID.Error())
 	}
 
 	orgs, err := controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)

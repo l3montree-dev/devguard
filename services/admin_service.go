@@ -67,11 +67,11 @@ func (service AdminService) GetUserIDFromMail(ctx context.Context, adminClient s
 
 	switch len(usersWithRequestedMail) {
 	case 0:
-		return uuid.UUID{}, fmt.Errorf(dtos.ErrorCouldNotFindUserWithMail)
+		return uuid.UUID{}, dtos.ErrCouldNotFindUserWithMail
 	case 1:
 		return uuid.Parse(usersWithRequestedMail[0].Id)
 	default:
-		return uuid.UUID{}, fmt.Errorf(dtos.ErrorCouldNotFindDefinitiveUserWithMail)
+		return uuid.UUID{}, dtos.ErrCouldNotFindDefinitiveUserWithMail
 	}
 }
 

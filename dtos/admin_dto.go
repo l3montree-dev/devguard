@@ -1,12 +1,16 @@
 package dtos
 
-import "github.com/google/uuid"
+import (
+	"errors"
 
-const (
-	ErrorCouldNotFindUserWithMail           = "could not find user with the provided mail"
-	ErrorCouldNotFindDefinitiveUserWithMail = "could not find a definitive user with the provided mail"
-	ErrorInvalidOrMissingOrgID              = "invalid or missing organization id in path parameters"
-	ErrorInvalidOrMissingUserID             = "invalid or missing user id in path parameters"
+	"github.com/google/uuid"
+)
+
+var (
+	ErrCouldNotFindUserWithMail           = errors.New("could not find user with the provided mail")
+	ErrCouldNotFindDefinitiveUserWithMail = errors.New("could not find a definitive user with the provided mail")
+	ErrInvalidOrMissingOrgID              = errors.New("invalid or missing organization id in path parameters")
+	ErrInvalidOrMissingUserID             = errors.New("invalid or missing user id in path parameters")
 )
 
 type AdminsInOrg struct {
