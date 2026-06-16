@@ -569,6 +569,9 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	}
 
 	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, projectExternalEntityID, parentProject.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create project: %s", err.Error())).WithInternal(err)
+	}
 
 	rbac := shared.GetRBAC(ctx)
 	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), project.ID, assetName, assetExternalEntityID, userID)
