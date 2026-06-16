@@ -574,6 +574,11 @@ func (f FilterQuery) SQL() string {
 		return field + " ILIKE ?"
 	case "any":
 		return "? = ANY(string_to_array(" + field + ", ' '))"
+	case "frameworkContains":
+		// Matches a JSONB array-of-objects column (e.g. policyFrameworks) where any
+		// element's "framework" key equals the value. Used by the compliance-risks
+		// framework filter.
+		return "EXISTS (SELECT 1 FROM jsonb_array_elements(" + field + ") AS e WHERE e->>'framework' = ?)"
 	default:
 		// default do an equals
 		return field + " = ?"

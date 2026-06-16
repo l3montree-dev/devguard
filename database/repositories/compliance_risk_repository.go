@@ -52,7 +52,16 @@ func (r *ComplianceRiskRepository) GetAllComplianceRisksForAssetVersionPaged(ctx
 		return shared.Paged[models.ComplianceRisk]{}, err
 	}
 
-	err := q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&risks).Error
+	// Order open risks first, then newest. The open-first key is selected as an
+	// aliased column because the query uses SELECT DISTINCT (Postgres requires
+	// ORDER BY expressions to appear in the select list). Per-column sort is not
+	// yet supported server-side (the sort param is ignored).
+	err := q.
+		Select("compliance_risks.*, CASE WHEN compliance_risks.state = 'open' THEN 0 ELSE 1 END AS state_sort_order").
+		Order("state_sort_order ASC").
+		Order("compliance_risks.created_at DESC").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Find(&risks).Error
 	if err != nil {
 		return shared.Paged[models.ComplianceRisk]{}, err
 	}
