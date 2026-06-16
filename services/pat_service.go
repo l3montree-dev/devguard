@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
@@ -65,31 +67,54 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 	}
 }
 
-func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT {
-	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-	fingerprint, err := pubKeyToFingerprint(request.PubKey)
+func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
+	if !utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes)) {
+		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
+	}
+
+	expiry := utils.Ptr(time.Unix(request.ExpiryDateUnix, 0))
+
+	if request.IsSymmetric() {
+		cleartext, hash, err := generateBearerToken()
+		if err != nil {
+			return models.PAT{}, "", fmt.Errorf("could not generate bearer token: %w", err)
+		}
+		return models.PAT{
+			UserID:          uuid.MustParse(userID),
+			Description:     request.Description,
+			Scopes:          request.Scopes,
+			BearerTokenHash: &hash,
+			ExpiryDate:      expiry,
+		}, cleartext, nil
+	}
+
+	if err := validatePubKey(*request.PubKey); err != nil {
+		return models.PAT{}, "", fmt.Errorf("invalid public key: %w", err)
+	}
+	fingerprint, err := pubKeyToFingerprint(*request.PubKey)
 	if err != nil {
-		slog.Error("could not convert public key to fingerprint", "err", err)
-		return models.PAT{}
+		return models.PAT{}, "", fmt.Errorf("could not derive fingerprint from public key: %w", err)
 	}
-
-	//check if the scopes are valid
-	ok := utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes))
-	if !ok {
-		slog.Error("invalid scopes", "scopes", request.Scopes)
-		return models.PAT{}
-	}
-
-	pat := models.PAT{
+	return models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: request.Description,
 		Scopes:      request.Scopes,
 		PubKey:      request.PubKey,
-		Fingerprint: fingerprint,
-	}
+		Fingerprint: &fingerprint,
+		ExpiryDate:  expiry,
+	}, "", nil
+}
 
-	//pat.Token = pat.HashToken(token)
-	return pat // return the unhashed token. This is the token that will be sent to the user
+var BearerTokenPrefix = "dvg_"
+
+// generateBearerToken creates a random dvg_-prefixed token and returns the cleartext and its hash.
+func generateBearerToken() (cleartext, hash string, err error) {
+	raw := make([]byte, 32)
+	if _, err = rand.Read(raw); err != nil {
+		return "", "", err
+	}
+	cleartext = BearerTokenPrefix + hex.EncodeToString(raw)
+	return cleartext, utils.HashString(cleartext), nil
 }
 
 func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
@@ -112,6 +137,23 @@ func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
 
 	pubKey := &privKey.PublicKey
 	return *pubKey, nil
+}
+
+// validatePubKey checks that pubKey is a valid hex-encoded P256 public key (128 hex chars).
+func validatePubKey(pubKey string) error {
+	decoded, err := hex.DecodeString(pubKey)
+	if err != nil {
+		return fmt.Errorf("public key must be hex-encoded: %w", err)
+	}
+	if len(decoded) != 64 {
+		return fmt.Errorf("public key must be 64 bytes (got %d)", len(decoded))
+	}
+	x := new(big.Int).SetBytes(decoded[:32])
+	y := new(big.Int).SetBytes(decoded[32:])
+	if !elliptic.P256().IsOnCurve(x, y) {
+		return fmt.Errorf("public key point is not on P256 curve")
+	}
+	return nil
 }
 
 func pubKeyToFingerprint(pubKey string) (string, error) {
@@ -177,7 +219,20 @@ func signedFields() httpsign.Fields {
 	return httpsign.Headers("@method", "content-digest")
 }
 
-func SignRequest(hexPrivKey string, req *http.Request) error {
+func AuthenticateRequestWithToken(token string, req *http.Request) error {
+	if token == "" {
+		return fmt.Errorf("token is empty")
+	}
+
+	if !strings.HasPrefix(token, BearerTokenPrefix) {
+		// assume it's a hex-encoded private key
+		return signRequest(token, req)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	return nil
+}
+
+func signRequest(hexPrivKey string, req *http.Request) error {
 	privKey, pubKey, err := HexTokenToECDSA(hexPrivKey)
 	if err != nil {
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
@@ -210,28 +265,51 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	return nil
 }
 
-func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
+func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+	if token == "" {
+		return "", "", fmt.Errorf("invalid token format")
+	}
+
+	pat, err := p.patRepository.GetByBearerTokenHash(ctx, nil, utils.HashString(token))
+	if err != nil {
+		return "", "", fmt.Errorf("could not verify bearer token: %w", err)
+	}
+	if pat.IsExpired() {
+		return "", "", fmt.Errorf("bearer token has expired")
+	}
+
+	if err := p.patRepository.MarkAsLastUsedNowByID(ctx, nil, pat.ID); err != nil {
+		slog.Warn("could not mark pat as last used", "err", err)
+	}
+	return pat.UserID.String(), pat.Scopes, nil
+}
+
+func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, models.PAT, error) {
+	if fingerprint == "" {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("no fingerprint provided")
+	}
 	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
 	if err != nil {
-		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
-	pubKey := pat.PubKey
+	if pat.IsExpired() {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("PAT has expired")
+	}
+	if pat.PubKey == nil {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("PAT has no public key")
+	}
+	pubKey := *pat.PubKey
 
-	pubKeyECDSA :=
-		ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     new(big.Int),
-			Y:     new(big.Int),
-		}
+	pubKeyECDSA := ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int),
+		Y:     new(big.Int),
+	}
 
 	pubKeyECDSA.X, _ = new(big.Int).SetString(pubKey[:len(pubKey)/2], 16)
 	pubKeyECDSA.Y, _ = new(big.Int).SetString(pubKey[len(pubKey)/2:], 16)
 
-	return pubKeyECDSA, pat.UserID, pat.Scopes, nil
-}
-
-func (p *PatService) markAsLastUsedNow(ctx context.Context, fingerprint string) error {
-	return p.patRepository.MarkAsLastUsedNow(ctx, nil, fingerprint)
+	return pubKeyECDSA, pat, nil
 }
 
 func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
@@ -292,8 +370,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		}
 		return nil, fmt.Errorf("no fingerprint provided")
 	}
-	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(ctx, fingerprint)
-
+	pubKey, pat, err := p.getPubKeyAndUserIDUsingFingerprint(ctx, fingerprint)
 	if err != nil {
 		return nil, fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
@@ -302,10 +379,12 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		return nil, fmt.Errorf("could not validate request: %v", err)
 	}
 
-	p.markAsLastUsedNow(ctx, fingerprint) //nolint:errcheck// we don't care if this fails
+	if err := p.patRepository.MarkAsLastUsedNowByID(ctx, nil, pat.ID); err != nil { //nolint:errcheck
+		slog.Warn("could not mark pat as last used", "err", err)
+	}
 
-	scopesArray := strings.Fields(scopes)
-	return accesscontrol.NewSession(userID.String(), scopesArray, false), nil
+	scopesArray := strings.Fields(pat.Scopes)
+	return accesscontrol.NewSession(pat.UserID.String(), scopesArray, false), nil
 }
 
 func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) error {
@@ -322,4 +401,15 @@ func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) err
 	}
 
 	return p.patRepository.DeleteByFingerprint(ctx, nil, fingerprint)
+}
+
+func (p *PatService) CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool) {
+	pat, err := p.patRepository.GetByFingerprint(ctx, nil, fingerprint)
+	if err != nil {
+		return models.PAT{}, false
+	}
+	if pat.IsExpired() {
+		return models.PAT{}, false
+	}
+	return pat, true
 }

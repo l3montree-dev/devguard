@@ -29,6 +29,7 @@ import (
 )
 
 func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
+	t.Parallel()
 	// Set up mock third-party integration
 	mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 	createIssueCallCount := 0
@@ -200,6 +201,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 }
 
 func TestSyncIssuesWithExistingTickets(t *testing.T) {
+	t.Parallel()
 	// Set up mock third-party integration
 	mockThirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 	createIssueCallCount := 0

@@ -21,6 +21,7 @@ import (
 )
 
 func TestArtifactControllerDeleteArtifact(t *testing.T) {
+	t.Parallel()
 	factory, client := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
@@ -369,6 +370,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 }
 
 func TestBuildVEX(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
 
@@ -434,10 +436,18 @@ func TestBuildVEX(t *testing.T) {
 			assert.Equal(t, "pkg:npm/axios@1.7.7", (*axiosVuln.Affects)[0].Ref)
 
 			//test timestamps if they have the right format
-			propertyValue1 := (*nextVuln.Properties)[0].Value
+			getFirstResponded := func(props *[]cyclonedx.Property) string {
+				for _, p := range *props {
+					if p.Name == "firstResponded" {
+						return p.Value
+					}
+				}
+				return ""
+			}
+			propertyValue1 := getFirstResponded(nextVuln.Properties)
 			responseTime1, err := time.Parse(time.RFC3339, propertyValue1)
 			assert.Nil(t, err)
-			propertyValue2 := (*axiosVuln.Properties)[0].Value
+			propertyValue2 := getFirstResponded(axiosVuln.Properties)
 			responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 			assert.Nil(t, err)
 			//test if the first responded timestamp is calculated about right
@@ -445,7 +455,7 @@ func TestBuildVEX(t *testing.T) {
 			assert.True(t, responseTime1.Before(creationTime.Add(-7*time.Minute+tolerance)) && responseTime1.After(creationTime.Add(-7*time.Minute-tolerance)))
 			assert.True(t, responseTime2.Before(creationTime.Add(-1*time.Minute+tolerance)) && responseTime2.After(creationTime.Add(-1*time.Minute-tolerance)))
 			//last updated should be the same as first responded when only 1 updateEvent happens
-			assert.Equal(t, axiosVuln.Analysis.LastUpdated, (*axiosVuln.Properties)[0].Value)
+			assert.Equal(t, axiosVuln.Analysis.LastUpdated, propertyValue2)
 		})
 
 		t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
@@ -482,7 +492,16 @@ func TestBuildVEX(t *testing.T) {
 			assert.NotNil(t, axiosVuln, "Should find axios vulnerability")
 
 			//if the vulnerability never gets handled we should have no first responded field and first issued and last updated should be the same
-			assert.Nil(t, axiosVuln.Properties)
+			hasFirstResponded := false
+			if axiosVuln.Properties != nil {
+				for _, p := range *axiosVuln.Properties {
+					if p.Name == "firstResponded" {
+						hasFirstResponded = true
+						break
+					}
+				}
+			}
+			assert.False(t, hasFirstResponded, "unhandled vuln should not have firstResponded property")
 			assert.Equal(t, axiosVuln.Analysis.FirstIssued, axiosVuln.Analysis.LastUpdated)
 		})
 

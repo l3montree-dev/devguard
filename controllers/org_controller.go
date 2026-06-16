@@ -52,6 +52,7 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body dtos.OrgCreateRequest true "Request body"
 // @Success 200 {object} models.Org
 // @Router /organizations [post]
@@ -81,6 +82,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.OrgPatchRequest true "Request body"
 // @Success 200 {object} dtos.OrgDetailsDTO
@@ -127,6 +129,7 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200
 // @Router /organizations/{organization} [delete]
@@ -147,6 +150,7 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/content-tree [get]
@@ -174,6 +178,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body dtos.AcceptInvitationRequest true "Request body"
 // @Success 200
 // @Router /accept-invitation [post]
@@ -239,6 +244,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.InviteRequest true "Request body"
 // @Success 200 {object} models.Invitation
@@ -277,6 +283,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param userID path string true "User ID"
 // @Param body body dtos.OrgChangeRoleRequest true "Request body"
@@ -322,6 +329,7 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param userID path string true "User ID"
 // @Success 200
@@ -356,6 +364,7 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} object{ownerId=string}
 // @Router /organizations/{organization}/metrics [get]
@@ -371,6 +380,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
 // @Produce text/plain
@@ -391,6 +401,7 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param config-file path string true "Config file ID"
 // @Param body body string true "Config file content"
@@ -434,6 +445,7 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {array} object
 // @Router /organizations/{organization}/members [get]
@@ -450,6 +462,7 @@ func (controller *OrgController) Members(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} dtos.OrgSettingsDTO
 // @Router /organizations/{organization}/settings [get]
@@ -467,6 +480,7 @@ func (controller *OrgController) AdminSettings(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} dtos.OrgDetailsDTO
 // @Router /organizations/{organization} [get]
@@ -496,6 +510,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Success 200 {array} models.Org
 // @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {

@@ -35,6 +35,7 @@ func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
 }
 
 func TestMultipleOrigins(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -162,6 +163,7 @@ func TestMultipleOrigins(t *testing.T) {
 }
 
 func TestKeepExistingVulnsClosed(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 
@@ -413,6 +415,7 @@ func TestKeepExistingVulnsClosed(t *testing.T) {
 // across single and multiple artifacts.  Each sub-test is self-contained via a fresh
 // WithTestApp so there is no shared state between scenarios.
 func TestUserAssessmentLifecycle(t *testing.T) {
+	t.Parallel()
 	// ── helpers ──────────────────────────────────────────────────────────────────
 	scan := func(t *testing.T, controller interface{ ScanDependencyVulnFromProject(shared.Context) error }, app *echo.Echo, setupCtx func(shared.Context), artifactName, ref, defaultBranch string, sbomBody func() io.Reader) {
 		t.Helper()
@@ -429,7 +432,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 		assert.Equal(t, 200, recorder.Code)
 	}
 
-	loadVuln := func(t *testing.T, db shared.DB, assetID interface{}, branch string) *models.DependencyVuln {
+	loadVuln := func(t *testing.T, db shared.DB, assetID any, branch string) *models.DependencyVuln {
 		t.Helper()
 		var vulns []models.DependencyVuln
 		assert.Nil(t, db.Where("asset_id = ? AND asset_version_name = ? AND cve_id = ?", assetID, branch, "CVE-2025-46569").Find(&vulns).Error)
@@ -824,6 +827,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 }
 
 func TestScanning(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1060,6 +1064,7 @@ func TestScanning(t *testing.T) {
 }
 
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1143,6 +1148,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1250,6 +1256,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 }
 
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1484,6 +1491,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -1598,6 +1606,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 }
 
 func TestTicketHandling(t *testing.T) {
+	t.Parallel()
 	testClientFactory, gitlabClientFacade := NewTestClientFactory(t)
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
@@ -1989,6 +1998,7 @@ func sarifWithFirstPartyVuln() *strings.Reader {
 }
 
 func TestIdempotency(t *testing.T) {
+	t.Parallel()
 	// 1. scan a sbom
 	// 2. Download the sbom from devguard
 	// 3. Scan that sbom
@@ -2089,6 +2099,7 @@ func TestIdempotency(t *testing.T) {
 }
 
 func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		// load small-sbom.json
@@ -2166,6 +2177,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 }
 
 func TestScanWithMultiplePaths(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2214,6 +2226,7 @@ func TestScanWithMultiplePaths(t *testing.T) {
 }
 
 func TestPathPatternVEXRules(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2298,6 +2311,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 }
 
 func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 
 		controller := f.App.ScanController
@@ -2408,6 +2422,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		artifactController := f.App.ArtifactController
@@ -2536,6 +2551,7 @@ func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		artifactController := f.App.ArtifactController
@@ -2714,6 +2730,7 @@ func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
 // or evicted by a concurrent transaction), a rescan must still succeed by
 // re-inserting the missing component before creating the dependency edge.
 func TestTrivyDebianSBOMRescan(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 		app := echo.New()
@@ -2770,6 +2787,7 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 }
 
 func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 
@@ -2854,7 +2872,120 @@ func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
 	})
 }
 
+func TestNoWriteHeader(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		setupContext := func(ctx shared.Context) {
+			authSession := mocks.NewAuthSession(t)
+			authSession.On("GetUserID").Return("abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		t.Run("X-No-Write on SBOM scan returns results without persisting vulns", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/api/v2/scan/", sbomWithVulnerability())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-nowrite")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-No-Write", "1")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanSbomFileVex(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var responseBOM cyclonedx.BOM
+			assert.Nil(t, json.NewDecoder(recorder.Body).Decode(&responseBOM))
+			assert.NotNil(t, responseBOM.Vulnerabilities)
+			assert.NotEmpty(t, *responseBOM.Vulnerabilities)
+
+			// Nothing must have been written to the database.
+			var vulns []models.DependencyVuln
+			assert.Nil(t, f.DB.Where("asset_id = ?", asset.ID).Find(&vulns).Error)
+			assert.Empty(t, vulns, "X-No-Write must not persist any vulnerabilities")
+		})
+
+		t.Run("X-No-Write on SARIF scan returns results without persisting first-party vulns", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/api/v2/sarif-scan/", sarifWithFirstPartyVuln())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Scanner", "test-scanner")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Asset-Ref", "main")
+			req.Header.Set("X-No-Write", "1")
+			ctx := app.NewContext(req, recorder)
+			setupContext(ctx)
+
+			err := controller.ScanSarifFile(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var body map[string]any
+			assert.Nil(t, json.Unmarshal(recorder.Body.Bytes(), &body))
+			runs := body["runs"].([]any)
+			results := runs[0].(map[string]any)["results"].([]any)
+			assert.NotEmpty(t, results)
+
+			// Nothing must have been written to the database.
+			var fpVulns []models.FirstPartyVuln
+			assert.Nil(t, f.DB.Where("asset_id = ?", asset.ID).Find(&fpVulns).Error)
+			assert.Empty(t, fpVulns, "X-No-Write must not persist any first-party vulnerabilities")
+		})
+	})
+}
+
+func TestScanDependencyVulnUnauthenticatedVex(t *testing.T) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+
+		t.Run("response BOM includes components with bom-refs matching affects refs", func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/api/v2/scan-unauthenticated/", sbomWithVulnerability())
+			req.Header.Set("Content-Type", "application/json")
+			ctx := app.NewContext(req, recorder)
+
+			err := controller.ScanDependencyVulnUnauthenticatedVex(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			var responseBOM cyclonedx.BOM
+			assert.Nil(t, json.NewDecoder(recorder.Body).Decode(&responseBOM))
+
+			assert.NotNil(t, responseBOM.Components)
+			assert.NotEmpty(t, *responseBOM.Components)
+			assert.NotNil(t, responseBOM.Vulnerabilities)
+			assert.NotEmpty(t, *responseBOM.Vulnerabilities)
+
+			compByRef := map[string]cyclonedx.Component{}
+			for _, c := range *responseBOM.Components {
+				compByRef[c.BOMRef] = c
+			}
+
+			for _, vuln := range *responseBOM.Vulnerabilities {
+				assert.NotNil(t, vuln.Affects, "vuln %s has no Affects", vuln.ID)
+				ref := (*vuln.Affects)[0].Ref
+				comp, ok := compByRef[ref]
+				assert.True(t, ok, "Affects.Ref %q for vuln %s does not match any component bom-ref", ref, vuln.ID)
+				assert.NotEmpty(t, comp.PackageURL, "matched component for vuln %s has no PackageURL", vuln.ID)
+			}
+		})
+	})
+}
+
 func TestScanScopedToArtifact(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
 

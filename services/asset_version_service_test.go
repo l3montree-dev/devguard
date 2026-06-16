@@ -550,9 +550,15 @@ func TestBuildVeX(t *testing.T) {
 
 		vuln := (*result.Vulnerabilities)[0]
 		require.NotNil(t, vuln.Properties, "vulnerability should have properties with pathPattern")
-		require.Len(t, *vuln.Properties, 1)
 
-		prop := (*vuln.Properties)[0]
+		var prop *cdx.Property
+		for i := range *vuln.Properties {
+			if (*vuln.Properties)[i].Name == "devguard:pathPattern" {
+				prop = &(*vuln.Properties)[i]
+				break
+			}
+		}
+		require.NotNil(t, prop, "should have devguard:pathPattern property")
 		assert.Equal(t, "devguard:pathPattern", prop.Name)
 
 		// The value should be the JSON-marshalled path pattern
@@ -605,6 +611,15 @@ func TestBuildVeX(t *testing.T) {
 		require.Len(t, *result.Vulnerabilities, 1)
 
 		vuln := (*result.Vulnerabilities)[0]
-		assert.Nil(t, vuln.Properties, "vulnerability should have no properties when no rules match")
+		hasPathPattern := false
+		if vuln.Properties != nil {
+			for _, p := range *vuln.Properties {
+				if p.Name == "devguard:pathPattern" {
+					hasPathPattern = true
+					break
+				}
+			}
+		}
+		assert.False(t, hasPathPattern, "vulnerability should have no pathPattern property when no rules match")
 	})
 }

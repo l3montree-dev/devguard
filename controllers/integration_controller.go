@@ -49,6 +49,7 @@ func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 // @Tags Integrations
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Success 200 {array} object
 // @Router /integrations/repositories [get]
 func (c *IntegrationController) ListRepositories(ctx shared.Context) error {

@@ -71,8 +71,12 @@ type ReleaseService interface {
 type PersonalAccessTokenService interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
+	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
-	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) models.PAT
+	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
+	// returned as the second value — it must be shown to the user once and is never stored.
+	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
+	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
 type CSAFService interface {
@@ -111,6 +115,7 @@ type ProjectRepository interface {
 
 type Verifier interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 }
 
 type PolicyRepository interface {
@@ -135,6 +140,12 @@ type DependencyProxySecretService interface {
 	GetOrCreateByAssetID(ctx context.Context, assetID uuid.UUID) (models.DependencyProxySecret, error)
 	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
+}
+
+type DBEncryptionService interface {
+	LoadDBEncryptionKey()
+	MaybeDecryptData(data string) (string, error)
+	EncryptAndWrapData(data string) (string, error)
 }
 
 type AssetRepository interface {
@@ -294,10 +305,11 @@ type InTotoLinkRepository interface {
 type PersonalAccessTokenRepository interface {
 	utils.Repository[uuid.UUID, models.PAT, DB]
 	GetByFingerprint(ctx context.Context, tx DB, fingerprint string) (models.PAT, error)
+	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(ctx context.Context, tx DB, userID string) ([]models.PAT, error)
 	DeleteByFingerprint(ctx context.Context, tx DB, fingerprint string) error
-	MarkAsLastUsedNow(ctx context.Context, tx DB, fingerprint string) error
+	MarkAsLastUsedNowByID(ctx context.Context, tx DB, id uuid.UUID) error
 }
 
 type SupplyChainRepository interface {
@@ -388,7 +400,7 @@ type AssetService interface {
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
-	SaveArtifact(ctx context.Context, artifact *models.Artifact) error
+	SaveArtifact(ctx context.Context, tx DB, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
 	GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
@@ -619,7 +631,7 @@ type StatisticsService interface {
 
 type OpenSourceInsightService interface {
 	GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error)
-	GetVersion(ctx context.Context, ecosystem, packageName, version string) (dtos.OpenSourceInsightsVersionResponse, error)
+	GetVersion(ctx context.Context, purl packageurl.PackageURL) (dtos.OpenSourceInsightsVersionResponse, error)
 }
 
 type ComponentProjectRepository interface {
@@ -806,5 +818,6 @@ const (
 )
 
 type InstanceSettings struct {
-	SingleOrganizationMode bool `json:"singleOrganizationMode"`
+	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
+	BearerTokenAuthDisabled bool `json:"bearerTokenAuthEnabled"`
 }

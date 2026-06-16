@@ -20,6 +20,7 @@ import (
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
+	t.Parallel()
 	factory, client := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{

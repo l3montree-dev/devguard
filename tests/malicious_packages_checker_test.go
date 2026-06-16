@@ -30,6 +30,7 @@ import (
 
 // TestMaliciousPackageChecker tests the malicious package detection
 func TestMaliciousPackageChecker(t *testing.T) {
+	t.Parallel()
 	// Set up test database
 	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()

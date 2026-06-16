@@ -18,6 +18,8 @@ const (
 	WebhookIntegrationID IntegrationID = "webhook"
 )
 
+var ErrOauth2TokenNotValidRedirectionRequired = fmt.Errorf("oauth2 token not valid, redirection required")
+
 type ThirdPartyIntegration interface {
 	WantsToHandleWebhook(ctx Context) bool
 	HandleWebhook(ctx Context) error

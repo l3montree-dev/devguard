@@ -49,6 +49,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.ProjectCreateRequest true "Request body"
 // @Success 200 {object} models.Project
@@ -123,6 +124,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {array} dtos.UserDTO
@@ -140,6 +142,7 @@ func (ProjectController *ProjectController) Members(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectInviteRequest true "Request body"
@@ -251,6 +254,7 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200
@@ -270,6 +274,7 @@ func (ProjectController *ProjectController) Delete(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {object} dtos.ProjectDetailsDTO
@@ -337,6 +342,7 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search query for filtering sub-projects and assets"
@@ -357,6 +363,7 @@ func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Co
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {array} models.Project
 // @Router /organizations/{organization}/projects [get]
@@ -385,6 +392,7 @@ func (ProjectController *ProjectController) SearchProjectsWithSubProjectsAndAsse
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectPatchRequest true "Request body"
@@ -446,6 +454,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param config-file path string true "Config file ID"
@@ -472,6 +481,7 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param config-file path string true "Config file ID"

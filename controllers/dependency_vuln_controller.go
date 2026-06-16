@@ -121,6 +121,7 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -254,6 +255,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -369,6 +371,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

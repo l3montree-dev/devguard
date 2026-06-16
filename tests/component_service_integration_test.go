@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	packageurl "github.com/package-url/packageurl-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestGetAndSaveLicenseInformation(t *testing.T) {
+	t.Parallel()
 	// Set up a mock OSI licenses API server that returns known valid licenses
 	// This avoids external API dependencies in tests
 	mockLicenses := `[
@@ -39,10 +41,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
 		// Mock response for the component without license - simulate getting "unknown" license
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
-			Return(dtos.OpenSourceInsightsVersionResponse{
-				Licenses: []string{}, // No licenses returned
-			}, nil)
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.MatchedBy(func(p packageurl.PackageURL) bool {
+			return p.Type == "npm" && p.Name == "no-license-package" && p.Version == "1.0.0"
+		})).Return(dtos.OpenSourceInsightsVersionResponse{
+			Licenses: []string{}, // No licenses returned
+		}, nil)
 
 		WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 			SuppressLogs: true,

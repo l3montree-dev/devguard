@@ -135,9 +135,15 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 	//delete the last slash if exists
 	purlString = strings.TrimSuffix(purlString, "/")
 
+	// validate the purl structure first
 	purl, err := packageurl.FromString(purlString)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid PURL").WithInternal(err)
+		return echo.NewHTTPError(400, "invalid PURL format").WithInternal(err)
+	}
+
+	// then validate the individual fields as well
+	if err := utils.ValidatePurlFields(purl); err != nil {
+		return echo.NewHTTPError(400, "PURL contains invalid characters").WithInternal(err)
 	}
 
 	matchCtx := normalize.ParsePurlForMatching(purl)

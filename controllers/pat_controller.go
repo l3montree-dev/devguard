@@ -21,6 +21,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/labstack/echo/v4"
 )
@@ -59,22 +61,20 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct := p.service.ToModel(c.Request().Context(), req, userID)
-
-	err := p.patRepository.Create(c.Request().Context(), nil, &patStruct)
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, userID)
 	if err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
 		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
 	}
 
-	return c.JSON(200, map[string]string{
-		"createdAt":   patStruct.CreatedAt.String(),
-		"description": patStruct.Description,
-		"userID":      patStruct.UserID.String(),
-		"pubKey":      patStruct.PubKey,
-		"fingerprint": patStruct.Fingerprint,
-		"scopes":      patStruct.Scopes,
-		"id":          patStruct.ID.String(),
-	})
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
 }
 
 // @Summary Revoke PAT by private key
@@ -107,6 +107,7 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param tokenID path string true "Token ID"
 // @Success 200
 // @Router /pats/{tokenID} [delete]
@@ -134,7 +135,8 @@ func (p *PatController) Delete(c shared.Context) error {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {array} models.PAT
+// @Security BearerAuth
+// @Success 200 {array} dtos.PATDTO
 // @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
@@ -146,5 +148,5 @@ func (p *PatController) List(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
 	}
 
-	return c.JSON(200, pats)
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
 }

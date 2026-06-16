@@ -12,6 +12,7 @@ import (
 )
 
 func TestSyncExternalReferences(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
 		createCVE2025_46569(f.DB)

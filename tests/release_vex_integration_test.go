@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -32,8 +31,8 @@ import (
 
 // TestReleaseVEXMergeIntegration verifies that the release VEX endpoint returns a merged VeX (CycloneDX BOM with vulnerabilities)
 func TestReleaseVEXMergeIntegration(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		os.Setenv("FRONTEND_URL", "http://localhost:3000")
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		// repositories and services from FX

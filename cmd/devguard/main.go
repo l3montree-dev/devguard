@@ -95,6 +95,11 @@ var release string // Will be filled at build time
 // @in							header
 // @name						Signature
 // @description				Instance admin authentication using ECDSA P-256 HTTP message signing. Requires Signature, Signature-Input and Content-Digest headers.
+
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description				Bearer token authentication. Set value to: Bearer dvg_…
 func main() {
 	//os.Setenv("TZ", "UTC")
 	shared.LoadConfig() // nolint: errcheck
@@ -134,6 +139,7 @@ func main() {
 		// we need to invoke all routers to register their routes
 		fx.Invoke(func(AdminRouter router.AdminRouter) {}),
 		fx.Invoke(func(OrgRouter router.OrgRouter) {}),
+		fx.Invoke(func(ProjectRouter router.APIV2Router) {}),
 		fx.Invoke(func(ProjectRouter router.ProjectRouter) {}),
 		fx.Invoke(func(SessionRouter router.SessionRouter) {}),
 		fx.Invoke(func(ArtifactRouter router.ArtifactRouter) {}),
@@ -149,6 +155,14 @@ func main() {
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
+		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					encryptionService.LoadDBEncryptionKey()
+					return nil
+				},
+			})
+		}),
 		fx.Invoke(func(lc fx.Lifecycle, server api.Server) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

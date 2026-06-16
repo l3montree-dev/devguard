@@ -33,15 +33,6 @@ import (
 )
 
 var _ shared.AccessControl = &casbinRBAC{}
-var casbinEnforcer *casbin.ContextEnforcer
-
-// ResetEnforcer clears the cached enforcer singleton so the next call to
-// NewCasbinRBACProvider builds a fresh one. Intended for use in tests only.
-func ResetEnforcer() {
-	concurrencyMutex.Lock()
-	defer concurrencyMutex.Unlock()
-	casbinEnforcer = nil
-}
 
 // protect against concurrent access on shared rbac structures like maps
 // in practical terms this means that whenever we call a function of the casbin context enforcer, we wrap the call inside a mutex lock and unlock
@@ -83,7 +74,7 @@ func (c *casbinRBAC) GetExternalEntityProviderID() *string {
 }
 
 func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
-	listOfUsers, _ := withLock(func() ([]string, error) {
+	listOfUsers, _ := withRLock(func() ([]string, error) {
 		return c.enforcer.GetUsersForRoleInDomain("role::owner", "domain::"+c.domain), nil
 	})
 	if len(listOfUsers) == 0 {
@@ -96,7 +87,7 @@ func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
 }
 
 func (c *casbinRBAC) GetAdminsOfOrganization() ([]string, error) {
-	implicitUsers, err := withLock(func() ([]string, error) {
+	implicitUsers, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitUsersForRole("role::admin", "domain::"+c.domain)
 	})
 	if err != nil {
@@ -112,7 +103,7 @@ func (c *casbinRBAC) GetAdminsOfOrganization() ([]string, error) {
 }
 
 func (c *casbinRBAC) GetAllMembersOfOrganization() ([]string, error) {
-	users, err := withLock(func() ([]string, error) {
+	users, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetAllUsersByDomain("domain::" + c.domain)
 	})
 	if err != nil {
@@ -126,7 +117,7 @@ func (c *casbinRBAC) GetAllMembersOfOrganization() ([]string, error) {
 }
 
 func (c *casbinRBAC) GetAllMembersOfProject(projectID string) ([]string, error) {
-	users, err := withLock(func() ([]string, error) {
+	users, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitUsersForRole("project::"+projectID+"|role::member", "domain::"+c.domain)
 	})
 	if err != nil {
@@ -140,7 +131,7 @@ func (c *casbinRBAC) GetAllMembersOfProject(projectID string) ([]string, error) 
 }
 
 func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
-	users, err := withLock(func() ([]string, error) {
+	users, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitUsersForRole("asset::"+assetID+"|role::member", "domain::"+c.domain)
 	})
 	if err != nil {
@@ -154,7 +145,7 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 }
 
 func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
-	return withLock(func() (bool, error) {
+	return withRLock(func() (bool, error) {
 		roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetUserID(), "domain::"+c.domain)
 		return len(roles) > 0, nil
 	})
@@ -162,7 +153,7 @@ func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) 
 
 func (c *casbinRBAC) GetAllProjectsForUser(user string) ([]string, error) {
 	projectIDs := []string{}
-	roles, _ := withLock(func() ([]string, error) {
+	roles, _ := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
 	})
 	for _, role := range roles {
@@ -176,7 +167,7 @@ func (c *casbinRBAC) GetAllProjectsForUser(user string) ([]string, error) {
 
 func (c *casbinRBAC) GetAllAssetsForUser(user string) ([]string, error) {
 	assetIDs := []string{}
-	roles, _ := withLock(func() ([]string, error) {
+	roles, _ := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
 	})
 	for _, role := range roles {
@@ -189,7 +180,7 @@ func (c *casbinRBAC) GetAllAssetsForUser(user string) ([]string, error) {
 }
 
 func (c *casbinRBAC) GetAllRoles(user string) []string {
-	roles, err := withLock(func() ([]string, error) {
+	roles, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
 	})
 	if err != nil {
@@ -399,7 +390,7 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 }
 
 func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withLock(func() ([][]string, error) {
+	permissions, err := withRLock(func() ([][]string, error) {
 		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	})
 	if err != nil {
@@ -414,7 +405,7 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 }
 
 func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withLock(func() ([][]string, error) {
+	permissions, err := withRLock(func() ([][]string, error) {
 		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	})
 
@@ -431,7 +422,7 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 }
 
 func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withLock(func() ([][]string, error) {
+	permissions, err := withRLock(func() ([][]string, error) {
 		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
 	})
 	if err != nil {
@@ -447,7 +438,7 @@ func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, 
 }
 
 func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
-	domains, err := withLock(func() ([]string, error) {
+	domains, err := withRLock(func() ([]string, error) {
 		return c.enforcer.GetDomainsForUser("user::" + user)
 	})
 	if err != nil {
@@ -498,9 +489,6 @@ func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker) (casbinRBACP
 }
 
 func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.ContextEnforcer, error) {
-	if casbinEnforcer != nil {
-		return casbinEnforcer, nil
-	}
 	a, err := gormadapter.NewAdapterByDB(db)
 	if err != nil {
 		return nil, err
@@ -538,8 +526,6 @@ func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.ContextEnfo
 	if err = e.LoadPolicy(); err != nil {
 		log.Println("LoadPolicy failed, err: ", err)
 	}
-
-	casbinEnforcer = e
 
 	return e, nil
 }

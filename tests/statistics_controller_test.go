@@ -28,6 +28,7 @@ import (
 )
 
 func TestGetOrgStatistics(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 

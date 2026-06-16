@@ -17,9 +17,11 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -28,30 +30,71 @@ import (
 type gitlabIntegrationRepository struct {
 	db *gorm.DB
 	utils.Repository[uuid.UUID, models.GitLabIntegration, *gorm.DB]
+	encryptionService shared.DBEncryptionService
 }
 
-func NewGitLabIntegrationRepository(db *gorm.DB) *gitlabIntegrationRepository {
+func NewGitLabIntegrationRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *gitlabIntegrationRepository {
 	return &gitlabIntegrationRepository{
-		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.GitLabIntegration](db),
+		db:                db,
+		Repository:        newGormRepository[uuid.UUID, models.GitLabIntegration](db),
+		encryptionService: encryptionService,
 	}
+}
+
+// overwrite save function with a custom one using the encryption logic, to make sure all callers encrypt before save
+func (r *gitlabIntegrationRepository) Save(ctx context.Context, tx *gorm.DB, integration *models.GitLabIntegration) error {
+	originalAccessToken := integration.AccessToken
+	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(originalAccessToken)
+	if err != nil {
+		return fmt.Errorf("could not encrypt access token before saving to db: %w", err)
+	}
+	integration.AccessToken = encryptedAccessToken
+	defer func() { integration.AccessToken = originalAccessToken }()
+
+	return r.Repository.Save(ctx, tx, integration)
+}
+
+func (r *gitlabIntegrationRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.GitLabIntegration, error) {
+	integration, err := r.Repository.Read(ctx, tx, id)
+	if err != nil {
+		return integration, err
+	}
+
+	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(integration.AccessToken)
+	if err != nil {
+		return integration, fmt.Errorf("could not decrypt fetched access token: %w", err)
+	}
+	integration.AccessToken = decryptedAccessToken
+
+	return integration, nil
 }
 
 func (r *gitlabIntegrationRepository) FindByOrganizationID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.GitLabIntegration, error) {
 	var integrations []models.GitLabIntegration
-	if err := r.GetDB(ctx, tx).Find(&integrations, "orgID = ?", orgID).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Find(&integrations, "org_id = ?", orgID).Error; err != nil {
 		return nil, err
 	}
+
+	for i := range integrations {
+		decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(integrations[i].AccessToken)
+		if err != nil {
+			return nil, fmt.Errorf("could not decrypt fetched access token: %w", err)
+		}
+		integrations[i].AccessToken = decryptedAccessToken
+	}
+
 	return integrations, nil
 }
 
 type gitlabOauth2TokenRepository struct {
-	db *gorm.DB
+	db                *gorm.DB
+	encryptionService shared.DBEncryptionService
 }
 
-func NewGitlabOauth2TokenRepository(db *gorm.DB) *gitlabOauth2TokenRepository {
+func NewGitlabOauth2TokenRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *gitlabOauth2TokenRepository {
 	return &gitlabOauth2TokenRepository{
-		db: db,
+		db:                db,
+		encryptionService: encryptionService,
 	}
 }
 
@@ -63,6 +106,14 @@ func (r *gitlabOauth2TokenRepository) GetDB(ctx context.Context, tx *gorm.DB) *g
 }
 
 func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
+	for _, t := range token {
+		restore, err := r.encryptTokenInPlace(t)
+		if err != nil {
+			return err
+		}
+		defer restore()
+	}
+
 	if err := r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
 		UpdateAll: true,
@@ -73,6 +124,12 @@ func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, tok
 }
 
 func (r *gitlabOauth2TokenRepository) Upsert(ctx context.Context, tx *gorm.DB, token *models.GitLabOauth2Token) error {
+	restore, err := r.encryptTokenInPlace(token)
+	if err != nil {
+		return err
+	}
+	defer restore()
+
 	if err := r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(token).Error; err != nil {
@@ -86,6 +143,11 @@ func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(ctx context.Cont
 	if err := r.GetDB(ctx, tx).Where("user_id = ? AND provider_id = ?", userID, providerID).First(&token).Error; err != nil {
 		return nil, err
 	}
+
+	if err := r.decryptTokenInPlace(&token); err != nil {
+		return nil, err
+	}
+
 	return &token, nil
 }
 
@@ -94,6 +156,13 @@ func (r *gitlabOauth2TokenRepository) FindByUserID(ctx context.Context, tx *gorm
 	if err := r.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
 		return nil, err
 	}
+
+	for i := range tokens {
+		if err := r.decryptTokenInPlace(&tokens[i]); err != nil {
+			return nil, err
+		}
+	}
+
 	return tokens, nil
 }
 
@@ -109,6 +178,14 @@ func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(ctx context.Co
 }
 
 func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx *gorm.DB, tokens []*models.GitLabOauth2Token) error {
+	for _, t := range tokens {
+		restore, err := r.encryptTokenInPlace(t)
+		if err != nil {
+			return err
+		}
+		defer restore()
+	}
+
 	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		DoNothing: true,
 		Columns: []clause.Column{
@@ -120,4 +197,42 @@ func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx 
 			},
 		},
 	}).Create(tokens).Error
+}
+
+// encryptTokenInPlace encrypts the token's sensitive fields in place and returns a func to restore the plaintext.
+func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(token *models.GitLabOauth2Token) (func(), error) {
+	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(token.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("could not encrypt access token before saving to db: %w", err)
+	}
+	encryptedRefreshToken, err := r.encryptionService.EncryptAndWrapData(token.RefreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("could not encrypt refresh token before saving to db: %w", err)
+	}
+
+	originalAccessToken := token.AccessToken
+	originalRefreshToken := token.RefreshToken
+	token.AccessToken = encryptedAccessToken
+	token.RefreshToken = encryptedRefreshToken
+
+	return func() {
+		token.AccessToken = originalAccessToken
+		token.RefreshToken = originalRefreshToken
+	}, nil
+}
+
+// decryptTokenInPlace decrypts the sensitive fields of a fetched token
+func (r *gitlabOauth2TokenRepository) decryptTokenInPlace(token *models.GitLabOauth2Token) error {
+	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(token.AccessToken)
+	if err != nil {
+		return fmt.Errorf("could not decrypt fetched access token: %w", err)
+	}
+	decryptedRefreshToken, err := r.encryptionService.MaybeDecryptData(token.RefreshToken)
+	if err != nil {
+		return fmt.Errorf("could not decrypt fetched refresh token: %w", err)
+	}
+
+	token.AccessToken = decryptedAccessToken
+	token.RefreshToken = decryptedRefreshToken
+	return nil
 }

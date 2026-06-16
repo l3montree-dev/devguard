@@ -73,7 +73,9 @@ type baseConfig struct {
 	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
 	IgnoreUpstreamAttestations bool `json:"ignoreUpstreamAttestations" mapstructure:"ignoreUpstreamAttestations"`
 
-	Offline bool `json:"offline" mapstructure:"offline"`
+	Offline bool   `json:"offline" mapstructure:"offline"`
+	NoWrite bool   `json:"noWrite" mapstructure:"noWrite"`
+	Output  string `json:"output" mapstructure:"output"`
 
 	ImagePath                     string `json:"imagePath" mapstructure:"imagePath"`
 	ImagePathSuffix               string `json:"imageSuffix" mapstructure:"imageSuffix"`
@@ -151,6 +153,12 @@ func ParseBaseConfig(runningCMD string) {
 		}
 	}
 
+	if RuntimeBaseConfig.Token == "" && !utils.RunsInCI() {
+		if token, err := getTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
+			RuntimeBaseConfig.Token = token
+		}
+	}
+
 	if RuntimeBaseConfig.ArtifactName == "" {
 		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
 	}
@@ -160,24 +168,12 @@ func ParseBaseConfig(runningCMD string) {
 	}
 }
 
-func StoreTokenInKeyring(assetName, token string) error {
-	service := "devguard/" + assetName
-	user := "devguard"
-
-	// set password
-	return keyring.Set(service, user, token)
+func StoreTokenInKeyring(apiURL, assetName, token string) error {
+	return keyring.Set("devguard/"+apiURL+"/"+assetName, "token", token)
 }
 
-func getTokenFromKeyring(assetName string) (string, error) {
-	service := "devguard/" + assetName
-	user := "devguard"
-
-	token, err := keyring.Get(service, user)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
+func getTokenFromKeyring(apiURL, assetName string) (string, error) {
+	return keyring.Get("devguard/"+apiURL+"/"+assetName, "token")
 }
 
 func tokenToInTotoKey(token string) (toto.Key, error) {
@@ -225,13 +221,6 @@ func ParseInTotoConfig() {
 		RuntimeInTotoConfig.Disabled = true
 		slog.Debug("no token provided, disabling in-toto functionality")
 		return
-	}
-
-	if RuntimeBaseConfig.Token == "" && RuntimeBaseConfig.CI {
-		RuntimeBaseConfig.Token, err = getTokenFromKeyring(RuntimeBaseConfig.AssetName)
-		if err != nil {
-			panic(err)
-		}
 	}
 
 	RuntimeInTotoConfig.Key, err = tokenToInTotoKey(RuntimeBaseConfig.Token)

@@ -239,7 +239,10 @@ func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]strin
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := service.HexPublicKeyToInTotoKey(pat.PubKey)
+		if pat.PubKey == nil {
+			continue
+		}
+		key, err := service.HexPublicKeyToInTotoKey(*pat.PubKey)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not convert public key")
 		}

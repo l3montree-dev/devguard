@@ -39,14 +39,6 @@ func NewComponentService(openSourceInsightsService shared.OpenSourceInsightServi
 	}
 }
 
-func combineNamespaceAndName(namespace, name string) string {
-	if namespace == "" {
-		return name
-	}
-
-	return namespace + "/" + name
-}
-
 func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject) {
 	projectKey := project.ProjectKey
 	projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
@@ -111,9 +103,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
 			ctx,
-			parsedPurl.Type,
-			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
-			parsedPurl.Version,
+			parsedPurl,
 		)
 
 		if err != nil {
@@ -141,9 +131,7 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 
 	resp, err := s.openSourceInsightsService.GetVersion(
 		ctx,
-		parsedPurl.Type,
-		combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
-		parsedPurl.Version,
+		parsedPurl,
 	)
 	if err != nil {
 		slog.Warn("could not get version information for component project", "err", err, "purl", pURL)

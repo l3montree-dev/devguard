@@ -228,20 +228,49 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 
 		firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 		vuln := cdx.Vulnerability{
-			ID: cve.CVE,
+			ID:          cve.CVE,
+			Description: cve.Description,
 			Source: &cdx.Source{
-				Name: "NVD",
-				URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.CVEID),
+				Name: "OSV",
+				URL:  fmt.Sprintf("https:/osv.dev/vulnerability/%s", dependencyVuln.CVEID),
 			},
-			Affects: &[]cdx.Affects{{
-				Ref: dependencyVuln.ComponentPurl,
-			}},
+			Affects: func() *[]cdx.Affects {
+				affects := cdx.Affects{Ref: dependencyVuln.ComponentPurl}
+				if dependencyVuln.ComponentFixedVersion != nil {
+					affects.Range = &[]cdx.AffectedVersions{{
+						Version: *dependencyVuln.ComponentFixedVersion,
+						Status:  cdx.VulnerabilityStatusNotAffected,
+					}}
+				}
+				return &[]cdx.Affects{affects}
+			}(),
 			Analysis: &cdx.VulnerabilityAnalysis{
 				State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
 				FirstIssued: firstIssued.UTC().Format(time.RFC3339),
 				LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 			},
 			Properties: properties,
+		}
+
+		if len(dependencyVuln.VulnerabilityPath) > 0 {
+			if vuln.Properties == nil {
+				vuln.Properties = &[]cdx.Property{}
+			}
+			pathJSON, _ := json.Marshal(dependencyVuln.VulnerabilityPath)
+			vuln.Properties = utils.Ptr(append(*vuln.Properties, cdx.Property{
+				Name:  "devguard:vulnerabilityPath",
+				Value: string(pathJSON),
+			}))
+		}
+
+		if dependencyVuln.DirectDependencyFixedVersion != nil {
+			if vuln.Properties == nil {
+				vuln.Properties = &[]cdx.Property{}
+			}
+			vuln.Properties = utils.Ptr(append(*vuln.Properties, cdx.Property{
+				Name:  "devguard:directDependencyFixedVersion",
+				Value: *dependencyVuln.DirectDependencyFixedVersion,
+			}))
 		}
 		if !firstResponded.IsZero() {
 			// check if we already have properties, if not create a new slice
@@ -354,7 +383,7 @@ func dependencyVulnStateToResponseStatus(state dtos.VulnState) cdx.ImpactAnalysi
 	case dtos.VulnStateAccepted:
 		return cdx.IARWillNotFix
 	case dtos.VulnStateFalsePositive:
-		return cdx.IARWillNotFix
+		return ""
 	case dtos.VulnStateMarkedForTransfer:
 		return ""
 	default:

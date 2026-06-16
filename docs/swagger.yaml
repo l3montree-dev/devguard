@@ -65,8 +65,3239 @@ components:
           type: array
           uniqueItems: false
       type: object
-    databasetypes.JSONB:
-      additionalProperties: {}
+    cyclonedx.Advisory:
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+      type: object
+    cyclonedx.AffectedVersions:
+      properties:
+        range:
+          type: string
+        status:
+          $ref: '#/components/schemas/cyclonedx.VulnerabilityStatus'
+        version:
+          type: string
+      type: object
+    cyclonedx.Affects:
+      properties:
+        ref:
+          type: string
+        versions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.AffectedVersions'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Affirmation:
+      properties:
+        signatories:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Signatory'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        statement:
+          type: string
+      type: object
+    cyclonedx.Annotation:
+      properties:
+        annotator:
+          $ref: '#/components/schemas/cyclonedx.Annotator'
+        bom-ref:
+          type: string
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        subjects:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        text:
+          type: string
+        timestamp:
+          type: string
+      type: object
+    cyclonedx.Annotator:
+      properties:
+        component:
+          $ref: '#/components/schemas/cyclonedx.Component'
+        individual:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        service:
+          $ref: '#/components/schemas/cyclonedx.Service'
+      type: object
+    cyclonedx.AsserterChoice:
+      properties:
+        individual:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        ref:
+          type: string
+      type: object
+    cyclonedx.Assessor:
+      properties:
+        bom-ref:
+          type: string
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        thirdParty:
+          type: boolean
+      type: object
+    cyclonedx.AttachedText:
+      properties:
+        content:
+          type: string
+        contentType:
+          type: string
+        encoding:
+          type: string
+      type: object
+    cyclonedx.Attestation:
+      properties:
+        assessor:
+          type: string
+        map:
+          items:
+            $ref: '#/components/schemas/cyclonedx.AttestationMap'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        summary:
+          type: string
+      type: object
+    cyclonedx.AttestationConfidence:
+      properties:
+        rationale:
+          type: string
+        score:
+          type: number
+      type: object
+    cyclonedx.AttestationConformance:
+      properties:
+        mitigationStrategies:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        rationale:
+          type: string
+        score:
+          type: number
+      type: object
+    cyclonedx.AttestationMap:
+      properties:
+        claims:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        confidence:
+          $ref: '#/components/schemas/cyclonedx.AttestationConfidence'
+        conformance:
+          $ref: '#/components/schemas/cyclonedx.AttestationConformance'
+        counterClaims:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        requirement:
+          type: string
+      type: object
+    cyclonedx.BOM:
+      properties:
+        $schema:
+          description: JSON specific fields
+          type: string
+        annotations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Annotation'
+          type: array
+          uniqueItems: false
+        bomFormat:
+          type: string
+        citations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Citation'
+          type: array
+          uniqueItems: false
+        components:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        compositions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Composition'
+          type: array
+          uniqueItems: false
+        declarations:
+          $ref: '#/components/schemas/cyclonedx.Declarations'
+        definitions:
+          $ref: '#/components/schemas/cyclonedx.Definitions'
+        dependencies:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Dependency'
+          type: array
+          uniqueItems: false
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        formulation:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Formula'
+          type: array
+          uniqueItems: false
+        metadata:
+          $ref: '#/components/schemas/cyclonedx.Metadata'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        serialNumber:
+          type: string
+        services:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Service'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        specVersion:
+          $ref: '#/components/schemas/cyclonedx.SpecVersion'
+        version:
+          type: integer
+        vulnerabilities:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Vulnerability'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Callstack:
+      properties:
+        frames:
+          items:
+            $ref: '#/components/schemas/cyclonedx.CallstackFrame'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.CallstackFrame:
+      properties:
+        column:
+          type: integer
+        fullFilename:
+          type: string
+        function:
+          type: string
+        line:
+          type: integer
+        module:
+          type: string
+        package:
+          type: string
+        parameters:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.CertificateExtension:
+      type: object
+    cyclonedx.CertificateProperties:
+      properties:
+        activationDate:
+          description: New in 1.7
+          type: string
+        certificateExtension:
+          description: 'Deprecated in 1.7: use CertificateFileExtension'
+          type: string
+        certificateExtensions:
+          description: New in 1.7
+          items:
+            $ref: '#/components/schemas/cyclonedx.CertificateExtension'
+          type: array
+          uniqueItems: false
+        certificateFileExtension:
+          description: New in 1.7
+          type: string
+        certificateFormat:
+          type: string
+        certificateState:
+          description: New in 1.7
+          items:
+            $ref: '#/components/schemas/cyclonedx.CertificateState'
+          type: array
+          uniqueItems: false
+        creationDate:
+          description: New in 1.7
+          type: string
+        deactivationDate:
+          description: New in 1.7
+          type: string
+        destructionDate:
+          description: New in 1.7
+          type: string
+        fingerprint:
+          $ref: '#/components/schemas/cyclonedx.Hash'
+        issuerName:
+          type: string
+        notValidAfter:
+          type: string
+        notValidBefore:
+          type: string
+        relatedCryptographicAssets:
+          description: New in 1.7
+          items:
+            $ref: '#/components/schemas/cyclonedx.RelatedCryptographicAsset'
+          type: array
+          uniqueItems: false
+        revocationDate:
+          description: New in 1.7
+          type: string
+        serialNumber:
+          type: string
+        signatureAlgorithmRef:
+          description: 'Deprecated in 1.7: use RelatedCryptographicAssets'
+          type: string
+        subjectName:
+          type: string
+        subjectPublicKeyRef:
+          description: 'Deprecated in 1.7: use RelatedCryptographicAssets'
+          type: string
+      type: object
+    cyclonedx.CertificateState:
+      type: object
+    cyclonedx.CipherSuite:
+      properties:
+        algorithms:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        identifiers:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        tlsGroups:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        tlsSignatureSchemes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Citation:
+      properties:
+        attributedTo:
+          type: string
+        bom-ref:
+          type: string
+        expressions:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        note:
+          type: string
+        pointers:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        process:
+          type: string
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        timestamp:
+          type: string
+      type: object
+    cyclonedx.Claim:
+      properties:
+        bom-ref:
+          type: string
+        counterEvidence:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        evidence:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        mitigationStrategies:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        predicate:
+          type: string
+        reasoning:
+          type: string
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        target:
+          type: string
+      type: object
+    cyclonedx.Commit:
+      properties:
+        author:
+          $ref: '#/components/schemas/cyclonedx.IdentifiableAction'
+        committer:
+          $ref: '#/components/schemas/cyclonedx.IdentifiableAction'
+        message:
+          type: string
+        uid:
+          type: string
+        url:
+          type: string
+      type: object
+    cyclonedx.Component:
+      properties:
+        author:
+          description: 'Deprecated: Use authors or manufacturer instead.'
+          type: string
+        authors:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+          type: array
+          uniqueItems: false
+        bom-ref:
+          type: string
+        components:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        copyright:
+          type: string
+        cpe:
+          type: string
+        cryptoProperties:
+          $ref: '#/components/schemas/cyclonedx.CryptoProperties'
+        data:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ComponentData'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        evidence:
+          $ref: '#/components/schemas/cyclonedx.Evidence'
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        group:
+          type: string
+        hashes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Hash'
+          type: array
+          uniqueItems: false
+        isExternal:
+          type: boolean
+        licenses:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseChoice'
+          type: array
+          uniqueItems: false
+        manufacturer:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        mime-type:
+          type: string
+        modelCard:
+          $ref: '#/components/schemas/cyclonedx.MLModelCard'
+        modified:
+          type: boolean
+        name:
+          type: string
+        omniborId:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        patentAssertions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.PatentAssertion'
+          type: array
+          uniqueItems: false
+        pedigree:
+          $ref: '#/components/schemas/cyclonedx.Pedigree'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        publisher:
+          type: string
+        purl:
+          type: string
+        releaseNotes:
+          $ref: '#/components/schemas/cyclonedx.ReleaseNotes'
+        scope:
+          $ref: '#/components/schemas/cyclonedx.Scope'
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        supplier:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        swhid:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        swid:
+          $ref: '#/components/schemas/cyclonedx.SWID'
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/cyclonedx.ComponentType'
+        version:
+          type: string
+        versionRange:
+          type: string
+      type: object
+    cyclonedx.ComponentData:
+      properties:
+        bom-ref:
+          type: string
+        classification:
+          type: string
+        contents:
+          $ref: '#/components/schemas/cyclonedx.ComponentDataContents'
+        description:
+          type: string
+        governance:
+          $ref: '#/components/schemas/cyclonedx.DataGovernance'
+        graphics:
+          $ref: '#/components/schemas/cyclonedx.ComponentDataGraphics'
+        name:
+          type: string
+        sensitiveData:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/cyclonedx.ComponentDataType'
+      type: object
+    cyclonedx.ComponentDataContents:
+      properties:
+        attachment:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        url:
+          type: string
+      type: object
+    cyclonedx.ComponentDataGovernanceResponsibleParty:
+      properties:
+        contact:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      type: object
+    cyclonedx.ComponentDataGraphic:
+      properties:
+        image:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        name:
+          type: string
+      type: object
+    cyclonedx.ComponentDataGraphics:
+      properties:
+        collection:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ComponentDataGraphic'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+      type: object
+    cyclonedx.ComponentDataType:
+      enum:
+      - configuration
+      - dataset
+      - definition
+      - other
+      - source-code
+      type: string
+      x-enum-varnames:
+      - ComponentDataTypeConfiguration
+      - ComponentDataTypeDataset
+      - ComponentDataTypeDefinition
+      - ComponentDataTypeOther
+      - ComponentDataTypeSourceCode
+    cyclonedx.ComponentType:
+      enum:
+      - application
+      - container
+      - cryptographic-asset
+      - data
+      - device
+      - device-driver
+      - file
+      - firmware
+      - framework
+      - library
+      - machine-learning-model
+      - operating-system
+      - platform
+      type: string
+      x-enum-varnames:
+      - ComponentTypeApplication
+      - ComponentTypeContainer
+      - ComponentTypeCryptographicAsset
+      - ComponentTypeData
+      - ComponentTypeDevice
+      - ComponentTypeDeviceDriver
+      - ComponentTypeFile
+      - ComponentTypeFirmware
+      - ComponentTypeFramework
+      - ComponentTypeLibrary
+      - ComponentTypeMachineLearningModel
+      - ComponentTypeOS
+      - ComponentTypePlatform
+    cyclonedx.Composition:
+      properties:
+        aggregate:
+          $ref: '#/components/schemas/cyclonedx.CompositionAggregate'
+        assemblies:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        bom-ref:
+          type: string
+        dependencies:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        vulnerabilities:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.CompositionAggregate:
+      enum:
+      - complete
+      - incomplete
+      - incomplete_first_party_only
+      - incomplete_first_party_opensource_only
+      - incomplete_first_party_proprietary_only
+      - incomplete_third_party_only
+      - incomplete_third_party_opensource_only
+      - incomplete_third_party_proprietary_only
+      - not_specified
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CompositionAggregateComplete
+      - CompositionAggregateIncomplete
+      - CompositionAggregateIncompleteFirstPartyOnly
+      - CompositionAggregateIncompleteFirstPartyOpenSourceOnly
+      - CompositionAggregateIncompleteFirstPartyProprietaryOnly
+      - CompositionAggregateIncompleteThirdPartyOnly
+      - CompositionAggregateIncompleteThirdPartyOpenSourceOnly
+      - CompositionAggregateIncompleteThirdPartyProprietaryOnly
+      - CompositionAggregateNotSpecified
+      - CompositionAggregateUnknown
+    cyclonedx.Copyright:
+      properties:
+        text:
+          type: string
+      type: object
+    cyclonedx.Credits:
+      properties:
+        individuals:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+          type: array
+          uniqueItems: false
+        organizations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.CryptoAlgorithmMode:
+      enum:
+      - cbc
+      - ecb
+      - ccm
+      - gcm
+      - cfb
+      - ofb
+      - ctr
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoAlgorithmModeCBC
+      - CryptoAlgorithmModeECB
+      - CryptoAlgorithmModeCCM
+      - CryptoAlgorithmModeGCM
+      - CryptoAlgorithmModeCFB
+      - CryptoAlgorithmModeOFB
+      - CryptoAlgorithmModeCTR
+      - CryptoAlgorithmModeOther
+      - CryptoAlgorithmModeUnknown
+    cyclonedx.CryptoAlgorithmProperties:
+      properties:
+        algorithmFamily:
+          type: string
+        certificationLevel:
+          items:
+            $ref: '#/components/schemas/cyclonedx.CryptoCertificationLevel'
+          type: array
+          uniqueItems: false
+        classicalSecurityLevel:
+          type: integer
+        cryptoFunctions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.CryptoFunction'
+          type: array
+          uniqueItems: false
+        curve:
+          description: 'Deprecated in 1.7: use EllipticCurve instead'
+          type: string
+        ellipticCurve:
+          type: string
+        executionEnvironment:
+          $ref: '#/components/schemas/cyclonedx.CryptoExecutionEnvironment'
+        implementationPlatform:
+          $ref: '#/components/schemas/cyclonedx.ImplementationPlatform'
+        mode:
+          $ref: '#/components/schemas/cyclonedx.CryptoAlgorithmMode'
+        nistQuantumSecurityLevel:
+          type: integer
+        padding:
+          $ref: '#/components/schemas/cyclonedx.CryptoPadding'
+        parameterSetIdentifier:
+          type: string
+        primitive:
+          $ref: '#/components/schemas/cyclonedx.CryptoPrimitive'
+      type: object
+    cyclonedx.CryptoAssetType:
+      enum:
+      - algorithm
+      - certificate
+      - protocol
+      - related-crypto-material
+      type: string
+      x-enum-varnames:
+      - CryptoAssetTypeAlgorithm
+      - CryptoAssetTypeCertificate
+      - CryptoAssetTypeProtocol
+      - CryptoAssetTypeRelatedCryptoMaterial
+    cyclonedx.CryptoCertificationLevel:
+      enum:
+      - none
+      - fips140-1-l1
+      - fips140-1-l2
+      - fips140-1-l3
+      - fips140-1-l4
+      - fips140-2-l1
+      - fips140-2-l2
+      - fips140-2-l3
+      - fips140-2-l4
+      - fips140-3-l1
+      - fips140-3-l2
+      - fips140-3-l3
+      - fips140-3-l4
+      - cc-eal1
+      - cc-eal1+
+      - cc-eal2
+      - cc-eal2+
+      - cc-eal3
+      - cc-eal3+
+      - cc-eal4
+      - cc-eal4+
+      - cc-eal5
+      - cc-eal5+
+      - cc-eal6
+      - cc-eal6+
+      - cc-eal7
+      - cc-eal7+
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoCertificationLevelNone
+      - CryptoCertificationLevelFIPS140_1_L1
+      - CryptoCertificationLevelFIPS140_1_L2
+      - CryptoCertificationLevelFIPS140_1_L3
+      - CryptoCertificationLevelFIPS140_1_L4
+      - CryptoCertificationLevelFIPS140_2_L1
+      - CryptoCertificationLevelFIPS140_2_L2
+      - CryptoCertificationLevelFIPS140_2_L3
+      - CryptoCertificationLevelFIPS140_2_L4
+      - CryptoCertificationLevelFIPS140_3_L1
+      - CryptoCertificationLevelFIPS140_3_L2
+      - CryptoCertificationLevelFIPS140_3_L3
+      - CryptoCertificationLevelFIPS140_3_L4
+      - CryptoCertificationLevelCCEAL1
+      - CryptoCertificationLevelCCEAL1Plus
+      - CryptoCertificationLevelCCEAL2
+      - CryptoCertificationLevelCCEAL2Plus
+      - CryptoCertificationLevelCCEAL3
+      - CryptoCertificationLevelCCEAL3Plus
+      - CryptoCertificationLevelCCEAL4
+      - CryptoCertificationLevelCCEAL4Plus
+      - CryptoCertificationLevelCCEAL5
+      - CryptoCertificationLevelCCEAL5Plus
+      - CryptoCertificationLevelCCEAL6
+      - CryptoCertificationLevelCCEAL6Plus
+      - CryptoCertificationLevelCCEAL7
+      - CryptoCertificationLevelCCEAL7Plus
+      - CryptoCertificationLevelOther
+      - CryptoCertificationLevelUnknown
+    cyclonedx.CryptoExecutionEnvironment:
+      enum:
+      - software-plain-ram
+      - software-encrypted-ram
+      - software-tee
+      - hardware
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoExecutionEnvironmentSoftwarePlainRAM
+      - CryptoExecutionEnvironmentSoftwareEncryptedRAM
+      - CryptoExecutionEnvironmentSoftwareTEE
+      - CryptoExecutionEnvironmentHardware
+      - CryptoExecutionEnvironmentOther
+      - CryptoExecutionEnvironmentUnknown
+    cyclonedx.CryptoFunction:
+      enum:
+      - generate
+      - keygen
+      - encrypt
+      - decrypt
+      - digest
+      - tag
+      - keyderive
+      - sign
+      - verify
+      - encapsulate
+      - decapsulate
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoFunctionGenerate
+      - CryptoFunctionKeygen
+      - CryptoFunctionEncrypt
+      - CryptoFunctionDecrypt
+      - CryptoFunctionDigest
+      - CryptoFunctionTag
+      - CryptoFunctionKeyderive
+      - CryptoFunctionSign
+      - CryptoFunctionVerify
+      - CryptoFunctionEncapsulate
+      - CryptoFunctionDecapsulate
+      - CryptoFunctionOther
+      - CryptoFunctionUnknown
+    cyclonedx.CryptoKeyState:
+      enum:
+      - pre-activation
+      - active
+      - suspended
+      - deactivated
+      - compromised
+      - destroyed
+      type: string
+      x-enum-varnames:
+      - CryptoKeyStatePreActivation
+      - CryptoKeyStateActive
+      - CryptoKeyStateSuspended
+      - CryptoKeyStateDeactivated
+      - CryptoKeyStateCompromised
+      - CryptoKeyStateDestroyed
+    cyclonedx.CryptoPadding:
+      enum:
+      - pkcs5
+      - pkcs7
+      - pkcs1v15
+      - oaep
+      - raw
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoPaddingPKCS5
+      - CryptoPaddingPKCS7
+      - CryptoPaddingPKCS1v15
+      - CryptoPaddingOAEP
+      - CryptoPaddingRaw
+      - CryptoPaddingOther
+      - CryptoPaddingUnknown
+    cyclonedx.CryptoPrimitive:
+      enum:
+      - drbg
+      - mac
+      - block-cipher
+      - stream-cipher
+      - signature
+      - hash
+      - pke
+      - xof
+      - kdf
+      - key-agree
+      - kem
+      - ae
+      - combiner
+      - key-wrap
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoPrimitiveDRBG
+      - CryptoPrimitiveMAC
+      - CryptoPrimitiveBlockCipher
+      - CryptoPrimitiveStreamCipher
+      - CryptoPrimitiveSignature
+      - CryptoPrimitiveHash
+      - CryptoPrimitivePKE
+      - CryptoPrimitiveXOF
+      - CryptoPrimitiveKDF
+      - CryptoPrimitiveKeyAgree
+      - CryptoPrimitiveKEM
+      - CryptoPrimitiveAE
+      - CryptoPrimitiveCombiner
+      - CryptoPrimitiveKeyWrap
+      - CryptoPrimitiveOther
+      - CryptoPrimitiveUnknown
+    cyclonedx.CryptoProperties:
+      properties:
+        algorithmProperties:
+          $ref: '#/components/schemas/cyclonedx.CryptoAlgorithmProperties'
+        assetType:
+          $ref: '#/components/schemas/cyclonedx.CryptoAssetType'
+        certificateProperties:
+          $ref: '#/components/schemas/cyclonedx.CertificateProperties'
+        oid:
+          type: string
+        protocolProperties:
+          $ref: '#/components/schemas/cyclonedx.CryptoProtocolProperties'
+        relatedCryptoMaterialProperties:
+          $ref: '#/components/schemas/cyclonedx.RelatedCryptoMaterialProperties'
+      type: object
+    cyclonedx.CryptoProtocolProperties:
+      properties:
+        cipherSuites:
+          items:
+            $ref: '#/components/schemas/cyclonedx.CipherSuite'
+          type: array
+          uniqueItems: false
+        cryptoRefArray:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        ikev2TransformTypes:
+          $ref: '#/components/schemas/cyclonedx.IKEv2TransformTypes'
+        relatedCryptographicAssets:
+          description: New in 1.7
+          items:
+            $ref: '#/components/schemas/cyclonedx.RelatedCryptographicAsset'
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/cyclonedx.CryptoProtocolType'
+        version:
+          type: string
+      type: object
+    cyclonedx.CryptoProtocolType:
+      enum:
+      - tls
+      - ssh
+      - ipsec
+      - ike
+      - sstp
+      - wpa
+      - dtls
+      - quic
+      - eap-aka
+      - eap-aka-prime
+      - prins
+      - 5g-aka
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - CryptoProtocolTypeTLS
+      - CryptoProtocolTypeSSH
+      - CryptoProtocolTypeIPSec
+      - CryptoProtocolTypeIKE
+      - CryptoProtocolTypeSSTP
+      - CryptoProtocolTypeWPA
+      - CryptoProtocolTypeDTLS
+      - CryptoProtocolTypeQUIC
+      - CryptoProtocolTypeEAPAKA
+      - CryptoProtocolTypeEAPAKAPrime
+      - CryptoProtocolTypePRINS
+      - CryptoProtocolType5GAKA
+      - CryptoProtocolTypeOther
+      - CryptoProtocolTypeUnknown
+    cyclonedx.DataClassification:
+      properties:
+        classification:
+          type: string
+        description:
+          type: string
+        destination:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        flow:
+          $ref: '#/components/schemas/cyclonedx.DataFlow'
+        governance:
+          $ref: '#/components/schemas/cyclonedx.DataGovernance'
+        name:
+          type: string
+        source:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.DataFlow:
+      enum:
+      - bi-directional
+      - inbound
+      - outbound
+      - unknown
+      type: string
+      x-enum-varnames:
+      - DataFlowBidirectional
+      - DataFlowInbound
+      - DataFlowOutbound
+      - DataFlowUnknown
+    cyclonedx.DataGovernance:
+      properties:
+        custodians:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ComponentDataGovernanceResponsibleParty'
+          type: array
+          uniqueItems: false
+        owners:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ComponentDataGovernanceResponsibleParty'
+          type: array
+          uniqueItems: false
+        stewards:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ComponentDataGovernanceResponsibleParty'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.DeclarationEvidence:
+      properties:
+        author:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        bom-ref:
+          type: string
+        created:
+          type: string
+        data:
+          items:
+            $ref: '#/components/schemas/cyclonedx.EvidenceData'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        expires:
+          type: string
+        propertyName:
+          type: string
+        reviewer:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+      type: object
+    cyclonedx.Declarations:
+      properties:
+        affirmation:
+          $ref: '#/components/schemas/cyclonedx.Affirmation'
+        assessors:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Assessor'
+          type: array
+          uniqueItems: false
+        attestations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Attestation'
+          type: array
+          uniqueItems: false
+        claims:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Claim'
+          type: array
+          uniqueItems: false
+        evidence:
+          items:
+            $ref: '#/components/schemas/cyclonedx.DeclarationEvidence'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        targets:
+          $ref: '#/components/schemas/cyclonedx.Targets'
+      type: object
+    cyclonedx.Definitions:
+      properties:
+        patents:
+          items:
+            $ref: '#/components/schemas/cyclonedx.PatentChoice'
+          type: array
+          uniqueItems: false
+        standards:
+          items:
+            $ref: '#/components/schemas/cyclonedx.StandardDefinition'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Dependency:
+      properties:
+        dependsOn:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        provides:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        ref:
+          type: string
+      type: object
+    cyclonedx.Diff:
+      properties:
+        text:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        url:
+          type: string
+      type: object
+    cyclonedx.DistributionConstraints:
+      properties:
+        tlp:
+          $ref: '#/components/schemas/cyclonedx.TLPClassification'
+      type: object
+    cyclonedx.EnvironmentVariableChoice:
+      type: object
+    cyclonedx.Event:
+      properties:
+        data:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        description:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        source:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        target:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        timeReceived:
+          type: string
+        uid:
+          type: string
+      type: object
+    cyclonedx.Evidence:
+      properties:
+        callstack:
+          $ref: '#/components/schemas/cyclonedx.Callstack'
+        copyright:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Copyright'
+          type: array
+          uniqueItems: false
+        identity:
+          $ref: '#/components/schemas/cyclonedx.EvidenceIdentityChoice'
+        licenses:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseChoice'
+          type: array
+          uniqueItems: false
+        occurrences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.EvidenceOccurrence'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.EvidenceData:
+      properties:
+        classification:
+          $ref: '#/components/schemas/cyclonedx.DataClassification'
+        contents:
+          $ref: '#/components/schemas/cyclonedx.EvidenceDataContents'
+        governance:
+          $ref: '#/components/schemas/cyclonedx.DataGovernance'
+        name:
+          type: string
+        sensitiveData:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.EvidenceDataContents:
+      properties:
+        attachment:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        url:
+          type: string
+      type: object
+    cyclonedx.EvidenceIdentityChoice:
+      type: object
+    cyclonedx.EvidenceOccurrence:
+      properties:
+        additionalContext:
+          type: string
+        bom-ref:
+          type: string
+        line:
+          type: integer
+        location:
+          type: string
+        offset:
+          type: integer
+        symbol:
+          type: string
+      type: object
+    cyclonedx.ExternalReference:
+      properties:
+        comment:
+          type: string
+        hashes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Hash'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/cyclonedx.ExternalReferenceType'
+        url:
+          type: string
+      type: object
+    cyclonedx.ExternalReferenceType:
+      enum:
+      - adversary-model
+      - advisories
+      - attestation
+      - bom
+      - build-meta
+      - build-system
+      - certification-report
+      - chat
+      - configuration
+      - codified-infrastructure
+      - component-analysis-report
+      - distribution
+      - distribution-intake
+      - documentation
+      - dynamic-analysis-report
+      - digital-signature
+      - electronic-signature
+      - evidence
+      - exploitability-statement
+      - formulation
+      - issue-tracker
+      - license
+      - log
+      - mailing-list
+      - maturity-report
+      - model-card
+      - other
+      - pentest-report
+      - poam
+      - quality-metrics
+      - release-notes
+      - risk-assessment
+      - rfc-9116
+      - runtime-analysis-report
+      - security-contact
+      - social
+      - source-distribution
+      - static-analysis-report
+      - support
+      - threat-model
+      - vcs
+      - vulnerability-assertion
+      - website
+      - patent
+      - patent-family
+      - patent-assertion
+      - citation
+      type: string
+      x-enum-varnames:
+      - ERTypeAdversaryModel
+      - ERTypeAdvisories
+      - ERTypeAttestation
+      - ERTypeBOM
+      - ERTypeBuildMeta
+      - ERTypeBuildSystem
+      - ERTypeCertificationReport
+      - ERTypeChat
+      - ERTypeConfiguration
+      - ERTypeCodifiedInfrastructure
+      - ERTypeComponentAnalysisReport
+      - ERTypeDistribution
+      - ERTypeDistributionIntake
+      - ERTypeDocumentation
+      - ERTypeDynamicAnalysisReport
+      - ERTypeDigitalSignature
+      - ERTypeElectronicSignature
+      - ERTypeEvidence
+      - ERTypeExploitabilityStatement
+      - ERTypeFormulation
+      - ERTypeIssueTracker
+      - ERTypeLicense
+      - ERTypeLog
+      - ERTypeMailingList
+      - ERTypeMaturityReport
+      - ERTypeModelCard
+      - ERTypeOther
+      - ERTypePentestReport
+      - ERTypePOAM
+      - ERTypeQualityMetrics
+      - ERTypeReleaseNotes
+      - ERTypeRiskAssessment
+      - ERTypeRFC9116
+      - ERTypeRuntimeAnalysisReport
+      - ERTypeSecurityContact
+      - ERTypeSocial
+      - ERTypeSourceDistribution
+      - ERTypeStaticAnalysisReport
+      - ERTypeSupport
+      - ERTypeThreatModel
+      - ERTypeVCS
+      - ERTypeVulnerabilityAssertion
+      - ERTypeWebsite
+      - ERTypePatent
+      - ERTypePatentFamily
+      - ERTypePatentAssertion
+      - ERTypeCitation
+    cyclonedx.Formula:
+      properties:
+        bom-ref:
+          type: string
+        components:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        services:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Service'
+          type: array
+          uniqueItems: false
+        workflows:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Workflow'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Hash:
+      description: New in 1.7
+      properties:
+        alg:
+          $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
+        content:
+          type: string
+      type: object
+    cyclonedx.HashAlgorithm:
+      enum:
+      - MD5
+      - SHA-1
+      - SHA-256
+      - SHA-384
+      - SHA-512
+      - SHA3-256
+      - SHA3-384
+      - SHA3-512
+      - BLAKE2b-256
+      - BLAKE2b-384
+      - BLAKE2b-512
+      - BLAKE3
+      - Streebog-256
+      - Streebog-512
+      type: string
+      x-enum-varnames:
+      - HashAlgoMD5
+      - HashAlgoSHA1
+      - HashAlgoSHA256
+      - HashAlgoSHA384
+      - HashAlgoSHA512
+      - HashAlgoSHA3_256
+      - HashAlgoSHA3_384
+      - HashAlgoSHA3_512
+      - HashAlgoBlake2b_256
+      - HashAlgoBlake2b_384
+      - HashAlgoBlake2b_512
+      - HashAlgoBlake3
+      - HashAlgoStreebog256
+      - HashAlgoStreebog512
+    cyclonedx.IKEv2Auth:
+      properties:
+        algorithm:
+          type: string
+        name:
+          type: string
+      type: object
+    cyclonedx.IKEv2Enc:
+      properties:
+        algorithm:
+          type: string
+        keyLength:
+          type: integer
+        name:
+          type: string
+      type: object
+    cyclonedx.IKEv2Integ:
+      properties:
+        algorithm:
+          type: string
+        name:
+          type: string
+      type: object
+    cyclonedx.IKEv2Ke:
+      properties:
+        algorithm:
+          type: string
+        group:
+          type: integer
+      type: object
+    cyclonedx.IKEv2Prf:
+      properties:
+        algorithm:
+          type: string
+        name:
+          type: string
+      type: object
+    cyclonedx.IKEv2TransformTypes:
+      properties:
+        auth:
+          items:
+            $ref: '#/components/schemas/cyclonedx.IKEv2Auth'
+          type: array
+          uniqueItems: false
+        encr:
+          items:
+            $ref: '#/components/schemas/cyclonedx.IKEv2Enc'
+          type: array
+          uniqueItems: false
+        esn:
+          type: boolean
+        integ:
+          items:
+            $ref: '#/components/schemas/cyclonedx.IKEv2Integ'
+          type: array
+          uniqueItems: false
+        ke:
+          items:
+            $ref: '#/components/schemas/cyclonedx.IKEv2Ke'
+          type: array
+          uniqueItems: false
+        prf:
+          items:
+            $ref: '#/components/schemas/cyclonedx.IKEv2Prf'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.IdentifiableAction:
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        timestamp:
+          type: string
+      type: object
+    cyclonedx.ImpactAnalysisJustification:
+      enum:
+      - code_not_present
+      - code_not_reachable
+      - requires_configuration
+      - requires_dependency
+      - requires_environment
+      - protected_by_compiler
+      - protected_at_runtime
+      - protected_at_perimeter
+      - protected_by_mitigating_control
+      type: string
+      x-enum-varnames:
+      - IAJCodeNotPresent
+      - IAJCodeNotReachable
+      - IAJRequiresConfiguration
+      - IAJRequiresDependency
+      - IAJRequiresEnvironment
+      - IAJProtectedByCompiler
+      - IAJProtectedAtRuntime
+      - IAJProtectedAtPerimeter
+      - IAJProtectedByMitigatingControl
+    cyclonedx.ImpactAnalysisResponse:
+      enum:
+      - can_not_fix
+      - will_not_fix
+      - update
+      - rollback
+      - workaround_available
+      type: string
+      x-enum-varnames:
+      - IARCanNotFix
+      - IARWillNotFix
+      - IARUpdate
+      - IARRollback
+      - IARWorkaroundAvailable
+    cyclonedx.ImpactAnalysisState:
+      enum:
+      - resolved
+      - resolved_with_pedigree
+      - exploitable
+      - in_triage
+      - false_positive
+      - not_affected
+      type: string
+      x-enum-varnames:
+      - IASResolved
+      - IASResolvedWithPedigree
+      - IASExploitable
+      - IASInTriage
+      - IASFalsePositive
+      - IASNotAffected
+    cyclonedx.ImplementationPlatform:
+      enum:
+      - generic
+      - x86_32
+      - x86_64
+      - armv7-a
+      - armv7-m
+      - armv8-a
+      - armv8-m
+      - armv9-a
+      - armv9-m
+      - s390x
+      - ppc64
+      - ppc64le
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - ImplementationPlatformGeneric
+      - ImplementationPlatformX86_32
+      - ImplementationPlatformX86_64
+      - ImplementationPlatformARMv7A
+      - ImplementationPlatformARMv7M
+      - ImplementationPlatformARMv8A
+      - ImplementationPlatformARMv8M
+      - ImplementationPlatformARMv9A
+      - ImplementationPlatformARMv9M
+      - ImplementationPlatformS390x
+      - ImplementationPlatformPPC64
+      - ImplementationPlatformPPC64LE
+      - ImplementationPlatformOther
+      - ImplementationPlatformUnknown
+    cyclonedx.Issue:
+      properties:
+        description:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        references:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        source:
+          $ref: '#/components/schemas/cyclonedx.Source'
+        type:
+          $ref: '#/components/schemas/cyclonedx.IssueType'
+      type: object
+    cyclonedx.IssueType:
+      enum:
+      - defect
+      - enhancement
+      - security
+      type: string
+      x-enum-varnames:
+      - IssueTypeDefect
+      - IssueTypeEnhancement
+      - IssueTypeSecurity
+    cyclonedx.JSFPublicKey:
+      properties:
+        crv:
+          type: string
+        e:
+          type: string
+        kty:
+          type: string
+        "n":
+          type: string
+        x:
+          type: string
+        "y":
+          type: string
+      type: object
+    cyclonedx.JSFSignature:
+      properties:
+        chain:
+          items:
+            $ref: '#/components/schemas/cyclonedx.JSFSigner'
+          type: array
+          uniqueItems: false
+        signers:
+          items:
+            $ref: '#/components/schemas/cyclonedx.JSFSigner'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.JSFSigner:
+      properties:
+        algorithm:
+          type: string
+        certificatePath:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        excludes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        keyId:
+          type: string
+        publicKey:
+          $ref: '#/components/schemas/cyclonedx.JSFPublicKey'
+        value:
+          type: string
+      type: object
+    cyclonedx.License:
+      properties:
+        acknowledgement:
+          $ref: '#/components/schemas/cyclonedx.LicenseAcknowledgement'
+        bom-ref:
+          type: string
+        id:
+          type: string
+        licensing:
+          $ref: '#/components/schemas/cyclonedx.Licensing'
+        name:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        text:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        url:
+          type: string
+      type: object
+    cyclonedx.LicenseAcknowledgement:
+      enum:
+      - declared
+      - concluded
+      type: string
+      x-enum-varnames:
+      - LicenseAcknowledgementDeclared
+      - LicenseAcknowledgementConcluded
+    cyclonedx.LicenseChoice:
+      properties:
+        acknowledgement:
+          $ref: '#/components/schemas/cyclonedx.LicenseAcknowledgement'
+        bom-ref:
+          type: string
+        expression:
+          type: string
+        expressionDetails:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseExpressionDetail'
+          type: array
+          uniqueItems: false
+        license:
+          $ref: '#/components/schemas/cyclonedx.License'
+        licensing:
+          $ref: '#/components/schemas/cyclonedx.Licensing'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.LicenseExpressionDetail:
+      properties:
+        bom-ref:
+          type: string
+        licenseIdentifier:
+          type: string
+        text:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        url:
+          type: string
+      type: object
+    cyclonedx.LicenseType:
+      enum:
+      - academic
+      - appliance
+      - client-access
+      - concurrent-user
+      - core-points
+      - custom-metric
+      - device
+      - evaluation
+      - named-user
+      - node-locked
+      - oem
+      - other
+      - perpetual
+      - processor-points
+      - subscription
+      - user
+      type: string
+      x-enum-varnames:
+      - LicenseTypeAcademic
+      - LicenseTypeAppliance
+      - LicenseTypeClientAccess
+      - LicenseTypeConcurrentUser
+      - LicenseTypeCorePoints
+      - LicenseTypeCustomMetric
+      - LicenseTypeDevice
+      - LicenseTypeEvaluation
+      - LicenseTypeNamedUser
+      - LicenseTypeNodeLocked
+      - LicenseTypeOEM
+      - LicenseTypeOther
+      - LicenseTypePerpetual
+      - LicenseTypeProcessorPoints
+      - LicenseTypeSubscription
+      - LicenseTypeUser
+    cyclonedx.Licensing:
+      properties:
+        altIds:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        expiration:
+          type: string
+        lastRenewal:
+          type: string
+        licenseTypes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseType'
+          type: array
+          uniqueItems: false
+        licensee:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntityOrContact'
+        licensor:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntityOrContact'
+        purchaseOrder:
+          type: string
+        purchaser:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntityOrContact'
+      type: object
+    cyclonedx.Lifecycle:
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        phase:
+          $ref: '#/components/schemas/cyclonedx.LifecyclePhase'
+      type: object
+    cyclonedx.LifecyclePhase:
+      enum:
+      - build
+      - decommission
+      - design
+      - discovery
+      - operations
+      - post-build
+      - pre-build
+      type: string
+      x-enum-varnames:
+      - LifecyclePhaseBuild
+      - LifecyclePhaseDecommission
+      - LifecyclePhaseDesign
+      - LifecyclePhaseDiscovery
+      - LifecyclePhaseOperations
+      - LifecyclePhasePostBuild
+      - LifecyclePhasePreBuild
+    cyclonedx.MLDatasetChoice:
+      type: object
+    cyclonedx.MLInputOutputParameters:
+      properties:
+        format:
+          type: string
+      type: object
+    cyclonedx.MLModelCO2Measure:
+      properties:
+        unit:
+          $ref: '#/components/schemas/cyclonedx.MLModelCO2Unit'
+        value:
+          type: number
+      type: object
+    cyclonedx.MLModelCO2Unit:
+      enum:
+      - tCO2eq
+      type: string
+      x-enum-varnames:
+      - MLModelCO2UnitTCO2Eq
+    cyclonedx.MLModelCard:
+      properties:
+        bom-ref:
+          type: string
+        considerations:
+          $ref: '#/components/schemas/cyclonedx.MLModelCardConsiderations'
+        modelParameters:
+          $ref: '#/components/schemas/cyclonedx.MLModelParameters'
+        quantitativeAnalysis:
+          $ref: '#/components/schemas/cyclonedx.MLQuantitativeAnalysis'
+      type: object
+    cyclonedx.MLModelCardConsiderations:
+      properties:
+        environmentalConsiderations:
+          $ref: '#/components/schemas/cyclonedx.MLModelCardEnvironmentalConsiderations'
+        ethicalConsiderations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLModelCardEthicalConsideration'
+          type: array
+          uniqueItems: false
+        fairnessAssessments:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLModelCardFairnessAssessment'
+          type: array
+          uniqueItems: false
+        performanceTradeoffs:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        technicalLimitations:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        useCases:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        users:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.MLModelCardEnvironmentalConsiderations:
+      properties:
+        energyConsumptions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLModelEnergyConsumption'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.MLModelCardEthicalConsideration:
+      properties:
+        mitigationStrategy:
+          type: string
+        name:
+          type: string
+      type: object
+    cyclonedx.MLModelCardFairnessAssessment:
+      properties:
+        benefits:
+          type: string
+        groupAtRisk:
+          type: string
+        harms:
+          type: string
+        mitigationStrategy:
+          type: string
+      type: object
+    cyclonedx.MLModelEnergyConsumption:
+      properties:
+        activity:
+          $ref: '#/components/schemas/cyclonedx.MLModelEnergyConsumptionActivity'
+        activityEnergyCost:
+          $ref: '#/components/schemas/cyclonedx.MLModelEnergyMeasure'
+        co2CostEquivalent:
+          $ref: '#/components/schemas/cyclonedx.MLModelCO2Measure'
+        co2CostOffset:
+          $ref: '#/components/schemas/cyclonedx.MLModelCO2Measure'
+        energyProviders:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLModelEnergyProvider'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.MLModelEnergyConsumptionActivity:
+      enum:
+      - design
+      - data-collection
+      - data-preparation
+      - training
+      - fine-tuning
+      - validation
+      - deployment
+      - inference
+      - other
+      type: string
+      x-enum-varnames:
+      - MLModelEnergyConsumptionActivityDesign
+      - MLModelEnergyConsumptionActivityDataCollection
+      - MLModelEnergyConsumptionActivityDataPreparation
+      - MLModelEnergyConsumptionActivityTraining
+      - MLModelEnergyConsumptionActivityFineTuning
+      - MLModelEnergyConsumptionActivityValidation
+      - MLModelEnergyConsumptionActivityDeployment
+      - MLModelEnergyConsumptionActivityInference
+      - MLModelEnergyConsumptionActivityOther
+    cyclonedx.MLModelEnergyMeasure:
+      properties:
+        unit:
+          $ref: '#/components/schemas/cyclonedx.MLModelEnergyUnit'
+        value:
+          type: number
+      type: object
+    cyclonedx.MLModelEnergyProvider:
+      properties:
+        bom-ref:
+          type: string
+        description:
+          type: string
+        energyProvided:
+          $ref: '#/components/schemas/cyclonedx.MLModelEnergyMeasure'
+        energySource:
+          $ref: '#/components/schemas/cyclonedx.MLModelEnergySource'
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      type: object
+    cyclonedx.MLModelEnergySource:
+      enum:
+      - coal
+      - oil
+      - natural-gas
+      - nuclear
+      - wind
+      - solar
+      - geothermal
+      - hydropower
+      - biofuel
+      - unknown
+      - other
+      type: string
+      x-enum-varnames:
+      - MLModelEnergySourceCoal
+      - MLModelEnergySourceOil
+      - MLModelEnergySourceNaturalGas
+      - MLModelEnergySourceNuclear
+      - MLModelEnergySourceWind
+      - MLModelEnergySourceSolar
+      - MLModelEnergySourceGeothermal
+      - MLModelEnergySourceHydropower
+      - MLModelEnergySourceBiofuel
+      - MLModelEnergySourceUnknown
+      - MLModelEnergySourceOther
+    cyclonedx.MLModelEnergyUnit:
+      enum:
+      - kWh
+      type: string
+      x-enum-varnames:
+      - MLModelEnergyUnitKWH
+    cyclonedx.MLModelParameters:
+      properties:
+        approach:
+          $ref: '#/components/schemas/cyclonedx.MLModelParametersApproach'
+        architectureFamily:
+          type: string
+        datasets:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLDatasetChoice'
+          type: array
+          uniqueItems: false
+        inputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLInputOutputParameters'
+          type: array
+          uniqueItems: false
+        modelArchitecture:
+          type: string
+        outputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLInputOutputParameters'
+          type: array
+          uniqueItems: false
+        task:
+          type: string
+      type: object
+    cyclonedx.MLModelParametersApproach:
+      properties:
+        type:
+          $ref: '#/components/schemas/cyclonedx.MLModelParametersApproachType'
+      type: object
+    cyclonedx.MLModelParametersApproachType:
+      enum:
+      - supervised
+      - unsupervised
+      - reinforcement-learning
+      - semi-supervised
+      - self-supervised
+      type: string
+      x-enum-varnames:
+      - MLModelParametersApproachTypeSupervised
+      - MLModelParametersApproachTypeUnsupervised
+      - MLModelParametersApproachTypeReinforcementLearning
+      - MLModelParametersApproachTypeSemiSupervised
+      - MLModelParametersApproachTypeSelfSupervised
+    cyclonedx.MLPerformanceMetric:
+      properties:
+        confidenceInterval:
+          $ref: '#/components/schemas/cyclonedx.MLPerformanceMetricConfidenceInterval'
+        slice:
+          type: string
+        type:
+          type: string
+        value:
+          type: string
+      type: object
+    cyclonedx.MLPerformanceMetricConfidenceInterval:
+      properties:
+        lowerBound:
+          type: string
+        upperBound:
+          type: string
+      type: object
+    cyclonedx.MLQuantitativeAnalysis:
+      properties:
+        graphics:
+          $ref: '#/components/schemas/cyclonedx.ComponentDataGraphics'
+        performanceMetrics:
+          items:
+            $ref: '#/components/schemas/cyclonedx.MLPerformanceMetric'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Metadata:
+      properties:
+        authors:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+          type: array
+          uniqueItems: false
+        component:
+          $ref: '#/components/schemas/cyclonedx.Component'
+        distributionConstraints:
+          $ref: '#/components/schemas/cyclonedx.DistributionConstraints'
+        licenses:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseChoice'
+          type: array
+          uniqueItems: false
+        lifecycles:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Lifecycle'
+          type: array
+          uniqueItems: false
+        manufacture:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        manufacturer:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        supplier:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        timestamp:
+          type: string
+        tools:
+          $ref: '#/components/schemas/cyclonedx.ToolsChoice'
+      type: object
+    cyclonedx.Note:
+      properties:
+        locale:
+          type: string
+        text:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+      type: object
+    cyclonedx.OrganizationalContact:
+      properties:
+        bom-ref:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+      type: object
+    cyclonedx.OrganizationalEntity:
+      description: 'Deprecated: Use Component Manufacturer instead.'
+      properties:
+        address:
+          $ref: '#/components/schemas/cyclonedx.PostalAddress'
+        bom-ref:
+          type: string
+        contact:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        url:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.OrganizationalEntityOrContact:
+      properties:
+        individual:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      type: object
+    cyclonedx.Parameter:
+      properties:
+        dataType:
+          type: string
+        name:
+          type: string
+        value:
+          type: string
+      type: object
+    cyclonedx.Patch:
+      properties:
+        diff:
+          $ref: '#/components/schemas/cyclonedx.Diff'
+        resolves:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Issue'
+          type: array
+          uniqueItems: false
+        type:
+          $ref: '#/components/schemas/cyclonedx.PatchType'
+      type: object
+    cyclonedx.PatchType:
+      enum:
+      - backport
+      - cherry-pick
+      - monkey
+      - unofficial
+      type: string
+      x-enum-varnames:
+      - PatchTypeBackport
+      - PatchTypeCherryPick
+      - PatchTypeMonkey
+      - PatchTypeUnofficial
+    cyclonedx.PatentAssertion:
+      properties:
+        asserter:
+          $ref: '#/components/schemas/cyclonedx.AsserterChoice'
+        assertionType:
+          $ref: '#/components/schemas/cyclonedx.PatentAssertionType'
+        bom-ref:
+          type: string
+        notes:
+          type: string
+        patentRefs:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.PatentAssertionType:
+      enum:
+      - ownership
+      - license
+      - third-party-claim
+      - standards-inclusion
+      - prior-art
+      - exclusive-rights
+      - non-assertion
+      - research-or-evaluation
+      type: string
+      x-enum-varnames:
+      - PatentAssertionTypeOwnership
+      - PatentAssertionTypeLicense
+      - PatentAssertionTypeThirdPartyClaim
+      - PatentAssertionTypeStandardsInclusion
+      - PatentAssertionTypePriorArt
+      - PatentAssertionTypeExclusiveRights
+      - PatentAssertionTypeNonAssertion
+      - PatentAssertionTypeResearchOrEvaluation
+    cyclonedx.PatentChoice:
+      type: object
+    cyclonedx.Pedigree:
+      properties:
+        ancestors:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        commits:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Commit'
+          type: array
+          uniqueItems: false
+        descendants:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        notes:
+          type: string
+        patches:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Patch'
+          type: array
+          uniqueItems: false
+        variants:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.PostalAddress:
+      properties:
+        bom-ref:
+          type: string
+        country:
+          type: string
+        locality:
+          type: string
+        postOfficeBoxNumber:
+          type: string
+        postalCode:
+          type: string
+        region:
+          type: string
+        streetAddress:
+          type: string
+      type: object
+    cyclonedx.ProofOfConcept:
+      properties:
+        environment:
+          type: string
+        reproductionSteps:
+          type: string
+        supportingMaterial:
+          items:
+            $ref: '#/components/schemas/cyclonedx.AttachedText'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Property:
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+      type: object
+    cyclonedx.RelatedCryptoMaterialProperties:
+      properties:
+        activationDate:
+          type: string
+        algorithmRef:
+          description: 'Deprecated in 1.7: use RelatedCryptographicAssets'
+          type: string
+        creationDate:
+          type: string
+        expirationDate:
+          type: string
+        fingerprint:
+          $ref: '#/components/schemas/cyclonedx.Hash'
+        format:
+          type: string
+        id:
+          type: string
+        relatedCryptographicAssets:
+          description: New in 1.7
+          items:
+            $ref: '#/components/schemas/cyclonedx.RelatedCryptographicAsset'
+          type: array
+          uniqueItems: false
+        securedBy:
+          $ref: '#/components/schemas/cyclonedx.SecuredBy'
+        size:
+          type: integer
+        state:
+          $ref: '#/components/schemas/cyclonedx.CryptoKeyState'
+        type:
+          $ref: '#/components/schemas/cyclonedx.RelatedCryptoMaterialType'
+        updateDate:
+          type: string
+        value:
+          type: string
+      type: object
+    cyclonedx.RelatedCryptoMaterialType:
+      enum:
+      - private-key
+      - public-key
+      - secret-key
+      - key
+      - ciphertext
+      - signature
+      - digest
+      - initialization-vector
+      - nonce
+      - seed
+      - salt
+      - shared-secret
+      - tag
+      - additional-data
+      - password
+      - credential
+      - token
+      - other
+      - unknown
+      type: string
+      x-enum-varnames:
+      - RelatedCryptoMaterialTypePrivateKey
+      - RelatedCryptoMaterialTypePublicKey
+      - RelatedCryptoMaterialTypeSecretKey
+      - RelatedCryptoMaterialTypeKey
+      - RelatedCryptoMaterialTypeCiphertext
+      - RelatedCryptoMaterialTypeSignature
+      - RelatedCryptoMaterialTypeDigest
+      - RelatedCryptoMaterialTypeInitializationVector
+      - RelatedCryptoMaterialTypeNonce
+      - RelatedCryptoMaterialTypeSeed
+      - RelatedCryptoMaterialTypeSalt
+      - RelatedCryptoMaterialTypeSharedSecret
+      - RelatedCryptoMaterialTypeTag
+      - RelatedCryptoMaterialTypeAdditionalData
+      - RelatedCryptoMaterialTypePassword
+      - RelatedCryptoMaterialTypeCredential
+      - RelatedCryptoMaterialTypeToken
+      - RelatedCryptoMaterialTypeOther
+      - RelatedCryptoMaterialTypeUnknown
+    cyclonedx.RelatedCryptographicAsset:
+      properties:
+        ref:
+          type: string
+        type:
+          type: string
+      type: object
+    cyclonedx.ReleaseNotes:
+      properties:
+        aliases:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        featuredImage:
+          type: string
+        notes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Note'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resolves:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Issue'
+          type: array
+          uniqueItems: false
+        socialImage:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        timestamp:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+      type: object
+    cyclonedx.ResourceReferenceChoice:
+      properties:
+        externalReference:
+          $ref: '#/components/schemas/cyclonedx.ExternalReference'
+        ref:
+          type: string
+      type: object
+    cyclonedx.SWID:
+      properties:
+        name:
+          type: string
+        patch:
+          type: boolean
+        tagId:
+          type: string
+        tagVersion:
+          type: integer
+        text:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        url:
+          type: string
+        version:
+          type: string
+      type: object
+    cyclonedx.Scope:
+      enum:
+      - excluded
+      - optional
+      - required
+      type: string
+      x-enum-varnames:
+      - ScopeExcluded
+      - ScopeOptional
+      - ScopeRequired
+    cyclonedx.ScoringMethod:
+      enum:
+      - other
+      - CVSSv2
+      - CVSSv3
+      - CVSSv31
+      - CVSSv4
+      - OWASP
+      - SSVC
+      type: string
+      x-enum-varnames:
+      - ScoringMethodOther
+      - ScoringMethodCVSSv2
+      - ScoringMethodCVSSv3
+      - ScoringMethodCVSSv31
+      - ScoringMethodCVSSv4
+      - ScoringMethodOWASP
+      - ScoringMethodSSVC
+    cyclonedx.SecuredBy:
+      properties:
+        algorithmRef:
+          type: string
+        mechanism:
+          type: string
+      type: object
+    cyclonedx.Service:
+      properties:
+        authenticated:
+          type: boolean
+        bom-ref:
+          type: string
+        data:
+          items:
+            $ref: '#/components/schemas/cyclonedx.DataClassification'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        endpoints:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        group:
+          type: string
+        licenses:
+          items:
+            $ref: '#/components/schemas/cyclonedx.LicenseChoice'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        patentAssertions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.PatentAssertion'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        provider:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        releaseNotes:
+          $ref: '#/components/schemas/cyclonedx.ReleaseNotes'
+        services:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Service'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        trustZone:
+          type: string
+        version:
+          type: string
+        x-trust-boundary:
+          type: boolean
+      type: object
+    cyclonedx.Severity:
+      enum:
+      - unknown
+      - none
+      - info
+      - low
+      - medium
+      - high
+      - critical
+      type: string
+      x-enum-varnames:
+      - SeverityUnknown
+      - SeverityNone
+      - SeverityInfo
+      - SeverityLow
+      - SeverityMedium
+      - SeverityHigh
+      - SeverityCritical
+    cyclonedx.Signatory:
+      properties:
+        externalReference:
+          $ref: '#/components/schemas/cyclonedx.ExternalReference'
+        name:
+          type: string
+        organization:
+          $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+        role:
+          type: string
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+      type: object
+    cyclonedx.Source:
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+      type: object
+    cyclonedx.SpecVersion:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      type: integer
+      x-enum-comments:
+        SpecVersion1_0: "1.0"
+        SpecVersion1_1: "1.1"
+        SpecVersion1_2: "1.2"
+        SpecVersion1_3: "1.3"
+        SpecVersion1_4: "1.4"
+        SpecVersion1_5: "1.5"
+        SpecVersion1_6: "1.6"
+        SpecVersion1_7: "1.7"
+      x-enum-varnames:
+      - SpecVersion1_0
+      - SpecVersion1_1
+      - SpecVersion1_2
+      - SpecVersion1_3
+      - SpecVersion1_4
+      - SpecVersion1_5
+      - SpecVersion1_6
+      - SpecVersion1_7
+    cyclonedx.StandardDefinition:
+      properties:
+        bom-ref:
+          type: string
+        description:
+          type: string
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        levels:
+          items:
+            $ref: '#/components/schemas/cyclonedx.StandardLevel'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        owner:
+          type: string
+        requirements:
+          items:
+            $ref: '#/components/schemas/cyclonedx.StandardRequirement'
+          type: array
+          uniqueItems: false
+        signature:
+          $ref: '#/components/schemas/cyclonedx.JSFSignature'
+        version:
+          type: string
+      type: object
+    cyclonedx.StandardLevel:
+      properties:
+        bom-ref:
+          type: string
+        description:
+          type: string
+        identifier:
+          type: string
+        requirements:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      type: object
+    cyclonedx.StandardRequirement:
+      properties:
+        bom-ref:
+          type: string
+        descriptions:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        externalReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ExternalReference'
+          type: array
+          uniqueItems: false
+        identifier:
+          type: string
+        openCre:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        parent:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        text:
+          type: string
+        title:
+          type: string
+      type: object
+    cyclonedx.TLPClassification:
+      enum:
+      - CLEAR
+      - GREEN
+      - AMBER
+      - AMBER_AND_STRICT
+      - RED
+      type: string
+      x-enum-varnames:
+      - TLPClassificationClear
+      - TLPClassificationGreen
+      - TLPClassificationAmber
+      - TLPClassificationAmberAndStrict
+      - TLPClassificationRed
+    cyclonedx.Targets:
+      properties:
+        components:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Component'
+          type: array
+          uniqueItems: false
+        organizations:
+          items:
+            $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+          type: array
+          uniqueItems: false
+        services:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Service'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.Task:
+      properties:
+        bom-ref:
+          type: string
+        description:
+          type: string
+        inputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskInput'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        outputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskOutput'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resourceReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+          type: array
+          uniqueItems: false
+        runtimeTopology:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Dependency'
+          type: array
+          uniqueItems: false
+        steps:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskStep'
+          type: array
+          uniqueItems: false
+        taskTypes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskType'
+          type: array
+          uniqueItems: false
+        timeEnd:
+          type: string
+        timeStart:
+          type: string
+        trigger:
+          $ref: '#/components/schemas/cyclonedx.TaskTrigger'
+        uid:
+          type: string
+        workspaces:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskWorkspace'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.TaskCommand:
+      properties:
+        executed:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.TaskInput:
+      properties:
+        data:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        environmentVars:
+          items:
+            $ref: '#/components/schemas/cyclonedx.EnvironmentVariableChoice'
+          type: array
+          uniqueItems: false
+        parameters:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Parameter'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resource:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        source:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        target:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+      type: object
+    cyclonedx.TaskOutput:
+      properties:
+        data:
+          $ref: '#/components/schemas/cyclonedx.AttachedText'
+        environmentVars:
+          items:
+            $ref: '#/components/schemas/cyclonedx.EnvironmentVariableChoice'
+          type: array
+          uniqueItems: false
+        parameters:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Parameter'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resource:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        source:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        target:
+          $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+        type:
+          $ref: '#/components/schemas/cyclonedx.TaskOutputType'
+      type: object
+    cyclonedx.TaskOutputType:
+      enum:
+      - artifact
+      - attestation
+      - evidence
+      - log
+      - metrics
+      - other
+      type: string
+      x-enum-varnames:
+      - TaskOutputTypeArtifact
+      - TaskOutputTypeAttestation
+      - TaskOutputTypeEvidence
+      - TaskOutputTypeLog
+      - TaskOutputTypeMetrics
+      - TaskOutputTypeOther
+    cyclonedx.TaskStep:
+      properties:
+        commands:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskCommand'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        name:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.TaskTrigger:
+      properties:
+        bom-ref:
+          type: string
+        conditions:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskTriggerCondition'
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        event:
+          $ref: '#/components/schemas/cyclonedx.Event'
+        inputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskInput'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        outputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskOutput'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resourceReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+          type: array
+          uniqueItems: false
+        timeActivated:
+          type: string
+        type:
+          $ref: '#/components/schemas/cyclonedx.TaskTriggerType'
+        uid:
+          type: string
+      type: object
+    cyclonedx.TaskTriggerCondition:
+      properties:
+        description:
+          type: string
+        expression:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+      type: object
+    cyclonedx.TaskTriggerType:
+      enum:
+      - api
+      - manual
+      - scheduled
+      - webhook
+      type: string
+      x-enum-varnames:
+      - TaskTriggerTypeAPI
+      - TaskTriggerTypeManual
+      - TaskTriggerTypeScheduled
+      - TaskTriggerTypeWebhook
+    cyclonedx.TaskType:
+      enum:
+      - build
+      - clean
+      - clone
+      - copy
+      - deliver
+      - deploy
+      - lint
+      - merge
+      - other
+      - release
+      - scan
+      - test
+      type: string
+      x-enum-varnames:
+      - TaskTypeBuild
+      - TaskTypeClean
+      - TaskTypeClone
+      - TaskTypeCopy
+      - TaskTypeDeliver
+      - TaskTypeDeploy
+      - TaskTypeLint
+      - TaskTypeMerge
+      - TaskTypeOther
+      - TaskTypeRelease
+      - TaskTypeScan
+      - TaskTypeTest
+    cyclonedx.TaskWorkspace:
+      properties:
+        accessMode:
+          $ref: '#/components/schemas/cyclonedx.TaskWorkspaceAccessMode'
+        aliases:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        bom-ref:
+          type: string
+        description:
+          type: string
+        managedDataType:
+          type: string
+        mountPath:
+          type: string
+        name:
+          type: string
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resourceReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+          type: array
+          uniqueItems: false
+        uid:
+          type: string
+        volume:
+          $ref: '#/components/schemas/cyclonedx.Volume'
+        volumeRequest:
+          type: string
+      type: object
+    cyclonedx.TaskWorkspaceAccessMode:
+      enum:
+      - read-only
+      - read-write
+      - read-write-once
+      - write-once
+      - write-only
+      type: string
+      x-enum-varnames:
+      - TaskWorkspaceAccessModeReadOnly
+      - TaskWorkspaceAccessModeReadWrite
+      - TaskWorkspaceAccessModeReadWriteOnce
+      - TaskWorkspaceAccessModeWriteOnce
+      - TaskWorkspaceAccessModeWriteOnly
+    cyclonedx.ToolsChoice:
+      type: object
+    cyclonedx.Volume:
+      properties:
+        mode:
+          $ref: '#/components/schemas/cyclonedx.VolumeMode'
+        name:
+          type: string
+        path:
+          type: string
+        persistent:
+          type: boolean
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        remote:
+          type: boolean
+        sizeAllocated:
+          type: string
+        uid:
+          type: string
+      type: object
+    cyclonedx.VolumeMode:
+      enum:
+      - block
+      - file-system
+      type: string
+      x-enum-varnames:
+      - VolumeModeBlock
+      - VolumeModeFilesystem
+    cyclonedx.Vulnerability:
+      properties:
+        advisories:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Advisory'
+          type: array
+          uniqueItems: false
+        affects:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Affects'
+          type: array
+          uniqueItems: false
+        analysis:
+          $ref: '#/components/schemas/cyclonedx.VulnerabilityAnalysis'
+        bom-ref:
+          type: string
+        created:
+          type: string
+        credits:
+          $ref: '#/components/schemas/cyclonedx.Credits'
+        cwes:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+        description:
+          type: string
+        detail:
+          type: string
+        id:
+          type: string
+        proofOfConcept:
+          $ref: '#/components/schemas/cyclonedx.ProofOfConcept'
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        published:
+          type: string
+        ratings:
+          items:
+            $ref: '#/components/schemas/cyclonedx.VulnerabilityRating'
+          type: array
+          uniqueItems: false
+        recommendation:
+          type: string
+        references:
+          items:
+            $ref: '#/components/schemas/cyclonedx.VulnerabilityReference'
+          type: array
+          uniqueItems: false
+        rejected:
+          type: string
+        source:
+          $ref: '#/components/schemas/cyclonedx.Source'
+        tools:
+          $ref: '#/components/schemas/cyclonedx.ToolsChoice'
+        updated:
+          type: string
+        workaround:
+          type: string
+      type: object
+    cyclonedx.VulnerabilityAnalysis:
+      properties:
+        detail:
+          type: string
+        firstIssued:
+          type: string
+        justification:
+          $ref: '#/components/schemas/cyclonedx.ImpactAnalysisJustification'
+        lastUpdated:
+          type: string
+        response:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ImpactAnalysisResponse'
+          type: array
+          uniqueItems: false
+        state:
+          $ref: '#/components/schemas/cyclonedx.ImpactAnalysisState'
+      type: object
+    cyclonedx.VulnerabilityRating:
+      properties:
+        justification:
+          type: string
+        method:
+          $ref: '#/components/schemas/cyclonedx.ScoringMethod'
+        score:
+          type: number
+        severity:
+          $ref: '#/components/schemas/cyclonedx.Severity'
+        source:
+          $ref: '#/components/schemas/cyclonedx.Source'
+        vector:
+          type: string
+      type: object
+    cyclonedx.VulnerabilityReference:
+      properties:
+        id:
+          type: string
+        source:
+          $ref: '#/components/schemas/cyclonedx.Source'
+      type: object
+    cyclonedx.VulnerabilityStatus:
+      enum:
+      - unknown
+      - affected
+      - unaffected
+      type: string
+      x-enum-varnames:
+      - VulnerabilityStatusUnknown
+      - VulnerabilityStatusAffected
+      - VulnerabilityStatusNotAffected
+    cyclonedx.Workflow:
+      properties:
+        bom-ref:
+          type: string
+        description:
+          type: string
+        inputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskInput'
+          type: array
+          uniqueItems: false
+        name:
+          type: string
+        outputs:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskOutput'
+          type: array
+          uniqueItems: false
+        properties:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Property'
+          type: array
+          uniqueItems: false
+        resourceReferences:
+          items:
+            $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+          type: array
+          uniqueItems: false
+        runtimeTopology:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Dependency'
+          type: array
+          uniqueItems: false
+        steps:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskStep'
+          type: array
+          uniqueItems: false
+        taskDependencies:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Dependency'
+          type: array
+          uniqueItems: false
+        taskTypes:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskType'
+          type: array
+          uniqueItems: false
+        tasks:
+          items:
+            $ref: '#/components/schemas/cyclonedx.Task'
+          type: array
+          uniqueItems: false
+        timeEnd:
+          type: string
+        timeStart:
+          type: string
+        trigger:
+          $ref: '#/components/schemas/cyclonedx.TaskTrigger'
+        uid:
+          type: string
+        workspaces:
+          items:
+            $ref: '#/components/schemas/cyclonedx.TaskWorkspace'
+          type: array
+          uniqueItems: false
       type: object
     dtos.AcceptInvitationRequest:
       properties:
@@ -650,11 +3881,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
+        cvePurlFixableCriticalCVSS:
+          type: integer
         cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableHighCVSS:
           type: integer
         cvePurlFixableLow:
           type: integer
+        cvePurlFixableLowCVSS:
+          type: integer
         cvePurlFixableMedium:
+          type: integer
+        cvePurlFixableMediumCVSS:
           type: integer
         cvePurlHigh:
           type: integer
@@ -670,11 +3909,19 @@ components:
           type: integer
         fixableCritical:
           type: integer
+        fixableCriticalCvss:
+          type: integer
         fixableHigh:
+          type: integer
+        fixableHighCvss:
           type: integer
         fixableLow:
           type: integer
+        fixableLowCvss:
+          type: integer
         fixableMedium:
+          type: integer
+        fixableMediumCvss:
           type: integer
         high:
           type: integer
@@ -1085,11 +4332,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
+        cvePurlFixableCriticalCVSS:
+          type: integer
         cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableHighCVSS:
           type: integer
         cvePurlFixableLow:
           type: integer
+        cvePurlFixableLowCVSS:
+          type: integer
         cvePurlFixableMedium:
+          type: integer
+        cvePurlFixableMediumCVSS:
           type: integer
         cvePurlHigh:
           type: integer
@@ -1107,11 +4362,19 @@ components:
           type: string
         fixableCritical:
           type: integer
+        fixableCriticalCvss:
+          type: integer
         fixableHigh:
+          type: integer
+        fixableHighCvss:
           type: integer
         fixableLow:
           type: integer
+        fixableLowCvss:
+          type: integer
         fixableMedium:
+          type: integer
+        fixableMediumCvss:
           type: integer
         high:
           type: integer
@@ -1207,13 +4470,69 @@ components:
         numProjects:
           type: integer
       type: object
+    dtos.PATDTO:
+      properties:
+        createdAt:
+          type: string
+        description:
+          type: string
+        expiryDateUnix:
+          type: integer
+        fingerprint:
+          type: string
+        id:
+          type: string
+        lastUsedAt:
+          type: string
+        scopes:
+          type: string
+      type: object
     dtos.PatCreateRequest:
       properties:
         description:
           type: string
+        expiryDateUnix:
+          type: integer
         pubKey:
           type: string
         scopes:
+          type: string
+      required:
+      - expiryDateUnix
+      type: object
+    dtos.ProjectAssetDTO:
+      properties:
+        avatar:
+          description: URL to the asset's avatar
+          type: string
+        createdAt:
+          type: string
+        description:
+          type: string
+        id:
+          type: string
+        isPublic:
+          type: boolean
+        name:
+          type: string
+        parentId:
+          description: only set for projects, not for assets
+          type: string
+        projectId:
+          type: string
+        resourceType:
+          description: '"project" or "asset"'
+          type: string
+        slug:
+          type: string
+        state:
+          type: string
+        subGroupsAndAsset:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectAssetDTO'
+          type: array
+          uniqueItems: false
+        updatedAt:
           type: string
       type: object
     dtos.ProjectCreateRequest:
@@ -1266,6 +4585,11 @@ components:
           type: string
         slug:
           type: string
+        subGroupsAndAsset:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectAssetDTO'
+          type: array
+          uniqueItems: false
         type:
           type: string
       type: object
@@ -1310,6 +4634,11 @@ components:
           type: string
         slug:
           type: string
+        subGroupsAndAsset:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectAssetDTO'
+          type: array
+          uniqueItems: false
         type:
           type: string
         webhooks:
@@ -1502,11 +4831,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
+        cvePurlFixableCriticalCVSS:
+          type: integer
         cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableHighCVSS:
           type: integer
         cvePurlFixableLow:
           type: integer
+        cvePurlFixableLowCVSS:
+          type: integer
         cvePurlFixableMedium:
+          type: integer
+        cvePurlFixableMediumCVSS:
           type: integer
         cvePurlHigh:
           type: integer
@@ -1525,11 +4862,19 @@ components:
           type: string
         fixableCritical:
           type: integer
+        fixableCriticalCvss:
+          type: integer
         fixableHigh:
+          type: integer
+        fixableHighCvss:
           type: integer
         fixableLow:
           type: integer
+        fixableLowCvss:
+          type: integer
         fixableMedium:
+          type: integer
+        fixableMediumCvss:
           type: integer
         fixedDependencyVulns:
           type: integer
@@ -1657,11 +5002,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
+        cvePurlFixableCriticalCVSS:
+          type: integer
         cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableHighCVSS:
           type: integer
         cvePurlFixableLow:
           type: integer
+        cvePurlFixableLowCVSS:
+          type: integer
         cvePurlFixableMedium:
+          type: integer
+        cvePurlFixableMediumCVSS:
           type: integer
         cvePurlHigh:
           type: integer
@@ -1677,11 +5030,19 @@ components:
           type: integer
         fixableCritical:
           type: integer
+        fixableCriticalCvss:
+          type: integer
         fixableHigh:
+          type: integer
+        fixableHighCvss:
           type: integer
         fixableLow:
           type: integer
+        fixableLowCvss:
+          type: integer
         fixableMedium:
+          type: integer
+        fixableMediumCvss:
           type: integer
         high:
           type: integer
@@ -1724,6 +5085,8 @@ components:
         type:
           $ref: '#/components/schemas/dtos.VulnEventType'
         uri:
+          type: string
+        userAgent:
           type: string
         userId:
           type: string
@@ -1803,36 +5166,22 @@ components:
         vulnEnabled:
           type: boolean
       type: object
-    models.AffectedComponent:
+    github_com_l3montree-dev_devguard_database_models.AffectedComponent:
       properties:
         cves:
           items:
-            $ref: '#/components/schemas/models.CVE'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
           type: array
           uniqueItems: false
         ecosystem:
           type: string
         id:
-          type: string
-        name:
-          type: string
-        namespace:
-          type: string
+          type: integer
         purl:
-          type: string
-        qualifiers:
-          $ref: '#/components/schemas/databasetypes.JSONB'
-        scheme:
           type: string
         semverEnd:
           type: string
         semverStart:
-          type: string
-        source:
-          type: string
-        subpath:
-          type: string
-        type:
           type: string
         version:
           description: either version or semver is defined
@@ -1848,39 +5197,39 @@ components:
             querying and ordering
           type: string
       type: object
-    models.Artifact:
+    github_com_l3montree-dev_devguard_database_models.Artifact:
       description: 'Ensure foreign key field order matches Artifact primary key: ArtifactName,
         AssetVersionName, AssetID'
       properties:
         artifactName:
           type: string
         assetVersion:
-          $ref: '#/components/schemas/models.AssetVersion'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
           type: string
         createdAt:
           type: string
         dependencyVulns:
           items:
-            $ref: '#/components/schemas/models.DependencyVuln'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.DependencyVuln'
           type: array
           uniqueItems: false
         lastHistoryUpdate:
           type: string
         licenseRisks:
           items:
-            $ref: '#/components/schemas/models.LicenseRisk'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk'
           type: array
           uniqueItems: false
         riskHistories:
           items:
-            $ref: '#/components/schemas/models.ArtifactRiskHistory'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory'
           type: array
           uniqueItems: false
         vulnAssetId:
           type: string
       type: object
-    models.ArtifactRiskHistory:
+    github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory:
       properties:
         artifactName:
           type: string
@@ -1902,11 +5251,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
+        cvePurlFixableCriticalCVSS:
+          type: integer
         cvePurlFixableHigh:
+          type: integer
+        cvePurlFixableHighCVSS:
           type: integer
         cvePurlFixableLow:
           type: integer
+        cvePurlFixableLowCVSS:
+          type: integer
         cvePurlFixableMedium:
+          type: integer
+        cvePurlFixableMediumCVSS:
           type: integer
         cvePurlHigh:
           type: integer
@@ -1925,11 +5282,19 @@ components:
           type: string
         fixableCritical:
           type: integer
+        fixableCriticalCvss:
+          type: integer
         fixableHigh:
+          type: integer
+        fixableHighCvss:
           type: integer
         fixableLow:
           type: integer
+        fixableLowCvss:
+          type: integer
         fixableMedium:
+          type: integer
+        fixableMediumCvss:
           type: integer
         fixedDependencyVulns:
           type: integer
@@ -1960,7 +5325,7 @@ components:
         sumOpenRisk:
           type: number
       type: object
-    models.Asset:
+    github_com_l3montree-dev_devguard_database_models.Asset:
       properties:
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
@@ -1969,7 +5334,7 @@ components:
         confidentialityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         configFiles:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         createdAt:
           type: string
         cvssAutomaticTicketThreshold:
@@ -1991,7 +5356,7 @@ components:
         keepOriginalSbomRootComponent:
           type: boolean
         metadata:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         name:
           type: string
         paranoidMode:
@@ -2001,14 +5366,14 @@ components:
         pipelineLastRun:
           type: string
         project:
-          $ref: '#/components/schemas/models.Project'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
         projectId:
           type: string
         reachableFromInternet:
           type: boolean
         refs:
           items:
-            $ref: '#/components/schemas/models.AssetVersion'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
           type: array
           uniqueItems: false
         repositoryId:
@@ -2028,9 +5393,9 @@ components:
         slug:
           type: string
         state:
-          $ref: '#/components/schemas/models.AssetState'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetState'
         type:
-          $ref: '#/components/schemas/models.AssetType'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetType'
         updatedAt:
           type: string
         vulnAutoReopenAfterDays:
@@ -2040,7 +5405,7 @@ components:
         webhookSecret:
           type: string
       type: object
-    models.AssetState:
+    github_com_l3montree-dev_devguard_database_models.AssetState:
       enum:
       - active
       - archived
@@ -2050,7 +5415,7 @@ components:
       - AssetStateActive
       - AssetStateArchived
       - AssetStateDeleted
-    models.AssetType:
+    github_com_l3montree-dev_devguard_database_models.AssetType:
       enum:
       - application
       - infrastructure
@@ -2058,20 +5423,20 @@ components:
       x-enum-varnames:
       - AssetTypeApplication
       - AssetTypeInfrastructure
-    models.AssetVersion:
+    github_com_l3montree-dev_devguard_database_models.AssetVersion:
       properties:
         artifacts:
           items:
-            $ref: '#/components/schemas/models.Artifact'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
           type: array
           uniqueItems: false
         asset:
-          $ref: '#/components/schemas/models.Asset'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
         assetId:
           type: string
         components:
           items:
-            $ref: '#/components/schemas/models.ComponentDependency'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
           type: array
           uniqueItems: false
         createdAt:
@@ -2080,13 +5445,13 @@ components:
           type: boolean
         dependencyVulns:
           items:
-            $ref: '#/components/schemas/models.DependencyVuln'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.DependencyVuln'
           type: array
           uniqueItems: false
         lastAccessedAt:
           type: string
         metadata:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         name:
           type: string
         signingPubKey:
@@ -2095,15 +5460,15 @@ components:
           type: string
         supplyChains:
           items:
-            $ref: '#/components/schemas/models.SupplyChain'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.SupplyChain'
           type: array
           uniqueItems: false
         type:
-          $ref: '#/components/schemas/models.AssetVersionType'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersionType'
         updatedAt:
           type: string
       type: object
-    models.AssetVersionType:
+    github_com_l3montree-dev_devguard_database_models.AssetVersionType:
       enum:
       - branch
       - tag
@@ -2111,10 +5476,10 @@ components:
       x-enum-varnames:
       - AssetVersionBranch
       - AssetVersionTag
-    models.Attestation:
+    github_com_l3montree-dev_devguard_database_models.Attestation:
       properties:
         artifact:
-          $ref: '#/components/schemas/models.Artifact'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
         artifactName:
           type: string
         assetId:
@@ -2122,7 +5487,7 @@ components:
         assetVersionName:
           type: string
         content:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         createdAt:
           type: string
         predicateType:
@@ -2130,11 +5495,11 @@ components:
         updatedAt:
           type: string
       type: object
-    models.CVE:
+    github_com_l3montree-dev_devguard_database_models.CVE:
       properties:
         affectedComponents:
           items:
-            $ref: '#/components/schemas/models.AffectedComponent'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AffectedComponent'
           type: array
           uniqueItems: false
         cisaActionDue:
@@ -2147,8 +5512,8 @@ components:
           type: string
         cisaVulnerabilityName:
           type: string
-        createdAt:
-          type: string
+        contentHash:
+          type: integer
         cve:
           type: string
         cvss:
@@ -2163,31 +5528,31 @@ components:
           type: number
         exploits:
           items:
-            $ref: '#/components/schemas/models.Exploit'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Exploit'
           type: array
           uniqueItems: false
+        id:
+          type: integer
         percentile:
           type: number
         references:
           type: string
         relationships:
           items:
-            $ref: '#/components/schemas/models.CVERelationship'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVERelationship'
           type: array
           uniqueItems: false
         risk:
           $ref: '#/components/schemas/dtos.RiskMetrics'
-        updatedAt:
-          type: string
         vector:
           type: string
         weaknesses:
           items:
-            $ref: '#/components/schemas/models.Weakness'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness'
           type: array
           uniqueItems: false
       type: object
-    models.CVERelationship:
+    github_com_l3montree-dev_devguard_database_models.CVERelationship:
       properties:
         relationship_type:
           $ref: '#/components/schemas/dtos.RelationshipType'
@@ -2195,8 +5560,10 @@ components:
           type: string
         target_cve:
           type: string
+        target_cve_data:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
       type: object
-    models.Component:
+    github_com_l3montree-dev_devguard_database_models.Component:
       description: |-
         the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
         this means, that the dependency graph between people using the same library might differ, since they use it differently
@@ -2206,7 +5573,7 @@ components:
           $ref: '#/components/schemas/dtos.ComponentType'
         dependsOn:
           items:
-            $ref: '#/components/schemas/models.ComponentDependency'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
           type: array
           uniqueItems: false
         id:
@@ -2218,34 +5585,32 @@ components:
         license:
           type: string
         project:
-          $ref: '#/components/schemas/models.ComponentProject'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentProject'
         projectId:
           type: string
         published:
           type: string
       type: object
-    models.ComponentDependency:
+    github_com_l3montree-dev_devguard_database_models.ComponentDependency:
       properties:
         assetId:
           type: string
         assetVersion:
-          $ref: '#/components/schemas/models.AssetVersion'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
           description: Foreign key fields for AssetVersion relationship
           type: string
         component:
-          $ref: '#/components/schemas/models.Component'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
         componentPurl:
-          description: will be nil, for direct dependencies
+          description: will be ROOT for direct dependencies
           type: string
         dependency:
-          $ref: '#/components/schemas/models.Component'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
         dependencyPurl:
           type: string
-        id:
-          type: string
       type: object
-    models.ComponentProject:
+    github_com_l3montree-dev_devguard_database_models.ComponentProject:
       properties:
         description:
           type: string
@@ -2261,7 +5626,7 @@ components:
           description: project name like "github.com/facebook/react"
           type: string
         scoreCard:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         scoreCardScore:
           type: number
         starsCount:
@@ -2269,15 +5634,15 @@ components:
         updatedAt:
           type: string
       type: object
-    models.DependencyVuln:
+    github_com_l3montree-dev_devguard_database_models.DependencyVuln:
       properties:
         artifacts:
           items:
-            $ref: '#/components/schemas/models.Artifact'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
           type: array
           uniqueItems: false
         assetVersion:
-          $ref: '#/components/schemas/models.AssetVersion'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
           type: string
         componentFixedVersion:
@@ -2287,7 +5652,7 @@ components:
         createdAt:
           type: string
         cve:
-          $ref: '#/components/schemas/models.CVE'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
         cveId:
           type: string
         directDependencyFixedVersion:
@@ -2296,7 +5661,7 @@ components:
           type: integer
         events:
           items:
-            $ref: '#/components/schemas/models.VulnEvent'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.VulnEvent'
           type: array
           uniqueItems: false
         id:
@@ -2332,10 +5697,12 @@ components:
           type: array
           uniqueItems: false
       type: object
-    models.Exploit:
+    github_com_l3montree-dev_devguard_database_models.Exploit:
       properties:
         author:
           type: string
+        contentHash:
+          type: integer
         cveID:
           type: string
         description:
@@ -2363,7 +5730,7 @@ components:
         watchers:
           type: integer
       type: object
-    models.GitLabIntegration:
+    github_com_l3montree-dev_devguard_database_models.GitLabIntegration:
       properties:
         accessToken:
           type: string
@@ -2376,20 +5743,20 @@ components:
         name:
           type: string
         org:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         orgId:
           type: string
         updatedAt:
           type: string
       type: object
-    models.GithubAppInstallation:
+    github_com_l3montree-dev_devguard_database_models.GithubAppInstallation:
       properties:
         installationCreatedWebhookReceivedTime:
           type: string
         installationId:
           type: integer
         org:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         orgId:
           type: string
         settingsUrl:
@@ -2401,7 +5768,7 @@ components:
         targetType:
           type: string
       type: object
-    models.Invitation:
+    github_com_l3montree-dev_devguard_database_models.Invitation:
       properties:
         code:
           type: string
@@ -2413,7 +5780,7 @@ components:
         id:
           type: string
         organization:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         organizationId:
           description: OrganizationID is the ID of the organization the invitation
             is for
@@ -2421,7 +5788,7 @@ components:
         updatedAt:
           type: string
       type: object
-    models.JiraIntegration:
+    github_com_l3montree-dev_devguard_database_models.JiraIntegration:
       properties:
         accessToken:
           type: string
@@ -2434,7 +5801,7 @@ components:
         name:
           type: string
         org:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         orgId:
           type: string
         updatedAt:
@@ -2444,19 +5811,19 @@ components:
         userEmail:
           type: string
       type: object
-    models.LicenseRisk:
+    github_com_l3montree-dev_devguard_database_models.LicenseRisk:
       properties:
         artifacts:
           items:
-            $ref: '#/components/schemas/models.Artifact'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
           type: array
           uniqueItems: false
         assetVersion:
-          $ref: '#/components/schemas/models.AssetVersion'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
           type: string
         component:
-          $ref: '#/components/schemas/models.Component'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
         componentPurl:
           description: only valid purls
           type: string
@@ -2464,7 +5831,7 @@ components:
           type: string
         events:
           items:
-            $ref: '#/components/schemas/models.VulnEvent'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.VulnEvent'
           type: array
           uniqueItems: false
         finalLicenseDecision:
@@ -2489,10 +5856,10 @@ components:
         vulnAssetId:
           type: string
       type: object
-    models.Org:
+    github_com_l3montree-dev_devguard_database_models.Org:
       properties:
         configFiles:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         contactPhoneNumber:
           type: string
         country:
@@ -2507,12 +5874,12 @@ components:
           type: string
         gitLabIntegrations:
           items:
-            $ref: '#/components/schemas/models.GitLabIntegration'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.GitLabIntegration'
           type: array
           uniqueItems: false
         githubAppInstallations:
           items:
-            $ref: '#/components/schemas/models.GithubAppInstallation'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.GithubAppInstallation'
           type: array
           uniqueItems: false
         grundschutz:
@@ -2527,7 +5894,7 @@ components:
           type: boolean
         jiraIntegrations:
           items:
-            $ref: '#/components/schemas/models.JiraIntegration'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.JiraIntegration'
           type: array
           uniqueItems: false
         language:
@@ -2540,7 +5907,7 @@ components:
           type: integer
         projects:
           items:
-            $ref: '#/components/schemas/models.Project'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           type: array
           uniqueItems: false
         sharesVulnInformation:
@@ -2551,32 +5918,11 @@ components:
           type: string
         webhooks:
           items:
-            $ref: '#/components/schemas/models.WebhookIntegration'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.WebhookIntegration'
           type: array
           uniqueItems: false
       type: object
-    models.PAT:
-      properties:
-        createdAt:
-          type: string
-        description:
-          type: string
-        fingerprint:
-          type: string
-        id:
-          type: string
-        lastUsedAt:
-          type: string
-        pubKey:
-          type: string
-        scopes:
-          description: whitespace separated scopes manage-project read-project scan-asset
-            manage-all
-          type: string
-        userId:
-          type: string
-      type: object
-    models.Policy:
+    github_com_l3montree-dev_devguard_database_models.Policy:
       properties:
         description:
           type: string
@@ -2587,7 +5933,7 @@ components:
             migrated by the system
           type: string
         organization:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         organizationId:
           description: will be null for global policies
           type: string
@@ -2595,7 +5941,7 @@ components:
           type: string
         projects:
           items:
-            $ref: '#/components/schemas/models.Project'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           type: array
           uniqueItems: false
         rego:
@@ -2603,24 +5949,24 @@ components:
         title:
           type: string
       type: object
-    models.Project:
+    github_com_l3montree-dev_devguard_database_models.Project:
       properties:
         assets:
           items:
-            $ref: '#/components/schemas/models.Asset'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
           type: array
           uniqueItems: false
         avatar:
           type: string
         configFiles:
-          $ref: '#/components/schemas/databasetypes.JSONB'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         createdAt:
           type: string
         description:
           type: string
         enabledPolicies:
           items:
-            $ref: '#/components/schemas/models.Policy'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Policy'
           type: array
           uniqueItems: false
         externalEntityId:
@@ -2636,11 +5982,11 @@ components:
         name:
           type: string
         organization:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         organizationId:
           type: string
         parent:
-          $ref: '#/components/schemas/models.Project'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
         parentId:
           type: string
         repositoryId:
@@ -2652,18 +5998,18 @@ components:
         slug:
           type: string
         state:
-          $ref: '#/components/schemas/models.ProjectState'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ProjectState'
         type:
-          $ref: '#/components/schemas/models.ProjectType'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ProjectType'
         updatedAt:
           type: string
         webhooks:
           items:
-            $ref: '#/components/schemas/models.WebhookIntegration'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.WebhookIntegration'
           type: array
           uniqueItems: false
       type: object
-    models.ProjectState:
+    github_com_l3montree-dev_devguard_database_models.ProjectState:
       enum:
       - active
       - deleted
@@ -2671,7 +6017,7 @@ components:
       x-enum-varnames:
       - ProjectStateActive
       - ProjectStateDeleted
-    models.ProjectType:
+    github_com_l3montree-dev_devguard_database_models.ProjectType:
       enum:
       - default
       - kubernetesNamespace
@@ -2681,12 +6027,12 @@ components:
       - ProjectTypeDefault
       - ProjectTypeKubernetesNamespace
       - ProjectTypeKubernetesCluster
-    models.SupplyChain:
+    github_com_l3montree-dev_devguard_database_models.SupplyChain:
       properties:
         assetId:
           type: string
         assetVersion:
-          $ref: '#/components/schemas/models.AssetVersion'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
           type: string
         createdAt:
@@ -2700,7 +6046,7 @@ components:
         verified:
           type: boolean
       type: object
-    models.VulnEvent:
+    github_com_l3montree-dev_devguard_database_models.VulnEvent:
       properties:
         arbitraryJSONData:
           type: string
@@ -2724,13 +6070,15 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.VulnEventType'
+        userAgent:
+          type: string
         userId:
           type: string
       type: object
-    models.Weakness:
+    github_com_l3montree-dev_devguard_database_models.Weakness:
       properties:
         cve:
-          $ref: '#/components/schemas/models.CVE'
+          type: string
         cwe:
           type: string
         source:
@@ -2738,7 +6086,7 @@ components:
         type:
           type: string
       type: object
-    models.WebhookIntegration:
+    github_com_l3montree-dev_devguard_database_models.WebhookIntegration:
       properties:
         createdAt:
           type: string
@@ -2749,11 +6097,11 @@ components:
         name:
           type: string
         org:
-          $ref: '#/components/schemas/models.Org'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
         orgId:
           type: string
         project:
-          $ref: '#/components/schemas/models.Project'
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
         projectId:
           type: string
         sbomEnabled:
@@ -2767,7 +6115,15 @@ components:
         vulnEnabled:
           type: boolean
       type: object
+    github_com_l3montree-dev_devguard_database_types.JSONB:
+      additionalProperties: {}
+      type: object
   securitySchemes:
+    BearerAuth:
+      description: 'Bearer token authentication. Set value to: Bearer dvg_…'
+      in: header
+      name: Authorization
+      type: apiKey
     CookieAuth:
       description: Session-based authentication using Ory Kratos
       in: cookie
@@ -2825,9 +6181,107 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Accept organization invitation
       tags:
       - Organizations
+  /api/v2/sarif-scan:
+    post:
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Enriched SARIF JSON
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Scan SARIF file and return enriched SARIF
+      tags:
+      - Scanning
+  /api/v2/sarif-scan-unauthenticated:
+    post:
+      parameters:
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Enriched SARIF JSON
+      summary: Scan SARIF without authentication and return enriched SARIF
+      tags:
+      - Scanning
+  /api/v2/scan:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/cyclonedx.BOM'
+              description: CycloneDX SBOM
+              summary: body
+        description: CycloneDX SBOM
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/cyclonedx.BOM'
+          description: CycloneDX VEX JSON
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Scan SBOM file and return CycloneDX VEX
+      tags:
+      - Scanning
+  /api/v2/scan-unauthenticated:
+    post:
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: CycloneDX SBOM
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/cyclonedx.BOM'
+          description: CycloneDX VEX JSON
+      summary: Scan for dependency vulnerabilities without authentication, returns
+        CycloneDX VEX
+      tags:
+      - Scanning
   /attestations:
     post:
       parameters:
@@ -2860,6 +6314,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create attestation
       tags:
       - Attestations
@@ -2877,6 +6332,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List repositories from integrations
       tags:
       - Integrations
@@ -2947,12 +6403,13 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.Org'
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List organizations
       tags:
       - Organizations
@@ -2971,11 +6428,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.Org'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create organization
       tags:
       - Organizations
@@ -2994,6 +6452,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete organization
       tags:
       - Organizations
@@ -3015,6 +6474,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization details
       tags:
       - Organizations
@@ -3045,6 +6505,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update organization
       tags:
       - Organizations
@@ -3073,6 +6534,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization config file
       tags:
       - Organizations
@@ -3108,6 +6570,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update organization config file
       tags:
       - Organizations
@@ -3130,6 +6593,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization content tree
       tags:
       - Organizations
@@ -3152,6 +6616,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF provider metadata for organization
       tags:
       - CSAF
@@ -3176,6 +6641,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List organization members
       tags:
       - Organizations
@@ -3201,11 +6667,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.Invitation'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Invitation'
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Invite member to organization
       tags:
       - Organizations
@@ -3230,6 +6697,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Remove member from organization
       tags:
       - Organizations
@@ -3262,6 +6730,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Change member role
       tags:
       - Organizations
@@ -3287,6 +6756,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization metrics
       tags:
       - Organizations
@@ -3305,12 +6775,13 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.Project'
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List projects
       tags:
       - Projects
@@ -3336,11 +6807,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.Project'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create project
       tags:
       - Projects
@@ -3365,6 +6837,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete project
       tags:
       - Projects
@@ -3392,6 +6865,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get project details
       tags:
       - Projects
@@ -3428,6 +6902,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update project
       tags:
       - Projects
@@ -3458,6 +6933,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List assets
       tags:
       - Assets
@@ -3494,6 +6970,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create asset
       tags:
       - Assets
@@ -3524,6 +7001,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete asset
       tags:
       - Assets
@@ -3557,6 +7035,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset details
       tags:
       - Assets
@@ -3599,6 +7078,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update asset
       tags:
       - Assets
@@ -3639,6 +7119,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset config file
       tags:
       - Assets
@@ -3686,6 +7167,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update asset config file
       tags:
       - Assets
@@ -3728,6 +7210,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF report
       tags:
       - CSAF
@@ -3762,6 +7245,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF changes CSV
       tags:
       - CSAF
@@ -3796,6 +7280,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF index file
       tags:
       - CSAF
@@ -3826,12 +7311,13 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.CVE'
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CVEs with known exploits for an asset
       tags:
       - Statistics
@@ -3868,6 +7354,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List asset versions
       tags:
       - Asset Versions
@@ -3916,6 +7403,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create asset version
       tags:
       - Asset Versions
@@ -3952,6 +7440,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete asset version
       tags:
       - Asset Versions
@@ -3991,6 +7480,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset version details
       tags:
       - Asset Versions
@@ -4034,11 +7524,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.Artifact'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
           description: Created
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create artifact
       tags:
       - Artifacts
@@ -4081,6 +7572,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete artifact
       tags:
       - Artifacts
@@ -4134,6 +7626,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update artifact
       tags:
       - Artifacts
@@ -4180,6 +7673,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in OpenVEX JSON format
       tags:
       - Artifacts
@@ -4226,6 +7720,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM in JSON format
       tags:
       - Artifacts
@@ -4272,6 +7767,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM as PDF
       tags:
       - Artifacts
@@ -4318,9 +7814,53 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM in XML format
       tags:
       - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/
+  : post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Sync external sources for a single artifact
+      tags:
+      - ExternalReferences
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/
   : get:
       parameters:
@@ -4364,6 +7904,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in JSON format
       tags:
       - Artifacts
@@ -4410,6 +7951,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in XML format
       tags:
       - Artifacts
@@ -4456,6 +7998,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get vulnerability report as PDF
       tags:
       - Artifacts
@@ -4492,12 +8035,13 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.Attestation'
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Attestation'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List attestations
       tags:
       - Attestations
@@ -4548,6 +8092,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List dependency vulnerabilities
       tags:
       - Vulnerabilities
@@ -4594,6 +8139,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get dependency vulnerability details
       tags:
       - Vulnerabilities
@@ -4643,6 +8189,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create vulnerability event
       tags:
       - Vulnerabilities
@@ -4685,6 +8232,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List external references for an asset version
       tags:
       - ExternalReferences
@@ -4733,6 +8281,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create an external reference
       tags:
       - ExternalReferences
@@ -4769,6 +8318,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete all external references for an asset version
       tags:
       - ExternalReferences
@@ -4805,6 +8355,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Sync external sources for all artifacts of an asset version
       tags:
       - ExternalReferences
@@ -4850,6 +8401,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset version metrics
       tags:
       - Asset Versions
@@ -4895,6 +8447,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get average fixing times for an asset version
       tags:
       - Statistics
@@ -4940,6 +8493,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get component risk distribution for an asset version
       tags:
       - Statistics
@@ -4999,6 +8553,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get risk history for an asset version
       tags:
       - Statistics
@@ -5065,6 +8620,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List VEX rules for an asset
       tags:
       - VEXRules
@@ -5113,6 +8669,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create a VEX rule
       tags:
       - VEXRules
@@ -5155,6 +8712,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete a VEX rule
       tags:
       - VEXRules
@@ -5200,6 +8758,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get a VEX rule
       tags:
       - VEXRules
@@ -5254,6 +8813,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update a VEX rule
       tags:
       - VEXRules
@@ -5300,6 +8860,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Reapply a VEX rule
       tags:
       - VEXRules
@@ -5345,6 +8906,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by asset version
       tags:
       - Vulnerabilities
@@ -5385,6 +8947,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get first-party vulnerabilities as SARIF
       tags:
       - Vulnerabilities
@@ -5414,6 +8977,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan SBOM file
       tags:
       - Scanning
@@ -5448,6 +9012,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get project config file
       tags:
       - Projects
@@ -5489,6 +9054,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update project config file
       tags:
       - Projects
@@ -5519,6 +9085,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List project members
       tags:
       - Projects
@@ -5551,6 +9118,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Invite members to project
       tags:
       - Projects
@@ -5584,6 +9152,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List releases
       tags:
       - Releases
@@ -5620,6 +9189,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create release
       tags:
       - Releases
@@ -5650,6 +9220,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete release
       tags:
       - Releases
@@ -5683,6 +9254,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release details
       tags:
       - Releases
@@ -5725,6 +9297,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update release
       tags:
       - Releases
@@ -5768,6 +9341,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Add item to release
       tags:
       - Releases
@@ -5804,6 +9378,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Remove item from release
       tags:
       - Releases
@@ -5838,6 +9413,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release SBOM as JSON
       tags:
       - Releases
@@ -5872,6 +9448,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release SBOM as XML
       tags:
       - Releases
@@ -5906,6 +9483,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get average remediation times for a release
       tags:
       - Statistics
@@ -5954,6 +9532,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get risk history for a release
       tags:
       - Statistics
@@ -5988,6 +9567,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release VEX as JSON
       tags:
       - Releases
@@ -6022,6 +9602,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release VEX as XML
       tags:
       - Releases
@@ -6055,6 +9636,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List release candidates
       tags:
       - Releases
@@ -6088,6 +9670,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by project
       tags:
       - Vulnerabilities
@@ -6110,6 +9693,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization admin settings
       tags:
       - Organizations
@@ -6181,6 +9765,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by organization
       tags:
       - Vulnerabilities
@@ -6192,12 +9777,13 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/models.PAT'
+                  $ref: '#/components/schemas/dtos.PATDTO'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List personal access tokens
       tags:
       - Authentication
@@ -6253,6 +9839,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete personal access token
       tags:
       - Authentication
@@ -6275,6 +9862,7 @@ paths:
       - Authentication
   /sarif-scan:
     post:
+      deprecated: true
       parameters:
       - description: Asset version name
         in: header
@@ -6315,11 +9903,42 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan for first-party vulnerabilities
+      tags:
+      - Scanning
+  /sarif-scan-unauthenticated:
+    post:
+      deprecated: true
+      parameters:
+      - description: Scanner ID
+        in: header
+        name: X-Scanner
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: SARIF scan result
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.FirstPartyScanResponse'
+          description: OK
+      summary: Scan for first-party vulnerabilities without authentication (scan-only,
+        results are not saved)
       tags:
       - Scanning
   /scan:
     post:
+      deprecated: true
       parameters:
       - description: Asset version name
         in: header
@@ -6369,11 +9988,13 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan for dependency vulnerabilities
       tags:
       - Scanning
   /scan-unauthenticated:
     post:
+      deprecated: true
       requestBody:
         content:
           text/plain:
@@ -6435,6 +10056,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Upload VEX document
       tags:
       - Scanning
@@ -6486,7 +10108,7 @@ paths:
                 properties:
                   data:
                     items:
-                      $ref: '#/components/schemas/models.CVE'
+                      $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
                     type: array
                   page:
                     type: integer
@@ -6541,7 +10163,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/models.CVE'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
           description: Details of the specified CVE
         "500":
           content:
@@ -6615,6 +10237,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get first-party vulnerability details
       tags:
       - Vulnerabilities
@@ -6645,6 +10268,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create first-party vulnerability event
       tags:
       - Vulnerabilities
@@ -6668,6 +10292,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create webhook integration
       tags:
       - Webhooks
@@ -6690,6 +10315,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update webhook integration
       tags:
       - Webhooks
@@ -6708,6 +10334,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete webhook integration
       tags:
       - Webhooks
@@ -6736,6 +10363,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Test webhook integration
       tags:
       - Webhooks

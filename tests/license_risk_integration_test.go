@@ -34,6 +34,7 @@ import (
 )
 
 func TestLicenseRiskArtifactAssociation(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		// Create test org/project/asset/version using FX helper
 		_, _, _, assetVersion := f.CreateOrgProjectAssetAndVersion()
@@ -100,6 +101,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 }
 
 func TestLicenseRiskClosedByRefresh(t *testing.T) {
+	t.Parallel()
 	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
@@ -173,6 +175,7 @@ func getSBOMWithWithLicenseRisk() io.Reader {
 }
 
 func TestLicenseRiskLifecycleManagement(t *testing.T) {
+	t.Parallel()
 	artifactName := "main"
 
 	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)

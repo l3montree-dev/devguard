@@ -28,8 +28,8 @@ func FromJSONSnippetContents(firstPartyVuln models.FirstPartyVuln) (dtos.Snippet
 		Snippets: []dtos.SnippetContent{},
 	}
 
-	snippetsInterface := firstPartyVuln.SnippetContents["snippets"].([]any)
-	if snippetsInterface == nil {
+	snippetsInterface, ok := firstPartyVuln.SnippetContents["snippets"].([]any)
+	if !ok {
 		return res, fmt.Errorf("no snippets found in SnippetContents")
 	}
 	for _, snippetAny := range snippetsInterface {

@@ -17,13 +17,11 @@ package middlewares
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -52,44 +50,42 @@ func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratos
 	return session.Id, nil
 }
 
-func SessionMiddleware(oryAPIClient shared.PublicClient, verifier shared.Verifier) echo.MiddlewareFunc {
+func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.ConfigService, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
+			instanceSettings, err := configService.GetInstanceSettings(ctx.Request().Context())
+			if err != nil {
+				return err
+			}
+			authHeader := ctx.Request().Header.Get("Authorization")
 
 			var userID string
 			var scopes string
-			var err error
 
 			if oryKratosSessionCookie != nil {
-				userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String())
-				if err != nil {
-					// user is not authenticated
-					// set a special session - it might be that the user is still allowed todo the request
-					// since the org, project etc. is public
-					slog.Warn("could not get user ID from cookie", "err", err)
-					ctx.Set("session", accesscontrol.NoSession)
+				if userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
+					scopes = "scan manage"
+					scopesArray := strings.Fields(scopes)
+					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
 					return next(ctx)
 				}
-				scopes = "scan manage"
-				scopesArray := strings.Fields(scopes)
-				ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
-				return next(ctx)
-			} else {
-				session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request())
-				if err != nil {
-					if strings.EqualFold(err.Error(), "could not verify request") || strings.EqualFold(err.Error(), "no fingerprint provided") {
-						ctx.Set("session", accesscontrol.NoSession)
-						return next(ctx)
-					} else if strings.Contains(err.Error(), "could not get public key using fingerprint") {
-						return echo.NewHTTPError(401, "token provided but not found in database").SetInternal(err)
-					}
-					monitoring.Alert("failed to verify request signature", err)
-					return echo.NewHTTPError(500, "unexpected error").WithInternal(err)
-				}
-				ctx.Set("session", session)
-				return next(ctx)
 			}
+			if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok && !instanceSettings.BearerTokenAuthDisabled {
+				if userID, scopes, err = verifier.VerifyAPIToken(ctx.Request().Context(), token); err == nil {
+					scopesArray := strings.Fields(scopes)
+					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
+					return next(ctx)
+				}
+			} else {
+				if session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
+					ctx.Set("session", session)
+					return next(ctx)
+				}
+			}
+
+			ctx.Set("session", accesscontrol.NoSession)
+			return next(ctx)
 		}
 	}
 }
