@@ -8699,6 +8699,12 @@
             }
         },
         "securitySchemes": {
+            "BearerAuth": {
+                "description": "Bearer token authentication. Set value to: Bearer dvg_…",
+                "in": "header",
+                "name": "Authorization",
+                "type": "apiKey"
+            },
             "CookieAuth": {
                 "description": "Session-based authentication using Ory Kratos",
                 "in": "cookie",
