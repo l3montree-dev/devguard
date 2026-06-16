@@ -136,8 +136,12 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		if req.CSAFPackageScope == "" {
 			return echo.NewHTTPError(400, "csafPackageScope is required for csaf references")
 		}
-		if _, err := packageurl.FromString(req.CSAFPackageScope); err != nil {
+		purl, err := packageurl.FromString(req.CSAFPackageScope)
+		if err != nil {
 			return echo.NewHTTPError(400, "csafPackageScope must be a valid PURL").WithInternal(err)
+		}
+		if err := utils.ValidatePurlFields(purl); err != nil {
+			return echo.NewHTTPError(400, "csafPackageScope PURL contains invalid characters").WithInternal(err)
 		}
 	}
 
