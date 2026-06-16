@@ -16,12 +16,15 @@
 package utils
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/package-url/packageurl-go"
 )
 
 // we use Set 1 of ISO 639 language codes to identify languages based on 2 letters
@@ -183,4 +186,29 @@ func CheckIfDeleted(name string) bool {
 // checks if a given string is a valid CVE
 func IsCVE(str string) bool {
 	return regexp.MustCompile("^CVE-[0-9]{4}-[0-9]{4,}$").MatchString(str)
+}
+
+// allowed character per purl field
+var (
+	purlTypeRe      = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9.+-]*$`)
+	purlNamespaceRe = regexp.MustCompile(`^[a-zA-Z0-9._~@-]+(/[a-zA-Z0-9._~@-]+)*$`)
+	purlNameRe      = regexp.MustCompile(`^[a-zA-Z0-9._~@+-]+$`)
+	purlVersionRe   = regexp.MustCompile(`^[a-zA-Z0-9._~:!+,@-]+$`)
+)
+
+// validate individual fields of purl for any incorrect characters
+func ValidatePurlFields(purl packageurl.PackageURL) error {
+	if !purlTypeRe.MatchString(purl.Type) {
+		return fmt.Errorf("invalid purl type: %q", purl.Type)
+	}
+	if purl.Namespace != "" && !purlNamespaceRe.MatchString(purl.Namespace) {
+		return fmt.Errorf("invalid purl namespace: %q", purl.Namespace)
+	}
+	if !purlNameRe.MatchString(purl.Name) {
+		return fmt.Errorf("invalid purl name: %q", purl.Name)
+	}
+	if purl.Version != "" && !purlVersionRe.MatchString(purl.Version) {
+		return fmt.Errorf("invalid purl version: %q", purl.Version)
+	}
+	return nil
 }
