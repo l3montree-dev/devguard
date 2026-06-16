@@ -173,6 +173,93 @@ func (_c *ProjectRepository_All_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// CleanupDynamicProject provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) CleanupDynamicProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error {
+	ret := _mock.Called(ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupDynamicProject")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProjectRepository_CleanupDynamicProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupDynamicProject'
+type ProjectRepository_CleanupDynamicProject_Call struct {
+	*mock.Call
+}
+
+// CleanupDynamicProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - organizationID uuid.UUID
+//   - parentProjectID uuid.UUID
+//   - projectName string
+//   - assetName string
+//   - assetVersionName string
+func (_e *ProjectRepository_Expecter) CleanupDynamicProject(ctx interface{}, tx interface{}, organizationID interface{}, parentProjectID interface{}, projectName interface{}, assetName interface{}, assetVersionName interface{}) *ProjectRepository_CleanupDynamicProject_Call {
+	return &ProjectRepository_CleanupDynamicProject_Call{Call: _e.mock.On("CleanupDynamicProject", ctx, tx, organizationID, parentProjectID, projectName, assetName, assetVersionName)}
+}
+
+func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string)) *ProjectRepository_CleanupDynamicProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_CleanupDynamicProject_Call) Return(err error) *ProjectRepository_CleanupDynamicProject_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProjectRepository_CleanupDynamicProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, projectName string, assetName string, assetVersionName string) error) *ProjectRepository_CleanupDynamicProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) Create(ctx context.Context, tx shared.DB, project *models.Project) error {
 	ret := _mock.Called(ctx, tx, project)

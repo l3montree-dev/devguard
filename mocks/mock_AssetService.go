@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -178,6 +179,104 @@ func (_c *AssetService_CreateAsset_Call) Return(asset1 *models.Asset, err error)
 }
 
 func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindOrCreateAsset provides a mock function for the type AssetService
+func (_mock *AssetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error) {
+	ret := _mock.Called(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindOrCreateAsset")
+	}
+
+	var r0 *models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) (*models.Asset, error)); ok {
+		return returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) *models.Asset); ok {
+		r0 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, string, uuid.UUID, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(ctx, rbac, providerID, orgID, projectID, name, currentUser)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetService_FindOrCreateAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOrCreateAsset'
+type AssetService_FindOrCreateAsset_Call struct {
+	*mock.Call
+}
+
+// FindOrCreateAsset is a helper method to define mock.On call
+//   - ctx context.Context
+//   - rbac shared.AccessControl
+//   - providerID string
+//   - orgID uuid.UUID
+//   - projectID uuid.UUID
+//   - name string
+//   - currentUser string
+func (_e *AssetService_Expecter) FindOrCreateAsset(ctx interface{}, rbac interface{}, providerID interface{}, orgID interface{}, projectID interface{}, name interface{}, currentUser interface{}) *AssetService_FindOrCreateAsset_Call {
+	return &AssetService_FindOrCreateAsset_Call{Call: _e.mock.On("FindOrCreateAsset", ctx, rbac, providerID, orgID, projectID, name, currentUser)}
+}
+
+func (_c *AssetService_FindOrCreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string)) *AssetService_FindOrCreateAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.AccessControl
+		if args[1] != nil {
+			arg1 = args[1].(shared.AccessControl)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetService_FindOrCreateAsset_Call) Return(asset *models.Asset, err error) *AssetService_FindOrCreateAsset_Call {
+	_c.Call.Return(asset, err)
+	return _c
+}
+
+func (_c *AssetService_FindOrCreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, currentUser string) (*models.Asset, error)) *AssetService_FindOrCreateAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

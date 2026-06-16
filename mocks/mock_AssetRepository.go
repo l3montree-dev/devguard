@@ -1945,8 +1945,8 @@ func (_c *AssetRepository_Update_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Upsert provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, assets, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
@@ -1954,7 +1954,7 @@ func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*mo
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Asset, []clause.Column, []string) error); ok {
-		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+		r0 = returnFunc(ctx, tx, assets, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1969,14 +1969,14 @@ type AssetRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - t *[]*models.Asset
+//   - assets *[]*models.Asset
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *AssetRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
-	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+func (_e *AssetRepository_Expecter) Upsert(ctx interface{}, tx interface{}, assets interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
+	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, assets, conflictingColumns, updateOnly)}
 }
 
-func (_c *AssetRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2014,7 +2014,95 @@ func (_c *AssetRepository_Upsert_Call) Return(err error) *AssetRepository_Upsert
 	return _c
 }
 
-func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error) *AssetRepository_Upsert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertSplit provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) UpsertSplit(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error) {
+	ret := _mock.Called(ctx, tx, externalProviderID, assets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertSplit")
+	}
+
+	var r0 []*models.Asset
+	var r1 []*models.Asset
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []*models.Asset) ([]*models.Asset, []*models.Asset, error)); ok {
+		return returnFunc(ctx, tx, externalProviderID, assets)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []*models.Asset) []*models.Asset); ok {
+		r0 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, []*models.Asset) []*models.Asset); ok {
+		r1 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, string, []*models.Asset) error); ok {
+		r2 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// AssetRepository_UpsertSplit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertSplit'
+type AssetRepository_UpsertSplit_Call struct {
+	*mock.Call
+}
+
+// UpsertSplit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - externalProviderID string
+//   - assets []*models.Asset
+func (_e *AssetRepository_Expecter) UpsertSplit(ctx interface{}, tx interface{}, externalProviderID interface{}, assets interface{}) *AssetRepository_UpsertSplit_Call {
+	return &AssetRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", ctx, tx, externalProviderID, assets)}
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) Run(run func(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset)) *AssetRepository_UpsertSplit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []*models.Asset
+		if args[3] != nil {
+			arg3 = args[3].([]*models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) Return(assets1 []*models.Asset, assets2 []*models.Asset, err error) *AssetRepository_UpsertSplit_Call {
+	_c.Call.Return(assets1, assets2, err)
+	return _c
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)) *AssetRepository_UpsertSplit_Call {
 	_c.Call.Return(run)
 	return _c
 }
