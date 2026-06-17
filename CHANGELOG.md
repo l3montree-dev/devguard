@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.6.1] - 2026-06-17
+
+### Added
+
+- **pprof basic auth** — profiling endpoints (`/debug/pprof`) are now protected by HTTP Basic Auth when the `PPROF_PASSWORD` environment variable is set; the Helm chart auto-generates and persists the password as a Kubernetes secret; the password is logged on startup
+- **Instance admin dashboard** (unfinished) — new `/admin` routes exposing instance-wide statistics (top CVEs, top components, malicious packages, average open risks, most vulnerable projects); asymmetric-key-based admin authentication via `devguard-cli gen-admin-key`; admin-scoped RBAC; daemon trigger endpoints with a 5-minute rate limit; separate admin router and controller
+
+### Fixed
+
+- **Goroutine leak in `errGroup`** — a `defer eg.startCollecting()` in `WaitAndCollect` pre-armed a new collector goroutine that was never drained when the `errGroup` was not reused, causing goroutines to accumulate unboundedly; fixed with a lazy re-arm via a `needsReset` flag checked in `Go`
+
+### Changed
+
+- **HTTP client hygiene** — all outgoing HTTP clients now use `utils.EgressTransport` (adds `User-Agent` and OpenTelemetry trace propagation) and carry explicit timeouts; `http.NewRequestWithContext` is used throughout; enforced via three new semgrep rules (`http-new-request-without-context`, `http-client-missing-egress-transport`, `http-client-egress-transport-missing-timeout`)
+- **Context threading** — `ctx context.Context` propagated through repository and service method signatures that were missing it; repository methods consistently carry `tx *gorm.DB` as a second parameter
+
 ## [v1.6.0] - 2026-06-16
 
 ### Added
