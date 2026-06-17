@@ -24,7 +24,7 @@ func NewAdminService(casbinRBACProvider shared.RBACProvider, orgRepository share
 	return &AdminService{casbinRBACProvider: casbinRBACProvider, orgRepository: orgRepository, statisticsRepository: statisticsRepository}
 }
 
-func (service AdminService) GetAdminsForOrg(orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
+func (service AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
 	orgRBAC := service.casbinRBACProvider.GetDomainRBAC(orgID.String())
 	adminIDs, err := orgRBAC.GetAdminsOfOrganization()
 	if err != nil {

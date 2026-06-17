@@ -670,6 +670,7 @@ type orgStatisticsEntry struct {
 const StatisticsExpiryTime = 15 * time.Minute
 
 // return cached statistics if present and not stale; also handles clean up of stale values
+// nosemgrep: service-method-missing-ctx -- private in-memory cache helper; no I/O
 func (s *statisticsService) getOrgStatisticFromCache(orgID uuid.UUID) (dtos.OrgOverview, bool) {
 	s.orgStatisticsCacheMutex.RLock()
 	entry, ok := s.orgStatisticsCache[orgID]
@@ -686,6 +687,7 @@ func (s *statisticsService) getOrgStatisticFromCache(orgID uuid.UUID) (dtos.OrgO
 }
 
 // writes new statistic date to the cache
+// nosemgrep: service-method-missing-ctx -- private in-memory cache helper; no I/O
 func (s *statisticsService) cacheOrgStatistics(orgID uuid.UUID, stats dtos.OrgOverview) {
 	s.orgStatisticsCacheMutex.Lock()
 	defer s.orgStatisticsCacheMutex.Unlock()

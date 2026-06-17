@@ -67,7 +67,7 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 	}
 }
 
-func (p *PatService) ToModel(_ context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
+func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
 	if !utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes)) {
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
@@ -312,6 +312,7 @@ func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fin
 	return pubKeyECDSA, pat, nil
 }
 
+// nosemgrep: service-method-missing-ctx -- req.Context() carries the context; adding a separate ctx param would be redundant
 func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 	if !p.adminKeyLoaded {
 		slog.Error("no admin public key could be found")

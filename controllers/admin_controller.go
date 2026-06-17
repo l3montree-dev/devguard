@@ -85,7 +85,7 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 		if org.ExternalEntityProviderID == nil {
 			return echo.NewHTTPError(500, "could not correctly fetch external organization")
 		}
-		admins, err := controller.adminService.GetAdminsForOrg(org.ID, adminClient)
+		admins, err := controller.adminService.GetAdminsForOrg(ctx.Request().Context(), org.ID, adminClient)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get admins for organization")
 		}
