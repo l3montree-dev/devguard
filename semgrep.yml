@@ -166,6 +166,36 @@ rules:
           $TX.Commit()
           ...
 
+  - id: http-client-instead-of-egress-client
+    message: |
+      Use utils.EgressClient instead of constructing a bare http.Client{}.
+      EgressClient adds the User-Agent header and OpenTelemetry trace propagation via EgressTransport.
+      If you need a custom timeout, copy EgressClient and override only the Timeout field:
+        client := utils.EgressClient; client.Timeout = 10 * time.Minute
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/utils/egress_client.go"
+    patterns:
+      - pattern-either:
+          - pattern: http.Client{...}
+          - pattern: "&http.Client{...}"
+
+  - id: http-new-request-without-context
+    message: |
+      Use http.NewRequestWithContext(ctx, ...) instead of http.NewRequest(...).
+      http.NewRequest uses context.Background() implicitly, which drops tracing and cancellation signals.
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+    pattern: http.NewRequest(...)
+
   - id: context-background-when-ctx-available
     message: |
       context.Background() / context.TODO() used inside a function that already receives a context parameter.

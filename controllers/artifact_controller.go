@@ -794,7 +794,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	if pdfAPIURL == "" {
 		return fmt.Errorf("missing env variable 'PDF_GENERATION_API'")
 	}
-	req, err := http.NewRequest(http.MethodPost, pdfAPIURL, &multipartBuffer)
+	req, err := http.NewRequestWithContext(ctx.Request().Context(), http.MethodPost, pdfAPIURL, &multipartBuffer)
 	if err != nil {
 		return err
 	}
@@ -898,7 +898,7 @@ func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	if pdfAPIURL == "" {
 		return fmt.Errorf("missing env variable 'PDF_GENERATION_API'")
 	}
-	req, err := http.NewRequest(http.MethodPost, pdfAPIURL, &multipartBuffer)
+	req, err := http.NewRequestWithContext(ctx.Request().Context(), http.MethodPost, pdfAPIURL, &multipartBuffer)
 	if err != nil {
 		return err
 	}

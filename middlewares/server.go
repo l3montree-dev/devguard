@@ -19,7 +19,11 @@ import (
 func registerMiddlewares(e *echo.Echo) {
 
 	if os.Getenv("PROFILE") == "true" {
-		slog.Info("enabling pprof endpoints under /debug/pprof")
+		if password := os.Getenv("PPROF_PASSWORD"); password != "" {
+			slog.Info("enabling pprof endpoints under /debug/pprof (basic auth enabled)", "pprofPassword", password)
+		} else {
+			slog.Warn("enabling pprof endpoints under /debug/pprof (no authentication)")
+		}
 		AddProfileEndpoints(e)
 	}
 
@@ -128,7 +132,7 @@ func Server() *echo.Echo {
 func GoroutineSafeContext(c shared.Context) shared.Context {
 	// create a new context - with only the values
 	// Use a background request so that Request().Context() works in goroutines
-	bgReq, _ := http.NewRequest("GET", "/", nil)
+	bgReq, _ := http.NewRequest("GET", "/", nil) // nosemgrep: http-new-request-without-context -- intentional background context: this synthetic request is only used to satisfy echo's Context interface in goroutines, it is never dispatched over the network
 	ctx := E.NewContext(bgReq, httptest.NewRecorder())
 
 	// copy all values from the original context that might be needed in goroutines

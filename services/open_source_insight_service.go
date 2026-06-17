@@ -54,7 +54,7 @@ func (s *openSourceInsightService) GetProject(ctx context.Context, projectID str
 		return dtos.OpenSourceInsightsProjectResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/projects/%s", openSourceInsightsAPIURL, projectID), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/projects/%s", openSourceInsightsAPIURL, projectID), nil)
 
 	if err != nil {
 		return dtos.OpenSourceInsightsProjectResponse{}, err
@@ -207,7 +207,7 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 		vendor := parts[0]
 		packageIdentifier := parts[1]
 
-		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s/%s.json", packagistAPIURL, vendor, packageIdentifier), nil)
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s/%s.json", packagistAPIURL, vendor, packageIdentifier), nil)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
@@ -241,7 +241,7 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 		url := fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystemName, packageName, purl.Version)
-		req, err = http.NewRequest(http.MethodGet, url, nil)
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}

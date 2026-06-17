@@ -16,6 +16,7 @@
 package commands
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -88,7 +89,7 @@ for authentication.`,
 				return fmt.Errorf("URL is required")
 			}
 			opts.url = args[0]
-			return runCurl(&opts)
+			return runCurl(cmd.Context(), &opts)
 		},
 		DisableFlagsInUseLine: true,
 	}
@@ -128,7 +129,7 @@ for authentication.`,
 	return cmd
 }
 
-func runCurl(opts *CurlOptions) error {
+func runCurl(ctx context.Context, opts *CurlOptions) error {
 	// Get token from flag or environment
 	token := opts.token
 	if token == "" {
@@ -164,7 +165,7 @@ func runCurl(opts *CurlOptions) error {
 	}
 
 	// Create HTTP request
-	req, err := http.NewRequest(method, opts.url, body)
+	req, err := http.NewRequestWithContext(ctx, method, opts.url, body)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
