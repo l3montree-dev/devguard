@@ -17,7 +17,9 @@ package middlewares
 
 import (
 	"log/slog"
+	"net/http"
 	"net/http/pprof"
+	"os"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -26,7 +28,20 @@ import (
 // AddProfileEndpoints adds several routes from package `net/http/pprof` to *echo.Echo object.
 func AddProfileEndpoints(e *echo.Echo) {
 	slog.Warn("Adding profile debug endpoints")
-	WrapGroup("", e.Group("/debug/pprof"))
+	g := e.Group("/debug/pprof")
+	if password := os.Getenv("PPROF_PASSWORD"); password != "" {
+		g.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				_, pass, ok := c.Request().BasicAuth()
+				if !ok || pass != password {
+					c.Response().Header().Set("WWW-Authenticate", `Basic realm="pprof"`)
+					return c.NoContent(http.StatusUnauthorized)
+				}
+				return next(c)
+			}
+		})
+	}
+	WrapGroup("", g)
 }
 
 // WrapGroup adds several routes from package `net/http/pprof` to *echo.Group object.
