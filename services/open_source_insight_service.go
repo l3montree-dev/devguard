@@ -210,7 +210,7 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 
-		res, err = s.httpClient.Do(req)
+		res, err = utils.EgressClient.Do(req)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
