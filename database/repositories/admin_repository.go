@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
 )
@@ -15,8 +17,8 @@ func NewAdminRepository(db *gorm.DB) AdminRepository {
 	}
 }
 
-func (repository AdminRepository) GetAllExternalEntityOrganizations() ([]models.Org, error) {
+func (repository AdminRepository) GetAllExternalEntityOrganizations(ctx context.Context) ([]models.Org, error) {
 	orgs := []models.Org{}
-	err := repository.db.Raw(`SELECT * FROM organizations o WHERE o.external_entity_provider_id IS NOT NULL;`).Find(&orgs).Error
+	err := repository.db.WithContext(ctx).Raw(`SELECT * FROM organizations o WHERE o.external_entity_provider_id IS NOT NULL;`).Find(&orgs).Error
 	return orgs, err
 }

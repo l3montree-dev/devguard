@@ -692,7 +692,7 @@ type AdminService interface {
 }
 
 type AdminRepository interface {
-	GetAllExternalEntityOrganizations() ([]models.Org, error)
+	GetAllExternalEntityOrganizations(ctx context.Context) ([]models.Org, error)
 }
 
 type AccessControl interface {

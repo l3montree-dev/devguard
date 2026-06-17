@@ -40,7 +40,7 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 					return next(ctx)
 				}
 			}
-			return echo.NewHTTPError(401)
+			return echo.NewHTTPError(401, "unauthorized")
 		}
 	}
 }

@@ -73,7 +73,7 @@ func NewAdminController(
 }
 
 func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) error {
-	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations()
+	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations(ctx.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get external organizations")
 	}
@@ -103,7 +103,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
+		return echo.NewHTTPError(400, "invalid or missing organization id in path parameters")
 	}
 
 	user, err := extractMailFromRequest(ctx)
@@ -136,13 +136,13 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
+		return echo.NewHTTPError(400, "invalid or missing organization id in path parameters")
 	}
 
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingUserID.Error())
+		return echo.NewHTTPError(400, "invalid or missing user id in path parameters")
 	}
 
 	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, parsedUserID)
@@ -156,7 +156,7 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	orgIDParsed, err := uuid.Parse(orgID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingOrgID.Error())
+		return echo.NewHTTPError(400, "invalid or missing organization id in path parameters")
 	}
 
 	err = controller.adminService.CheckIfOrgExists(context.Background(), orgIDParsed)
@@ -186,7 +186,7 @@ func (controller *AdminController) GetUserInformation(ctx shared.Context) error 
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
-		return echo.NewHTTPError(400, dtos.ErrInvalidOrMissingUserID.Error())
+		return echo.NewHTTPError(400, "invalid or missing user id in path parameters")
 	}
 
 	orgs, err := controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)

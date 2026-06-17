@@ -63,7 +63,7 @@ func (p *PatController) Create(c shared.Context) error {
 
 	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, userID)
 	if err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create personal access token: %s", err.Error()))
 	}
 
 	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
