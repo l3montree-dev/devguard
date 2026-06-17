@@ -148,42 +148,42 @@ func (service AdminService) GetInstanceUsageStatistics(ctx context.Context, tx *
 func (service AdminService) GetInstanceVulnStatistics(ctx context.Context, topCVEsLimit, topComponentsLimit, topProjectsLimit int) (dtos.InstanceOverview, error) {
 	res := utils.Concurrently(
 		func() (any, error) { // 0: topCVEs
-			results, err := service.statisticsRepository.GetTopCVEsAcrossInstance(ctx, topCVEsLimit)
+			results, err := service.statisticsRepository.GetTopCVEsAcrossInstance(ctx, nil, topCVEsLimit)
 			if err != nil {
 				return results, fmt.Errorf("could not get top CVEs across instance: %w", err)
 			}
 			return results, nil
 		},
 		func() (any, error) { // 1: topComponents
-			results, err := service.statisticsRepository.GetTopComponentsAcrossInstance(ctx, topComponentsLimit)
+			results, err := service.statisticsRepository.GetTopComponentsAcrossInstance(ctx, nil, topComponentsLimit)
 			if err != nil {
 				return results, fmt.Errorf("could not get top components across instance: %w", err)
 			}
 			return results, nil
 		},
 		func() (any, error) { // 2: maliciousPackages
-			results, err := service.statisticsRepository.FindMaliciousPackagesAcrossInstance(ctx)
+			results, err := service.statisticsRepository.FindMaliciousPackagesAcrossInstance(ctx, nil)
 			if err != nil {
 				return results, fmt.Errorf("could not get malicious packages across instance: %w", err)
 			}
 			return results, nil
 		},
 		func() (any, error) { // 3: averageOpenCodeRisks
-			results, err := service.statisticsRepository.GetAvgOpenCodeRisksAcrossInstance(ctx)
+			results, err := service.statisticsRepository.GetAvgOpenCodeRisksAcrossInstance(ctx, nil)
 			if err != nil {
 				return results, fmt.Errorf("could not get average open code risks across instance: %w", err)
 			}
 			return results, nil
 		},
 		func() (any, error) { // 4: topVulnerableProjects
-			results, err := service.statisticsRepository.GetMostVulnerableProjectsAcrossInstance(ctx, topProjectsLimit)
+			results, err := service.statisticsRepository.GetMostVulnerableProjectsAcrossInstance(ctx, nil, topProjectsLimit)
 			if err != nil {
 				return results, fmt.Errorf("could not get most vulnerable projects across instance: %w", err)
 			}
 			return results, nil
 		},
 		func() (any, error) { // 5: averageOpenVulnsPerOrg
-			results, err := service.statisticsRepository.GetAverageOpenVulnsPerOrgAcrossInstance(ctx)
+			results, err := service.statisticsRepository.GetAverageOpenVulnsPerOrgAcrossInstance(ctx, nil)
 			if err != nil {
 				return results, fmt.Errorf("could not get average open vulns per org across instance: %w", err)
 			}

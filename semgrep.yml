@@ -77,6 +77,7 @@ rules:
     patterns:
       - pattern: $R.db
       - pattern-not-inside: func ($R $T) GetDB(...) { ... }
+      - pattern-not-inside: $R.db.WithContext(...)
 
   - id: repo-getdb-nil-when-tx-available
     message: tx is available as parameter, use GetDB(ctx, tx) instead of GetDB(ctx, nil)

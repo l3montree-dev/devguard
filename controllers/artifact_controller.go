@@ -713,7 +713,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 

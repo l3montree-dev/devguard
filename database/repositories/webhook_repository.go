@@ -29,6 +29,7 @@ func NewWebhookRepository(db *gorm.DB, encryptionService shared.DBEncryptionServ
 }
 
 // encryptSecretInPlace returns a copy of the webhook with its secret encrypted
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
 func (r *webhookRepository) encryptSecretInPlace(ctx context.Context, webhook models.WebhookIntegration) (models.WebhookIntegration, error) {
 	if webhook.Secret == nil {
 		return webhook, nil
@@ -44,6 +45,7 @@ func (r *webhookRepository) encryptSecretInPlace(ctx context.Context, webhook mo
 }
 
 // decryptSecretInPlace decrypts the secret of a fetched webhook in place
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
 func (r *webhookRepository) decryptSecretInPlace(ctx context.Context, webhook *models.WebhookIntegration) error {
 	if webhook.Secret == nil {
 		return nil

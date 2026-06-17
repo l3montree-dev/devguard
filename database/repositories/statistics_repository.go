@@ -100,13 +100,13 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTimes(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+func (r *statisticsRepository) AverageFixingTimes(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
 	results := dtos.RemediationTimeAverages{}
 
 	var err error
 
 	if artifactName == nil {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
 	SELECT
 		dependency_vulns.raw_risk_assessment,
@@ -135,7 +135,7 @@ SELECT
 FROM events
 WHERE type IN ? AND prev_type IN ?;`, append(remediationEvents, openEvents...), assetVersionName, assetID, remediationEvents, openEvents).Find(&results).Error
 	} else {
-		err = r.db.Raw(`
+		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
 	SELECT
 		dependency_vulns.raw_risk_assessment,
@@ -590,9 +590,9 @@ func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, t
 	return instanceStatistics, nil
 }
 
-func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error) {
+func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, tx *gorm.DB, limit int) ([]dtos.CVEOccurrence, error) {
 	topCVEs := make([]dtos.CVEOccurrence, 0, limit)
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT a.cve_id, 
 	MAX(cves.cvss) as cvss,
 	COUNT(DISTINCT (a.asset_id)) AS total_amount
@@ -604,9 +604,9 @@ func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, lim
 	return topCVEs, err
 }
 
-func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
+func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, tx *gorm.DB, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
 	components := make([]dtos.ComponentOccurrenceAcrossInstance, 0, limit)
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT cd.dependency_id as purl,
 	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
   	COALESCE(1.0 * COUNT(DISTINCT (cd.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
@@ -617,9 +617,9 @@ func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Contex
 	return components, err
 }
 
-func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error) {
+func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context, tx *gorm.DB) ([]dtos.MaliciousPackage, error) {
 	packages := []dtos.MaliciousPackage{}
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
 		mac.malicious_package_id,
 		cd.dependency_id as component,
@@ -641,9 +641,9 @@ func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.C
 	return packages, err
 }
 
-func (r *statisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error) {
+func (r *statisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context, tx *gorm.DB) (float32, error) {
 	var average float32
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT COALESCE( -- add division by 0 guards
     	((SELECT COUNT(*) FROM first_party_vulnerabilities WHERE state = 'open') * 1.0) /
     	NULLIF((SELECT COUNT(*) FROM projects), 0)
@@ -651,9 +651,9 @@ func (r *statisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Con
 	return average, err
 }
 
-func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error) {
+func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, tx *gorm.DB, limit int) ([]dtos.ProjectVulnDistribution, error) {
 	projects := []dtos.ProjectVulnDistribution{}
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT sub.pslug, sub.pname,
 		COUNT(*) as total,
 		COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) AS low_risk,
@@ -680,9 +680,9 @@ func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx conte
 	return projects, err
 }
 
-func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error) {
+func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context, tx *gorm.DB) (dtos.OrgVulnAverage, error) {
 	average := dtos.OrgVulnAverage{}
-	err := r.GetDB(ctx, nil).Raw(`
+	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 4 AND sub.raw_risk_assessment < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_medium,

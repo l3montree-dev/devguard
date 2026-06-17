@@ -49,7 +49,7 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifact := ctx.QueryParam("artifactName")
 
-	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average fixing time").WithInternal(err)
 	}

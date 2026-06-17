@@ -73,7 +73,7 @@ func NewAdminController(
 }
 
 func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) error {
-	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations(ctx.Request().Context())
+	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations(ctx.Request().Context(), nil)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get external organizations")
 	}

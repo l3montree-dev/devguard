@@ -17,8 +17,12 @@ func NewAdminRepository(db *gorm.DB) AdminRepository {
 	}
 }
 
-func (repository AdminRepository) GetAllExternalEntityOrganizations(ctx context.Context) ([]models.Org, error) {
+func (repository AdminRepository) GetAllExternalEntityOrganizations(ctx context.Context, tx *gorm.DB) ([]models.Org, error) {
 	orgs := []models.Org{}
-	err := repository.db.WithContext(ctx).Raw(`SELECT * FROM organizations o WHERE o.external_entity_provider_id IS NOT NULL;`).Find(&orgs).Error
+	db := repository.db.WithContext(ctx)
+	if tx != nil {
+		db = tx
+	}
+	err := db.Raw(`SELECT * FROM organizations o WHERE o.external_entity_provider_id IS NOT NULL;`).Find(&orgs).Error
 	return orgs, err
 }

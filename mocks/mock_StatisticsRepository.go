@@ -43,8 +43,8 @@ func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 }
 
 // AverageFixingTimes provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
-	ret := _mock.Called(ctx, artifactNam, assetVersionName, assetID)
+func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+	ret := _mock.Called(ctx, tx, artifactNam, assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTimes")
@@ -52,16 +52,16 @@ func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, artif
 
 	var r0 dtos.RemediationTimeAverages
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
-		return returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
+		return returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) dtos.RemediationTimeAverages); ok {
-		r0 = returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID) dtos.RemediationTimeAverages); ok {
+		r0 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
 	} else {
 		r0 = ret.Get(0).(dtos.RemediationTimeAverages)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -75,36 +75,42 @@ type StatisticsRepository_AverageFixingTimes_Call struct {
 
 // AverageFixingTimes is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - artifactNam *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsRepository_AverageFixingTimes_Call {
-	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, artifactNam, assetVersionName, assetID)}
+func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx interface{}, tx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsRepository_AverageFixingTimes_Call {
+	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, tx, artifactNam, assetVersionName, assetID)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_AverageFixingTimes_Call {
+func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_AverageFixingTimes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*string)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 *string
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(*string)
 		}
-		var arg3 uuid.UUID
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg3 = args[3].(string)
+		}
+		var arg4 uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -115,7 +121,7 @@ func (_c *StatisticsRepository_AverageFixingTimes_Call) Return(remediationTimeAv
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTimes_Call) RunAndReturn(run func(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsRepository_AverageFixingTimes_Call {
+func (_c *StatisticsRepository_AverageFixingTimes_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsRepository_AverageFixingTimes_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -267,8 +273,8 @@ func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndR
 }
 
 // FindMaliciousPackagesAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error) {
-	ret := _mock.Called(ctx)
+func (_mock *StatisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context, tx shared.DB) ([]dtos.MaliciousPackage, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindMaliciousPackagesAcrossInstance")
@@ -276,18 +282,18 @@ func (_mock *StatisticsRepository) FindMaliciousPackagesAcrossInstance(ctx conte
 
 	var r0 []dtos.MaliciousPackage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]dtos.MaliciousPackage, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]dtos.MaliciousPackage, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []dtos.MaliciousPackage); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []dtos.MaliciousPackage); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.MaliciousPackage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -301,18 +307,24 @@ type StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call struct {
 
 // FindMaliciousPackagesAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesAcrossInstance(ctx interface{}) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
-	return &StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call{Call: _e.mock.On("FindMaliciousPackagesAcrossInstance", ctx)}
+//   - tx shared.DB
+func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+	return &StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call{Call: _e.mock.On("FindMaliciousPackagesAcrossInstance", ctx, tx)}
 }
 
-func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -323,7 +335,7 @@ func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) Return(
 	return _c
 }
 
-func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) ([]dtos.MaliciousPackage, error)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+func (_c *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]dtos.MaliciousPackage, error)) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -547,8 +559,8 @@ func (_c *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_C
 }
 
 // GetAverageOpenVulnsPerOrgAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error) {
-	ret := _mock.Called(ctx)
+func (_mock *StatisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context, tx shared.DB) (dtos.OrgVulnAverage, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageOpenVulnsPerOrgAcrossInstance")
@@ -556,16 +568,16 @@ func (_mock *StatisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx c
 
 	var r0 dtos.OrgVulnAverage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (dtos.OrgVulnAverage, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) (dtos.OrgVulnAverage, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) dtos.OrgVulnAverage); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) dtos.OrgVulnAverage); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		r0 = ret.Get(0).(dtos.OrgVulnAverage)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -579,18 +591,24 @@ type StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call struct {
 
 // GetAverageOpenVulnsPerOrgAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *StatisticsRepository_Expecter) GetAverageOpenVulnsPerOrgAcrossInstance(ctx interface{}) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
-	return &StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call{Call: _e.mock.On("GetAverageOpenVulnsPerOrgAcrossInstance", ctx)}
+//   - tx shared.DB
+func (_e *StatisticsRepository_Expecter) GetAverageOpenVulnsPerOrgAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+	return &StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call{Call: _e.mock.On("GetAverageOpenVulnsPerOrgAcrossInstance", ctx, tx)}
 }
 
-func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -601,7 +619,7 @@ func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Ret
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) (dtos.OrgVulnAverage, error)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) (dtos.OrgVulnAverage, error)) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -679,8 +697,8 @@ func (_c *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call) RunAndR
 }
 
 // GetAvgOpenCodeRisksAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error) {
-	ret := _mock.Called(ctx)
+func (_mock *StatisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context.Context, tx shared.DB) (float32, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAvgOpenCodeRisksAcrossInstance")
@@ -688,16 +706,16 @@ func (_mock *StatisticsRepository) GetAvgOpenCodeRisksAcrossInstance(ctx context
 
 	var r0 float32
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (float32, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) (float32, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) float32); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) float32); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		r0 = ret.Get(0).(float32)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -711,18 +729,24 @@ type StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call struct {
 
 // GetAvgOpenCodeRisksAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *StatisticsRepository_Expecter) GetAvgOpenCodeRisksAcrossInstance(ctx interface{}) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
-	return &StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call{Call: _e.mock.On("GetAvgOpenCodeRisksAcrossInstance", ctx)}
+//   - tx shared.DB
+func (_e *StatisticsRepository_Expecter) GetAvgOpenCodeRisksAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+	return &StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call{Call: _e.mock.On("GetAvgOpenCodeRisksAcrossInstance", ctx, tx)}
 }
 
-func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) Run(run func(ctx context.Context)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -733,7 +757,7 @@ func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) Return(f 
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) RunAndReturn(run func(ctx context.Context) (float32, error)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+func (_c *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) (float32, error)) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1199,8 +1223,8 @@ func (_c *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call) RunAndReturn(r
 }
 
 // GetMostVulnerableProjectsAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error) {
-	ret := _mock.Called(ctx, limit)
+func (_mock *StatisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx context.Context, tx shared.DB, limit int) ([]dtos.ProjectVulnDistribution, error) {
+	ret := _mock.Called(ctx, tx, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMostVulnerableProjectsAcrossInstance")
@@ -1208,18 +1232,18 @@ func (_mock *StatisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx c
 
 	var r0 []dtos.ProjectVulnDistribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.ProjectVulnDistribution, error)); ok {
-		return returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) ([]dtos.ProjectVulnDistribution, error)); ok {
+		return returnFunc(ctx, tx, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.ProjectVulnDistribution); ok {
-		r0 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) []dtos.ProjectVulnDistribution); ok {
+		r0 = returnFunc(ctx, tx, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.ProjectVulnDistribution)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, int) error); ok {
+		r1 = returnFunc(ctx, tx, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1233,24 +1257,30 @@ type StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call struct {
 
 // GetMostVulnerableProjectsAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
-	return &StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call{Call: _e.mock.On("GetMostVulnerableProjectsAcrossInstance", ctx, limit)}
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+	return &StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call{Call: _e.mock.On("GetMostVulnerableProjectsAcrossInstance", ctx, tx, limit)}
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB, limit int)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1261,7 +1291,7 @@ func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) Ret
 	return _c
 }
 
-func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, limit int) ([]dtos.ProjectVulnDistribution, error)) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1493,8 +1523,8 @@ func (_c *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call) Run
 }
 
 // GetTopCVEsAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error) {
-	ret := _mock.Called(ctx, limit)
+func (_mock *StatisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, tx shared.DB, limit int) ([]dtos.CVEOccurrence, error) {
+	ret := _mock.Called(ctx, tx, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetTopCVEsAcrossInstance")
@@ -1502,18 +1532,18 @@ func (_mock *StatisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context,
 
 	var r0 []dtos.CVEOccurrence
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.CVEOccurrence, error)); ok {
-		return returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) ([]dtos.CVEOccurrence, error)); ok {
+		return returnFunc(ctx, tx, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.CVEOccurrence); ok {
-		r0 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) []dtos.CVEOccurrence); ok {
+		r0 = returnFunc(ctx, tx, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.CVEOccurrence)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, int) error); ok {
+		r1 = returnFunc(ctx, tx, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1527,24 +1557,30 @@ type StatisticsRepository_GetTopCVEsAcrossInstance_Call struct {
 
 // GetTopCVEsAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetTopCVEsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
-	return &StatisticsRepository_GetTopCVEsAcrossInstance_Call{Call: _e.mock.On("GetTopCVEsAcrossInstance", ctx, limit)}
+func (_e *StatisticsRepository_Expecter) GetTopCVEsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+	return &StatisticsRepository_GetTopCVEsAcrossInstance_Call{Call: _e.mock.On("GetTopCVEsAcrossInstance", ctx, tx, limit)}
 }
 
-func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB, limit int)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1555,14 +1591,14 @@ func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) Return(cVEOccurren
 	return _c
 }
 
-func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetTopCVEsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, limit int) ([]dtos.CVEOccurrence, error)) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetTopComponentsAcrossInstance provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
-	ret := _mock.Called(ctx, limit)
+func (_mock *StatisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, tx shared.DB, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
+	ret := _mock.Called(ctx, tx, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetTopComponentsAcrossInstance")
@@ -1570,18 +1606,18 @@ func (_mock *StatisticsRepository) GetTopComponentsAcrossInstance(ctx context.Co
 
 	var r0 []dtos.ComponentOccurrenceAcrossInstance
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dtos.ComponentOccurrenceAcrossInstance, error)); ok {
-		return returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) ([]dtos.ComponentOccurrenceAcrossInstance, error)); ok {
+		return returnFunc(ctx, tx, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dtos.ComponentOccurrenceAcrossInstance); ok {
-		r0 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) []dtos.ComponentOccurrenceAcrossInstance); ok {
+		r0 = returnFunc(ctx, tx, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.ComponentOccurrenceAcrossInstance)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, int) error); ok {
+		r1 = returnFunc(ctx, tx, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1595,24 +1631,30 @@ type StatisticsRepository_GetTopComponentsAcrossInstance_Call struct {
 
 // GetTopComponentsAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetTopComponentsAcrossInstance(ctx interface{}, limit interface{}) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
-	return &StatisticsRepository_GetTopComponentsAcrossInstance_Call{Call: _e.mock.On("GetTopComponentsAcrossInstance", ctx, limit)}
+func (_e *StatisticsRepository_Expecter) GetTopComponentsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+	return &StatisticsRepository_GetTopComponentsAcrossInstance_Call{Call: _e.mock.On("GetTopComponentsAcrossInstance", ctx, tx, limit)}
 }
 
-func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) Run(run func(ctx context.Context, limit int)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) Run(run func(ctx context.Context, tx shared.DB, limit int)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -1623,7 +1665,7 @@ func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) Return(compo
 	return _c
 }
 
-func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+func (_c *StatisticsRepository_GetTopComponentsAcrossInstance_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
 	_c.Call.Return(run)
 	return _c
 }

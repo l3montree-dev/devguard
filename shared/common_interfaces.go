@@ -574,7 +574,7 @@ type ConfigService interface {
 
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(ctx context.Context, tx DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	AverageFixingTimes(ctx context.Context, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
+	AverageFixingTimes(ctx context.Context, tx DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// AverageRemediationTimesForRelease computes all risk/CVSS average fixing times for a release tree in one query
 	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 
@@ -598,12 +598,12 @@ type StatisticsRepository interface {
 
 	// instance dashboard functions
 	GetInstanceUsageStatistics(ctx context.Context, tx DB) (dtos.InstanceUsageStatistics, error)
-	GetTopCVEsAcrossInstance(ctx context.Context, limit int) ([]dtos.CVEOccurrence, error)
-	GetTopComponentsAcrossInstance(ctx context.Context, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)
-	FindMaliciousPackagesAcrossInstance(ctx context.Context) ([]dtos.MaliciousPackage, error)
-	GetAvgOpenCodeRisksAcrossInstance(ctx context.Context) (float32, error)
-	GetMostVulnerableProjectsAcrossInstance(ctx context.Context, limit int) ([]dtos.ProjectVulnDistribution, error)
-	GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context) (dtos.OrgVulnAverage, error)
+	GetTopCVEsAcrossInstance(ctx context.Context, tx DB, limit int) ([]dtos.CVEOccurrence, error)
+	GetTopComponentsAcrossInstance(ctx context.Context, tx DB, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error)
+	FindMaliciousPackagesAcrossInstance(ctx context.Context, tx DB) ([]dtos.MaliciousPackage, error)
+	GetAvgOpenCodeRisksAcrossInstance(ctx context.Context, tx DB) (float32, error)
+	GetMostVulnerableProjectsAcrossInstance(ctx context.Context, tx DB, limit int) ([]dtos.ProjectVulnDistribution, error)
+	GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context, tx DB) (dtos.OrgVulnAverage, error)
 }
 
 type ArtifactRiskHistoryRepository interface {
@@ -692,7 +692,7 @@ type AdminService interface {
 }
 
 type AdminRepository interface {
-	GetAllExternalEntityOrganizations(ctx context.Context) ([]models.Org, error)
+	GetAllExternalEntityOrganizations(ctx context.Context, tx DB) ([]models.Org, error)
 }
 
 type AccessControl interface {

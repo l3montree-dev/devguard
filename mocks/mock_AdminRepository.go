@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,8 +40,8 @@ func (_m *AdminRepository) EXPECT() *AdminRepository_Expecter {
 }
 
 // GetAllExternalEntityOrganizations provides a mock function for the type AdminRepository
-func (_mock *AdminRepository) GetAllExternalEntityOrganizations(ctx context.Context) ([]models.Org, error) {
-	ret := _mock.Called(ctx)
+func (_mock *AdminRepository) GetAllExternalEntityOrganizations(ctx context.Context, tx shared.DB) ([]models.Org, error) {
+	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllExternalEntityOrganizations")
@@ -48,18 +49,18 @@ func (_mock *AdminRepository) GetAllExternalEntityOrganizations(ctx context.Cont
 
 	var r0 []models.Org
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]models.Org, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.Org, error)); ok {
+		return returnFunc(ctx, tx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []models.Org); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.Org); ok {
+		r0 = returnFunc(ctx, tx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Org)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,13 +73,26 @@ type AdminRepository_GetAllExternalEntityOrganizations_Call struct {
 }
 
 // GetAllExternalEntityOrganizations is a helper method to define mock.On call
-func (_e *AdminRepository_Expecter) GetAllExternalEntityOrganizations(ctx interface{}) *AdminRepository_GetAllExternalEntityOrganizations_Call {
-	return &AdminRepository_GetAllExternalEntityOrganizations_Call{Call: _e.mock.On("GetAllExternalEntityOrganizations", ctx)}
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *AdminRepository_Expecter) GetAllExternalEntityOrganizations(ctx interface{}, tx interface{}) *AdminRepository_GetAllExternalEntityOrganizations_Call {
+	return &AdminRepository_GetAllExternalEntityOrganizations_Call{Call: _e.mock.On("GetAllExternalEntityOrganizations", ctx, tx)}
 }
 
-func (_c *AdminRepository_GetAllExternalEntityOrganizations_Call) Run(run func(ctx context.Context)) *AdminRepository_GetAllExternalEntityOrganizations_Call {
+func (_c *AdminRepository_GetAllExternalEntityOrganizations_Call) Run(run func(ctx context.Context, tx shared.DB)) *AdminRepository_GetAllExternalEntityOrganizations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -88,7 +102,7 @@ func (_c *AdminRepository_GetAllExternalEntityOrganizations_Call) Return(orgs []
 	return _c
 }
 
-func (_c *AdminRepository_GetAllExternalEntityOrganizations_Call) RunAndReturn(run func(context.Context) ([]models.Org, error)) *AdminRepository_GetAllExternalEntityOrganizations_Call {
+func (_c *AdminRepository_GetAllExternalEntityOrganizations_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.Org, error)) *AdminRepository_GetAllExternalEntityOrganizations_Call {
 	_c.Call.Return(run)
 	return _c
 }

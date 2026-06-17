@@ -200,6 +200,7 @@ func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx 
 }
 
 // encryptTokenInPlace encrypts the token's sensitive fields in place and returns a func to restore the plaintext.
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
 func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(ctx context.Context, token *models.GitLabOauth2Token) (func(), error) {
 	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(token.AccessToken)
 	if err != nil {
@@ -222,6 +223,7 @@ func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(ctx context.Context, t
 }
 
 // decryptTokenInPlace decrypts the sensitive fields of a fetched token
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
 func (r *gitlabOauth2TokenRepository) decryptTokenInPlace(ctx context.Context, token *models.GitLabOauth2Token) error {
 	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(token.AccessToken)
 	if err != nil {
