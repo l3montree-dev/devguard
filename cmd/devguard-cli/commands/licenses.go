@@ -79,7 +79,7 @@ func updateApprovedLicenses(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not build the http request: %s", err)
 	}
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 
@@ -172,7 +172,7 @@ func getAPKIndexInformation(ctx context.Context, url string) (*bytes.Buffer, err
 	if err != nil {
 		return &bytes.Buffer{}, err
 	}
-	client := &http.Client{
+	client := &http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -245,7 +245,7 @@ func retrieveAlpineVersions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	client := &http.Client{
+	client := &http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -284,7 +284,7 @@ func getFileListYAML(ctx context.Context) (*bytes.Buffer, error) {
 	if err != nil {
 		return &bytes.Buffer{}, err
 	}
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -332,7 +332,7 @@ func getLicensesFromFileList(ctx context.Context, fileList *bytes.Buffer) (map[s
 	wg.Add(mumberOfGoRoutines)
 
 	licenseMap = make(map[string]string, len(urls))
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 

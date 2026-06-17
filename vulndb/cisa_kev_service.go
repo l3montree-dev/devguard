@@ -19,14 +19,12 @@ import (
 type cisaKEVService struct {
 	cveRepository             shared.CveRepository
 	cveRelationshipRepository shared.CVERelationshipRepository
-	httpClient                *http.Client
 }
 
 func NewCISAKEVService(cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository) cisaKEVService {
 	return cisaKEVService{
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		httpClient:                &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
@@ -62,7 +60,7 @@ func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 		return nil, err
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

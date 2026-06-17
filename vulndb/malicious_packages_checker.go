@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
@@ -28,14 +27,12 @@ import (
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
 
 // MaliciousPackageChecker checks packages against the malicious package database
 type MaliciousPackageChecker struct {
 	repository *repositories.MaliciousPackageRepository
-	httpClient *http.Client
 }
 
 type malRows struct {
@@ -48,7 +45,6 @@ func NewMaliciousPackageChecker(
 ) (*MaliciousPackageChecker, error) {
 	return &MaliciousPackageChecker{
 		repository: repository,
-		httpClient: &http.Client{Transport: utils.EgressTransport},
 	}, nil
 }
 

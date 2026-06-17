@@ -295,7 +295,6 @@ func SyncAllTables(ctx context.Context, tx pgx.Tx) error {
 }
 
 type osvService struct {
-	httpClient                *http.Client
 	affectedCmpRepository     shared.AffectedComponentRepository
 	cveRepository             shared.CveRepository
 	cveRelationshipRepository shared.CVERelationshipRepository
@@ -304,7 +303,6 @@ type osvService struct {
 
 func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, pool *pgxpool.Pool) osvService {
 	return osvService{
-		httpClient:                &http.Client{},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
@@ -558,7 +556,7 @@ func (s osvService) getOSVZipContainingEcosystem(ctx context.Context, ecosystem 
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download zip")
 	}

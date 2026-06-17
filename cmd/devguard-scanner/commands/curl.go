@@ -199,7 +199,7 @@ func runCurl(ctx context.Context, opts *CurlOptions) error {
 	}
 
 	// Create HTTP client
-	client := &http.Client{}
+	client := &http.Client{} // nosemgrep: http-client-missing-egress-transport -- CLI tool, timeout and redirect policy set dynamically from user flags
 
 	// Configure timeout
 	if opts.timeout > 0 {
