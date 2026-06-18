@@ -121,7 +121,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 
 		// we create a new ticket in github
 		client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
-		if err == notConnectedError {
+		if err == ErrNotConnected {
 			return nil
 		} else if err != nil {
 			return err

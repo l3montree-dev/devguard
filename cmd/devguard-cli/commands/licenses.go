@@ -33,7 +33,7 @@ var (
 func NewLicensesCommand() *cobra.Command {
 	licenses := cobra.Command{
 		Use:   "licenses",
-		Short: "licenses",
+		Short: "Manage approved license and package license information",
 	}
 
 	licenses.AddCommand(newUpdateLicensesCommand())

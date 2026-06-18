@@ -618,7 +618,7 @@ type ArtifactRiskHistoryRepository interface {
 }
 
 type StatisticsService interface {
-	UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
+	UpdateArtifactRiskAggregation(ctx context.Context, tx DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	// Release scoped statistics
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)

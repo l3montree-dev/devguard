@@ -172,6 +172,10 @@ func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferen
 	return nil
 }
 
+func (githubIntegration *GithubIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	return nil, nil
+}
+
 func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	if !shared.HasOrganization(ctx) {
 		// github integration is connected to an organization not a user
@@ -439,7 +443,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 	if doUpdateArtifactRiskHistory && vuln != nil {
 		artifacts := vuln.GetArtifacts()
 		for _, artifact := range artifacts {
-			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(reqCtx, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(reqCtx, nil, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}

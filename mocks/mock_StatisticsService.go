@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -518,16 +519,16 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ct
 }
 
 // UpdateArtifactRiskAggregation provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
-	ret := _mock.Called(ctx, artifact, assetID, begin, end)
+func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
+	ret := _mock.Called(ctx, tx, artifact, assetID, begin, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateArtifactRiskAggregation")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
-		r0 = returnFunc(ctx, artifact, assetID, begin, end)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
+		r0 = returnFunc(ctx, tx, artifact, assetID, begin, end)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -541,35 +542,40 @@ type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
 
 // UpdateArtifactRiskAggregation is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - artifact *models.Artifact
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
-	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, artifact, assetID, begin, end)}
+func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, tx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, tx, artifact, assetID, begin, end)}
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Artifact
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Artifact)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *models.Artifact
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*models.Artifact)
 		}
-		var arg3 time.Time
+		var arg3 uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(time.Time)
+			arg3 = args[3].(uuid.UUID)
 		}
 		var arg4 time.Time
 		if args[4] != nil {
 			arg4 = args[4].(time.Time)
+		}
+		var arg5 time.Time
+		if args[5] != nil {
+			arg5 = args[5].(time.Time)
 		}
 		run(
 			arg0,
@@ -577,6 +583,7 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -587,7 +594,7 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Return(err error
 	return _c
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }
