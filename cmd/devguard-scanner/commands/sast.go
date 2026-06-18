@@ -41,7 +41,7 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	args := []string{"scan", p, "--sarif", "--sarif-output", sarifFilePath, "-v"}
 	args = append(args, configFileArgs...)
 	scannerCmd = exec.Command("semgrep", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
-	slog.Info("Starting sast scanning", "path", p, "result-path", sarifFilePath)
+	slog.Info("Starting sast scanning", "path", p, "resultPath", sarifFilePath)
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -51,6 +51,7 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
 			slog.Warn("Vulnerabilities found, but continuing execution.")
+			slog.Debug("Semgrep output", "stderr", stderr.String())
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
