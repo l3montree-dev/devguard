@@ -46,7 +46,7 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error) {
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error) {
 
 	asset := &models.Asset{
 		Name:                     name,
@@ -54,6 +54,7 @@ func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.Access
 		ProjectID:                projectID,
 		ExternalEntityID:         &externalEntityID,
 		ExternalEntityProviderID: &providerID,
+		Description:              description,
 	}
 
 	newAssets, _, err := s.assetRepository.UpsertSplit(ctx, nil, providerID, []*models.Asset{asset})

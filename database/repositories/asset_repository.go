@@ -194,6 +194,15 @@ func (repository *assetRepository) GetByProjectIDs(ctx context.Context, tx *gorm
 	return apps, nil
 }
 
+func (repository *assetRepository) GetByProjectIDsWithProviderID(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error) {
+	var apps []models.Asset
+	err := repository.GetDB(ctx, tx).Where("project_id IN ? AND external_entity_provider_id = ?", projectIDs, providerID).Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}
+
 func (repository *assetRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
 	err := repository.GetDB(ctx, tx).Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error

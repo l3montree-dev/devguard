@@ -426,6 +426,24 @@ func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm
 	return projects, err
 }
 
+func (g *projectRepository) GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx context.Context, tx *gorm.DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error) {
+	var project models.Project
+	err := g.GetDB(ctx, tx).Debug().Where("parent_id = ? AND external_entity_provider_id = ? AND external_entity_id = ?", parentID, providerID, externalEntityID).First(&project).Error
+	return project, err
+}
+
+func (g *projectRepository) GetDirectChildProjectsWithProviderID(ctx context.Context, tx *gorm.DB, parentID uuid.UUID, providerID string) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.GetDB(ctx, tx).Where("parent_id = ? AND external_entity_provider_id = ?", parentID, providerID).Find(&projects).Error
+	return projects, err
+}
+
+func (g *projectRepository) GetChildProjectsForParents(ctx context.Context, tx *gorm.DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.GetDB(ctx, tx).Where("parent_id IN ? AND external_entity_provider_id = ?", parentIDs, providerID).Find(&projects).Error
+	return projects, err
+}
+
 func (g *projectRepository) EnablePolicyForProject(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	return g.GetDB(ctx, tx).Model(&models.Project{
 		Model: models.Model{
@@ -592,8 +610,10 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error {
-	query := `
+func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
+	var query string
+
+	query = `
 WITH
   target AS (
     SELECT
@@ -603,6 +623,7 @@ WITH
     FROM projects p
     JOIN assets         a  ON a.project_id = p.id AND a.external_entity_id = ?
     JOIN asset_versions av ON av.asset_id  = a.id AND av.name = ?
+	JOIN artifacts      ar ON ar.asset_version_name = av.name AND ar.asset_id = a.id
     WHERE p.organization_id 	= ?
       AND p.parent_id       = ?
 	  AND p.external_entity_provider_id      = ?
@@ -610,10 +631,21 @@ WITH
 	  AND p.type            = 'dynamic'
     LIMIT 1
   ),
+  del_artifact AS (
+	DELETE FROM artifacts
+	WHERE asset_id = (SELECT asset_id FROM target)
+	  AND asset_version_name = (SELECT asset_version_name FROM target)
+	  AND artifact_name = ?
+  ),
   del_asset_version AS (
     DELETE FROM asset_versions
     WHERE asset_id = (SELECT asset_id FROM target)
       AND name     = (SELECT asset_version_name FROM target)
+	  AND NOT EXISTS (
+		SELECT 1 FROM artifacts
+		WHERE asset_id           = (SELECT asset_id FROM target)
+		  AND asset_version_name = (SELECT asset_version_name FROM target)
+	  )
   ),
   del_asset AS (
     DELETE FROM assets
@@ -621,7 +653,6 @@ WITH
       AND NOT EXISTS (
         SELECT 1 FROM asset_versions
         WHERE asset_id = (SELECT asset_id FROM target)
-          AND name    != (SELECT asset_version_name FROM target)
       )
   ),
   del_project AS (
@@ -637,6 +668,6 @@ SELECT 1`
 
 	return g.GetDB(ctx, tx).Exec(query,
 		assetExternalEntityID, assetVersionName,
-		organizationID, parentProjectID, providerID, projectExternalEntityID,
+		organizationID, parentProjectID, providerID, projectExternalEntityID, artifactName,
 	).Error
 }

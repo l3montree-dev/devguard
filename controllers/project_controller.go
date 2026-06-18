@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -542,16 +543,36 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	action := probe.Verb
 	projectName := probe.ProjectName
 	projectExternalEntityID := probe.ProjectExternalEntityID
+	projectDescription := probe.ProjectDescription
+
+	subProjectExternalEntityID := probe.SubProjectExternalEntityID
+	subProjectName := probe.SubProjectName
+	subProjectDescription := probe.SubProjectDescription
+
 	assetName := probe.AssetName
 	assetExternalEntityID := probe.AssetExternalEntityID
-	assetVersionName := probe.AssetVersion
+	assetDescription := probe.AssetDescription
+
+	assetVersionName := probe.AssetVersionName
+	artifactName := probe.Artifact
+
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
 	if action == "delete" {
-		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProject.ID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName)
+		parentProjectID := parentProject.ID
+		proExternalEntityID := projectExternalEntityID
+		if subProjectExternalEntityID != "" {
+			subProjectParent, err := ProjectController.projectRepository.GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx.Request().Context(), nil, parentProject.ID, providerID, projectExternalEntityID)
+			if err != nil {
+				return echo.NewHTTPError(500, fmt.Sprintf("could not fetch sub-projects: %s", err.Error())).WithInternal(err)
+			}
+			parentProjectID = subProjectParent.ID
+			proExternalEntityID = subProjectExternalEntityID
+		}
+		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProjectID, providerID, proExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
 		if err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
 		}
@@ -570,13 +591,23 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
 	}
 
-	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, projectExternalEntityID, parentProject.ID)
+	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, projectExternalEntityID, parentProject.ID, projectDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create project: %s", err.Error())).WithInternal(err)
 	}
 
+	pID := project.ID
+
+	if subProjectExternalEntityID != "" {
+		subProject, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), subProjectName, subProjectExternalEntityID, project.ID, subProjectDescription)
+		if err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("could not create sub-project: %s", err.Error())).WithInternal(err)
+		}
+		pID = subProject.ID
+	}
+
 	rbac := shared.GetRBAC(ctx)
-	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), project.ID, assetName, assetExternalEntityID, userID)
+	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, assetName, assetExternalEntityID, userID, assetDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
@@ -585,8 +616,6 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset version: %s", err.Error())).WithInternal(err)
 	}
-
-	artifactName := normalize.ArtifactPurl("operator", fmt.Sprintf("%s/%s/%s", organization.Slug, project.Slug, asset.Name))
 
 	artifact := models.Artifact{
 		ArtifactName:     artifactName,
@@ -646,46 +675,161 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
-
 	providerID := shared.GetProviderID(ctx)
 
-	//TOD:: we should optimize this by doing it in a single query.
-	projects, err := ProjectController.projectRepository.GetDirectChildProjects(reqCtx, nil, parentProject.ID)
+	// Query 1: direct child projects filtered by providerID
+	projects, err := ProjectController.projectRepository.GetDirectChildProjectsWithProviderID(reqCtx, nil, parentProject.ID, providerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
+	}
+	if len(projects) == 0 {
+		return ctx.JSON(200, []dtos.ProjectsAssetAssetVersionsDTO{})
+	}
+
+	projectIDs := make([]uuid.UUID, len(projects))
+	for i, p := range projects {
+		projectIDs[i] = p.ID
+	}
+
+	// Query 2: all sub-projects for all parent projects in one shot
+	subProjects, err := ProjectController.projectRepository.GetChildProjectsForParents(reqCtx, nil, projectIDs, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list sub-projects").WithInternal(err)
+	}
+
+	subProjectIDs := make([]uuid.UUID, len(subProjects))
+	for i, sp := range subProjects {
+		subProjectIDs[i] = sp.ID
+	}
+
+	// Query 3: all assets for projects + sub-projects, filtered by providerID
+	allProjectIDs := append(projectIDs, subProjectIDs...)
+	allAssets, err := ProjectController.assetRepository.GetByProjectIDsWithProviderID(reqCtx, nil, allProjectIDs, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
+	}
+
+	allAssetIDs := make([]uuid.UUID, len(allAssets))
+	for i, a := range allAssets {
+		allAssetIDs[i] = a.ID
+	}
+
+	// Query 4: all asset versions for all assets
+	allAssetVersions, err := ProjectController.assetVersionRepository.GetAssetVersionsByAssetIDs(reqCtx, nil, allAssetIDs)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
+	}
+
+	// Query 5: all artifacts for all assets
+	allArtifacts, err := ProjectController.artifactRepository.GetByAssetIDs(reqCtx, nil, allAssetIDs)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list artifacts").WithInternal(err)
+	}
+
+	// Build in-memory lookup maps
+	subProjectsByParentID := make(map[uuid.UUID][]models.Project)
+	for _, sp := range subProjects {
+		if sp.ParentID != nil {
+			subProjectsByParentID[*sp.ParentID] = append(subProjectsByParentID[*sp.ParentID], sp)
+		}
+	}
+
+	assetsByProjectID := make(map[uuid.UUID][]models.Asset)
+	for _, a := range allAssets {
+		assetsByProjectID[a.ProjectID] = append(assetsByProjectID[a.ProjectID], a)
+	}
+
+	versionsByAssetID := make(map[uuid.UUID][]models.AssetVersion)
+	for _, av := range allAssetVersions {
+		versionsByAssetID[av.AssetID] = append(versionsByAssetID[av.AssetID], av)
+	}
+
+	artifactsByAssetIDAndVersion := make(map[uuid.UUID]map[string][]string)
+	for _, art := range allArtifacts {
+		if artifactsByAssetIDAndVersion[art.AssetID] == nil {
+			artifactsByAssetIDAndVersion[art.AssetID] = make(map[string][]string)
+		}
+		artifactsByAssetIDAndVersion[art.AssetID][art.AssetVersionName] = append(
+			artifactsByAssetIDAndVersion[art.AssetID][art.AssetVersionName], art.ArtifactName,
+		)
+	}
+
+	buildAssetEntries := func(projectID uuid.UUID) []struct {
+		AssetExternalEntityID string `json:"assetExternalEntityId"`
+		AssetName             string `json:"assetName"`
+		AssetVersions         []struct {
+			AssetVersionName string   `json:"assetVersionName"`
+			Artifacts        []string `json:"artifacts"`
+		} `json:"assetVersions"`
+	} {
+		var entries []struct {
+			AssetExternalEntityID string `json:"assetExternalEntityId"`
+			AssetName             string `json:"assetName"`
+			AssetVersions         []struct {
+				AssetVersionName string   `json:"assetVersionName"`
+				Artifacts        []string `json:"artifacts"`
+			} `json:"assetVersions"`
+		}
+		for _, asset := range assetsByProjectID[projectID] {
+			if asset.ExternalEntityID == nil {
+				continue
+			}
+			versions := versionsByAssetID[asset.ID]
+			if len(versions) == 0 {
+				continue
+			}
+			assetEntry := struct {
+				AssetExternalEntityID string `json:"assetExternalEntityId"`
+				AssetName             string `json:"assetName"`
+				AssetVersions         []struct {
+					AssetVersionName string   `json:"assetVersionName"`
+					Artifacts        []string `json:"artifacts"`
+				} `json:"assetVersions"`
+			}{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
+			for _, av := range versions {
+				avEntry := struct {
+					AssetVersionName string   `json:"assetVersionName"`
+					Artifacts        []string `json:"artifacts"`
+				}{AssetVersionName: av.Name, Artifacts: artifactsByAssetIDAndVersion[asset.ID][av.Name]}
+				assetEntry.AssetVersions = append(assetEntry.AssetVersions, avEntry)
+			}
+			entries = append(entries, assetEntry)
+		}
+		return entries
 	}
 
 	result := make([]dtos.ProjectsAssetAssetVersionsDTO, 0, len(projects))
 	for _, project := range projects {
-		if project.ExternalEntityProviderID == nil || *project.ExternalEntityProviderID != providerID {
+		if project.ExternalEntityID == nil {
 			continue
 		}
-		assets, err := ProjectController.assetRepository.GetByProjectID(reqCtx, nil, project.ID)
-		if err != nil {
-			return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
+		entry := dtos.ProjectsAssetAssetVersionsDTO{
+			ProjectExternalEntityID: *project.ExternalEntityID,
+			ProjectName:             project.Name,
 		}
 
-		entry := dtos.ProjectsAssetAssetVersionsDTO{ProjectExternalEntityID: *project.ExternalEntityID, ProjectName: project.Name}
-		for _, asset := range assets {
-			if asset.ExternalEntityProviderID == nil || *asset.ExternalEntityProviderID != providerID {
+		for _, sp := range subProjectsByParentID[project.ID] {
+			if sp.ExternalEntityID == nil {
 				continue
 			}
-			versions, err := ProjectController.assetVersionRepository.GetAssetVersionsByAssetID(reqCtx, nil, asset.ID)
-			if err != nil {
-				return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
-			}
-
-			assetEntry := struct {
-				AssetExternalEntityID string   `json:"assetExternalEntityId"`
-				AssetName             string   `json:"assetName"`
-				Versions              []string `json:"versions"`
-			}{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
-
-			for _, v := range versions {
-				assetEntry.Versions = append(assetEntry.Versions, v.Name)
-			}
-			entry.Assets = append(entry.Assets, assetEntry)
+			spEntry := struct {
+				SubProjectExternalEntityID string `json:"subProjectExternalEntityId,omitempty"`
+				SubProjectName             string `json:"subProjectName,omitempty"`
+				SubProjectDescription      string `json:"subProjectDescription,omitempty"`
+				Assets                     []struct {
+					AssetExternalEntityID string `json:"assetExternalEntityId"`
+					AssetName             string `json:"assetName"`
+					AssetVersions         []struct {
+						AssetVersionName string   `json:"assetVersionName"`
+						Artifacts        []string `json:"artifacts"`
+					} `json:"assetVersions"`
+				} `json:"assets"`
+			}{SubProjectExternalEntityID: *sp.ExternalEntityID, SubProjectName: sp.Name}
+			spEntry.Assets = buildAssetEntries(sp.ID)
+			entry.SubProjects = append(entry.SubProjects, spEntry)
 		}
+
+		entry.Assets = buildAssetEntries(project.ID)
 		result = append(result, entry)
 	}
 

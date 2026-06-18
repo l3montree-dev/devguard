@@ -99,18 +99,40 @@ type ProjectAssetDTO struct {
 type ProjectsAssetAssetVersionsDTO struct {
 	ProjectExternalEntityID string `json:"projectExternalEntityId"`
 	ProjectName             string `json:"projectName"`
-	Assets                  []struct {
-		AssetExternalEntityID string   `json:"assetExternalEntityId"`
-		AssetName             string   `json:"assetName"`
-		Versions              []string `json:"versions"`
+	SubProjects             []struct {
+		SubProjectExternalEntityID string `json:"subProjectExternalEntityId,omitempty"`
+		SubProjectName             string `json:"subProjectName,omitempty"`
+		SubProjectDescription      string `json:"subProjectDescription,omitempty"`
+		Assets                     []struct {
+			AssetExternalEntityID string `json:"assetExternalEntityId"`
+			AssetName             string `json:"assetName"`
+			AssetVersions         []struct {
+				AssetVersionName string   `json:"assetVersionName"`
+				Artifacts        []string `json:"artifacts"`
+			} `json:"assetVersions"`
+		} `json:"assets"`
+	} `json:"subProjects,omitempty"`
+	Assets []struct {
+		AssetExternalEntityID string `json:"assetExternalEntityId"`
+		AssetName             string `json:"assetName"`
+		AssetVersions         []struct {
+			AssetVersionName string   `json:"assetVersionName"`
+			Artifacts        []string `json:"artifacts"`
+		} `json:"assetVersions"`
 	} `json:"assets"`
 }
 type DynamicProjectRequestDTO struct {
-	Verb                    string          `json:"verb"`
-	ProjectExternalEntityID string          `json:"projectExternalEntityId"`
-	ProjectName             string          `json:"projectName"`
-	AssetExternalEntityID   string          `json:"assetExternalEntityId"`
-	AssetName               string          `json:"assetName"`
-	AssetVersion            string          `json:"assetVersion"`
-	Sbom                    json.RawMessage `json:"sbom,omitempty"`
+	Verb                       string          `json:"verb"`
+	ProjectExternalEntityID    string          `json:"projectExternalEntityId"`
+	ProjectName                string          `json:"projectName"`
+	ProjectDescription         string          `json:"projectDescription"`
+	SubProjectExternalEntityID string          `json:"subProjectExternalEntityId,omitempty"`
+	SubProjectName             string          `json:"subProjectName,omitempty"`
+	SubProjectDescription      string          `json:"subProjectDescription,omitempty"`
+	AssetExternalEntityID      string          `json:"assetExternalEntityId"`
+	AssetName                  string          `json:"assetName"`
+	AssetDescription           string          `json:"assetDescription"`
+	AssetVersionName           string          `json:"assetVersionName"`
+	Artifact                   string          `json:"artifact"`
+	Sbom                       json.RawMessage `json:"sbom,omitempty"`
 }

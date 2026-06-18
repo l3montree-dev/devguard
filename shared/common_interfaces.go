@@ -94,6 +94,8 @@ type ProjectRepository interface {
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
+	GetDirectChildProjectsWithProviderID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string) ([]models.Project, error)
+	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
@@ -107,7 +109,8 @@ type ProjectRepository interface {
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
-	CleanupDynamicProject(ctx context.Context, tx DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string) error
+	GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error)
+	CleanupDynamicProject(ctx context.Context, tx DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
 }
 
 type Verifier interface {
@@ -148,6 +151,8 @@ type AssetRepository interface {
 	utils.Repository[uuid.UUID, models.Asset, DB]
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDsWithProviderID(ctx context.Context, tx DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(ctx context.Context, tx DB, name string) (models.Asset, error)
 	FindAssetByExternalProviderID(ctx context.Context, tx DB, externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
@@ -177,6 +182,8 @@ type ArtifactRepository interface {
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID uuid.UUID) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 	CleanupOrphanedRecords(ctx context.Context) error
+	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Artifact, error)
+	GetByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.Artifact, error)
 }
 
 type ReleaseRepository interface {
@@ -380,7 +387,7 @@ type ProjectService interface {
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
 	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
-	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID) (*models.Project, error)
+	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)
 }
 
 type InTotoVerifierService interface {
@@ -395,7 +402,7 @@ type AssetService interface {
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
 	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
-	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string) (*models.Asset, error)
+	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -435,6 +442,7 @@ type AssetVersionRepository interface {
 	Delete(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	Save(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
+	GetAssetVersionsByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error)
 	GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error)

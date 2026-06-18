@@ -162,8 +162,8 @@ func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx shared.Co
 }
 
 // FindOrCreateProject provides a mock function for the type ProjectService
-func (_mock *ProjectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID) (*models.Project, error) {
-	ret := _mock.Called(ctx, providerID, orgID, name, externalEntityID, parentID)
+func (_mock *ProjectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error) {
+	ret := _mock.Called(ctx, providerID, orgID, name, externalEntityID, parentID, description)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindOrCreateProject")
@@ -171,18 +171,18 @@ func (_mock *ProjectService) FindOrCreateProject(ctx shared.Context, providerID 
 
 	var r0 *models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID) (*models.Project, error)); ok {
-		return returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID)
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) (*models.Project, error)); ok {
+		return returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID) *models.Project); ok {
-		r0 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID)
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) *models.Project); ok {
+		r0 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID)
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -201,11 +201,12 @@ type ProjectService_FindOrCreateProject_Call struct {
 //   - name string
 //   - externalEntityID string
 //   - parentID uuid.UUID
-func (_e *ProjectService_Expecter) FindOrCreateProject(ctx interface{}, providerID interface{}, orgID interface{}, name interface{}, externalEntityID interface{}, parentID interface{}) *ProjectService_FindOrCreateProject_Call {
-	return &ProjectService_FindOrCreateProject_Call{Call: _e.mock.On("FindOrCreateProject", ctx, providerID, orgID, name, externalEntityID, parentID)}
+//   - description string
+func (_e *ProjectService_Expecter) FindOrCreateProject(ctx interface{}, providerID interface{}, orgID interface{}, name interface{}, externalEntityID interface{}, parentID interface{}, description interface{}) *ProjectService_FindOrCreateProject_Call {
+	return &ProjectService_FindOrCreateProject_Call{Call: _e.mock.On("FindOrCreateProject", ctx, providerID, orgID, name, externalEntityID, parentID, description)}
 }
 
-func (_c *ProjectService_FindOrCreateProject_Call) Run(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID)) *ProjectService_FindOrCreateProject_Call {
+func (_c *ProjectService_FindOrCreateProject_Call) Run(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string)) *ProjectService_FindOrCreateProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.Context
 		if args[0] != nil {
@@ -231,6 +232,10 @@ func (_c *ProjectService_FindOrCreateProject_Call) Run(run func(ctx shared.Conte
 		if args[5] != nil {
 			arg5 = args[5].(uuid.UUID)
 		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -238,6 +243,7 @@ func (_c *ProjectService_FindOrCreateProject_Call) Run(run func(ctx shared.Conte
 			arg3,
 			arg4,
 			arg5,
+			arg6,
 		)
 	})
 	return _c
@@ -248,7 +254,7 @@ func (_c *ProjectService_FindOrCreateProject_Call) Return(project *models.Projec
 	return _c
 }
 
-func (_c *ProjectService_FindOrCreateProject_Call) RunAndReturn(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID) (*models.Project, error)) *ProjectService_FindOrCreateProject_Call {
+func (_c *ProjectService_FindOrCreateProject_Call) RunAndReturn(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)) *ProjectService_FindOrCreateProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
