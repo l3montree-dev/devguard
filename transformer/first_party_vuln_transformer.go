@@ -83,6 +83,24 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVulnDTO {
 	}
 }
 
+func FirstPartyVulnDTOToModel(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
+	m := models.FirstPartyVuln{
+		RuleID:          v.RuleID,
+		RuleName:        v.RuleName,
+		RuleHelpURI:     v.RuleHelpURI,
+		RuleDescription: v.RuleDescription,
+		URI:             v.URI,
+	}
+	m.State = v.State
+	if len(v.SnippetContents) > 0 {
+		snippetJSON, err := SnippetContentsToJSON(dtos.SnippetContents{Snippets: v.SnippetContents})
+		if err == nil {
+			m.SnippetContents = snippetJSON
+		}
+	}
+	return m
+}
+
 func SnippetContentsToJSON(s dtos.SnippetContents) (databasetypes.JSONB, error) {
 	if len(s.Snippets) == 0 {
 		return databasetypes.JSONB{}, fmt.Errorf("no snippets to convert to JSON")

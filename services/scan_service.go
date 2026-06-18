@@ -863,9 +863,19 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 				Message:         &msg,
 				Date:            time.Now().Format(time.RFC3339),
 			}
-			if len(result.Locations) > 0 {
-				loc := result.Locations[0]
-				vuln.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
+			for i, loc := range result.Locations {
+				if i == 0 {
+					vuln.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
+				}
+				if loc.PhysicalLocation.Region != nil && loc.PhysicalLocation.Region.Snippet != nil {
+					vuln.SnippetContents = append(vuln.SnippetContents, dtos.SnippetContent{
+						StartLine:   utils.OrDefault(loc.PhysicalLocation.Region.StartLine, 0),
+						EndLine:     utils.OrDefault(loc.PhysicalLocation.Region.EndLine, 0),
+						StartColumn: utils.OrDefault(loc.PhysicalLocation.Region.StartColumn, 0),
+						EndColumn:   utils.OrDefault(loc.PhysicalLocation.Region.EndColumn, 0),
+						Snippet:     utils.OrDefault(loc.PhysicalLocation.Region.Snippet.Text, ""),
+					})
+				}
 			}
 			vulns = append(vulns, vuln)
 		}

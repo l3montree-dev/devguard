@@ -732,17 +732,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not do an unauthenticated sarif scan: %s", err.Error())).WithInternal(err)
 	}
 
-	vulns := utils.Map(scanResults.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
-		fpv := models.FirstPartyVuln{
-			RuleID:          v.RuleID,
-			RuleName:        v.RuleName,
-			RuleHelpURI:     v.RuleHelpURI,
-			RuleDescription: v.RuleDescription,
-			URI:             v.URI,
-		}
-		fpv.State = v.State
-		return fpv
-	})
+	vulns := utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 
 	report := firstPartyVulnsToSARIF(scannerID, vulns)
 	return c.JSON(200, report)
@@ -918,17 +908,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 			span.SetStatus(codes.Error, scanErr.Error())
 			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 		}
-		newState = utils.Map(scanResults.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
-			fpv := models.FirstPartyVuln{
-				RuleID:          v.RuleID,
-				RuleName:        v.RuleName,
-				RuleHelpURI:     v.RuleHelpURI,
-				RuleDescription: v.RuleDescription,
-				URI:             v.URI,
-			}
-			fpv.State = v.State
-			return fpv
-		})
+		newState = utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 	} else {
 		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
 		if err != nil {

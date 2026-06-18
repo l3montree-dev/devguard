@@ -37,6 +37,23 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	var configFileArgs []string
 	if config.RuntimeBaseConfig.ConfigFilePath != "" {
 		configFileArgs = []string{"--config", config.RuntimeBaseConfig.ConfigFilePath}
+	} else {
+		// Semgrep 1.38+ no longer auto-discovers config files; pass local config explicitly if present.
+		// Use p as the config root; if p is a file, search its parent directory.
+		configRoot := p
+		if info, err := os.Stat(p); err == nil && !info.IsDir() {
+			configRoot = path.Dir(p)
+		}
+		for _, localConfig := range []string{".semgrep.yml", ".semgrep.yaml"} {
+			candidate := path.Join(configRoot, localConfig)
+			if _, err := os.Stat(candidate); err == nil {
+				configFileArgs = []string{"--config", candidate}
+				break
+			}
+		}
+		if len(configFileArgs) == 0 {
+			configFileArgs = []string{"--config", "auto"}
+		}
 	}
 	args := []string{"scan", p, "--sarif", "--sarif-output", sarifFilePath, "-v"}
 	args = append(args, configFileArgs...)

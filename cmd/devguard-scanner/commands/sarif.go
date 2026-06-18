@@ -252,6 +252,17 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		// expand snippet and obfuscate it
 		expandAndObfuscateSnippet(sarifResult, config.RuntimeBaseConfig.Path)
 
+		// strip inline-suppressed results before upload so the server doesn't re-surface them
+		for i := range sarifResult.Runs {
+			filtered := sarifResult.Runs[i].Results[:0]
+			for _, result := range sarifResult.Runs[i].Results {
+				if len(result.Suppressions) == 0 {
+					filtered = append(filtered, result)
+				}
+			}
+			sarifResult.Runs[i].Results = filtered
+		}
+
 		// marshal the result
 		b, err := json.Marshal(sarifResult)
 		if err != nil {
