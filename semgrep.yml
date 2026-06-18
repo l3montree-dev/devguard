@@ -77,6 +77,7 @@ rules:
     patterns:
       - pattern: $R.db
       - pattern-not-inside: func ($R $T) GetDB(...) { ... }
+      - pattern-not-inside: $R.db.WithContext(...)
 
   - id: repo-getdb-nil-when-tx-available
     message: tx is available as parameter, use GetDB(ctx, tx) instead of GetDB(ctx, nil)
@@ -165,6 +166,54 @@ rules:
           ...
           $TX.Commit()
           ...
+
+  - id: http-client-missing-egress-transport
+    message: |
+      http.Client is missing utils.EgressTransport.
+      EgressTransport adds the User-Agent header and OpenTelemetry trace propagation to all outgoing requests.
+      Use: &http.Client{Transport: utils.EgressTransport, Timeout: <duration>} or utils.EgressClient directly.
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/utils/egress_client.go"
+    patterns:
+      - pattern-either:
+          - pattern: "http.Client{}"
+          - pattern: "&http.Client{}"
+          - pattern: "http.Client{Timeout: $T}"
+          - pattern: "&http.Client{Timeout: $T}"
+
+  - id: http-client-egress-transport-missing-timeout
+    message: |
+      http.Client with EgressTransport is missing a Timeout.
+      Without a timeout, slow or stalled servers can block a goroutine indefinitely.
+      Add a Timeout field: &http.Client{Transport: utils.EgressTransport, Timeout: 30 * time.Second}
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/utils/egress_client.go"
+    patterns:
+      - pattern-either:
+          - pattern: "http.Client{Transport: utils.EgressTransport}"
+          - pattern: "&http.Client{Transport: utils.EgressTransport}"
+
+  - id: http-new-request-without-context
+    message: |
+      Use http.NewRequestWithContext(ctx, ...) instead of http.NewRequest(...).
+      http.NewRequest uses context.Background() implicitly, which drops tracing and cancellation signals.
+    severity: WARNING
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+    pattern: http.NewRequest(...)
 
   - id: context-background-when-ctx-available
     message: |

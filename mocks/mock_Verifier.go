@@ -8,6 +8,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,36 +39,104 @@ func (_m *Verifier) EXPECT() *Verifier_Expecter {
 	return &Verifier_Expecter{mock: &_m.Mock}
 }
 
+// VerifyAPIToken provides a mock function for the type Verifier
+func (_mock *Verifier) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+	ret := _mock.Called(ctx, token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyAPIToken")
+	}
+
+	var r0 string
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, string, error)); ok {
+		return returnFunc(ctx, token)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, token)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) string); ok {
+		r1 = returnFunc(ctx, token)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = returnFunc(ctx, token)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// Verifier_VerifyAPIToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAPIToken'
+type Verifier_VerifyAPIToken_Call struct {
+	*mock.Call
+}
+
+// VerifyAPIToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - token string
+func (_e *Verifier_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *Verifier_VerifyAPIToken_Call {
+	return &Verifier_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
+}
+
+func (_c *Verifier_VerifyAPIToken_Call) Run(run func(ctx context.Context, token string)) *Verifier_VerifyAPIToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Verifier_VerifyAPIToken_Call) Return(s string, s1 string, err error) *Verifier_VerifyAPIToken_Call {
+	_c.Call.Return(s, s1, err)
+	return _c
+}
+
+func (_c *Verifier_VerifyAPIToken_Call) RunAndReturn(run func(ctx context.Context, token string) (string, string, error)) *Verifier_VerifyAPIToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifyRequestSignature provides a mock function for the type Verifier
-func (_mock *Verifier) VerifyRequestSignature(ctx context.Context, req *http.Request) (string, string, error) {
+func (_mock *Verifier) VerifyRequestSignature(ctx context.Context, req *http.Request) (shared.AuthSession, error) {
 	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyRequestSignature")
 	}
 
-	var r0 string
-	var r1 string
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) (string, string, error)); ok {
+	var r0 shared.AuthSession
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) (shared.AuthSession, error)); ok {
 		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) shared.AuthSession); ok {
 		r0 = returnFunc(ctx, req)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.AuthSession)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *http.Request) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *http.Request) error); ok {
 		r1 = returnFunc(ctx, req)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, *http.Request) error); ok {
-		r2 = returnFunc(ctx, req)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // Verifier_VerifyRequestSignature_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyRequestSignature'
@@ -100,12 +169,12 @@ func (_c *Verifier_VerifyRequestSignature_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) Return(s string, s1 string, err error) *Verifier_VerifyRequestSignature_Call {
-	_c.Call.Return(s, s1, err)
+func (_c *Verifier_VerifyRequestSignature_Call) Return(authSession shared.AuthSession, err error) *Verifier_VerifyRequestSignature_Call {
+	_c.Call.Return(authSession, err)
 	return _c
 }
 
-func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) (string, string, error)) *Verifier_VerifyRequestSignature_Call {
+func (_c *Verifier_VerifyRequestSignature_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) (shared.AuthSession, error)) *Verifier_VerifyRequestSignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

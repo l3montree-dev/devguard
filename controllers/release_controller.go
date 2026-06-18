@@ -33,6 +33,7 @@ func NewReleaseController(service shared.ReleaseService, avService shared.AssetV
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
@@ -63,6 +64,7 @@ func (h *ReleaseController) List(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -100,6 +102,7 @@ func (h *ReleaseController) SBOMJSON(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -137,6 +140,7 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -174,6 +178,7 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -358,6 +363,7 @@ func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -382,6 +388,7 @@ func (h *ReleaseController) Read(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ReleaseCreateRequest true "Release data"
@@ -407,6 +414,7 @@ func (h *ReleaseController) Create(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -443,6 +451,7 @@ func (h *ReleaseController) Update(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -466,6 +475,7 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -504,6 +514,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
@@ -528,6 +539,7 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 // @Tags Releases
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID query string false "Release ID"

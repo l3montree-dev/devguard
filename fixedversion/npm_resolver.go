@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"golang.org/x/mod/semver"
 )
@@ -276,9 +277,9 @@ func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
 	encodedName := url.PathEscape(fullName)
 
 	if pkg.Version != "" {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + encodedName + "/" + normalizedVersion)
+		req, err = utils.EgressClient.Get("https://registry.npmjs.org/" + encodedName + "/" + normalizedVersion)
 	} else {
-		req, err = httpClient.Get("https://registry.npmjs.org/" + encodedName)
+		req, err = utils.EgressClient.Get("https://registry.npmjs.org/" + encodedName)
 	}
 
 	if err != nil {

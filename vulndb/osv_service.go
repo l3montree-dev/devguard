@@ -295,7 +295,6 @@ func SyncAllTables(ctx context.Context, tx pgx.Tx) error {
 }
 
 type osvService struct {
-	httpClient                *http.Client
 	affectedCmpRepository     shared.AffectedComponentRepository
 	cveRepository             shared.CveRepository
 	cveRelationshipRepository shared.CVERelationshipRepository
@@ -304,7 +303,6 @@ type osvService struct {
 
 func NewOSVService(affectedCmpRepository shared.AffectedComponentRepository, cveRepository shared.CveRepository, cveRelationshipRepository shared.CVERelationshipRepository, pool *pgxpool.Pool) osvService {
 	return osvService{
-		httpClient:                &http.Client{},
 		affectedCmpRepository:     affectedCmpRepository,
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
@@ -383,7 +381,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 
 	// start the fetching controller which's job is to call the fetching functions for each ecosystem
 	zipPushWaitGroup.Add(1)
-	go s.fetchingController(zipPushWaitGroup, zipJobs, &fetchFailures)
+	go s.fetchingController(ctx, zipPushWaitGroup, zipJobs, &fetchFailures)
 
 	// when all zip files are pushed we do not receive more zip jobs
 	go func() {
@@ -494,21 +492,21 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 }
 
 // starts all zip fetches in the background
-func (s osvService) fetchingController(zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
+func (s osvService) fetchingController(ctx context.Context, zipPushWaitGroup *sync.WaitGroup, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 	for _, ecosystem := range importEcosystems {
 		slog.Info("start fetching zip", "ecosystem", ecosystem)
 		zipPushWaitGroup.Add(1)
-		go s.fetchEcosystemEntriesViaZip(zipPushWaitGroup, ecosystem, zipJobs, fetchFailures)
+		go s.fetchEcosystemEntriesViaZip(ctx, zipPushWaitGroup, ecosystem, zipJobs, fetchFailures)
 	}
 	slog.Info("finished starting all downloads")
 }
 
-func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup, ecosystem string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
+func (s osvService) fetchEcosystemEntriesViaZip(ctx context.Context, zipPushWaitGroup *sync.WaitGroup, ecosystem string, zipJobs chan zipJob, fetchFailures *atomic.Int64) {
 	defer zipPushWaitGroup.Done()
 	start := time.Now()
 
-	zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
+	zipReader, err := s.getOSVZipContainingEcosystem(ctx, ecosystem)
 	if err != nil {
 		fetchFailures.Add(1)
 		return
@@ -537,7 +535,7 @@ func (s osvService) fetchEcosystemEntriesViaZip(zipPushWaitGroup *sync.WaitGroup
 	slog.Info("finished extracting zip file", "ecosystem", ecosystem, "took", time.Since(start))
 }
 
-func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
+func (s osvService) getOSVZipContainingEcosystem(ctx context.Context, ecosystem string) (*zip.Reader, error) {
 	if debugLocalZip {
 		slog.Info("debug mode enabled, reading zip from disk instead of fetching from network", "ecosystem", ecosystem)
 		// check if the file exists on disk and read it if it does, otherwise return an error
@@ -553,12 +551,12 @@ func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader,
 			}
 		}
 	}
-	req, err := http.NewRequest(http.MethodGet, osvBaseURL+"/"+ecosystem+"/all.zip", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, osvBaseURL+"/"+ecosystem+"/all.zip", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download zip")
 	}

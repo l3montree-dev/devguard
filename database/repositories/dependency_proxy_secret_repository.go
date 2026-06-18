@@ -42,7 +42,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByOrgID(ctx context.Context
 				OrgID: &orgID,
 			}
 
-			err = r.Create(ctx, r.db, &newProxy)
+			err = r.Create(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err
@@ -59,7 +59,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByProjectID(ctx context.Con
 			newProxy := models.DependencyProxySecret{
 				ProjectID: &projectID,
 			}
-			err = r.Create(ctx, r.db, &newProxy)
+			err = r.Create(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err
@@ -76,7 +76,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 			newProxy := models.DependencyProxySecret{
 				AssetID: &assetID,
 			}
-			err = r.Create(ctx, r.db, &newProxy)
+			err = r.Create(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err

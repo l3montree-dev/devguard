@@ -65,9 +65,15 @@ type errGroup[T any] struct {
 	group          errgroup.Group
 	res            []T
 	collectionDone sync.WaitGroup
+	needsReset     bool
 }
 
 func (eg *errGroup[T]) Go(fn func() (T, error)) {
+	if eg.needsReset {
+		eg.ch = make(chan T)
+		eg.startCollecting()
+		eg.needsReset = false
+	}
 	eg.group.Go(func() error {
 		r, err := fn()
 		if err != nil {
@@ -81,7 +87,6 @@ func (eg *errGroup[T]) Go(fn func() (T, error)) {
 }
 
 func (eg *errGroup[T]) startCollecting() {
-	// reset the result slice
 	eg.res = make([]T, 0)
 	eg.collectionDone.Go(func() {
 		for r := range eg.ch {
@@ -91,19 +96,15 @@ func (eg *errGroup[T]) startCollecting() {
 }
 
 func (eg *errGroup[T]) WaitAndCollect() ([]T, error) {
-	defer eg.startCollecting()
 	err := eg.group.Wait()
 	close(eg.ch)
 	// Wait for the collection to finish - otherwise the result might be incomplete
 	eg.collectionDone.Wait()
+	eg.needsReset = true
 	if err != nil {
 		return nil, err
 	}
-	// Reset the channel
-	eg.ch = make(chan T)
-	res := eg.res
-
-	return res, nil
+	return eg.res, nil
 }
 
 func ErrGroup[T any](limit int) *errGroup[T] {

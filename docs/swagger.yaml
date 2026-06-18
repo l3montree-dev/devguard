@@ -4476,6 +4476,8 @@ components:
           type: string
         description:
           type: string
+        expiryDateUnix:
+          type: integer
         fingerprint:
           type: string
         id:
@@ -4489,13 +4491,20 @@ components:
       properties:
         description:
           type: string
+        expiryDateUnix:
+          type: integer
         pubKey:
           type: string
         scopes:
           type: string
+      required:
+      - expiryDateUnix
       type: object
     dtos.ProjectAssetDTO:
       properties:
+        avatar:
+          description: URL to the asset's avatar
+          type: string
         createdAt:
           type: string
         description:
@@ -6110,6 +6119,11 @@ components:
       additionalProperties: {}
       type: object
   securitySchemes:
+    BearerAuth:
+      description: 'Bearer token authentication. Set value to: Bearer dvg_…'
+      in: header
+      name: Authorization
+      type: apiKey
     CookieAuth:
       description: Session-based authentication using Ory Kratos
       in: cookie
@@ -6167,6 +6181,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Accept organization invitation
       tags:
       - Organizations
@@ -6190,6 +6205,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan SARIF file and return enriched SARIF
       tags:
       - Scanning
@@ -6241,6 +6257,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan SBOM file and return CycloneDX VEX
       tags:
       - Scanning
@@ -6297,6 +6314,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create attestation
       tags:
       - Attestations
@@ -6314,6 +6332,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List repositories from integrations
       tags:
       - Integrations
@@ -6390,6 +6409,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List organizations
       tags:
       - Organizations
@@ -6413,6 +6433,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create organization
       tags:
       - Organizations
@@ -6431,6 +6452,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete organization
       tags:
       - Organizations
@@ -6452,6 +6474,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization details
       tags:
       - Organizations
@@ -6482,6 +6505,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update organization
       tags:
       - Organizations
@@ -6510,6 +6534,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization config file
       tags:
       - Organizations
@@ -6545,6 +6570,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update organization config file
       tags:
       - Organizations
@@ -6567,6 +6593,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization content tree
       tags:
       - Organizations
@@ -6589,6 +6616,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF provider metadata for organization
       tags:
       - CSAF
@@ -6613,6 +6641,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List organization members
       tags:
       - Organizations
@@ -6643,6 +6672,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Invite member to organization
       tags:
       - Organizations
@@ -6667,6 +6697,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Remove member from organization
       tags:
       - Organizations
@@ -6699,6 +6730,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Change member role
       tags:
       - Organizations
@@ -6724,6 +6756,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization metrics
       tags:
       - Organizations
@@ -6748,6 +6781,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List projects
       tags:
       - Projects
@@ -6778,6 +6812,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create project
       tags:
       - Projects
@@ -6802,6 +6837,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete project
       tags:
       - Projects
@@ -6829,6 +6865,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get project details
       tags:
       - Projects
@@ -6865,6 +6902,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update project
       tags:
       - Projects
@@ -6895,6 +6933,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List assets
       tags:
       - Assets
@@ -6931,6 +6970,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create asset
       tags:
       - Assets
@@ -6961,6 +7001,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete asset
       tags:
       - Assets
@@ -6994,6 +7035,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset details
       tags:
       - Assets
@@ -7036,6 +7078,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update asset
       tags:
       - Assets
@@ -7076,6 +7119,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset config file
       tags:
       - Assets
@@ -7123,6 +7167,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update asset config file
       tags:
       - Assets
@@ -7165,6 +7210,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF report
       tags:
       - CSAF
@@ -7199,6 +7245,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF changes CSV
       tags:
       - CSAF
@@ -7233,6 +7280,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CSAF index file
       tags:
       - CSAF
@@ -7269,6 +7317,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get CVEs with known exploits for an asset
       tags:
       - Statistics
@@ -7305,6 +7354,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List asset versions
       tags:
       - Asset Versions
@@ -7353,6 +7403,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create asset version
       tags:
       - Asset Versions
@@ -7389,6 +7440,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete asset version
       tags:
       - Asset Versions
@@ -7428,6 +7480,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset version details
       tags:
       - Asset Versions
@@ -7476,6 +7529,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create artifact
       tags:
       - Artifacts
@@ -7518,6 +7572,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete artifact
       tags:
       - Artifacts
@@ -7571,6 +7626,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update artifact
       tags:
       - Artifacts
@@ -7617,6 +7673,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in OpenVEX JSON format
       tags:
       - Artifacts
@@ -7663,6 +7720,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM in JSON format
       tags:
       - Artifacts
@@ -7709,6 +7767,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM as PDF
       tags:
       - Artifacts
@@ -7755,6 +7814,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get SBOM in XML format
       tags:
       - Artifacts
@@ -7797,6 +7857,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Sync external sources for a single artifact
       tags:
       - ExternalReferences
@@ -7843,6 +7904,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in JSON format
       tags:
       - Artifacts
@@ -7889,6 +7951,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get VEX in XML format
       tags:
       - Artifacts
@@ -7935,6 +7998,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get vulnerability report as PDF
       tags:
       - Artifacts
@@ -7977,6 +8041,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List attestations
       tags:
       - Attestations
@@ -8027,6 +8092,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List dependency vulnerabilities
       tags:
       - Vulnerabilities
@@ -8073,6 +8139,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get dependency vulnerability details
       tags:
       - Vulnerabilities
@@ -8122,6 +8189,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create vulnerability event
       tags:
       - Vulnerabilities
@@ -8164,6 +8232,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List external references for an asset version
       tags:
       - ExternalReferences
@@ -8212,6 +8281,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create an external reference
       tags:
       - ExternalReferences
@@ -8248,6 +8318,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete all external references for an asset version
       tags:
       - ExternalReferences
@@ -8284,6 +8355,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Sync external sources for all artifacts of an asset version
       tags:
       - ExternalReferences
@@ -8329,6 +8401,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get asset version metrics
       tags:
       - Asset Versions
@@ -8374,6 +8447,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get average fixing times for an asset version
       tags:
       - Statistics
@@ -8419,6 +8493,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get component risk distribution for an asset version
       tags:
       - Statistics
@@ -8478,6 +8553,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get risk history for an asset version
       tags:
       - Statistics
@@ -8544,6 +8620,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List VEX rules for an asset
       tags:
       - VEXRules
@@ -8592,6 +8669,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create a VEX rule
       tags:
       - VEXRules
@@ -8634,6 +8712,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete a VEX rule
       tags:
       - VEXRules
@@ -8679,6 +8758,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get a VEX rule
       tags:
       - VEXRules
@@ -8733,6 +8813,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update a VEX rule
       tags:
       - VEXRules
@@ -8779,6 +8860,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Reapply a VEX rule
       tags:
       - VEXRules
@@ -8824,6 +8906,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by asset version
       tags:
       - Vulnerabilities
@@ -8864,6 +8947,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get first-party vulnerabilities as SARIF
       tags:
       - Vulnerabilities
@@ -8893,6 +8977,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan SBOM file
       tags:
       - Scanning
@@ -8927,6 +9012,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get project config file
       tags:
       - Projects
@@ -8968,6 +9054,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update project config file
       tags:
       - Projects
@@ -8998,6 +9085,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List project members
       tags:
       - Projects
@@ -9030,6 +9118,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Invite members to project
       tags:
       - Projects
@@ -9063,6 +9152,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List releases
       tags:
       - Releases
@@ -9099,6 +9189,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create release
       tags:
       - Releases
@@ -9129,6 +9220,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete release
       tags:
       - Releases
@@ -9162,6 +9254,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release details
       tags:
       - Releases
@@ -9204,6 +9297,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update release
       tags:
       - Releases
@@ -9247,6 +9341,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Add item to release
       tags:
       - Releases
@@ -9283,6 +9378,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Remove item from release
       tags:
       - Releases
@@ -9317,6 +9413,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release SBOM as JSON
       tags:
       - Releases
@@ -9351,6 +9448,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release SBOM as XML
       tags:
       - Releases
@@ -9385,6 +9483,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get average remediation times for a release
       tags:
       - Statistics
@@ -9433,6 +9532,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get risk history for a release
       tags:
       - Statistics
@@ -9467,6 +9567,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release VEX as JSON
       tags:
       - Releases
@@ -9501,6 +9602,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get release VEX as XML
       tags:
       - Releases
@@ -9534,6 +9636,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List release candidates
       tags:
       - Releases
@@ -9567,6 +9670,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by project
       tags:
       - Vulnerabilities
@@ -9589,6 +9693,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get organization admin settings
       tags:
       - Organizations
@@ -9660,6 +9765,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List first-party vulnerabilities by organization
       tags:
       - Vulnerabilities
@@ -9677,6 +9783,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: List personal access tokens
       tags:
       - Authentication
@@ -9732,6 +9839,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete personal access token
       tags:
       - Authentication
@@ -9795,6 +9903,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan for first-party vulnerabilities
       tags:
       - Scanning
@@ -9879,6 +9988,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Scan for dependency vulnerabilities
       tags:
       - Scanning
@@ -9946,6 +10056,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Upload VEX document
       tags:
       - Scanning
@@ -10126,6 +10237,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Get first-party vulnerability details
       tags:
       - Vulnerabilities
@@ -10156,6 +10268,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create first-party vulnerability event
       tags:
       - Vulnerabilities
@@ -10179,6 +10292,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Create webhook integration
       tags:
       - Webhooks
@@ -10201,6 +10315,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Update webhook integration
       tags:
       - Webhooks
@@ -10219,6 +10334,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Delete webhook integration
       tags:
       - Webhooks
@@ -10247,6 +10363,7 @@ paths:
       security:
       - CookieAuth: []
       - PATAuth: []
+      - BearerAuth: []
       summary: Test webhook integration
       tags:
       - Webhooks

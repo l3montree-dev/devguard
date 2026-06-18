@@ -91,9 +91,6 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx conte
 
 func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
 
-	var count int64
-	var firstPartyVulns = []models.FirstPartyVuln{}
-
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
 	// apply filters
@@ -104,15 +101,32 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 		q = q.Where("\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.uri ILIKE ? OR rule_description ILIKE ? OR first_party_vulnerabilities.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Count(&count).Error
+	type rowWithCount struct {
+		models.FirstPartyVuln
+		TotalCount int64
+	}
+	var rows []rowWithCount
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.FirstPartyVuln]{}, nil, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
+	var count int64
+	firstPartyVulns := make([]models.FirstPartyVuln, len(rows))
+	for i, r := range rows {
+		firstPartyVulns[i] = r.FirstPartyVuln
+		count = r.TotalCount
+	}
 
-	if err != nil {
-		return shared.Paged[models.FirstPartyVuln]{}, nil, err
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.FirstPartyVuln]{}, nil, err
+		}
 	}
 	//TODO: check it
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
@@ -129,21 +143,34 @@ func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx
 
 // TODO: change it
 func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx context.Context, tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
-	var firstPartyVulns = []models.FirstPartyVuln{}
-
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
-	var count int64
+	type rowWithCount struct {
+		models.FirstPartyVuln
+		TotalCount int64
+	}
+	var rows []rowWithCount
 
-	err := q.Count(&count).Error
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.FirstPartyVuln]{}, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
+	var count int64
+	firstPartyVulns := make([]models.FirstPartyVuln, len(rows))
+	for i, r := range rows {
+		firstPartyVulns[i] = r.FirstPartyVuln
+		count = r.TotalCount
+	}
 
-	if err != nil {
-		return shared.Paged[models.FirstPartyVuln]{}, err
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.FirstPartyVuln]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, firstPartyVulns), nil

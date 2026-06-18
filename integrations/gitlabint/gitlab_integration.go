@@ -232,7 +232,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 	// check that the token is valid
 	if !g.checkIfTokenIsValid(ctx, *token, 0) {
 		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
-		return false, fmt.Errorf("gitlab oauth2 token is not valid for provider %s", externalEntityProviderID)
+		return false, shared.ErrOauth2TokenNotValidRedirectionRequired
 	}
 
 	return true, nil
@@ -649,7 +649,7 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		})
 	})
 	if err != nil {
-		slog.Error("failed to list projects in group", "err", err)
+		slog.Error("failed to list projects in group", "err", err, "groupID", groupID)
 		return nil, nil, err
 	}
 
@@ -1316,11 +1316,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
-
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1470,10 +1466,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),

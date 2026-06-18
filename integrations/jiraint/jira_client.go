@@ -19,7 +19,6 @@ type Client struct {
 	AccessToken       string
 	BaseURL           string
 	UserEmail         string
-	httpClient        *http.Client
 }
 
 func (c *Client) SetJiraIntegrationID(id uuid.UUID) {
@@ -34,7 +33,6 @@ func NewJiraClient(token string, baseURL string, userEmail string) (*Client, err
 		AccessToken: token,
 		BaseURL:     baseURL,
 		UserEmail:   userEmail,
-		httpClient:  &http.Client{Transport: utils.EgressTransport},
 	}, nil
 }
 
@@ -268,8 +266,7 @@ func (c *Client) jiraRequest(method string, url string, body io.Reader) (*http.R
 	req.Header.Set("Content-Type", "application/json")
 
 	req.SetBasicAuth(c.UserEmail, c.AccessToken)
-	return c.httpClient.Do(req)
-
+	return utils.EgressClient.Do(req)
 }
 
 func ParseWebhook(payload []byte) (*WebhookEvent, error) {

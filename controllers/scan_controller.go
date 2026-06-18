@@ -74,6 +74,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "CycloneDX VEX BOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -419,6 +420,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "SARIF scan result"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Tag header string false "Tag flag"
@@ -527,6 +529,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "CycloneDX SBOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -618,9 +621,7 @@ func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return echo.NewHTTPError(400, map[string]string{
-			"error": "no X-Scanner header found",
-		})
+		return echo.NewHTTPError(400, "no X-Scanner header found")
 	}
 
 	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)
@@ -721,7 +722,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		return echo.NewHTTPError(400, map[string]string{"error": "no X-Scanner header found"})
+		return echo.NewHTTPError(400, "no X-Scanner header found")
 	}
 
 	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)
@@ -751,6 +752,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param file formData file true "SBOM file"
 // @Param X-Origin header string false "Origin"
 // @Success 200 {object} dtos.ScanResponse
@@ -810,6 +812,7 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body cyclonedx.BOM true "CycloneDX SBOM"
 // @Produce application/json
 // @Success 200 {object} cyclonedx.BOM "CycloneDX VEX JSON"
@@ -853,6 +856,7 @@ func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "SARIF scan result"
 // @Produce application/json
 // @Success 200 {object} object "Enriched SARIF JSON"

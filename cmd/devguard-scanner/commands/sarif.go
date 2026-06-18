@@ -69,7 +69,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		if config.RuntimeBaseConfig.Token != "" {
-			err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+			err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 			if err != nil {
 				return errors.Wrap(err, "could not sign request")
 			}

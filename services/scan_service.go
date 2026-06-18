@@ -586,7 +586,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 }
 
 func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
-	client := &http.Client{Transport: utils.EgressTransport}
+
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
 		url = normalize.SanitizeExternalReferencesURL(url)
@@ -617,7 +617,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 			continue
 		}
 
-		resp, err := client.Do(req)
+		resp, err := utils.EgressClient.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
 				URL:    url,
@@ -668,7 +668,6 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 }
 
 func (s *scanService) FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) (vexReports []*normalize.VexReport, valid []models.ExternalReference, invalid []models.ExternalReference) {
-	client := &http.Client{Transport: utils.EgressTransport}
 	//check if the upstream urls are valid urls
 	for _, ref := range upstreamURLs {
 		switch ref.Type {
@@ -716,7 +715,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, upstreamURLs []m
 				continue
 			}
 
-			resp, err := client.Do(req)
+			resp, err := utils.EgressClient.Do(req)
 			if err != nil || resp.StatusCode != 200 {
 				invalid = append(invalid, ref)
 				continue
