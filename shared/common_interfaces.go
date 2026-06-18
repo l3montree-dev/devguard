@@ -756,13 +756,9 @@ type AccessControl interface {
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
-<<<<<<< HEAD
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)
-=======
-	
->>>>>>> origin/main
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

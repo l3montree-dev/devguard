@@ -512,10 +512,10 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	for i, d := range domains {
 		domains[i] = d[8:]
 	}
+
 	return domains, nil
 }
 
-<<<<<<< HEAD
 // delete all roles associated with an organization
 func (c casbinRBACProvider) RevokeAllRolesForDomain(domain uuid.UUID) error {
 	concurrencyMutex.Lock()
@@ -549,9 +549,6 @@ func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error)
 		domains = append(domains, strings.TrimPrefix(p[2], "domain::"))
 	}
 	return domains, nil
-=======
-
->>>>>>> origin/main
 }
 
 // the provider can be used to create domain specific RBAC instances
