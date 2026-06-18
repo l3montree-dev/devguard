@@ -54,8 +54,11 @@ func (w *WebhookController) Delete(ctx shared.Context) error {
 }
 
 func (w *WebhookController) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	// Webhook integration does not support issue tracking
 	return nil
+}
+
+func (w *WebhookController) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	return nil, nil
 }
 
 // @Summary Update webhook integration

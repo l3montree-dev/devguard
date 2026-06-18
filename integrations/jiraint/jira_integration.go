@@ -101,6 +101,10 @@ func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Co
 	return nil
 }
 
+func (i *JiraIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	return nil, nil
+}
+
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
 	asset, err := i.assetRepository.Read(context.Background(), nil, assetID)
 	if err != nil {

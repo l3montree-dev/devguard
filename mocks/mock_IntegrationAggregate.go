@@ -259,6 +259,80 @@ func (_c *IntegrationAggregate_CreateLabels_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// GetExcessTicketIDs provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	ret := _mock.Called(ctx, asset, vulnsWithTickets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetExcessTicketIDs")
+	}
+
+	var r0 []string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, []models.DependencyVuln) ([]string, error)); ok {
+		return returnFunc(ctx, asset, vulnsWithTickets)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, []models.DependencyVuln) []string); ok {
+		r0 = returnFunc(ctx, asset, vulnsWithTickets)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.Asset, []models.DependencyVuln) error); ok {
+		r1 = returnFunc(ctx, asset, vulnsWithTickets)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_GetExcessTicketIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExcessTicketIDs'
+type IntegrationAggregate_GetExcessTicketIDs_Call struct {
+	*mock.Call
+}
+
+// GetExcessTicketIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - asset models.Asset
+//   - vulnsWithTickets []models.DependencyVuln
+func (_e *IntegrationAggregate_Expecter) GetExcessTicketIDs(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *IntegrationAggregate_GetExcessTicketIDs_Call {
+	return &IntegrationAggregate_GetExcessTicketIDs_Call{Call: _e.mock.On("GetExcessTicketIDs", ctx, asset, vulnsWithTickets)}
+}
+
+func (_c *IntegrationAggregate_GetExcessTicketIDs_Call) Run(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln)) *IntegrationAggregate_GetExcessTicketIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetExcessTicketIDs_Call) Return(strings []string, err error) *IntegrationAggregate_GetExcessTicketIDs_Call {
+	_c.Call.Return(strings, err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetExcessTicketIDs_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error)) *IntegrationAggregate_GetExcessTicketIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetID provides a mock function for the type IntegrationAggregate
 func (_mock *IntegrationAggregate) GetID() shared.IntegrationID {
 	ret := _mock.Called()

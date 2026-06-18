@@ -349,27 +349,22 @@ func getAllParentGroups(idMap map[int64]*gitlab.Group, group *gitlab.Group) []*g
 	return parentGroups
 }
 
-func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	// check if we can even handle this
-	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
+// getExcessIIDs returns the GitLab client, projectID, and issue IIDs that are
+// open in GitLab but no longer correspond to an open vuln in devguard.
+func (g *GitlabIntegration) getExcessIIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) (client shared.GitlabClientFacade, projectID int, excessIIDs []int, err error) {
+	client, projectID, err = g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
-			return nil
-		}
-		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
-		return err
+		return client, 0, nil, err
 	}
 
-	// convert the dependency vulns into a list of iids for this asset
 	depVulnsIIDs := make([]int, 0, len(vulnsWithTickets))
 	for _, vuln := range vulnsWithTickets {
 		fields := strings.Split(*vuln.TicketID, "/")
 		if len(fields) == 1 {
 			continue
 		}
-		// iid is found in the last part of the ticketID
-		iid, err := strconv.Atoi(fields[len(fields)-1])
-		if err != nil {
+		iid, parseErr := strconv.Atoi(fields[len(fields)-1])
+		if parseErr != nil {
 			slog.Warn("invalid ticket id", "vulnID", vuln.ID)
 			continue
 		}
@@ -377,33 +372,51 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.
 	}
 
 	issues, err := FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
-		listIssuesOptions := gitlab.ListProjectIssuesOptions{
-			ListOptions: gitlab.ListOptions{
-				PerPage: 100,
-				Page:    int64(page),
-			},
-			State: utils.Ptr("opened"),
-			Labels: &gitlab.LabelOptions{
-				"devguard",
-			},
-		}
-		return client.GetProjectIssues(ctx, projectID, &listIssuesOptions)
+		return client.GetProjectIssues(ctx, projectID, &gitlab.ListProjectIssuesOptions{
+			ListOptions: gitlab.ListOptions{PerPage: 100, Page: int64(page)},
+			State:       utils.Ptr("opened"),
+			Labels:      &gitlab.LabelOptions{"devguard"},
+		})
 	})
 	if err != nil {
-		return err
+		return client, projectID, nil, err
 	}
 
 	gitlabIIDs := make([]int, 0, len(issues))
-	// only count open tickets created by devguard
 	for _, issue := range issues {
 		gitlabIIDs = append(gitlabIIDs, int(issue.IID))
 	}
 
-	// compare both states
 	comparison := utils.CompareSlices(depVulnsIIDs, gitlabIIDs, func(iid int) int { return iid })
-	excessIIDs := comparison.OnlyInB
+	return client, projectID, comparison.OnlyInB, nil
+}
 
-	// close all excess devguard tickets
+// GetExcessTicketIDs implements shared.ThirdPartyIntegration.
+func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	_, _, iids, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, ErrNotConnected) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ids := make([]string, len(iids))
+	for i, iid := range iids {
+		ids[i] = strconv.Itoa(iid)
+	}
+	return ids, nil
+}
+
+func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	client, projectID, excessIIDs, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, ErrNotConnected) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
 	updateOptions := gitlab.UpdateIssueOptions{
 		StateEvent: utils.Ptr("close"),
 	}
@@ -420,6 +433,7 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.
 	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
 	return nil
 }
+
 
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// get the oauth2 tokens for this user
@@ -1336,7 +1350,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	return err
 }
 
-var notConnectedError = errors.New("not connected to gitlab")
+var ErrNotConnected = errors.New("not connected to gitlab")
 
 func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset models.Asset) (shared.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
@@ -1372,7 +1386,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 		return client, projectID, nil
 	}
 
-	return nil, 0, notConnectedError
+	return nil, 0, ErrNotConnected
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
@@ -1386,7 +1400,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	)
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1516,7 +1530,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1561,7 +1575,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)

@@ -128,9 +128,17 @@ func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 			errMsg := assetWithDetails.err.Error()
 			asset.PipelineError = &errMsg
 			asset.PipelineLastRun = time.Now()
-			err := runner.assetRepository.Save(context.Background(), nil, &asset)
+			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+			err := runner.assetRepository.Save(context.Background(), tx, &asset)
 			if err != nil {
+				tx.Rollback()
 				monitoring.Alert("could not save pipeline error to asset", err)
+				continue
+			}
+			if runner.debugOptions.DryRun {
+				tx.Rollback()
+			} else {
+				tx.Commit()
 			}
 		}
 	}()
@@ -185,6 +193,10 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 			monitoring.RecoverPanic("resolve fixed versions panic")
 		}()
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("ResolveFixedVersions") {
+				out <- assetWithDetails
+				continue
+			}
 			toSaveVulns := make([]models.DependencyVuln, 0)
 			// get all closed/accepted vulnerabilities for the asset version
 			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(assetWithDetails.ctx, nil, assetWithDetails.asset.ID)
@@ -224,14 +236,21 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 			}
 
 			if len(toSaveVulns) > 0 {
-				err = runner.dependencyVulnRepository.SaveBatch(assetWithDetails.ctx, nil, toSaveVulns)
+				tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+				err = runner.dependencyVulnRepository.SaveBatch(assetWithDetails.ctx, tx, toSaveVulns)
 				if err != nil {
+					tx.Rollback()
 					slog.Error("could not save vulns with resolved fixed versions", "assetID", assetWithDetails.asset.ID, "err", err)
 					errChan <- pipelineError{
 						asset: assetWithDetails.asset,
 						err:   fmt.Errorf("could not save vulns with resolved fixed versions: %w", err),
 					}
 					continue
+				}
+				if runner.debugOptions.DryRun {
+					tx.Rollback()
+				} else {
+					tx.Commit()
 				}
 			}
 
@@ -325,8 +344,10 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			// mark the asset as processed - so that we do not process it again, even if the pipeline takes longer than an hour
 			asset.PipelineLastRun = time.Now()
 			asset.PipelineError = nil
-			err = runner.assetRepository.Save(assetCtx, nil, &asset)
+			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+			err = runner.assetRepository.Save(assetCtx, tx, &asset)
 			if err != nil {
+				tx.Rollback()
 				monitoring.Alert("could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)", err)
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "save pipeline run failed")
@@ -336,6 +357,11 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 					err:   fmt.Errorf("could not fetch project: %w", err),
 				}
 				continue
+			}
+			if runner.debugOptions.DryRun {
+				tx.Rollback()
+			} else {
+				tx.Commit()
 			}
 
 			// NOTE: the pipeline.asset span is intentionally NOT ended here.
@@ -363,6 +389,10 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("SyncTickets") {
+				out <- assetWithDetails
+				continue
+			}
 			asset := assetWithDetails.asset
 			if asset.ExternalEntityProviderID != nil {
 				if _, disabled := disabledExternalEntityProviderIDs[strings.ToUpper(*asset.ExternalEntityProviderID)]; disabled {
@@ -379,6 +409,8 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-tickets")
 			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
+				// No transaction needed: SyncAllIssues delegates to thirdPartyIntegration.CreateIssue/UpdateIssue,
+				// which in dry-run mode are intercepted by dryRunIntegration and never reach the DB write inside the real integration.
 				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion, nil)
 				if err != nil {
 					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
@@ -432,6 +464,10 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("ResolveDifferencesInTicketState") {
+				out <- assetWithDetails
+				continue
+			}
 			asset := assetWithDetails.asset
 			if asset.ExternalEntityProviderID != nil {
 				if _, disabled := disabledExternalEntityProviderIDs[strings.ToUpper(*asset.ExternalEntityProviderID)]; disabled {
@@ -491,6 +527,10 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 		}
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("ScanAsset") {
+				out <- assetWithDetails
+				continue
+			}
 			assetVersions := assetWithDetails.assetVersions
 			asset := assetWithDetails.asset
 			project := assetWithDetails.project
@@ -511,7 +551,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
 					bom.ClearScope()
-					_, _, _, err = runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
+					opened, closed, newState, err := runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
 
 					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {
 						tx.Rollback()
@@ -519,7 +559,21 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 						errs = append(errs, err)
 						continue
 					}
-					tx.Commit()
+
+					if runner.debugOptions.DryRun {
+						tx.Rollback()
+						for _, v := range opened {
+							slog.Info("[DRY-RUN] would open vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
+						}
+						for _, v := range closed {
+							slog.Info("[DRY-RUN] would close vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
+						}
+						for _, v := range newState {
+							slog.Info("[DRY-RUN] vuln unchanged", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "state", v.State, "component", v.ComponentPurl)
+						}
+					} else {
+						tx.Commit()
+					}
 
 					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				}
@@ -550,6 +604,10 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("SyncUpstream") {
+				out <- assetWithDetails
+				continue
+			}
 			assetVersions := assetWithDetails.assetVersions
 			asset := assetWithDetails.asset
 			project := assetWithDetails.project
@@ -572,7 +630,11 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 
 					slog.Info("synced upstream for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 
-					tx.Commit()
+					if runner.debugOptions.DryRun {
+						tx.Rollback()
+					} else {
+						tx.Commit()
+					}
 				}
 			}
 			if len(errs) > 0 {
@@ -600,14 +662,25 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("CollectStats") {
+				out <- assetWithDetails
+				continue
+			}
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.collect-stats")
 			errs := make([]error, 0)
 			for _, assetVersion := range assetWithDetails.assetVersions {
 				for _, artifact := range assetVersion.Artifacts {
-					if err := runner.statisticsService.UpdateArtifactRiskAggregation(stageCtx, &artifact, artifact.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, time.Now().AddDate(0, -1, 0)), time.Now()); err != nil {
+					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+					if err := runner.statisticsService.UpdateArtifactRiskAggregation(stageCtx, tx, &artifact, artifact.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, time.Now().AddDate(0, -1, 0)), time.Now()); err != nil {
+						tx.Rollback()
 						slog.Error("could not recalculate risk history", "err", err)
 						errs = append(errs, err)
 						continue
+					}
+					if runner.debugOptions.DryRun {
+						tx.Rollback()
+					} else {
+						tx.Commit()
 					}
 					slog.Info("updated statistics for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", artifact.AssetVersionName, "assetID", artifact.AssetID)
 				}
@@ -641,6 +714,10 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("RecalculateRiskForVulnerabilities") {
+				out <- assetWithDetails
+				continue
+			}
 			assetVersions := assetWithDetails.assetVersions
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.recalculate-risk")
 			errs := make([]error, 0)
@@ -658,11 +735,18 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 				}
 
 				// Use asset from assetWithDetails to ensure environmental requirements are loaded
-				_, err = runner.dependencyVulnService.RecalculateRawRiskAssessment(stageCtx, nil, "system", dependencyVulns, "System recalculated raw risk assessment", assetWithDetails.asset)
+				tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+				_, err = runner.dependencyVulnService.RecalculateRawRiskAssessment(stageCtx, tx, "system", dependencyVulns, "System recalculated raw risk assessment", assetWithDetails.asset)
 				if err != nil {
+					tx.Rollback()
 					slog.Error("failed to recalculate raw risk assessment for asset version", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID, "error", err)
 					errs = append(errs, err)
 					continue
+				}
+				if runner.debugOptions.DryRun {
+					tx.Rollback()
+				} else {
+					tx.Commit()
 				}
 			}
 			if len(errs) > 0 {
@@ -692,6 +776,10 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("AutoReopenTickets") {
+				out <- assetWithDetails
+				continue
+			}
 			asset := assetWithDetails.asset
 			if asset.VulnAutoReopenAfterDays == nil || *asset.VulnAutoReopenAfterDays <= 0 {
 				out <- assetWithDetails
@@ -717,13 +805,19 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 			for _, vuln := range vulnerabilities {
 				event := models.NewReopenedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", fmt.Sprintf("Automatically reopened since the vulnerability was accepted more than %d days ago", *asset.VulnAutoReopenAfterDays), false, nil)
 
-				if err := runner.dependencyVulnRepository.ApplyAndSave(stageCtx, nil, &vuln, &event); err != nil {
+				tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+				if err := runner.dependencyVulnRepository.ApplyAndSave(stageCtx, tx, &vuln, &event); err != nil {
+					tx.Rollback()
 					slog.Error("failed to apply and save vulnerability event", "vulnerabilityID", vuln.ID, "error", err)
 					errs = append(errs, err)
 					continue
-				} else {
-					slog.Info("reopened vulnerability since it was accepted more than the configured time", "vulnerabilityID", vuln.ID, "assetID", asset.ID, "reopenAfterDays", *asset.VulnAutoReopenAfterDays)
 				}
+				if runner.debugOptions.DryRun {
+					tx.Rollback()
+				} else {
+					tx.Commit()
+				}
+				slog.Info("reopened vulnerability since it was accepted more than the configured time", "vulnerabilityID", vuln.ID, "assetID", asset.ID, "reopenAfterDays", *asset.VulnAutoReopenAfterDays)
 			}
 			if len(errs) > 0 {
 				joined := errors.Join(errs...)
@@ -752,9 +846,15 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 		}()
 
 		for assetWithDetails := range input {
+			if !runner.stageEnabled("DeleteOldAssetVersions") {
+				out <- assetWithDetails
+				continue
+			}
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.delete-old-versions")
-			_, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(stageCtx, nil, assetWithDetails.asset.ID, 7)
+			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+			_, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(stageCtx, tx, assetWithDetails.asset.ID, 7)
 			if err != nil {
+				tx.Rollback()
 				slog.Error("Failed to delete old asset versions", "err", err)
 				failStage(assetWithDetails.ctx, span, err)
 				errChan <- pipelineError{
@@ -762,6 +862,11 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 					err:   fmt.Errorf("could not delete old asset versions: %w", err),
 				}
 				continue
+			}
+			if runner.debugOptions.DryRun {
+				tx.Rollback()
+			} else {
+				tx.Commit()
 			}
 
 			// Remove just-deleted versions from the in-memory slice.

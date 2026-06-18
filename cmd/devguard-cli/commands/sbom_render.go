@@ -63,10 +63,10 @@ Examples:
   devguard-cli sbom render -i sbom.json -o output.dot
 
   # Render with vulnerabilities shown
-  devguard-cli sbom render -i sbom.json --show-vulns -o diagram.pdf
+  devguard-cli sbom render -i sbom.json --showVulns -o diagram.pdf
 
   # Limit depth to avoid huge graphs
-  devguard-cli sbom render -i sbom.json --max-depth 5 -o diagram.pdf
+  devguard-cli sbom render -i sbom.json --maxDepth 5 -o diagram.pdf
 
   # Render only the subgraph rooted at a specific component
   devguard-cli sbom render -i sbom.json --from '/nix/store/h19kjqi10ynjk0i6scllhv82gx45p58w-go-1.25.5.drv' -o go.svg`,
@@ -80,10 +80,10 @@ Examples:
 	renderCmd.Flags().StringVarP(&format, "format", "f", "", "Output format (auto-detected from file extension, or specify: dot, svg, png, pdf)")
 	renderCmd.Flags().StringVarP(&layout, "layout", "l", "twopi", "Graphviz layout engine: dot (hierarchical tree, slow on large graphs), twopi (radial tree, best for SBOMs), sfdp (force-directed), fdp, circo")
 	renderCmd.Flags().StringVar(&fromBOMRef, "from", "", "Start the graph from this BOM ref instead of the root (renders only the subgraph reachable from this node)")
-	renderCmd.Flags().IntVarP(&maxDepth, "max-depth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
-	renderCmd.Flags().BoolVarP(&showVulns, "show-vulns", "v", false, "Show vulnerabilities in the graph")
-	renderCmd.Flags().BoolVar(&includeFiles, "include-files", false, "Include 'file' type components (source tarballs, scripts — skipped by default as they cannot match CVEs)")
-	renderCmd.Flags().BoolVarP(&keepOriginalSbomRootComponent, "keep-root-component", "", false, "Keep the original SBOM root component instead of replacing it with an info source node")
+	renderCmd.Flags().IntVarP(&maxDepth, "maxDepth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
+	renderCmd.Flags().BoolVarP(&showVulns, "showVulns", "v", false, "Show vulnerabilities in the graph")
+	renderCmd.Flags().BoolVar(&includeFiles, "includeFiles", false, "Include 'file' type components (source tarballs, scripts — skipped by default as they cannot match CVEs)")
+	renderCmd.Flags().BoolVarP(&keepOriginalSbomRootComponent, "keepRootComponent", "", false, "Keep the original SBOM root component instead of replacing it with an info source node")
 
 	if err := renderCmd.MarkFlagRequired("input"); err != nil {
 		slog.Error("Failed to mark input flag as required", "err", err)

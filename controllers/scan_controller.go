@@ -218,7 +218,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	s.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -406,7 +406,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 
 		s.FireAndForget(func() {
 			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		})

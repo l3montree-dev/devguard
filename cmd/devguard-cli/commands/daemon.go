@@ -31,7 +31,7 @@ func markMirrored(configService shared.ConfigService, key string) error {
 func NewDaemonCommand() *cobra.Command {
 	daemon := cobra.Command{
 		Use:   "daemon",
-		Short: "daemon",
+		Short: "Manage and trigger background daemon jobs",
 	}
 
 	daemon.AddCommand(newTriggerCommand())
@@ -61,21 +61,29 @@ func newRunPipelineForAssetCommand() *cobra.Command {
 		Use:   "runPipeline [asset-id]",
 		Short: "Run the asset pipeline for a single asset",
 		Long: `Runs the full asset pipeline (scan, risk recalculation, ticket sync, etc.) for a single asset.
-Useful for debugging. You can further scope with --asset-version and --vuln-id flags.`,
+Useful for debugging. You can further scope with --assetVersionSlug flag.
+
+Use --dryRun to run in safe read-only mode: the database connection is opened
+with default_transaction_read_only=on and all ticket mutations (open, close,
+update) are replaced by log lines showing what would have happened.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			assetID := args[0]
 			assetVersion, _ := cmd.Flags().GetString("assetVersionSlug")
-			return runPipelineForAsset(assetID, assetVersion)
+			dryRun, _ := cmd.Flags().GetBool("dryRun")
+			stages, _ := cmd.Flags().GetStringArray("stage")
+			return runPipelineForAsset(assetID, assetVersion, dryRun, stages)
 		},
 	}
 	cmd.Flags().StringP("assetVersionSlug", "v", "", "Scope to a specific asset version name")
+	cmd.Flags().Bool("dryRun", true, "Read-only mode: log ticket operations instead of executing them, never write to the database (default: true, use --dryRun=false to apply changes)")
+	cmd.Flags().StringArray("stage", []string{}, "Run only the specified pipeline stage(s), can be repeated (e.g. --stage SyncTickets --stage CollectStats). Valid values: SyncTickets, ResolveDifferencesInTicketState, ScanAsset, SyncUpstream, CollectStats, RecalculateRiskForVulnerabilities, AutoReopenTickets, DeleteOldAssetVersions, ResolveFixedVersions")
 
 	return cmd
 }
 
-func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
+func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stages []string) error {
 	assetID, err := uuid.Parse(assetIDStr)
 	if err != nil {
 		slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
@@ -88,8 +96,13 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
 	var assetRepository shared.AssetRepository
 	var assetVersionRepository shared.AssetVersionRepository
 
-	app := fx.New(
-		fx.Supply(database.GetPoolConfigFromEnv()),
+	poolCfg := database.GetPoolConfigFromEnv()
+	if dryRun {
+		slog.Warn("[DRY-RUN] running in dry-run mode — all database writes will be rolled back, no external system mutations will occur")
+	}
+
+	fxOpts := []fx.Option{
+		fx.Supply(poolCfg),
 		fx.NopLogger,
 		database.Module,
 		fx.Provide(database.NewPostgreSQLBroker),
@@ -102,17 +115,26 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string) error {
 		daemons.Module,
 		fixedversion.Module,
 		fx.Populate(&daemonRunner, &dependencyVulnRepository, &dependencyVulnService, &assetRepository, &assetVersionRepository),
-	)
+	}
+
+	if dryRun {
+		fxOpts = append(fxOpts, fx.Decorate(func(real shared.IntegrationAggregate) shared.IntegrationAggregate {
+			return integrations.NewDryRunIntegration(real)
+		}))
+	}
+
+	app := fx.New(fxOpts...)
 
 	if err := app.Err(); err != nil {
 		return err
 	}
 	runner := daemonRunner.(*daemons.DaemonRunner)
 
-	// Otherwise run full pipeline for asset
-	slog.Info("running full asset pipeline", "assetID", assetID)
+	slog.Info("running asset pipeline", "assetID", assetID, "dryRun", dryRun, "stages", stages, "assetVersionSlug", assetVersionSlug)
 	runner.SetDebugOptions(daemons.DebugOptions{
 		LimitToAssetVersionSlug: assetVersionSlug,
+		LimitToStages:           stages,
+		DryRun:                  dryRun,
 	})
 
 	if err := runner.RunDaemonPipelineForAsset(context.Background(), assetID); err != nil {

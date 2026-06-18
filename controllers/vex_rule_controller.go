@@ -247,7 +247,7 @@ func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, a
 			}
 		}
 		for _, artifact := range artifacts {
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
 			}
 		}
