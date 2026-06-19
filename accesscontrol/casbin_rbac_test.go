@@ -147,7 +147,7 @@ func TestCasbinRBAC_ConcurrentReadsAndWrites(t *testing.T) {
 // revokeAllRolesForPrefix: every role inside the project is removed while a sibling
 // project whose id shares the same string prefix must stay untouched. This guards the
 // trailing "|" in the revoke prefix (without it, "proj" would also match "proj-2").
-func TestRevokeAllRolesInProject_RemovesRolesButKeepsSiblings(t *testing.T) {
+func TestRevokeAllRolesInProjectRemovesRolesButKeepsSiblings(t *testing.T) {
 	ctx := context.Background()
 	rbac := newTestCasbinRBAC(t, "org-1")
 
@@ -193,7 +193,7 @@ func TestRevokeAllRolesInProject_RemovesRolesButKeepsSiblings(t *testing.T) {
 
 // TestRevokeAllRolesInProject_RemovesPolicies verifies the second branch of
 // revokeAllRolesForPrefix: permission policies (p rules) scoped to the project are deleted.
-func TestRevokeAllRolesInProject_RemovesPolicies(t *testing.T) {
+func TestRevokeAllRolesInProjectRemovesPolicies(t *testing.T) {
 	ctx := context.Background()
 	rbac := newTestCasbinRBAC(t, "org-1")
 
@@ -230,7 +230,7 @@ func TestRevokeAllRolesInProject_RemovesPolicies(t *testing.T) {
 }
 
 // TestRevokeAllRolesInAsset_RemovesRolesButKeepsSiblings mirrors the project test for assets.
-func TestRevokeAllRolesInAsset_RemovesRolesButKeepsSiblings(t *testing.T) {
+func TestRevokeAllRolesInAssetRemovesRolesButKeepsSiblings(t *testing.T) {
 	ctx := context.Background()
 	rbac := newTestCasbinRBAC(t, "org-1")
 
@@ -261,7 +261,7 @@ func TestRevokeAllRolesInAsset_RemovesRolesButKeepsSiblings(t *testing.T) {
 // two users trigger RefreshExternalEntityProviderProjects for the same org simultaneously.
 // singleflight deduplicates per org+user, so both goroutines run concurrently and both
 // call casbin write operations on the shared enforcer.
-func TestCasbinRBAC_TwoUsersConcurrentOrgSync(t *testing.T) {
+func TestCasbinRBACTwoUsersConcurrentOrgSync(t *testing.T) {
 	// Both users share the same enforcer (same org, different singleflight keys).
 	sharedEnforcer := newTestEnforcer(t)
 
