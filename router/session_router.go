@@ -79,7 +79,7 @@ func NewSessionRouter(
 		middlewares.AssetNameMiddleware(),
 		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
-		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
+		assetScopedRBAC(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 

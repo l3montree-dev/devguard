@@ -9,7 +9,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type APIV2Router struct{}
+type APIV2Router struct {
+	*echo.Group
+}
 
 func NewAPIV2Router(
 	srv api.Server,
@@ -50,15 +52,17 @@ func NewAPIV2Router(
 		middlewares.AssetNameMiddleware(),
 		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
 		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
-		assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate),
+		assetScopedRBAC(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 
-	v2.POST("/scan/", scanController.ScanSbomFileVex)
-	v2.POST("/sarif-scan/", scanController.ScanSarifFile)
+	v2.POST("/scan/", scanController.ScanSbomFileVex, middlewares.DisallowPublicRequests)
+	v2.POST("/sarif-scan/", scanController.ScanSarifFile, middlewares.DisallowPublicRequests)
 
 	srv.Echo.POST("/api/v2/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticatedVex)
 	srv.Echo.POST("/api/v2/sarif-scan-unauthenticated/", scanController.SarifScanUnauthenticated)
 
-	return APIV2Router{}
+	return APIV2Router{
+		Group: v2,
+	}
 }
