@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -621,5 +622,34 @@ func TestBuildVeX(t *testing.T) {
 			}
 		}
 		assert.False(t, hasPathPattern, "vulnerability should have no pathPattern property when no rules match")
+	})
+}
+
+func TestGetBestDescription(t *testing.T) {
+	t.Run("nil ShortDescription does not panic", func(t *testing.T) {
+		rule := sarif.ReportingDescriptor{
+			ShortDescription: nil,
+			FullDescription:  nil,
+		}
+		assert.NotPanics(t, func() {
+			result := getBestDescription(rule)
+			assert.Equal(t, "", result)
+		})
+	})
+
+	t.Run("returns FullDescription Markdown when present", func(t *testing.T) {
+		md := "full markdown"
+		rule := sarif.ReportingDescriptor{
+			FullDescription: &sarif.MultiformatMessageString{Markdown: &md},
+		}
+		assert.Equal(t, md, getBestDescription(rule))
+	})
+
+	t.Run("falls back to ShortDescription when FullDescription absent", func(t *testing.T) {
+		text := "short text"
+		rule := sarif.ReportingDescriptor{
+			ShortDescription: &sarif.MultiformatMessageString{Text: text},
+		}
+		assert.Equal(t, text, getBestDescription(rule))
 	})
 }

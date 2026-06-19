@@ -75,11 +75,14 @@ func getBestDescription(rule sarif.ReportingDescriptor) string {
 			return rule.FullDescription.Text
 		}
 	}
-	if rule.ShortDescription.Markdown != nil {
-		return utils.OrDefault(rule.ShortDescription.Markdown, "")
+	if rule.ShortDescription != nil {
+		if rule.ShortDescription.Markdown != nil {
+			return utils.OrDefault(rule.ShortDescription.Markdown, "")
+		}
+		return rule.ShortDescription.Text
 	}
 
-	return rule.ShortDescription.Text
+	return ""
 }
 
 func preferMarkdown(text sarif.MultiformatMessageString) string {
