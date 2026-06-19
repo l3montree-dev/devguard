@@ -104,8 +104,6 @@ services:
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
       - DEVGUARD_TELEMETRY_DISABLED=false
-      - DEVGUARD_TELEMETRY_UMAMI_ENDPOINT=https://umami.l3montree.com/api/send
-      - DEVGUARD_TELEMETRY_UMAMI_WEBSITE_ID=
       - FRONTEND_URL=http://localhost:3000
     command: ["devguard-cli", "migrate"]
     networks:
@@ -166,8 +164,6 @@ services:
       - ORY_SDK_URL=http://kratos:4433
       - ORY_SDK_PUBLIC_URL=http://localhost:3000
       - DEVGUARD_TELEMETRY_DISABLED=false
-      - DEVGUARD_TELEMETRY_UMAMI_ENDPOINT=https://umami.l3montree.com/api/send
-      - DEVGUARD_TELEMETRY_UMAMI_WEBSITE_ID=
     networks:
       - devguard-local
 

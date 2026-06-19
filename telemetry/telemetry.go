@@ -40,13 +40,15 @@ const (
 
 	EventName       = "devguard-instance-start"
 	DefaultEndpoint = "https://umami.l3montree.com/api/send"
+	WebsiteID       = "2ab9fe36-42ec-485d-a592-b0f6e78dd1ad"
 	DefaultTimeout  = 3 * time.Second
 	UserAgent       = "DevguardTelemetry"
 	SchemaVersion   = 1
+	TransparencyLog = "sending anonymized telemetry data - nothing personal or critical is included. " +
+		"This helps us understand what DevGuard versions are used and which versions we should provide patches for. " +
+		"You can disable this by setting DEVGUARD_TELEMETRY_DISABLED=true."
 
-	EnvDisabled  = "DEVGUARD_TELEMETRY_DISABLED"
-	EnvEndpoint  = "DEVGUARD_TELEMETRY_UMAMI_ENDPOINT"
-	EnvWebsiteID = "DEVGUARD_TELEMETRY_UMAMI_WEBSITE_ID"
+	EnvDisabled = "DEVGUARD_TELEMETRY_DISABLED"
 
 	// Umami stores the distinct/session id in varchar(50). Keep a stable
 	// SHA-256-derived id, but short enough for Umami's schema.
@@ -54,10 +56,7 @@ const (
 )
 
 type Config struct {
-	Disabled  bool
-	Endpoint  string
-	WebsiteID string
-	Timeout   time.Duration
+	Disabled bool
 }
 
 type StartupEvent struct {
@@ -102,10 +101,7 @@ type umamiPayload struct {
 
 func ConfigFromEnv() Config {
 	return Config{
-		Disabled:  isTruthyEnv(os.Getenv(EnvDisabled)),
-		Endpoint:  envOrDefault(os.Getenv(EnvEndpoint), DefaultEndpoint),
-		WebsiteID: os.Getenv(EnvWebsiteID),
-		Timeout:   DefaultTimeout,
+		Disabled: isTruthyEnv(os.Getenv(EnvDisabled)),
 	}
 }
 
@@ -136,7 +132,6 @@ func (c GormAPIStatsCollector) count(ctx context.Context, label string, model an
 }
 
 func APIStartupEvent(version, frontendURL, postgresHost, postgresDB string, stats APIStats) StartupEvent {
-	version = RuntimeVersion(version)
 	data := map[string]any{
 		"component": ComponentAPI,
 		"version":   version,
@@ -154,7 +149,6 @@ func APIStartupEvent(version, frontendURL, postgresHost, postgresDB string, stat
 }
 
 func ScannerStartupEvent(version, apiURL, goos, goarch string, runsInCI bool, command string) StartupEvent {
-	version = RuntimeVersion(version)
 	apiHost := hostFromURL(apiURL)
 	data := map[string]any{
 		"component": ComponentScanner,
@@ -174,7 +168,7 @@ func ScannerStartupEvent(version, apiURL, goos, goarch string, runsInCI bool, co
 }
 
 func SendAPIStartup(ctx context.Context, cfg Config, client HTTPDoer, statsCollector APIStatsCollector, version string) {
-	if cfg.Disabled || cfg.WebsiteID == "" {
+	if cfg.Disabled {
 		SendStartup(ctx, cfg, client, APIStartupEvent(
 			version,
 			os.Getenv("FRONTEND_URL"),
@@ -210,22 +204,12 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 		slog.Info("DevGuard startup telemetry is disabled", "env", EnvDisabled, "component", event.Component)
 		return
 	}
-	if cfg.WebsiteID == "" {
-		slog.Info("DevGuard startup telemetry is disabled because no Umami website ID is configured", "env", EnvWebsiteID, "component", event.Component)
-		return
-	}
 
-	if cfg.Endpoint == "" {
-		cfg.Endpoint = DefaultEndpoint
-	}
-	if cfg.Timeout <= 0 {
-		cfg.Timeout = DefaultTimeout
-	}
 	if client == nil {
 		client = http.DefaultClient
 	}
 
-	requestPayload := BuildStartupPayload(cfg, event)
+	requestPayload := BuildStartupPayload(event)
 	body, err := json.Marshal(requestPayload)
 	if err != nil {
 		slog.Warn("could not encode DevGuard startup telemetry payload", "err", err, "component", event.Component)
@@ -239,12 +223,12 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 		"payload_data", requestPayload.Payload.Data,
 		"disable_env", EnvDisabled,
 	}
-	slog.Info("sending anonymous DevGuard startup telemetry", logFields...)
+	slog.Info(TransparencyLog, logFields...)
 
-	sendCtx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	sendCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(sendCtx, http.MethodPost, cfg.Endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(sendCtx, http.MethodPost, DefaultEndpoint, bytes.NewReader(body))
 	if err != nil {
 		slog.Warn("could not create DevGuard startup telemetry request", "err", err, "component", event.Component)
 		return
@@ -264,7 +248,7 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 	}
 }
 
-func BuildStartupPayload(cfg Config, event StartupEvent) umamiRequest {
+func BuildStartupPayload(event StartupEvent) umamiRequest {
 	data := map[string]any{}
 	for key, value := range event.Data {
 		data[key] = value
@@ -280,7 +264,7 @@ func BuildStartupPayload(cfg Config, event StartupEvent) umamiRequest {
 			Hostname: event.Component,
 			URL:      "/startup",
 			Title:    "DevGuard startup",
-			Website:  cfg.WebsiteID,
+			Website:  WebsiteID,
 			Name:     EventName,
 			ID:       event.InstanceID,
 			Data:     data,
@@ -310,13 +294,6 @@ func isTruthyEnv(value string) bool {
 	default:
 		return false
 	}
-}
-
-func envOrDefault(value, fallback string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	return value
 }
 
 func RuntimeVersion(values ...string) string {
