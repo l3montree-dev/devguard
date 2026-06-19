@@ -30,7 +30,7 @@ var EgressTransport http.RoundTripper = otelhttp.NewTransport(EgressRoundTripper
 })
 
 var EgressClient = http.Client{
-	Timeout:   30 * time.Second,
+	Timeout:   5 * time.Minute,
 	Transport: EgressTransport,
 }
 

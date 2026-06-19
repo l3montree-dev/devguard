@@ -39,6 +39,7 @@ const debugImport = false
 // and malicious packages.
 type VulnDBService struct {
 	osv               osvService
+	euvdService       euvdService
 	epss              epssService
 	cisaKEV           cisaKEVService
 	githubExploits    *githubExploitDBService
@@ -59,6 +60,7 @@ func NewVulnDBService(
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
+		euvdService:       NewEUVDService(cveRepository, cveRelationshipRepository, pool),
 		epss:              NewEPSSService(cveRepository, cveRelationshipRepository),
 		cisaKEV:           NewCISAKEVService(cveRepository, cveRelationshipRepository),
 		githubExploits:    NewGithubExploitDBService(exploitRepository),
@@ -133,12 +135,29 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		return fmt.Errorf("could not truncate malicious package tables: %w", err)
 	}
 
+	// prepare the tables for bulk insert before any loading begins
+	if err := PrepareBulkInsert(ctx, tx); err != nil {
+		return fmt.Errorf("could not prepare bulk insert: %w", err)
+	}
+
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
 	osvEntries, survivingCVEs, err := s.osv.fetchAndImportOSV(ctx, tx, start)
 	if err != nil {
 		return fmt.Errorf("OSV fetch failed: %w", err)
 	}
+
+	// then we can add the additional data sources
+	// load the EUVD aliases into the cve_relationship table
+	err = s.euvdService.importEUVDAliases(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
+	}
+
+	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
+		return fmt.Errorf("could not re-add indexes and constraints: %w", err)
+	}
+
 	if err := writeGobFileItems(osvEntries, "osv.gob"); err != nil {
 		return fmt.Errorf("could not write OSV gob: %w", err)
 	}

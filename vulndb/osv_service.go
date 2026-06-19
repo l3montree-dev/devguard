@@ -418,9 +418,6 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 
 	slog.Info("fetched OSV vulns and malware", "entries", len(allOSVVulns), "latest", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
 
-	if err := PrepareBulkInsert(ctx, tx); err != nil {
-		return nil, nil, fmt.Errorf("could not prepare bulk insert: %w", err)
-	}
 	if err := CreateStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
@@ -449,13 +446,12 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	if err := FlushOSVStagingTables(ctx, tx); err != nil {
 		return nil, nil, fmt.Errorf("could not flush osv staging tables: %w", err)
 	}
-	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
-		return nil, nil, fmt.Errorf("could not re-add indexes and constraints: %w", err)
-	}
 
 	// Delete orphan CVEs and affected_components so the DB state matches what
 	// importers will end up with, and so integrity checksums are valid.
-	runCleanUpJobs(ctx, tx)
+	if err := runCleanUpJobs(ctx, tx); err != nil {
+		return nil, nil, fmt.Errorf("could not run clean up jobs: %w", err)
+	}
 
 	// Re-query surviving CVE IDs to filter the gob — no point serializing
 	// entries that were just deleted.
@@ -967,7 +963,8 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	_, err = tx.Exec(ctx, `
 	-- Then add the foreign key constraints
 	ALTER TABLE public.cves ADD CONSTRAINT cves_cve_unique UNIQUE (cve);
-	ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE;
+	-- ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE;
+	-- euvd ids are not present in the cves table, but need the id mapping (CHECK BEFORE MERGE)
 
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE;
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cve_id) REFERENCES public.cves (id) ON DELETE CASCADE;
@@ -1015,10 +1012,28 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 // runScopedCleanUpJobs removes orphaned affected_components and CVEs that resulted
 // from deleting the given pivot rows. Only checks the specific IDs involved rather
 // than scanning the full tables.
-func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
+func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 	slog.Info("start running sanity checks")
-	// first delete all cves which have no affected components and also none of their relationships does
+	// first manually check if all cve_relationship rows have a valid reference to a cve,
+	// this is a substitute for the removed foreign key (which does not work with the EUVD entries)
 	start := time.Now()
+	var orphanCount int64
+	if err := tx.QueryRow(ctx, `
+	SELECT COUNT(*)
+	FROM cve_relationships cr
+	WHERE NOT EXISTS (
+		SELECT FROM cves WHERE cves.cve = cr.source_cve
+	);`).Scan(&orphanCount); err != nil {
+		return fmt.Errorf("could not calculate orphan cve_relationships rows: %w", err)
+	}
+	// throw an error and stop the import to be consistent with the old FK logic
+	if orphanCount > 0 {
+		return fmt.Errorf("found %d orphan cve_relationships rows referencing a missing cve", orphanCount)
+	}
+	slog.Info("no orphan cve_relationships rows found", "took", time.Since(start))
+
+	// then delete all cves which have no affected components and also none of their relationships does
+	start = time.Now()
 	_, err := tx.Exec(ctx, `
 	DELETE FROM cves 
 	WHERE id IN (
@@ -1059,6 +1074,8 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) {
 	} else {
 		slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
 	}
+
+	return nil
 }
 
 func shouldIgnoreVulnerabilityID(id string) bool {
