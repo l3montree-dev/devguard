@@ -25,6 +25,7 @@ import (
 
 	"github.com/casbin/casbin/v3"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -320,6 +321,55 @@ func (c *casbinRBAC) RevokeAllRolesInAssetForUser(ctx context.Context, user stri
 	return nil
 }
 
+// remove all roles for a domain prefix like an assert or project
+func (c *casbinRBAC) revokeAllRolesForPrefix(ctx context.Context, prefix string) error {
+	concurrencyMutex.Lock()
+	defer concurrencyMutex.Unlock()
+	dom := "domain::" + c.domain
+
+	grouping, err := c.enforcer.GetFilteredNamedGroupingPolicy("g", 2, dom)
+	if err != nil {
+		return err
+	}
+
+	// filter only the roles of the given prefix
+	groupsToRemove := utils.Filter(grouping, func(r []string) bool {
+		return strings.HasPrefix(r[0], prefix) || strings.HasPrefix(r[1], prefix)
+	})
+
+	if len(groupsToRemove) > 0 {
+		// if found remove any of these groups
+		if _, err := c.enforcer.RemoveGroupingPoliciesCtx(ctx, groupsToRemove); err != nil {
+			return err
+		}
+	}
+
+	// then do the same for any policies of the domain containing the prefix
+	policies, err := c.enforcer.GetFilteredPolicy(1, dom)
+	if err != nil {
+		return err
+	}
+	policiesToRemove := utils.Filter(policies, func(r []string) bool {
+		return strings.HasPrefix(r[0], prefix) || strings.HasPrefix(r[2], prefix)
+	})
+	if len(policiesToRemove) > 0 {
+		if _, err := c.enforcer.RemovePoliciesCtx(ctx, policiesToRemove); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *casbinRBAC) RevokeAllRolesInProject(ctx context.Context, project string) error {
+	// add "|" delimiter to match project id exactly and catch all roles
+	return c.revokeAllRolesForPrefix(ctx, "project::"+project+"|")
+}
+
+func (c *casbinRBAC) RevokeAllRolesInAsset(ctx context.Context, asset string) error {
+	// add "|" delimiter to match asset id exactly and catch all roles
+	return c.revokeAllRolesForPrefix(ctx, "asset::"+asset+"|")
+}
+
 func (c *casbinRBAC) InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
 	_, err := withLock(func() (struct{}, error) {
 		_, err := c.enforcer.AddRoleForUserInDomainCtx(ctx, "role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
@@ -462,7 +512,16 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	for i, d := range domains {
 		domains[i] = d[8:]
 	}
+
 	return domains, nil
+}
+
+// delete all roles associated with an organization
+func (c casbinRBACProvider) RevokeAllRolesForDomain(domain uuid.UUID) error {
+	concurrencyMutex.Lock()
+	defer concurrencyMutex.Unlock()
+	_, err := c.enforcer.DeleteDomains("domain::" + domain.String())
+	return err
 }
 
 func (c casbinRBACProvider) GetAllUsers() ([]string, error) {

@@ -46,6 +46,14 @@ func (e *externalEntityProviderRBAC) RevokeAllRolesInProjectForUser(ctx context.
 	return e.rootAccessControl.RevokeAllRolesInProjectForUser(ctx, user, project)
 }
 
+func (e *externalEntityProviderRBAC) RevokeAllRolesInProject(ctx context.Context, project string) error {
+	return e.rootAccessControl.RevokeAllRolesInProject(ctx, project)
+}
+
+func (e *externalEntityProviderRBAC) RevokeAllRolesInAsset(ctx context.Context, asset string) error {
+	return e.rootAccessControl.RevokeAllRolesInAsset(ctx, asset)
+}
+
 func (e *externalEntityProviderRBAC) InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions shared.Role) error {
 	return e.rootAccessControl.InheritRole(ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
