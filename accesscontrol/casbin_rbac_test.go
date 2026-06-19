@@ -207,7 +207,8 @@ func TestRevokeAllRolesInProject_RemovesPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	allowed, err := rbac.IsAllowedInProject(ctx, project, "alice", shared.ObjectProject, shared.ActionRead)
+	alice := NewSession("alice", nil, false)
+	allowed, err := rbac.IsAllowedInProject(ctx, project, alice, shared.ObjectProject, shared.ActionRead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestRevokeAllRolesInProject_RemovesPolicies(t *testing.T) {
 		t.Fatalf("RevokeAllRolesInProject: %v", err)
 	}
 
-	allowed, err = rbac.IsAllowedInProject(ctx, project, "alice", shared.ObjectProject, shared.ActionRead)
+	allowed, err = rbac.IsAllowedInProject(ctx, project, alice, shared.ObjectProject, shared.ActionRead)
 	if err != nil {
 		t.Fatal(err)
 	}
