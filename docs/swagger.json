@@ -6299,6 +6299,9 @@
                     "description": {
                         "type": "string"
                     },
+                    "expiryDateUnix": {
+                        "type": "integer"
+                    },
                     "fingerprint": {
                         "type": "string"
                     },
@@ -6319,6 +6322,9 @@
                     "description": {
                         "type": "string"
                     },
+                    "expiryDateUnix": {
+                        "type": "integer"
+                    },
                     "pubKey": {
                         "type": "string"
                     },
@@ -6326,10 +6332,17 @@
                         "type": "string"
                     }
                 },
+                "required": [
+                    "expiryDateUnix"
+                ],
                 "type": "object"
             },
             "dtos.ProjectAssetDTO": {
                 "properties": {
+                    "avatar": {
+                        "description": "URL to the asset's avatar",
+                        "type": "string"
+                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -8686,6 +8699,12 @@
             }
         },
         "securitySchemes": {
+            "BearerAuth": {
+                "description": "Bearer token authentication. Set value to: Bearer dvg_…",
+                "in": "header",
+                "name": "Authorization",
+                "type": "apiKey"
+            },
             "CookieAuth": {
                 "description": "Session-based authentication using Ory Kratos",
                 "in": "cookie",
@@ -8764,6 +8783,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Accept organization invitation",
@@ -8804,6 +8826,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Scan SARIF file and return enriched SARIF",
@@ -8888,6 +8913,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Scan SBOM file and return CycloneDX VEX",
@@ -8979,6 +9007,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create attestation",
@@ -9010,6 +9041,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List repositories from integrations",
@@ -9139,6 +9173,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List organizations",
@@ -9178,6 +9215,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create organization",
@@ -9210,6 +9250,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete organization",
@@ -9247,6 +9290,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get organization details",
@@ -9297,6 +9343,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update organization",
@@ -9345,6 +9394,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get organization config file",
@@ -9403,6 +9455,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update organization config file",
@@ -9442,6 +9497,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get organization content tree",
@@ -9481,6 +9539,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get CSAF provider metadata for organization",
@@ -9523,6 +9584,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List organization members",
@@ -9573,6 +9637,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Invite member to organization",
@@ -9614,6 +9681,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Remove member from organization",
@@ -9666,6 +9736,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Change member role",
@@ -9710,6 +9783,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get organization metrics",
@@ -9752,6 +9828,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List projects",
@@ -9802,6 +9881,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create project",
@@ -9843,6 +9925,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete project",
@@ -9889,6 +9974,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get project details",
@@ -9948,6 +10036,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update project",
@@ -9999,6 +10090,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List assets",
@@ -10058,6 +10152,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create asset",
@@ -10108,6 +10205,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete asset",
@@ -10163,6 +10263,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get asset details",
@@ -10231,6 +10334,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update asset",
@@ -10297,6 +10403,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get asset config file",
@@ -10373,6 +10482,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update asset config file",
@@ -10430,6 +10542,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get CSAF changes CSV",
@@ -10487,6 +10602,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get CSAF index file",
@@ -10555,6 +10673,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get CSAF report",
@@ -10615,6 +10736,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get CVEs with known exploits for an asset",
@@ -10675,6 +10799,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List asset versions",
@@ -10753,6 +10880,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create asset version",
@@ -10812,6 +10942,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete asset version",
@@ -10876,6 +11009,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get asset version details",
@@ -10954,6 +11090,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create artifact",
@@ -11022,6 +11161,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete artifact",
@@ -11107,6 +11249,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update artifact",
@@ -11182,6 +11327,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get VEX in OpenVEX JSON format",
@@ -11257,6 +11405,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get SBOM in JSON format",
@@ -11332,6 +11483,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get SBOM as PDF",
@@ -11407,6 +11561,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get SBOM in XML format",
@@ -11475,6 +11632,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Sync external sources for a single artifact",
@@ -11550,6 +11710,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get VEX in JSON format",
@@ -11625,6 +11788,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get VEX in XML format",
@@ -11700,6 +11866,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get vulnerability report as PDF",
@@ -11769,6 +11938,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List attestations",
@@ -11851,6 +12023,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List dependency vulnerabilities",
@@ -11926,6 +12101,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get dependency vulnerability details",
@@ -12004,6 +12182,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create vulnerability event",
@@ -12073,6 +12254,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List external references for an asset version",
@@ -12150,6 +12334,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create an external reference",
@@ -12209,6 +12396,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Sync external sources for all artifacts of an asset version",
@@ -12268,6 +12458,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete all external references for an asset version",
@@ -12342,6 +12535,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get asset version metrics",
@@ -12416,6 +12612,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get average fixing times for an asset version",
@@ -12490,6 +12689,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get component risk distribution for an asset version",
@@ -12585,6 +12787,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get risk history for an asset version",
@@ -12692,6 +12897,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List VEX rules for an asset",
@@ -12769,6 +12977,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create a VEX rule",
@@ -12837,6 +13048,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete a VEX rule",
@@ -12910,6 +13124,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get a VEX rule",
@@ -12996,6 +13213,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update a VEX rule",
@@ -13071,6 +13291,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Reapply a VEX rule",
@@ -13145,6 +13368,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List first-party vulnerabilities by asset version",
@@ -13211,6 +13437,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get first-party vulnerabilities as SARIF",
@@ -13261,6 +13490,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Scan SBOM file",
@@ -13318,6 +13550,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get project config file",
@@ -13385,6 +13620,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update project config file",
@@ -13436,6 +13674,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List project members",
@@ -13488,6 +13729,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Invite members to project",
@@ -13544,6 +13788,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List releases",
@@ -13603,6 +13850,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create release",
@@ -13659,6 +13909,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List release candidates",
@@ -13709,6 +13962,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete release",
@@ -13764,6 +14020,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get release details",
@@ -13832,6 +14091,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update release",
@@ -13902,6 +14164,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Add item to release",
@@ -13961,6 +14226,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Remove item from release",
@@ -14018,6 +14286,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get release SBOM as JSON",
@@ -14075,6 +14346,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get release SBOM as XML",
@@ -14132,6 +14406,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get average remediation times for a release",
@@ -14210,6 +14487,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get risk history for a release",
@@ -14267,6 +14547,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get release VEX as JSON",
@@ -14324,6 +14607,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get release VEX as XML",
@@ -14380,6 +14666,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List first-party vulnerabilities by project",
@@ -14419,6 +14708,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get organization admin settings",
@@ -14530,6 +14822,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List first-party vulnerabilities by organization",
@@ -14561,6 +14856,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "List personal access tokens",
@@ -14678,6 +14976,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete personal access token",
@@ -14754,6 +15055,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Scan for first-party vulnerabilities",
@@ -14889,6 +15193,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Scan for dependency vulnerabilities",
@@ -14997,6 +15304,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Upload VEX document",
@@ -15282,6 +15592,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Get first-party vulnerability details",
@@ -15333,6 +15646,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create first-party vulnerability event",
@@ -15373,6 +15689,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Create webhook integration",
@@ -15411,6 +15730,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Update webhook integration",
@@ -15459,6 +15781,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Test webhook integration",
@@ -15491,6 +15816,9 @@
                     },
                     {
                         "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
                     }
                 ],
                 "summary": "Delete webhook integration",

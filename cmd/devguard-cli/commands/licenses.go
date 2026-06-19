@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,7 +33,7 @@ var (
 func NewLicensesCommand() *cobra.Command {
 	licenses := cobra.Command{
 		Use:   "licenses",
-		Short: "licenses",
+		Short: "Manage approved license and package license information",
 	}
 
 	licenses.AddCommand(newUpdateLicensesCommand())
@@ -46,19 +47,20 @@ func newUpdateLicensesCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			start := time.Now()
+			ctx := cmd.Context()
 
-			err = updateApprovedLicenses()
+			err = updateApprovedLicenses(ctx)
 			if err != nil {
 				slog.Error("error when trying to update approved licenses, continuing...\n", "err", err)
 			}
 
-			err = updateAlpineLicenses()
+			err = updateAlpineLicenses(ctx)
 			if err != nil {
 				slog.Error("error when trying to update alpine licenses, continuing...\n", "err", err)
 			}
 
 			if len(args) >= 1 && args[0] == "all" {
-				err = updateDebianLicenses()
+				err = updateDebianLicenses(ctx)
 				if err != nil {
 					slog.Error("error when trying to update debian licenses, continuing...\n", "err", err)
 				}
@@ -71,13 +73,13 @@ func newUpdateLicensesCommand() *cobra.Command {
 	return updateLicenses
 }
 
-func updateApprovedLicenses() error {
+func updateApprovedLicenses(ctx context.Context) error {
 	apiURL := "https://raw.githubusercontent.com/spdx/license-list-data/refs/heads/main/json/licenses.json"
-	req, err := http.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return fmt.Errorf("could not build the http request: %s", err)
 	}
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 
@@ -104,15 +106,15 @@ func updateApprovedLicenses() error {
 	return nil
 }
 
-func updateAlpineLicenses() error {
+func updateAlpineLicenses(ctx context.Context) error {
 
-	err := retrieveAlpineVersions()
+	err := retrieveAlpineVersions(ctx)
 	if err != nil {
 		return err
 	}
 	for _, version := range alpineReleaseVersions {
 		versionURL := fmt.Sprintf("https://dl-cdn.alpinelinux.org/%s/main/x86_64/APKINDEX.tar.gz", version)
-		apkIndex, err := getAPKIndexInformation(versionURL)
+		apkIndex, err := getAPKIndexInformation(ctx, versionURL)
 		if err != nil {
 			return err
 		}
@@ -127,13 +129,13 @@ func updateAlpineLicenses() error {
 	return nil
 }
 
-func updateDebianLicenses() error {
-	fileList, err := getFileListYAML()
+func updateDebianLicenses(ctx context.Context) error {
+	fileList, err := getFileListYAML(ctx)
 	if err != nil {
 		return err
 	}
 
-	debianLicenseMap, err := getLicensesFromFileList(fileList)
+	debianLicenseMap, err := getLicensesFromFileList(ctx, fileList)
 	if err != nil {
 		return err
 	}
@@ -165,12 +167,12 @@ func writeLicenseMapToFile(licenses *map[string]string, path string) error {
 	return nil
 }
 
-func getAPKIndexInformation(url string) (*bytes.Buffer, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func getAPKIndexInformation(ctx context.Context, url string) (*bytes.Buffer, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return &bytes.Buffer{}, err
 	}
-	client := &http.Client{
+	client := &http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -236,14 +238,14 @@ func extractLicensesFromAPKINDEX(contents bytes.Buffer) {
 	}
 }
 
-func retrieveAlpineVersions() error {
+func retrieveAlpineVersions(ctx context.Context) error {
 	buf := bytes.NewBuffer(make([]byte, 0, 64*1000)) // json size is roughly 64 KB
 	releasesURL := "https://alpinelinux.org/releases.json"
-	req, err := http.NewRequest("GET", releasesURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releasesURL, nil)
 	if err != nil {
 		return err
 	}
-	client := &http.Client{
+	client := &http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -276,13 +278,13 @@ func retrieveAlpineVersions() error {
 	return nil
 }
 
-func getFileListYAML() (*bytes.Buffer, error) {
+func getFileListYAML(ctx context.Context) (*bytes.Buffer, error) {
 	url := "https://metadata.ftp-master.debian.org/changelogs/filelist.yaml.xz"
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return &bytes.Buffer{}, err
 	}
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 	resp, err := client.Do(req)
@@ -306,7 +308,7 @@ func getFileListYAML() (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) {
+func getLicensesFromFileList(ctx context.Context, fileList *bytes.Buffer) (map[string]string, error) {
 	var licenseMap map[string]string //map to hold the license
 	baseURL := "https://metadata.ftp-master.debian.org/changelogs/"
 	urls := make([]string, 0, 200*1000)
@@ -330,7 +332,7 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 	wg.Add(mumberOfGoRoutines)
 
 	licenseMap = make(map[string]string, len(urls))
-	client := http.Client{
+	client := http.Client{ // nosemgrep: http-client-missing-egress-transport -- CLI tool, OTel tracing not available
 		Timeout: 10 * time.Second,
 	}
 
@@ -345,7 +347,7 @@ func getLicensesFromFileList(fileList *bytes.Buffer) (map[string]string, error) 
 					return
 				}
 
-				req, err := http.NewRequest(http.MethodGet, baseURL+task.url, nil)
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+task.url, nil)
 				if err != nil {
 					slog.Error("error when building request", "error", err, "url", baseURL+task.url)
 					continue //swallow errors

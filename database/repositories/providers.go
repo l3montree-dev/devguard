@@ -58,4 +58,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewExternalReferenceRepository, fx.As(new(shared.ExternalReferenceRepository)))),
 	fx.Provide(fx.Annotate(NewTrustedEntityRepository, fx.As(new(shared.TrustedEntityRepository)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyRepository, fx.As(new(shared.DependencyProxySecretRepository)))),
+	fx.Provide(fx.Annotate(NewAdminRepository, fx.As(new(shared.AdminRepository)))),
 )

@@ -290,7 +290,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	var q *gorm.DB
 
 	assetQuery := g.GetDB(ctx, tx).Model(&models.Asset{}).
-		Select("'asset' AS resource_type, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
+		Select("'asset' AS resource_type, avatar, id, name, slug, description, project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id, is_public, state, created_at, updated_at").
 		Where("project_id = ?", parentID)
 
 	if len(allowedAssetIDs) > 0 {
@@ -300,7 +300,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	}
 
 	projectQuery := g.GetDB(ctx, tx).Model(&models.Project{}).
-		Select("'project' AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
+		Select("'project' AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at").
 		Where("parent_id = ?", parentID)
 
 	if len(allowedProjectIDs) > 0 {
@@ -311,7 +311,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	q = g.GetDB(ctx, tx).Table("(?) AS combined", g.GetDB(ctx, tx).Raw("? UNION ALL ?", assetQuery, projectQuery))
 
-	//add sort by name as default if no other sorting is provided, to ensure consistent pagination
+	// add sort by name as default if no other sorting is provided, to ensure consistent pagination
 	if len(sort) == 0 {
 		q = q.Order("name ASC")
 	}
@@ -331,18 +331,33 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		q = q.Order(s.SQL())
 	}
 
-	// Count
-	var count int64
-	if err := q.Count(&count).Error; err != nil {
+	// Single query: window function avoids a separate COUNT(*) round trip.
+	type resultRow struct {
+		dtos.ProjectAssetDTO
+		TotalCount int64
+	}
+	var rows []resultRow
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
+	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, err
 	}
 
-	// Pagination
-	err := q.
-		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&results).Error
+	var count int64
+	results = make([]dtos.ProjectAssetDTO, len(rows))
+	for i, r := range rows {
+		results[i] = r.ProjectAssetDTO
+		count = r.TotalCount
+	}
 
-	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, count, results), nil
@@ -381,14 +396,32 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 		}
 	}
 
-	var count int64
-	err := q.Count(&count).Error
+	type rowWithCount struct {
+		models.Project
+		TotalCount int64
+	}
+	var rows []rowWithCount
+
+	// use a new gorm session to force a new statement for both queries
+	err := q.Session(&gorm.Session{}).Select("*, COUNT(*) OVER() AS total_count").
+		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
+		Scan(&rows).Error
 	if err != nil {
 		return shared.Paged[models.Project]{}, err
 	}
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&projects).Error
-	if err != nil {
-		return shared.Paged[models.Project]{}, err
+
+	var count int64
+	projects = make([]models.Project, len(rows))
+	for i, r := range rows {
+		projects[i] = r.Project
+		count = r.TotalCount
+	}
+
+	// if we have no rows the window functions does not work, so we fallback to a traditional count
+	if len(rows) == 0 {
+		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
+			return shared.Paged[models.Project]{}, err
+		}
 	}
 	return shared.NewPaged(pageInfo, count, projects), nil
 }

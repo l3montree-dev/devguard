@@ -19,7 +19,6 @@ import (
 )
 
 type openSourceInsightService struct {
-	httpClient           *http.Client
 	depsDevRateLimiter   rate.Limiter
 	packagistRateLimiter rate.Limiter
 }
@@ -28,7 +27,6 @@ var _ shared.OpenSourceInsightService = (*openSourceInsightService)(nil) // Ensu
 
 func NewOpenSourceInsightService() *openSourceInsightService {
 	return &openSourceInsightService{
-		httpClient:           &http.Client{Transport: utils.EgressTransport},
 		depsDevRateLimiter:   *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
 		packagistRateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
 	}
@@ -54,13 +52,13 @@ func (s *openSourceInsightService) GetProject(ctx context.Context, projectID str
 		return dtos.OpenSourceInsightsProjectResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/projects/%s", openSourceInsightsAPIURL, projectID), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/projects/%s", openSourceInsightsAPIURL, projectID), nil)
 
 	if err != nil {
 		return dtos.OpenSourceInsightsProjectResponse{}, err
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return dtos.OpenSourceInsightsProjectResponse{}, err
 	}
@@ -123,7 +121,7 @@ func (s *openSourceInsightService) getGoVersion(ctx context.Context, purl packag
 
 	// deps.dev is case-sensitive for Go module paths, but PURLs lowercase the namespace.
 	// Resolve the canonical casing via the Go module proxy, which accepts !-encoded paths.
-	canonicalPurl, err := resolveGoModuleCanonicalPurl(ctx, s.httpClient, purl)
+	canonicalPurl, err := resolveGoModuleCanonicalPurl(ctx, &utils.EgressClient, purl)
 	if err != nil {
 		return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("could not get version information for %s: %w", purl.String(), err)
 	}
@@ -207,12 +205,12 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 		vendor := parts[0]
 		packageIdentifier := parts[1]
 
-		req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/%s/%s.json", packagistAPIURL, vendor, packageIdentifier), nil)
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/%s/%s.json", packagistAPIURL, vendor, packageIdentifier), nil)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 
-		res, err = s.httpClient.Do(req)
+		res, err = utils.EgressClient.Do(req)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
@@ -241,12 +239,12 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 		url := fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", openSourceInsightsAPIURL, ecosystemName, packageName, purl.Version)
-		req, err = http.NewRequest(http.MethodGet, url, nil)
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}
 
-		res, err = s.httpClient.Do(req)
+		res, err = utils.EgressClient.Do(req)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, err
 		}

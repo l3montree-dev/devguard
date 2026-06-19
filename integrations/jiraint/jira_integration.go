@@ -101,6 +101,10 @@ func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Co
 	return nil
 }
 
+func (i *JiraIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	return nil, nil
+}
+
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
 	asset, err := i.assetRepository.Read(context.Background(), nil, assetID)
 	if err != nil {
@@ -336,10 +340,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	assetSlug := asset.Slug
 
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, assetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
@@ -675,10 +676,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraProjectID, ticketID, err := jiraTicketIDToProjectIDAndIssueID(utils.SafeDereference(dependencyVuln.GetTicketID()))
 	if err != nil {

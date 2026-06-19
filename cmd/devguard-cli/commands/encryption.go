@@ -25,6 +25,7 @@ func NewEncryptionCommand() *cobra.Command {
 
 	encryptionCmd.AddCommand(newMigrationCommand())
 	encryptionCmd.AddCommand(newKeyRotationCommand())
+	encryptionCmd.AddCommand(newDecryptCommand())
 
 	return encryptionCmd
 }
@@ -121,6 +122,29 @@ func newKeyRotationCommand() *cobra.Command {
 	}
 
 	return rotationCmd
+}
+
+func newDecryptCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "decrypt [ciphertext]",
+		Short: "Decrypt a single ciphertext value using the current app-side encryption key.",
+		Long:  "Reads the current key from APP_SIDE_ENCRYPTION_KEY_PATH and decrypts the given ciphertext, printing the plaintext to stdout. Useful for inspecting encrypted values stored in the database.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shared.LoadConfig() // nolint
+			key := services.ReadCurrentKey()
+			enc, err := services.NewDBEncryptionServiceFromKey(key)
+			if err != nil {
+				return fmt.Errorf("could not build encryption module from key: %w", err)
+			}
+			plaintext, err := enc.MaybeDecryptData(args[0])
+			if err != nil {
+				return fmt.Errorf("could not decrypt value: %w", err)
+			}
+			fmt.Println(plaintext)
+			return nil
+		},
+	}
 }
 
 // function to fetch all secrets, decrypt them with the decryptEnc, then encrypting them with the encryptEnc and finally saving the update secrets to the database

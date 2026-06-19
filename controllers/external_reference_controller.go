@@ -75,6 +75,7 @@ type CreateExternalReferenceRequest struct {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -109,6 +110,7 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -134,8 +136,12 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		if req.CSAFPackageScope == "" {
 			return echo.NewHTTPError(400, "csafPackageScope is required for csaf references")
 		}
-		if _, err := packageurl.FromString(req.CSAFPackageScope); err != nil {
+		purl, err := packageurl.FromString(req.CSAFPackageScope)
+		if err != nil {
 			return echo.NewHTTPError(400, "csafPackageScope must be a valid PURL").WithInternal(err)
+		}
+		if err := utils.ValidatePurlFields(purl); err != nil {
+			return echo.NewHTTPError(400, "csafPackageScope PURL contains invalid characters").WithInternal(err)
 		}
 	}
 
@@ -195,7 +201,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	})
 	c.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -207,6 +213,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -240,6 +247,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -258,6 +266,7 @@ func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"

@@ -29,7 +29,8 @@ func NewWebhookRepository(db *gorm.DB, encryptionService shared.DBEncryptionServ
 }
 
 // encryptSecretInPlace returns a copy of the webhook with its secret encrypted
-func (r *webhookRepository) encryptSecretInPlace(webhook models.WebhookIntegration) (models.WebhookIntegration, error) {
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
+func (r *webhookRepository) encryptSecretInPlace(ctx context.Context, webhook models.WebhookIntegration) (models.WebhookIntegration, error) {
 	if webhook.Secret == nil {
 		return webhook, nil
 	}
@@ -44,7 +45,8 @@ func (r *webhookRepository) encryptSecretInPlace(webhook models.WebhookIntegrati
 }
 
 // decryptSecretInPlace decrypts the secret of a fetched webhook in place
-func (r *webhookRepository) decryptSecretInPlace(webhook *models.WebhookIntegration) error {
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
+func (r *webhookRepository) decryptSecretInPlace(ctx context.Context, webhook *models.WebhookIntegration) error {
 	if webhook.Secret == nil {
 		return nil
 	}
@@ -60,7 +62,7 @@ func (r *webhookRepository) decryptSecretInPlace(webhook *models.WebhookIntegrat
 
 // Save encrypts the secret in place so GORM writes DB-generated fields back onto the caller's model, then restores the plaintext.
 func (r *webhookRepository) Save(ctx context.Context, tx *gorm.DB, webhook *models.WebhookIntegration) error {
-	encrypted, err := r.encryptSecretInPlace(*webhook)
+	encrypted, err := r.encryptSecretInPlace(ctx, *webhook)
 	if err != nil {
 		return err
 	}
@@ -78,7 +80,7 @@ func (r *webhookRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID)
 		return webhook, err
 	}
 
-	if err := r.decryptSecretInPlace(&webhook); err != nil {
+	if err := r.decryptSecretInPlace(ctx, &webhook); err != nil {
 		return webhook, err
 	}
 
@@ -95,7 +97,7 @@ func (r *webhookRepository) FindByOrgIDAndProjectID(ctx context.Context, tx *gor
 	}
 
 	for i := range integrations {
-		if err := r.decryptSecretInPlace(&integrations[i]); err != nil {
+		if err := r.decryptSecretInPlace(ctx, &integrations[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -113,7 +115,7 @@ func (r *webhookRepository) GetProjectWebhooks(ctx context.Context, tx *gorm.DB,
 	}
 
 	for i := range integrations {
-		if err := r.decryptSecretInPlace(&integrations[i]); err != nil {
+		if err := r.decryptSecretInPlace(ctx, &integrations[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -127,7 +129,7 @@ func (r *webhookRepository) GetClientByIntegrationID(ctx context.Context, tx *go
 		return models.WebhookIntegration{}, err
 	}
 
-	if err := r.decryptSecretInPlace(&integration); err != nil {
+	if err := r.decryptSecretInPlace(ctx, &integration); err != nil {
 		return models.WebhookIntegration{}, err
 	}
 

@@ -74,6 +74,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "CycloneDX VEX BOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -217,7 +218,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
 	s.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -405,7 +406,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 
 		s.FireAndForget(func() {
 			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+			if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		})
@@ -419,6 +420,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "SARIF scan result"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Tag header string false "Tag flag"
@@ -527,6 +529,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "CycloneDX SBOM"
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
@@ -618,9 +621,7 @@ func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return echo.NewHTTPError(400, map[string]string{
-			"error": "no X-Scanner header found",
-		})
+		return echo.NewHTTPError(400, "no X-Scanner header found")
 	}
 
 	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)
@@ -721,7 +722,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		return echo.NewHTTPError(400, map[string]string{"error": "no X-Scanner header found"})
+		return echo.NewHTTPError(400, "no X-Scanner header found")
 	}
 
 	scanResults, err := s.ScanSarifWithoutSaving(reqCtx, sarifScan, scannerID)
@@ -731,17 +732,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not do an unauthenticated sarif scan: %s", err.Error())).WithInternal(err)
 	}
 
-	vulns := utils.Map(scanResults.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
-		fpv := models.FirstPartyVuln{
-			RuleID:          v.RuleID,
-			RuleName:        v.RuleName,
-			RuleHelpURI:     v.RuleHelpURI,
-			RuleDescription: v.RuleDescription,
-			URI:             v.URI,
-		}
-		fpv.State = v.State
-		return fpv
-	})
+	vulns := utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 
 	report := firstPartyVulnsToSARIF(scannerID, vulns)
 	return c.JSON(200, report)
@@ -751,6 +742,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param file formData file true "SBOM file"
 // @Param X-Origin header string false "Origin"
 // @Success 200 {object} dtos.ScanResponse
@@ -810,6 +802,7 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body cyclonedx.BOM true "CycloneDX SBOM"
 // @Produce application/json
 // @Success 200 {object} cyclonedx.BOM "CycloneDX VEX JSON"
@@ -853,6 +846,7 @@ func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 // @Tags Scanning
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param body body object true "SARIF scan result"
 // @Produce application/json
 // @Success 200 {object} object "Enriched SARIF JSON"
@@ -914,17 +908,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 			span.SetStatus(codes.Error, scanErr.Error())
 			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 		}
-		newState = utils.Map(scanResults.FirstPartyVulns, func(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
-			fpv := models.FirstPartyVuln{
-				RuleID:          v.RuleID,
-				RuleName:        v.RuleName,
-				RuleHelpURI:     v.RuleHelpURI,
-				RuleDescription: v.RuleDescription,
-				URI:             v.URI,
-			}
-			fpv.State = v.State
-			return fpv
-		})
+		newState = utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 	} else {
 		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
 		if err != nil {

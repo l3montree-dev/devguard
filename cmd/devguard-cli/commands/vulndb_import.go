@@ -63,7 +63,7 @@ func newImportCommand() *cobra.Command {
 	importCmd.Flags().BoolVar(&bulk, "bulk", false, "Load all gob data into RAM before writing (faster but uses ~2-3 GB memory)")
 	importCmd.Flags().StringSliceVar(&limitedToTables, "limitedToTables", []string{}, "Comma-separated list of tables to limit the import to (e.g. --limitedToTables=cves,exploits,malicious_packages)")
 	importCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logging")
-	importCmd.Flags().BoolVar(&localArchive, "local-archive", false, "Read from vulndb.tar.zst in the current directory instead of pulling from OCI")
+	importCmd.Flags().BoolVar(&localArchive, "localArchive", false, "Read from vulndb.tar.zst in the current directory instead of pulling from OCI")
 
 	return importCmd
 }
@@ -107,9 +107,9 @@ func newExportCommand() *cobra.Command {
 		},
 	}
 
-	exportCmd.Flags().BoolVar(&diffToPrevious, "diff-to-previous", false,
+	exportCmd.Flags().BoolVar(&diffToPrevious, "diffToPrevious", false,
 		"Compute a QuickDiff against the previous export so importers on the last version can skip staging entirely")
-	exportCmd.Flags().BoolVar(&localArchive, "local-archive", false,
+	exportCmd.Flags().BoolVar(&localArchive, "localArchive", false,
 		"Use vulndb.tar.zst in the current directory for the baseline import instead of pulling from OCI")
 
 	return exportCmd

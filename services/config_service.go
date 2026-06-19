@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -51,7 +52,14 @@ func (service ConfigService) RemoveConfig(ctx context.Context, key string) error
 	return service.repository.GetDB(ctx, nil).Where("key = ?", key).Delete(&models.Config{}).Error
 }
 
+var instanceSettingsCache *shared.InstanceSettings
+var instanceSettingsExpiry time.Time
+
 func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
+	if instanceSettingsCache != nil && time.Now().Before(instanceSettingsExpiry) {
+		return *instanceSettingsCache, nil
+	}
+
 	var settings shared.InstanceSettings
 	err := service.GetJSONConfig(ctx, "instanceSettings", &settings)
 	//if there is an error, we return default settings from environment variables
@@ -62,10 +70,26 @@ func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.In
 		} else {
 			settings.SingleOrganizationMode = false
 		}
-		err = service.SetJSONConfig(ctx, "instanceSettings", settings)
-		if err != nil {
-			return shared.InstanceSettings{}, err
+		bearerTokenAuthDisabled := os.Getenv("BEARER_TOKEN_AUTH_DISABLED")
+		if bearerTokenAuthDisabled == "true" {
+			settings.BearerTokenAuthDisabled = true
+		} else {
+			settings.BearerTokenAuthDisabled = false
 		}
 	}
+
+	instanceSettingsCache = &settings
+	instanceSettingsExpiry = time.Now().Add(5 * time.Minute) // cache for 5 minutes
+
+	return settings, nil
+}
+
+func (service ConfigService) GetAndCacheInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
+
+	settings, err := service.GetInstanceSettings(ctx)
+	if err != nil {
+		return shared.InstanceSettings{}, err
+	}
+
 	return settings, nil
 }

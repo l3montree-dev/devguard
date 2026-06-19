@@ -107,7 +107,7 @@ func (r *gitlabOauth2TokenRepository) GetDB(ctx context.Context, tx *gorm.DB) *g
 
 func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
 	for _, t := range token {
-		restore, err := r.encryptTokenInPlace(t)
+		restore, err := r.encryptTokenInPlace(ctx, t)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, tok
 }
 
 func (r *gitlabOauth2TokenRepository) Upsert(ctx context.Context, tx *gorm.DB, token *models.GitLabOauth2Token) error {
-	restore, err := r.encryptTokenInPlace(token)
+	restore, err := r.encryptTokenInPlace(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(ctx context.Cont
 		return nil, err
 	}
 
-	if err := r.decryptTokenInPlace(&token); err != nil {
+	if err := r.decryptTokenInPlace(ctx, &token); err != nil {
 		return nil, err
 	}
 
@@ -158,7 +158,7 @@ func (r *gitlabOauth2TokenRepository) FindByUserID(ctx context.Context, tx *gorm
 	}
 
 	for i := range tokens {
-		if err := r.decryptTokenInPlace(&tokens[i]); err != nil {
+		if err := r.decryptTokenInPlace(ctx, &tokens[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -179,7 +179,7 @@ func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(ctx context.Co
 
 func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx *gorm.DB, tokens []*models.GitLabOauth2Token) error {
 	for _, t := range tokens {
-		restore, err := r.encryptTokenInPlace(t)
+		restore, err := r.encryptTokenInPlace(ctx, t)
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,8 @@ func (r *gitlabOauth2TokenRepository) CreateIfNotExists(ctx context.Context, tx 
 }
 
 // encryptTokenInPlace encrypts the token's sensitive fields in place and returns a func to restore the plaintext.
-func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(token *models.GitLabOauth2Token) (func(), error) {
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
+func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(ctx context.Context, token *models.GitLabOauth2Token) (func(), error) {
 	encryptedAccessToken, err := r.encryptionService.EncryptAndWrapData(token.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("could not encrypt access token before saving to db: %w", err)
@@ -222,7 +223,8 @@ func (r *gitlabOauth2TokenRepository) encryptTokenInPlace(token *models.GitLabOa
 }
 
 // decryptTokenInPlace decrypts the sensitive fields of a fetched token
-func (r *gitlabOauth2TokenRepository) decryptTokenInPlace(token *models.GitLabOauth2Token) error {
+// nosemgrep: repo-method-missing-tx -- private helper; no DB access
+func (r *gitlabOauth2TokenRepository) decryptTokenInPlace(ctx context.Context, token *models.GitLabOauth2Token) error {
 	decryptedAccessToken, err := r.encryptionService.MaybeDecryptData(token.AccessToken)
 	if err != nil {
 		return fmt.Errorf("could not decrypt fetched access token: %w", err)

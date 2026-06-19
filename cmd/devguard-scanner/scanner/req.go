@@ -43,7 +43,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign request")
 	}
@@ -96,7 +96,7 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	}
 
 	if config.RuntimeBaseConfig.Token != "" {
-		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+		err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return nil, cancel, errors.Wrap(err, "could not sign request")
 		}
@@ -194,7 +194,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}

@@ -102,6 +102,7 @@ func assignTrustScore(ctx context.Context, entityType string, entityID string, s
 			projectRepo shared.ProjectRepository,
 		) error {
 			tx := trustedEntityRepo.GetDB(ctx, nil).Begin()
+			defer tx.Rollback()
 			defer func() {
 				if r := recover(); r != nil {
 					tx.Rollback()
