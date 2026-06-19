@@ -644,9 +644,8 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 }
 
 func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
-	var query string
 
-	query = `
+	query := `
 WITH
   target AS (
     SELECT
