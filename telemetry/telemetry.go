@@ -39,7 +39,7 @@ const (
 	ComponentScanner = "devguard-scanner"
 
 	EventName       = "devguard-instance-start"
-	DefaultEndpoint = "https://umami.l3montree.com/api/send"
+	DefaultEndpoint = "http://localhost:3001/api/send"
 	WebsiteID       = "2ab9fe36-42ec-485d-a592-b0f6e78dd1ad"
 	DefaultTimeout  = 3 * time.Second
 	UserAgent       = "DevguardTelemetry"
