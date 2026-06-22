@@ -93,7 +93,7 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var body struct {
-			Data []map[string]interface{} `json:"data"`
+			Data []map[string]any `json:"data"`
 		}
 		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		assert.Len(t, body.Data, 1)

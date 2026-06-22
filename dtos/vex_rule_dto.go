@@ -16,6 +16,8 @@
 package dtos
 
 import (
+	"slices"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
 )
@@ -56,10 +58,8 @@ func (p PathPattern) MatchesSuffix(path []string) bool {
 
 	// ROOT is a stop marker meaning "direct dependency only". When the pattern
 	// contains ROOT, skip suffix scanning and match the full path from position 0.
-	for _, elem := range p {
-		if elem == normalize.GraphRootNodeID {
-			return matchPatternExact(p, path)
-		}
+	if slices.Contains(p, normalize.GraphRootNodeID) {
+		return matchPatternExact(p, path)
 	}
 
 	// For suffix matching, we try increasingly longer suffixes
@@ -160,12 +160,7 @@ func matchPatternExact(pattern, path []string) bool {
 
 // ContainsWildcard returns true if the pattern contains a wildcard (*).
 func (p PathPattern) ContainsWildcard() bool {
-	for _, elem := range p {
-		if IsWildcard(elem) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(p, IsWildcard)
 }
 
 type VEXRuleDTO struct {

@@ -18,6 +18,7 @@ package daemons
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -86,12 +87,7 @@ func (runner *DaemonRunner) stageEnabled(stageName string) bool {
 	if len(runner.debugOptions.LimitToStages) == 0 {
 		return true
 	}
-	for _, s := range runner.debugOptions.LimitToStages {
-		if s == stageName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(runner.debugOptions.LimitToStages, stageName)
 }
 
 func (runner *DaemonRunner) DebugMode() bool {

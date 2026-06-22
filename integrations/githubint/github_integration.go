@@ -702,7 +702,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 		case dtos.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
 			_, _, err = client.CreateIssueComment(ctx, owner, repo, githubTicketNumber, &github.IssueComment{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("### %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -711,7 +711,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 		case dtos.EventTypeFalsePositive:
 
 			_, _, err = client.CreateIssueComment(ctx, owner, repo, githubTicketNumber, &github.IssueComment{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("### %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -719,14 +719,14 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 
 		case dtos.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(ctx, owner, repo, githubTicketNumber, &github.IssueComment{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("### %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 		case dtos.EventTypeComment:
 			_, _, err = client.CreateIssueComment(ctx, owner, repo, githubTicketNumber, &github.IssueComment{
-				Body: github.String(fmt.Sprintf(" %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
+				Body: new(fmt.Sprintf(" %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			return err
 		}
@@ -805,9 +805,9 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 
 	labels := commonint.GetLabels(firstPartyVuln)
 	issueRequest := &github.IssueRequest{
-		State:  github.String(expectedIssueState),
-		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		State:  new(expectedIssueState),
+		Title:  new(firstPartyVuln.Title()),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -829,9 +829,9 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	labels := commonint.GetLabels(dependencyVuln)
 	issueRequest := &github.IssueRequest{
-		State:  github.String(expectedIssueState.ToGithub()),
-		Title:  github.String(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		State:  new(expectedIssueState.ToGithub()),
+		Title:  new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
 		Labels: &labels,
 	}
 
@@ -906,7 +906,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 	// if an error did happen, delete the issue from github
 	if err != nil {
 		_, _, err := client.EditIssue(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
-			State: github.String("closed"),
+			State: new("closed"),
 		})
 		if err != nil {
 			slog.Error("could not delete issue", "err", err)
@@ -920,8 +920,8 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
 	labels := commonint.GetLabels(firstPartyVuln)
 	issue := &github.IssueRequest{
-		Title:  github.String(firstPartyVuln.Title()),
-		Body:   github.String(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Title:  new(firstPartyVuln.Title()),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -931,8 +931,8 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	}
 
 	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
-		Description: github.String("DevGuard"),
-		Color:       github.String("182654"),
+		Description: new("DevGuard"),
+		Color:       new("182654"),
 	})
 	if err != nil {
 		slog.Error("could not update label", "err", err)
@@ -941,7 +941,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 
 	// create comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
-		Body: github.String(justification),
+		Body: new(justification),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
@@ -955,8 +955,8 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 	labels := commonint.GetLabels(licenseRisk)
 
 	issue := &github.IssueRequest{
-		Title:  github.String(licenseRisk.Title()),
-		Body:   github.String(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Title:  new(licenseRisk.Title()),
+		Body:   new(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		Labels: &labels,
 	}
 
@@ -966,8 +966,8 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 	}
 
 	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
-		Description: github.String("DevGuard"),
-		Color:       github.String("182654"),
+		Description: new("DevGuard"),
+		Color:       new("182654"),
 	})
 	if err != nil {
 		// nevertheless try to create the comment, thus not returning here
@@ -976,7 +976,7 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 
 	// create comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
-		Body: github.String(justification),
+		Body: new(justification),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
@@ -996,9 +996,9 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &github.IssueRequest{
-		Title: github.String(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,
+		Title: new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,
 			utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
 		Labels: &labels,
 	}
 
@@ -1011,8 +1011,8 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	if err == nil {
 		// todo - we are editing the labels on each call. Actually we only need todo it once
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "risk:"+strings.ToLower(riskSeverity), &github.Label{
-			Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
-			Color:       github.String(vulndb.RiskToColor(*dependencyVuln.RawRiskAssessment)),
+			Description: new("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
+			Color:       new(vulndb.RiskToColor(*dependencyVuln.RawRiskAssessment)),
 		})
 
 		if err != nil {
@@ -1023,8 +1023,8 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	cvssSeverity, err := vulndb.RiskToSeverity(float64(dependencyVuln.GetCVE().CVSS))
 	if err == nil {
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "cvss-severity:"+strings.ToLower(cvssSeverity), &github.Label{
-			Description: github.String("CVSS severity of the vulnerability"),
-			Color:       github.String(vulndb.RiskToColor(float64(dependencyVuln.GetCVE().CVSS))),
+			Description: new("CVSS severity of the vulnerability"),
+			Color:       new(vulndb.RiskToColor(float64(dependencyVuln.GetCVE().CVSS))),
 		})
 
 		if err != nil {
@@ -1038,8 +1038,8 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 		slog.Error("could not update label", "err", err)
 	}
 	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
-		Description: github.String("DevGuard"),
-		Color:       github.String("182654"),
+		Description: new("DevGuard"),
+		Color:       new("182654"),
 	})
 	if err != nil {
 		// nevertheless try to create the comment, thus not returning here
@@ -1048,7 +1048,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 	// create comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
-		Body: github.String(justification),
+		Body: new(justification),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)

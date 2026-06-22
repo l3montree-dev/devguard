@@ -105,10 +105,10 @@ func parseSSEEvents(body string) []struct{ Event, Data string } {
 	var event, data string
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "event: ") {
-			event = strings.TrimPrefix(line, "event: ")
-		} else if strings.HasPrefix(line, "data: ") {
-			data = strings.TrimPrefix(line, "data: ")
+		if after, ok := strings.CutPrefix(line, "event: "); ok {
+			event = after
+		} else if after, ok := strings.CutPrefix(line, "data: "); ok {
+			data = after
 		} else if line == "" && event != "" {
 			events = append(events, struct{ Event, Data string }{event, data})
 			event, data = "", ""

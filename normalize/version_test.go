@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/mod/semver"
 )
@@ -230,12 +229,12 @@ func TestCheckVersion(t *testing.T) {
 			assert.False(t, result)
 		})
 		t.Run("apk - should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, utils.Ptr("2.0.0"), "1.5.0", "apk")
+			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 		t.Run("apk - should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, utils.Ptr("1.0.0"), nil, "1.5.0", "apk")
+			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -252,7 +251,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("should work with curl version", func(t *testing.T) {
 			lookingForVersion := "7.88.1-10+deb12u12"
 
-			result, err := normalize.CheckVersion(nil, nil, utils.Ptr("7.88.1-10+deb12u1"), lookingForVersion, "deb")
+			result, err := normalize.CheckVersion(nil, nil, new("7.88.1-10+deb12u1"), lookingForVersion, "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -341,13 +340,13 @@ func TestCheckVersion(t *testing.T) {
 		})
 
 		t.Run("should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, utils.Ptr("2.0.0"), "1.5.0", "deb")
+			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, utils.Ptr("1.0.0"), nil, "1.5.0", "deb")
+			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -408,13 +407,13 @@ func TestCheckVersion(t *testing.T) {
 		})
 
 		t.Run("should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, utils.Ptr("2.0.0"), "1.5.0", "rpm")
+			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, utils.Ptr("1.0.0"), nil, "1.5.0", "rpm")
+			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})

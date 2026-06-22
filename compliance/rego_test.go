@@ -91,7 +91,7 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 
 	expectedResult := &PolicyEvaluation{
 		Policy:    model,
-		Compliant: utils.Ptr(false),
+		Compliant: new(false),
 		Violations: []string{
 			"Component \"github.com/cloudflare/circl\" uses non-OSI approved license \"non-standard\"",
 			"Component \"github.com/dustin/go-humanize\" uses non-OSI approved license \"non-standard\"",

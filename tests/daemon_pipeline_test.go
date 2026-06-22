@@ -10,7 +10,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -509,7 +508,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 
 		// Create multiple assets that all need processing
 		assetIDs := make([]uuid.UUID, 0)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			asset := models.Asset{
 				Name:            fmt.Sprintf("asset-%d", i),
 				ProjectID:       project.ID,
@@ -748,7 +747,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				Description:      "Test vulnerability for risk calculation",
 				CVSS:             8.5,
 				Vector:           "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-				EPSS:             utils.Ptr(0.7),
+				EPSS:             new(0.7),
 			}
 			err := f.DB.Create(&cve).Error
 			assert.NoError(t, err)

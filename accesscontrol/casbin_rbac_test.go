@@ -82,7 +82,7 @@ func TestCasbinRBAC_ConcurrentWrites(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		i := i
 		go func() {
 			defer wg.Done()
@@ -99,7 +99,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 	rbac := newTestCasbinRBAC(t, "org-1")
 
 	// Seed some data first.
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		_ = rbac.GrantRoleInProject(context.Background(), fmt.Sprintf("user-%d", i), shared.RoleMember, "project-0")
 	}
 
@@ -107,7 +107,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		i := i
 		go func() {
 			defer wg.Done()
@@ -126,7 +126,7 @@ func TestCasbinRBAC_ConcurrentReadsAndWrites(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		i := i
 		go func() {
 			defer wg.Done()
@@ -272,17 +272,14 @@ func TestCasbinRBACTwoUsersConcurrentOrgSync(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for _, rbac := range []*casbinRBAC{user1rbac, user2rbac} {
-		rbac := rbac
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			// Simulate what syncProjectsAndAssets does: grant + read roles per project.
 			for _, project := range projects {
 				_ = rbac.GrantRoleInProject(context.Background(), "user", shared.RoleMember, project)
 				_ = rbac.GetAllRoles("user")
 				_ = rbac.RevokeAllRolesInProjectForUser(context.Background(), "user", project)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }

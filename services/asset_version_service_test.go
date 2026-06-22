@@ -16,7 +16,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -250,7 +249,7 @@ func TestBuildVeX(t *testing.T) {
 				Events: []models.VulnEvent{
 					{
 						Type:          dtos.EventTypeDetected,
-						Justification: utils.Ptr("Initial detection event without justification"),
+						Justification: new("Initial detection event without justification"),
 						CreatedAt:     time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
 					},
 					{
@@ -260,7 +259,7 @@ func TestBuildVeX(t *testing.T) {
 					},
 					{
 						Type:          dtos.EventTypeComment,
-						Justification: utils.Ptr("This is a comment and should be ignored"),
+						Justification: new("This is a comment and should be ignored"),
 						CreatedAt:     time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),
 					},
 				},
@@ -328,7 +327,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeAccepted,
-					Justification: utils.Ptr("Risk accepted"),
+					Justification: new("Risk accepted"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -383,7 +382,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected in this context"),
+					Justification: new("Not affected in this context"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -454,7 +453,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected via path 1"),
+					Justification: new("Not affected via path 1"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -472,7 +471,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected via path 2"),
+					Justification: new("Not affected via path 2"),
 					CreatedAt:     time.Now(),
 				}},
 			},

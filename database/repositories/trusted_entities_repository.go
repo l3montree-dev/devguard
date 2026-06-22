@@ -45,7 +45,7 @@ func (r *trustedEntityRepository) UpsertOrganizationTrust(ctx context.Context, t
 	}
 
 	// Update existing entry
-	return db.Model(&existing).Updates(map[string]interface{}{
+	return db.Model(&existing).Updates(map[string]any{
 		"trustscore": trustScore,
 		"updated_at": gorm.Expr("NOW()"),
 	}).Error

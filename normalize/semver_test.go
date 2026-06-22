@@ -20,8 +20,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//go:fix inline
 func ptr(s string) *string {
-	return &s
+	return new(s)
 }
 
 func TestSemverFix(t *testing.T) {
@@ -92,32 +93,32 @@ func TestFixFixedVersion(t *testing.T) {
 		{
 			name:         "empty fixedVersion returns nil",
 			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
-			fixedVersion: ptr(""),
+			fixedVersion: new(""),
 			want:         nil,
 		},
 		{
 			name:         "purl without @ returns fixedVersion",
 			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim",
-			fixedVersion: ptr("1.2.3"),
-			want:         ptr("1.2.3"),
+			fixedVersion: new("1.2.3"),
+			want:         new("1.2.3"),
 		},
 		{
 			name:         "version after @ does not start with v, returns fixedVersion",
 			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
-			fixedVersion: ptr("1.2.3"),
-			want:         ptr("1.2.3"),
+			fixedVersion: new("1.2.3"),
+			want:         new("1.2.3"),
 		},
 		{
 			name:         "version after @ starts with v, returns fixedVersion+ver",
 			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v1.9.1",
-			fixedVersion: ptr("1.2.3"),
-			want:         ptr("v1.2.3"),
+			fixedVersion: new("1.2.3"),
+			want:         new("v1.2.3"),
 		},
 		{
 			name:         "version after @ is just v, returns fixedVersion+ver",
 			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v",
-			fixedVersion: ptr("1.2.3"),
-			want:         ptr("v1.2.3"),
+			fixedVersion: new("1.2.3"),
+			want:         new("v1.2.3"),
 		},
 	}
 

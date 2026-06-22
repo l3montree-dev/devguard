@@ -32,7 +32,7 @@ type ProcessInfo struct {
 type RuntimeInfo struct {
 	GoVersion     string   `json:"goVersion,omitempty"`
 	NumGoroutines int      `json:"numGoroutines,omitempty"`
-	Mem           MemStats `json:"mem,omitempty"`
+	Mem           MemStats `json:"mem"`
 }
 
 // MemStats focuses on a small, relevant subset of runtime.MemStats

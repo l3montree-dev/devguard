@@ -206,7 +206,7 @@ func scanExternalImage(ctx context.Context) error {
 				continue
 			}
 
-			bom.Components = utils.Ptr(append(*bom.Components, cyclonedx.Component{
+			bom.Components = new(append(*bom.Components, cyclonedx.Component{
 				Type:       cyclonedx.ComponentTypeApplication,
 				Name:       purl,
 				BOMRef:     purl,

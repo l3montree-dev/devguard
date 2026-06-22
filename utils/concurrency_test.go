@@ -40,7 +40,6 @@ func TestErrGroupGoroutineLeak(t *testing.T) {
 func TestErrGroupCorrectness(t *testing.T) {
 	eg := ErrGroup[int](5)
 	for i := range 10 {
-		i := i
 		eg.Go(func() (int, error) { return i, nil })
 	}
 	results, err := eg.WaitAndCollect()

@@ -96,8 +96,8 @@ func (c *casbinRBAC) GetAdminsOfOrganization() ([]string, error) {
 	}
 	userIDs := make([]string, 0, len(implicitUsers))
 	for _, user := range implicitUsers {
-		if strings.HasPrefix(user, "user::") {
-			userIDs = append(userIDs, strings.TrimPrefix(user, "user::"))
+		if after, ok := strings.CutPrefix(user, "user::"); ok {
+			userIDs = append(userIDs, after)
 		}
 	}
 	return userIDs, nil

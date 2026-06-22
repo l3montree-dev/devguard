@@ -12,7 +12,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -393,7 +392,7 @@ func TestGetLabels(t *testing.T) {
 				{ArtifactName: "container:test"},
 				{ArtifactName: "source-code:test"},
 			},
-			RawRiskAssessment: utils.Ptr(0.2),
+			RawRiskAssessment: new(0.2),
 		}
 		expectedLabels := []string{
 			"devguard",
@@ -550,7 +549,7 @@ func TestRenderMarkdown(t *testing.T) {
 
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
 			URI: "the/uri/of/the/vuln",
@@ -571,7 +570,7 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.NoError(t, err)
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 			URI: "the/uri/of/the/vuln",
 		}
@@ -606,7 +605,7 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 			vuln := &models.DependencyVuln{
 				Vulnerability:     models.Vulnerability{State: dtos.VulnStateOpen},
 				Artifacts:         order,
-				RawRiskAssessment: utils.Ptr(0.5),
+				RawRiskAssessment: new(0.5),
 			}
 			labels := GetLabels(vuln)
 			if i == 0 {

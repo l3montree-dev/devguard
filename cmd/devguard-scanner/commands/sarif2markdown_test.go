@@ -17,7 +17,7 @@ func TestExtractResourceName(t *testing.T) {
 			name: "from properties",
 			result: sarif.Result{
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"resource": "Pod/nginx",
 					},
 				},
@@ -30,7 +30,7 @@ func TestExtractResourceName(t *testing.T) {
 				Locations: []sarif.Location{
 					{
 						LogicalLocations: []sarif.LogicalLocation{
-							{Name: ptr("test-pod")},
+							{Name: new("test-pod")},
 						},
 					},
 				},
@@ -176,26 +176,26 @@ func TestAggregateResults(t *testing.T) {
 	t.Run("aggregates results by rule ID", func(t *testing.T) {
 		results := []sarif.Result{
 			{
-				RuleID: ptr("policy1/rule1"),
+				RuleID: new("policy1/rule1"),
 				Level:  "high",
 				Message: sarif.Message{
 					Text: "Got fail on resource1",
 				},
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"policy":   "policy1",
 						"resource": "Pod/test1",
 					},
 				},
 			},
 			{
-				RuleID: ptr("policy1/rule1"),
+				RuleID: new("policy1/rule1"),
 				Level:  "high",
 				Message: sarif.Message{
 					Text: "Got pass on resource2",
 				},
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"policy":   "policy1",
 						"resource": "Pod/test2",
 					},
@@ -215,33 +215,33 @@ func TestAggregateResults(t *testing.T) {
 	t.Run("sorts by severity", func(t *testing.T) {
 		results := []sarif.Result{
 			{
-				RuleID:  ptr("policy1/rule1"),
+				RuleID:  new("policy1/rule1"),
 				Level:   "low",
 				Message: sarif.Message{Text: "test"},
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"policy":   "policy1",
 						"resource": "resource1",
 					},
 				},
 			},
 			{
-				RuleID:  ptr("policy2/rule2"),
+				RuleID:  new("policy2/rule2"),
 				Level:   "critical",
 				Message: sarif.Message{Text: "test"},
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"policy":   "policy2",
 						"resource": "resource2",
 					},
 				},
 			},
 			{
-				RuleID:  ptr("policy3/rule3"),
+				RuleID:  new("policy3/rule3"),
 				Level:   "medium",
 				Message: sarif.Message{Text: "test"},
 				Properties: &sarif.PropertyBag{
-					AdditionalProperties: map[string]interface{}{
+					AdditionalProperties: map[string]any{
 						"policy":   "policy3",
 						"resource": "resource3",
 					},
@@ -292,13 +292,13 @@ func TestGenerateSummaryMarkdown(t *testing.T) {
 				},
 				Results: []sarif.Result{
 					{
-						RuleID: ptr("policy1/rule1"),
+						RuleID: new("policy1/rule1"),
 						Level:  "high",
 						Message: sarif.Message{
 							Text: "Got fail on check",
 						},
 						Properties: &sarif.PropertyBag{
-							AdditionalProperties: map[string]interface{}{
+							AdditionalProperties: map[string]any{
 								"policy":   "policy1",
 								"resource": "Pod/test",
 							},
@@ -319,6 +319,7 @@ func TestGenerateSummaryMarkdown(t *testing.T) {
 	assert.Contains(t, markdown, "❌ Failed: 1")
 }
 
+//go:fix inline
 func ptr[T any](v T) *T {
-	return &v
+	return new(v)
 }

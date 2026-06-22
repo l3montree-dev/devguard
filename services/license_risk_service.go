@@ -280,7 +280,7 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(ct
 		// copy all events for this license risk
 		if len(alreadyExistingEvents[i]) != 0 {
 			events[i] = utils.Map(alreadyExistingEvents[i], func(el models.VulnEvent) models.VulnEvent {
-				el.LicenseRiskID = utils.Ptr(licenseRisk.CalculateHash())
+				el.LicenseRiskID = new(licenseRisk.CalculateHash())
 				el.ID = uuid.Nil
 				return el
 			})
@@ -335,7 +335,7 @@ func diffLicenseRisksBetweenBranches(foundLicenseRisks []models.LicenseRisk, exi
 				})
 
 				existingRiskEventsOnOtherBranch = append(existingRiskEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
-					event.OriginalAssetVersionName = utils.Ptr(existingRisk.GetAssetVersionName())
+					event.OriginalAssetVersionName = new(existingRisk.GetAssetVersionName())
 					return event
 				})...)
 			}

@@ -16,7 +16,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -560,7 +559,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
 			markFP(t, repo, vuln, "art")
 
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom) // gone
 				f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 				scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability) // back
@@ -1640,8 +1639,8 @@ func TestTicketHandling(t *testing.T) {
 
 		t.Run("should open tickets for vulnerabilities if the risk threshold is exceeded", func(t *testing.T) {
 
-			asset.CVSSAutomaticTicketThreshold = utils.Ptr(7.0)
-			asset.RepositoryID = utils.Ptr(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
+			asset.CVSSAutomaticTicketThreshold = new(7.0)
+			asset.RepositoryID = new(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
 
@@ -1659,7 +1658,7 @@ func TestTicketHandling(t *testing.T) {
 				IID: 456,
 			}, nil, nil).Once()
 			gitlabClientFacade.On("CreateIssueComment", mock.Anything, 123, 456, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
+				Body: new("<devguard> Risk exceeds predefined threshold\n"),
 			}).Return(nil, nil, nil).Once()
 
 			err = controller.ScanDependencyVulnFromProject(ctx)
@@ -1679,7 +1678,7 @@ func TestTicketHandling(t *testing.T) {
 					State:            dtos.VulnStateOpen,
 					AssetID:          asset.ID,
 					// use numeric project id to mimic real stored value format gitlab:<projectID>/<issueIID>
-					TicketID: utils.Ptr("gitlab:123/789"),
+					TicketID: new("gitlab:123/789"),
 				},
 				Artifacts: []models.Artifact{
 					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
@@ -1713,7 +1712,7 @@ func TestTicketHandling(t *testing.T) {
 					AssetVersionName: "main",
 					State:            dtos.VulnStateOpen,
 					AssetID:          asset.ID,
-					TicketID:         utils.Ptr("gitlab:123/789"),
+					TicketID:         new("gitlab:123/789"),
 				},
 				Artifacts: []models.Artifact{
 					{ArtifactName: "some-other-artifact", AssetVersionName: "main", AssetID: asset.ID},
@@ -1791,8 +1790,8 @@ func TestTicketHandling(t *testing.T) {
 		})
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
 			// Ensure asset has thresholds and integration set for ticket creation
-			asset.CVSSAutomaticTicketThreshold = utils.Ptr(7.0)
-			asset.RepositoryID = utils.Ptr(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
+			asset.CVSSAutomaticTicketThreshold = new(7.0)
+			asset.RepositoryID = new(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
 
@@ -1834,7 +1833,7 @@ func TestTicketHandling(t *testing.T) {
 				IID: 789,
 			}, nil, nil).Once()
 			gitlabClientFacade.On("CreateIssueComment", mock.Anything, 123, 789, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
+				Body: new("<devguard> Risk exceeds predefined threshold\n"),
 			}).Return(nil, nil, nil).Once()
 
 			err = controller.ScanDependencyVulnFromProject(ctx)
@@ -1867,7 +1866,7 @@ func createCVE2025_46569(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
-		SemverFixed:        utils.Ptr("1.4.0"),
+		SemverFixed:        new("1.4.0"),
 	}
 
 	err = db.Create(&affectedComponent).Error
@@ -2123,7 +2122,7 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		affectedComp := models.AffectedComponent{
 			PurlWithoutVersion: "pkg:golang/github.com/jinzhu/inflection",
 			Ecosystem:          "golang",
-			Version:            utils.Ptr("1.0.0"),
+			Version:            new("1.0.0"),
 			CVE:                []models.CVE{newCVE},
 		}
 		if err = f.DB.Create(&affectedComp).Error; err != nil {

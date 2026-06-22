@@ -11,7 +11,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +43,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		assert.Nil(t, f.DB.Create(&integration).Error)
 
 		// connect the asset to gitlab
-		asset.RepositoryID = utils.Ptr("gitlab:" + integration.ID.String() + ":1")
+		asset.RepositoryID = new("gitlab:" + integration.ID.String() + ":1")
 		assert.Nil(t, f.DB.Save(&asset).Error)
 		// create a asset version
 		assetVersion := models.AssetVersion{
@@ -65,7 +64,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 				State:            dtos.VulnStateOpen,
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				TicketID:         utils.Ptr("gitlab:0/123"),
+				TicketID:         new("gitlab:0/123"),
 			},
 			CVEID: "CVE-2222",
 		}
@@ -141,7 +140,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			req.Header.Set("X-Gitlab-Event", "Issue Hook")
 			req.Header.Set("X-Gitlab-Token", "invalid-token")
 			// add an webhook secret to the asset
-			asset.WebhookSecret = utils.Ptr(uuid.New())
+			asset.WebhookSecret = new(uuid.New())
 			f.DB.Save(&asset)
 
 			rec := httptest.NewRecorder()
@@ -184,8 +183,8 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			assert.Nil(t, gitlabInt.HandleWebhook(ctx))
 			options := client.Calls[0].Arguments.Get(3).(*gitlab.UpdateIssueOptions)
 
-			assert.Equal(t, utils.Ptr("close"), options.StateEvent)
-			assert.Equal(t, options.Labels, utils.Ptr(gitlab.LabelOptions([]string{"devguard", "state:accepted"})))
+			assert.Equal(t, new("close"), options.StateEvent)
+			assert.Equal(t, options.Labels, new(gitlab.LabelOptions([]string{"devguard", "state:accepted"})))
 
 			vulnFromDB := models.DependencyVuln{}
 			assert.Nil(t, f.DB.First(&vulnFromDB, "id = ?", vuln.ID).Error)
@@ -225,8 +224,8 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			assert.Nil(t, gitlabInt.HandleWebhook(ctx))
 			options := client.Calls[0].Arguments.Get(3).(*gitlab.UpdateIssueOptions)
 
-			assert.Equal(t, utils.Ptr("reopen"), options.StateEvent)
-			assert.Equal(t, options.Labels, utils.Ptr(gitlab.LabelOptions([]string{"devguard", "state:open"})))
+			assert.Equal(t, new("reopen"), options.StateEvent)
+			assert.Equal(t, options.Labels, new(gitlab.LabelOptions([]string{"devguard", "state:open"})))
 
 			vulnFromDB := models.DependencyVuln{}
 			assert.Nil(t, f.DB.First(&vulnFromDB, "id = ?", vuln.ID).Error)

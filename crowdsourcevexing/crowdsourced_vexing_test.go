@@ -80,7 +80,7 @@ func generateDistinctVoters(n int, pattern []string, cve CVE, assessment string,
 	var projects []Project
 	var assets []Asset
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		suffix := fmt.Sprintf("%d", i)
 		orgID := "org-" + suffix
 		projID := "proj-" + suffix
@@ -263,14 +263,14 @@ func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
 	var projects []Project
 	var assets []Asset
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		orgs = append(orgs, makeOrgWithCreator("org-mal", 0.3, oldOrg(), "creator-mal"))
 		projects = append(projects, makeProject("proj-mal", "org-mal", 0.3))
 		assets = append(assets, makeAsset("asset-mal", "proj-mal"))
 		rules = append(rules, makeVexRule(patternMal, testCVE, "asset-mal", testAssessmentSecondary))
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		s := fmt.Sprintf("%d", i)
 		orgs = append(orgs, makeOrgWithCreator("org-"+s, 0.1, oldOrg(), "creator-"+s))
 		projects = append(projects, makeProject("proj-"+s, "org-"+s, 0.9))
@@ -297,7 +297,7 @@ func TestCrowdsourcedVexing_ProjectsOnly(t *testing.T) {
 	var mProjects []Project
 	var mAssets []Asset
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		s := fmt.Sprintf("%d", i)
 		mOrgs = append(mOrgs, makeOrgWithCreator("m-org-"+s, 0, oldOrg(), "creator-"+s))
 		mProjects = append(mProjects, makeProject("m-proj-"+s, "m-org-"+s, 0.2))
@@ -305,7 +305,7 @@ func TestCrowdsourcedVexing_ProjectsOnly(t *testing.T) {
 		mRules = append(mRules, makeVexRule(patternMal, testCVE, "m-asset-"+s, testAssessmentPrimary))
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		s := fmt.Sprintf("%d", i)
 		orgs = append(orgs, makeOrgWithCreator("org-"+s, 0, oldOrg(), "creator-"+s))
 		projects = append(projects, makeProject("proj-"+s, "org-"+s, 0.9))
@@ -417,7 +417,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		asset := makeAsset("replay-asset", "replay-proj")
 
 		var rules []VexRule
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, testAssessmentPrimary))
 		}
 
@@ -432,7 +432,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		var rules []VexRule
 		var projects []Project
 		var assets []Asset
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			s := fmt.Sprintf("%d", i)
 			projID := "diff-proj-" + s
 			assetID := "diff-asset-" + s
@@ -453,7 +453,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		asset := makeAsset("deep-replay-asset", "deep-replay-proj")
 
 		var rules []VexRule
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			rules = append(rules, makeVexRule(pattern, testCVE, asset.ID, testAssessmentPrimary))
 		}
 
@@ -520,7 +520,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 		var sameOrgs []Organization
 		var sameProjs []Project
 		var sameAssets []Asset
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			s := fmt.Sprintf("%d", i)
 			sameOrgs = append(sameOrgs, makeOrgWithCreator("deep-same-org-"+s, 0.3, oldOrg(), "deep-single-user"))
 			sameProjs = append(sameProjs, makeProject("deep-same-proj-"+s, "deep-same-org-"+s, 0.3))
