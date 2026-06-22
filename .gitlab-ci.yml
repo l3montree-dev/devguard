@@ -22,7 +22,7 @@ stages:
 
 include:
 # ── api-pipeline ──────────────────────────────────────────────────────────────
-  - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/build-nix-multiarch.yml
+  - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
       nix_target_amd64: "devguard-amd64"
@@ -30,7 +30,7 @@ include:
       arm64_runner_tag: "arm"
 
 # ── scanner-pipeline ──────────────────────────────────────────────────────────
-  - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/build-nix-multiarch.yml
+  - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
       image_suffix: "scanner"
@@ -40,7 +40,7 @@ include:
       job_suffix: ":scanner"
 
   # ── postgresql-pipeline ──────────────────────────────────────────────────────────
-  - remote: https://gitlab.com/l3montree/devguard/-/raw/main/templates/build-nix-multiarch.yml
+  - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
       image_suffix: "postgresql"
