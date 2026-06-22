@@ -339,6 +339,8 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFixed:
 		ev = models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
+	default:
+		return models.VulnEvent{}, fmt.Errorf("unsupported event type: %s", vulnEventType)
 	}
 
 	// Apply the event to the original vuln

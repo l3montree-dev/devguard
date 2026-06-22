@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -409,6 +410,8 @@ func (s *LicenseRiskService) updateLicenseRiskState(ctx context.Context, tx shar
 		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
 		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), dtos.VulnTypeLicenseRisk, userID, justification, false, userAgent)
+	default:
+		return models.VulnEvent{}, fmt.Errorf("unsupported event type: %s", statusType)
 	}
 
 	err := s.licenseRiskRepository.ApplyAndSave(ctx, tx, licenseRisk, &ev)

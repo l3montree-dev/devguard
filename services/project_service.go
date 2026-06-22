@@ -61,9 +61,7 @@ func (s *projectService) CreateProject(ctx shared.Context, project *models.Proje
 				return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 			}
 		}
-
-		// enable the default community policies
-		return s.projectRepository.EnableCommunityManagedPolicies(ctx.Request().Context(), tx, newProject.ID)
+		return nil
 	})
 	if err != nil {
 		slog.Error("could not create project", "err", err, "projectSlug", project.Slug, "projectID", project.ID)

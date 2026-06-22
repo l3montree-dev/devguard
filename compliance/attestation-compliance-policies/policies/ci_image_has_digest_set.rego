@@ -8,7 +8,7 @@
 #   tags:
 #   - GitLab CI
 #   - Legal
-#   complianceFrameworks: []
+#   policyFrameworks: []
 package compliance
 
 import rego.v1

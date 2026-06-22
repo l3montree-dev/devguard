@@ -10,8 +10,12 @@
 #   - A.5.7 Threat intelligence
 #   - A.5.9 Inventory of information and other associated assets
 #   - A.8.8 Management of technical vulnerabilities
-#   complianceFrameworks:
-#   - ISO 27001
+#   policyFrameworks:
+#   - framework: ISO 27001
+#     controls:
+#     - A.5.7
+#     - A.5.9
+#     - A.8.8
 package compliance
 
 import rego.v1

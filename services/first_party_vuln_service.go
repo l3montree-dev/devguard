@@ -120,6 +120,8 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, t
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
 		ev = models.NewCommentEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
+	default:
+		return models.VulnEvent{}, fmt.Errorf("unsupported event type: %s", statusType)
 	}
 
 	return s.applyAndSave(ctx, tx, firstPartyVuln, &ev)

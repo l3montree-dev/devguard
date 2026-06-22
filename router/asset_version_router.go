@@ -30,7 +30,6 @@ func NewAssetVersionRouter(
 	assetGroup AssetRouter,
 	assetVersionController *controllers.AssetVersionController,
 	firstPartyVulnController *controllers.FirstPartyVulnController,
-	complianceController *controllers.ComplianceController,
 	componentController *controllers.ComponentController,
 	statisticsController *controllers.StatisticsController,
 	attestationController *controllers.AttestationController,
@@ -50,8 +49,7 @@ func NewAssetVersionRouter(
 	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
 	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	assetVersionRouter.GET("/", assetVersionController.Read)
-	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
-	assetVersionRouter.GET("/compliance/:policy/", complianceController.Details)
+
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)

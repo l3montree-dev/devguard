@@ -43,8 +43,6 @@ type Project struct {
 
 	ConfigFiles databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
-	EnabledPolicies []Policy `json:"enabledPolicies" gorm:"many2many:project_enabled_policies;constraint:OnDelete:CASCADE;"`
-
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:unique_external_entity;"`
 	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:unique_external_entity;"`
 	ExternalEntityParentID   *string `json:"externalEntityProviderParentId" gorm:"type:text;"`

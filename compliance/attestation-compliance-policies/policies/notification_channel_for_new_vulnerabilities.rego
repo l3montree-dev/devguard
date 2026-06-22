@@ -9,8 +9,10 @@
 #   tags:
 #   - ISO 27001
 #   - A.8.8 Management of technical vulnerabilities
-#   complianceFrameworks:
-#   - ISO 27001
+#   policyFrameworks:
+#   - framework: ISO 27001
+#     controls:
+#     - A.8.8
 package compliance
 
 import rego.v1

@@ -30,6 +30,7 @@ func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
 	artifactController *controllers.ArtifactController,
 	externalReferenceController *controllers.ExternalReferenceController,
+	attestationController *controllers.AttestationController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
 ) ArtifactRouter {
@@ -43,6 +44,7 @@ func NewArtifactRouter(
 	artifactRouter.GET("/vex.xml/", artifactController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", artifactController.BuildPDFFromSBOM)
 	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
+	artifactRouter.GET("/attestations/", attestationController.ListByArtifact)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))

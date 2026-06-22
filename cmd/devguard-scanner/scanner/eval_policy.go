@@ -25,163 +25,40 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func EvaluatePolicyAgainstAttestations(image string, policyPath string, attestations []map[string]any) (*sarif.SarifSchema210Json, []compliance.PolicyEvaluation, error) {
-	policyContent, err := os.ReadFile(policyPath)
+func EvaluatePolicyAgainstAttestations(srcPath string, policyPath string, attestations []map[string]any) (*sarif.SarifSchema210Json, []compliance.PolicyEvaluation, error) {
+
+	content, err := os.ReadFile(policyPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not read policy file: %w", err)
 	}
 
-	policy, err := compliance.NewPolicy(filepath.Base(policyPath), string(policyContent))
+	policy, err := compliance.GetPolicyFromFile(filepath.Base(policyPath), string(content))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not parse policy: %w", err)
 	}
 
-	model := compliance.ConvertPolicyFsToModel(*policy)
+	evaluations := make([]compliance.PolicyEvaluation, 0)
 
-	filtered := attestations
-	if policy.PredicateType != "" {
-		filtered = []map[string]any{}
-		for _, attestation := range attestations {
-			if predicateType, ok := attestation["predicateType"].(string); ok && predicateType == policy.PredicateType {
-				filtered = append(filtered, attestation)
+	for _, attestation := range attestations {
+		var eval compliance.PolicyEvaluation
+		predicateType, _ := attestation["predicateType"].(string)
+		if predicateType != policy.PredicateType {
+			eval = compliance.Eval(policy, nil)
+		} else {
+			raw, err := json.Marshal(attestation)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not marshal attestation: %w", err)
 			}
-		}
-		if len(filtered) == 0 {
-			return nil, nil, fmt.Errorf("no attestations found for predicate type %s", policy.PredicateType)
-		}
-	}
-
-	var evaluations []compliance.PolicyEvaluation
-	for _, attestation := range filtered {
-		raw, err := json.Marshal(attestation)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not marshal attestation: %w", err)
+			input, err := utils.ExtractAttestationPayload(string(raw))
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not extract attestation payload: %w", err)
+			}
+			eval = compliance.Eval(policy, input)
 		}
 
-		input, err := utils.ExtractAttestationPayload(string(raw))
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not extract attestation payload: %w", err)
-		}
-
-		evaluations = append(evaluations, compliance.Eval(model, input))
+		evaluations = append(evaluations, eval)
 	}
 
-	sarif := buildSarifFromPolicy(image, *policy, evaluations)
-	return &sarif, evaluations, nil
-}
-
-func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations []compliance.PolicyEvaluation) sarif.SarifSchema210Json {
-	ruleID := policy.Filename
-	ruleName := policy.Title
-
-	var helpURI *string
-	if len(policy.RelatedResources) > 0 {
-		helpURI = &policy.RelatedResources[0]
-	}
-
-	rule := sarif.ReportingDescriptor{
-		ID:   ruleID,
-		Name: &ruleName,
-		ShortDescription: &sarif.MultiformatMessageString{
-			Text: policy.Title,
-		},
-		FullDescription: &sarif.MultiformatMessageString{
-			Text: policy.Description,
-		},
-		Help: &sarif.MultiformatMessageString{
-			Text: policy.Description,
-		},
-		HelpURI: helpURI,
-		Properties: &sarif.PropertyBag{
-			Tags: policy.Tags,
-			AdditionalProperties: map[string]any{
-				"priority":             policy.Priority,
-				"relatedResources":     policy.RelatedResources,
-				"complianceFrameworks": policy.ComplianceFrameworks,
-				"predicateType":        policy.PredicateType,
-			},
-		},
-	}
-
-	location := func(message string) sarif.Location {
-		uri := fmt.Sprintf("oci://%s", image)
-
-		return sarif.Location{
-			PhysicalLocation: sarif.PhysicalLocation{
-				ArtifactLocation: sarif.ArtifactLocation{
-					URI: &uri,
-				},
-			},
-			Message: sarif.Message{
-				Text: message,
-			},
-		}
-	}
-
-	var results []sarif.Result
-	seen := make(map[string]bool)
-	addResult := func(r sarif.Result) {
-		key := string(r.Kind) + "|" + r.Message.Text
-		if !seen[key] {
-			seen[key] = true
-			results = append(results, r)
-		}
-	}
-	for _, evaluation := range evaluations {
-		if evaluation.Compliant != nil && *evaluation.Compliant {
-			addResult(sarif.Result{
-				Kind:   sarif.ResultKindPass,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: "Policy compliant",
-				},
-				Locations: []sarif.Location{
-					location("The attestation is compliant with the policy."),
-				},
-				Properties: &sarif.PropertyBag{
-					Tags: policy.Tags,
-					AdditionalProperties: map[string]any{
-						"precision": "high",
-					},
-				},
-			})
-			continue
-		}
-		for _, violation := range evaluation.Violations {
-			addResult(sarif.Result{
-				Kind:   sarif.ResultKindFail,
-				RuleID: &ruleID,
-				Message: sarif.Message{
-					Text: violation,
-				},
-				Locations: []sarif.Location{
-					location(violation),
-				},
-				Properties: &sarif.PropertyBag{
-					Tags: policy.Tags,
-					AdditionalProperties: map[string]any{
-						"precision": "high",
-					},
-				},
-			})
-		}
-	}
-
-	driver := sarif.ToolComponent{
-		Name:  "devguard-attestations",
-		Rules: []sarif.ReportingDescriptor{rule},
-	}
-
-	return sarif.SarifSchema210Json{
-		Version: sarif.SarifSchema210JsonVersionA210,
-		Schema:  utils.Ptr("https://json.schemastore.org/sarif-2.1.0.json"),
-		Runs: []sarif.Run{
-			{
-				Tool: sarif.Tool{
-					Driver: driver,
-				},
-				Results: results,
-			},
-		},
-	}
+	sarifResult := compliance.BuildSarifFromPoliciesEvaluations(srcPath, evaluations)
+	return &sarifResult, evaluations, nil
 }

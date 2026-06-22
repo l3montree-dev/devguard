@@ -43,6 +43,15 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(ctx context.Context,
 	return attestationList, nil
 }
 
+func (a *attestationRepository) GetByArtifactAndAssetVersionAndAssetID(ctx context.Context, tx *gorm.DB, artifactName string, assetVersion string, assetID uuid.UUID) ([]models.Attestation, error) {
+	var attestationList []models.Attestation
+	err := a.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ?", assetID, assetVersion, artifactName).Find(&attestationList).Error
+	if err != nil {
+		return attestationList, err
+	}
+	return attestationList, nil
+}
+
 func (a *attestationRepository) Create(ctx context.Context, tx *gorm.DB, attestation *models.Attestation) error {
 	return a.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{

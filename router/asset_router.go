@@ -32,7 +32,6 @@ func NewAssetRouter(
 	assetController *controllers.AssetController,
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	assetVersionController *controllers.AssetVersionController,
-	complianceController *controllers.ComplianceController,
 	statisticsController *controllers.StatisticsController,
 	componentController *controllers.ComponentController,
 	intotoController *controllers.InToToController,
@@ -49,8 +48,6 @@ func NewAssetRouter(
 	assetRouter := projectGroup.Group.Group("/assets/:assetSlug", assetScopedRBAC(shared.ObjectAsset, shared.ActionRead))
 	assetRouter.GET("/", assetController.Read)
 
-	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
-	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)

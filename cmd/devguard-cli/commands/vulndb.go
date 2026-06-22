@@ -83,6 +83,7 @@ func migrateDB() {
 			fx.Invoke(func(DependencyVulnRouter router.DependencyVulnRouter) {}),
 			fx.Invoke(func(FirstPartyVulnRouter router.FirstPartyVulnRouter) {}),
 			fx.Invoke(func(LicenseRiskRouter router.LicenseRiskRouter) {}),
+			fx.Invoke(func(ComplianceRiskRouter router.ComplianceRiskRouter) {}),
 			fx.Invoke(func(ShareRouter router.ShareRouter) {}),
 			fx.Invoke(func(VulnDBRouter router.VulnDBRouter) {}),
 			fx.Invoke(func(dependencyProxyRouter router.DependencyProxyRouter) {}),
