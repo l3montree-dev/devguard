@@ -1,0 +1,1 @@
+ALTER TABLE cves ADD COLUMN euvd_exploit_add timestamptz;
