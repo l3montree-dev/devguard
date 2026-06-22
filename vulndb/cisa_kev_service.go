@@ -162,7 +162,7 @@ func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.C
 	return nil
 }
 
-func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	// Always reset CISA fields so CVEs that are no longer in the catalog (or were
 	// never in it) end up with NULL — not the empty-string zero-value written by
 	// the initial CVE insert. The reset must run even when the entry list is empty,
@@ -180,16 +180,17 @@ func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 			cisa_exploit_add        date,
 			cisa_action_due         date,
 			cisa_required_action    text,
-			cisa_vulnerability_name text
+			cisa_vulnerability_name text,
+			euvd_exploit_add 		date
 		) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("could not create kev staging table: %w", err)
 	}
 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
-		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "euvd_exploit_add"},
 		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
 			e := entries[i]
-			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+			return []any{e.CVE, e.CISAExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName, e.EUVDExploitAddDate}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
 	}
@@ -222,7 +223,7 @@ func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 	return nil
 }
 
-func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+func applyKEVToStage(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -232,15 +233,16 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 			cisa_exploit_add        date,
 			cisa_action_due         date,
 			cisa_required_action    text,
-			cisa_vulnerability_name text
+			cisa_vulnerability_name text,
+			euvd_exploit_add 		date
 		) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("could not create kev staging table: %w", err)
 	}
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
-		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "euvd_exploit_add"},
 		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
 			e := entries[i]
-			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+			return []any{e.CVE, e.CISAExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName, e.EUVDExploitAddDate}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into kev staging table: %w", err)
 	}

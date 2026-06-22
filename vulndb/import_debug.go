@@ -153,12 +153,12 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			return
 		}
 
-		var kevEntries []CISAKEVEntry
+		var kevEntries []KEVEntry
 		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
 			slog.Error("show-diff: could not read cisakev.gob", "err", err)
 			return
 		}
-		if err := applyCISAKEVToStage(ctx, tx, kevEntries); err != nil {
+		if err := applyKEVToStage(ctx, tx, kevEntries); err != nil {
 			slog.Error("show-diff: could not apply CISA KEV to staging", "err", err)
 			return
 		}
@@ -238,8 +238,8 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 				stageID:     "id",
 				joinCond:    "db.id = gob.id",
 				contentCols: []string{"modified"},
-				liveFilter:   "id NOT LIKE 'MAL-FAKE-TEST-%'",
-				joinFilter:   "db.id NOT LIKE 'MAL-FAKE-TEST-%'",
+				liveFilter:  "id NOT LIKE 'MAL-FAKE-TEST-%'",
+				joinFilter:  "db.id NOT LIKE 'MAL-FAKE-TEST-%'",
 			})
 		case "malicious_affected_components":
 			err = diffTable(ctx, tx, diffSpec{

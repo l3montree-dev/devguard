@@ -15,14 +15,15 @@ import (
 	"gorm.io/datatypes"
 )
 
-// CISAKEVEntry is the gob-safe representation of a CISA KEV record.
+// KEVEntry is the gob-safe representation of a CISA KEV record.
 // Dates are stored as *time.Time to avoid the datatypes.Date gob limitation.
-type CISAKEVEntry struct {
-	CVE               string
-	ExploitAddDate    *time.Time
-	ActionDueDate     *time.Time
-	RequiredAction    string
-	VulnerabilityName string
+type KEVEntry struct {
+	CVE                string
+	CISAExploitAddDate *time.Time
+	EUVDExploitAddDate *time.Time
+	ActionDueDate      *time.Time
+	RequiredAction     *string
+	VulnerabilityName  *string
 }
 
 // GobExploit is the gob-safe representation of models.Exploit.
@@ -67,15 +68,16 @@ type GobMaliciousPackagesExport struct {
 
 // --- CISA KEV conversions ---
 
-func cisaKEVEntriesToGob(cves []models.CVE) []CISAKEVEntry {
-	out := make([]CISAKEVEntry, 0, len(cves))
+func kevEntriesToGob(cves []models.CVE) []KEVEntry {
+	out := make([]KEVEntry, 0, len(cves))
 	for _, c := range cves {
-		out = append(out, CISAKEVEntry{
-			CVE:               c.CVE,
-			ExploitAddDate:    dateToTimePtr(c.CISAExploitAdd),
-			ActionDueDate:     dateToTimePtr(c.CISAActionDue),
-			RequiredAction:    *c.CISARequiredAction,
-			VulnerabilityName: *c.CISAVulnerabilityName,
+		out = append(out, KEVEntry{
+			CVE:                c.CVE,
+			CISAExploitAddDate: dateToTimePtr(c.CISAExploitAdd),
+			EUVDExploitAddDate: dateToTimePtr(c.EUVDExploitAdd),
+			ActionDueDate:      dateToTimePtr(c.CISAActionDue),
+			RequiredAction:     c.CISARequiredAction,
+			VulnerabilityName:  c.CISAVulnerabilityName,
 		})
 	}
 	return out

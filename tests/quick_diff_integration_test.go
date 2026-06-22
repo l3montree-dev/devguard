@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +50,7 @@ func makeCVE(id int64, cveStr, desc string, cvss float32, vector string) models.
 
 // seedCVEState inserts the given CVEs (plus optional EPSS/KEV) as the current
 // live-table state via staging→sync, so the DB reflects exactly this set.
-func seedCVEState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, cves []models.CVE, rels []models.CVERelationship, epss map[string]dtos.EPSS, kev []vulndb.CISAKEVEntry) {
+func seedCVEState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, cves []models.CVE, rels []models.CVERelationship, epss map[string]dtos.EPSS, kev []vulndb.KEVEntry) {
 	t.Helper()
 	conn, err := pool.Acquire(ctx)
 	assert.NoError(t, err)
@@ -66,7 +67,7 @@ func seedCVEState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, cves []
 	}
 	assert.NoError(t, vulndb.SyncAllTables(ctx, tx))
 	assert.NoError(t, vulndb.InsertEPSSBulk(ctx, tx, epss))
-	assert.NoError(t, vulndb.InsertCISAKEVBulk(ctx, tx, kev))
+	assert.NoError(t, vulndb.InsertKEVBulk(ctx, tx, kev))
 
 	assert.NoError(t, tx.Commit(ctx))
 }
@@ -77,7 +78,7 @@ func simulateExport(
 	ctx context.Context, t *testing.T, pool *pgxpool.Pool,
 	prevVersion time.Time,
 	newCVEs []models.CVE, newRels []models.CVERelationship,
-	newEPSS map[string]dtos.EPSS, newKEV []vulndb.CISAKEVEntry,
+	newEPSS map[string]dtos.EPSS, newKEV []vulndb.KEVEntry,
 ) (*vulndb.QuickDiff, vulndb.IntegrityInformation) {
 	t.Helper()
 	conn, err := pool.Acquire(ctx)
@@ -97,7 +98,7 @@ func simulateExport(
 	}
 	assert.NoError(t, vulndb.FlushOSVStagingTables(ctx, tx))
 	assert.NoError(t, vulndb.InsertEPSSBulk(ctx, tx, newEPSS))
-	assert.NoError(t, vulndb.InsertCISAKEVBulk(ctx, tx, newKEV))
+	assert.NoError(t, vulndb.InsertKEVBulk(ctx, tx, newKEV))
 
 	diff, err := vulndb.ComputeQuickDiff(ctx, tx, prevVersion)
 	assert.NoError(t, err)
@@ -116,7 +117,7 @@ func simulateExport(
 func applyQuickDiffAndVerify(
 	ctx context.Context, t *testing.T, pool *pgxpool.Pool,
 	decoded *vulndb.QuickDiff,
-	newEPSS map[string]dtos.EPSS, newKEV []vulndb.CISAKEVEntry,
+	newEPSS map[string]dtos.EPSS, newKEV []vulndb.KEVEntry,
 	groundTruth vulndb.IntegrityInformation,
 ) {
 	t.Helper()
@@ -130,7 +131,7 @@ func applyQuickDiffAndVerify(
 
 	assert.NoError(t, vulndb.ApplyQuickDiff(ctx, tx, decoded))
 	assert.NoError(t, vulndb.InsertEPSSBulk(ctx, tx, newEPSS))
-	assert.NoError(t, vulndb.InsertCISAKEVBulk(ctx, tx, newKEV))
+	assert.NoError(t, vulndb.InsertKEVBulk(ctx, tx, newKEV))
 
 	localIntegrity, err := vulndb.CalculateTotalIntegrityInformation(ctx, tx)
 	assert.NoError(t, err)
@@ -293,8 +294,8 @@ func TestQuickDiffCISAKEVAdded(t *testing.T) {
 	seedCVEState(ctx, t, pool, prevCVEs, nil, nil, nil)
 	prevVersion := time.Now()
 
-	newKEV := []vulndb.CISAKEVEntry{
-		{CVE: "CVE-2024-4001", RequiredAction: "patch immediately", VulnerabilityName: "Super Bug"},
+	newKEV := []vulndb.KEVEntry{
+		{CVE: "CVE-2024-4001", RequiredAction: utils.Ptr("patch immediately"), VulnerabilityName: utils.Ptr("Super Bug")},
 	}
 
 	diff, groundTruth := simulateExport(ctx, t, pool, prevVersion, prevCVEs, nil, nil, newKEV)
@@ -315,8 +316,8 @@ func TestQuickDiffCISAKEVRemoved(t *testing.T) {
 	prevCVEs := []models.CVE{
 		makeCVE(5001, "CVE-2024-5001", "was in KEV", 8.0, testVector),
 	}
-	prevKEV := []vulndb.CISAKEVEntry{
-		{CVE: "CVE-2024-5001", RequiredAction: "apply workaround", VulnerabilityName: "Old Bug"},
+	prevKEV := []vulndb.KEVEntry{
+		{CVE: "CVE-2024-5001", RequiredAction: utils.Ptr("apply workaround"), VulnerabilityName: utils.Ptr("Old Bug")},
 	}
 
 	seedCVEState(ctx, t, pool, prevCVEs, nil, nil, prevKEV)
@@ -421,8 +422,8 @@ func TestQuickDiffCISAViaRelationship(t *testing.T) {
 	prevVersion := time.Now()
 
 	// New: CVE-B added to CISA KEV — CVE-A (alias) must also get the CISA data.
-	newKEV := []vulndb.CISAKEVEntry{
-		{CVE: "CVE-2025-8002", RequiredAction: "patch now", VulnerabilityName: "Critical Bug"},
+	newKEV := []vulndb.KEVEntry{
+		{CVE: "CVE-2025-8002", RequiredAction: utils.Ptr("patch now"), VulnerabilityName: utils.Ptr("Critical Bug")},
 	}
 
 	diff, groundTruth := simulateExport(ctx, t, pool, prevVersion, prevCVEs, prevRels, nil, newKEV)
@@ -513,7 +514,7 @@ func TestQuickDiffSequentialImports(t *testing.T) {
 	diff1, gt1 := simulateExport(ctx, t, pool, v1Time, v2CVEs, nil, v2EPSS, nil)
 	seedCVEState(ctx, t, pool, v1CVEs, nil, v1EPSS, nil)
 	// Apply round-1 quickdiff and commit so the DB is the importer's v2 state.
-	applyAndCommit := func(decoded *vulndb.QuickDiff, epss map[string]dtos.EPSS, kev []vulndb.CISAKEVEntry) {
+	applyAndCommit := func(decoded *vulndb.QuickDiff, epss map[string]dtos.EPSS, kev []vulndb.KEVEntry) {
 		t.Helper()
 		conn, err := pool.Acquire(ctx)
 		assert.NoError(t, err)
@@ -522,7 +523,7 @@ func TestQuickDiffSequentialImports(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, vulndb.ApplyQuickDiff(ctx, tx, decoded))
 		assert.NoError(t, vulndb.InsertEPSSBulk(ctx, tx, epss))
-		assert.NoError(t, vulndb.InsertCISAKEVBulk(ctx, tx, kev))
+		assert.NoError(t, vulndb.InsertKEVBulk(ctx, tx, kev))
 		assert.NoError(t, tx.Commit(ctx))
 	}
 	applyAndCommit(roundtripDiff(t, diff1), v2EPSS, nil)
