@@ -835,6 +835,8 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 		Labels: &labels,
 	}
 
+	slog.Info("updating github ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", expectedIssueState.ToGithub())
+
 	_, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
 	return err
 }
@@ -891,6 +893,8 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 	vuln.SetTicketID(fmt.Sprintf("github:%d/%d", createdIssue.GetID(), createdIssue.GetNumber()))
 	vuln.SetTicketURL(createdIssue.GetHTMLURL())
 	vuln.SetManualTicketCreation(userID != "system")
+
+	slog.Info("created github ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", createdIssue.GetHTMLURL())
 
 	// create an event
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{

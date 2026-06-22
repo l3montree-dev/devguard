@@ -418,22 +418,28 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.
 	}
 
 	updateOptions := gitlab.UpdateIssueOptions{
-		StateEvent: utils.Ptr("close"),
+		StateEvent:  utils.Ptr("close"),
+		Description: utils.Ptr("Closed by DevGuard: this issue has the 'devguard' label but is not referenced by any vulnerability tracked in DevGuard for this asset."),
 	}
 	amountClosed := 0
+	closedURLs := make([]string, 0, len(excessIIDs))
 	for _, iid := range excessIIDs {
-		_, _, err = client.EditIssue(ctx, projectID, iid, &updateOptions)
+		updated, _, err := client.EditIssue(ctx, projectID, iid, &updateOptions)
 		if err != nil {
-			slog.Error("could not close issue", "iid", iid)
+			slog.Error("could not close excess gitlab issue", "iid", iid, "assetID", asset.ID)
 			continue
 		}
 		amountClosed++
+		if updated != nil {
+			closedURLs = append(closedURLs, updated.WebURL)
+		}
 	}
 
-	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
+	if amountClosed > 0 {
+		slog.Info("closed excess gitlab tickets", "assetID", asset.ID, "count", amountClosed, "tickets", closedURLs)
+	}
 	return nil
 }
-
 
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	// get the oauth2 tokens for this user
@@ -1341,6 +1347,8 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
+	slog.Info("updating gitlab ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedState))
+
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
@@ -1432,6 +1440,8 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	vuln.SetTicketID(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	vuln.SetTicketURL(createdIssue.WebURL)
 	vuln.SetManualTicketCreation(userID != "system")
+
+	slog.Info("created gitlab ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", createdIssue.WebURL)
 
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),

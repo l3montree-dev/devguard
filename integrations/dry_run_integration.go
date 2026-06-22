@@ -40,7 +40,7 @@ func (d *dryRunIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	default:
 		expectedState = "unknown"
 	}
-	slog.Info("[DRY-RUN] would update ticket", "vuln", vuln.GetID(), "asset", asset.Slug, "ticketID", vuln.GetTicketID(), "expectedState", expectedState)
+	slog.Info("[DRY-RUN] would update ticket", "vuln", vuln.GetID(), "asset", asset.Slug, "ticketID", *vuln.GetTicketID(), "expectedState", expectedState)
 	return nil
 }
 
