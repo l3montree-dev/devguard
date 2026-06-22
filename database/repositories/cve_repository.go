@@ -262,7 +262,8 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 // this function is used by the CISA KEV mirror function to update the KEV information for all cves
 func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, batch []models.CVE) error {
 	ids := make([]string, len(batch))
-	exploitAdds := make([]any, len(batch))
+	cisaExploitAdds := make([]any, len(batch))
+	euvdExploitAdds := make([]any, len(batch))
 	actionDues := make([]any, len(batch))
 	requiredActions := make([]string, len(batch))
 	vulnNames := make([]string, len(batch))
@@ -270,8 +271,12 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 	for i := range batch {
 		ids[i] = batch[i].CVE
 		if batch[i].CISAExploitAdd != nil {
-			exploitAdds[i] = time.Time(*batch[i].CISAExploitAdd).Format("2006-01-02")
+			cisaExploitAdds[i] = time.Time(*batch[i].CISAExploitAdd).Format("2006-01-02")
 		}
+		if batch[i].EUVDExploitAdd != nil {
+			euvdExploitAdds[i] = time.Time(*batch[i].EUVDExploitAdd).Format("2006-01-02")
+		}
+
 		if batch[i].CISAActionDue != nil {
 			actionDues[i] = time.Time(*batch[i].CISAActionDue).Format("2006-01-02")
 		}
@@ -284,14 +289,16 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 		cisa_action_due = new.cisa_action_due::date,
 		cisa_required_action = new.cisa_required_action,
 		cisa_vulnerability_name = new.cisa_vulnerability_name
+		euvd_exploit_add = new.euvd_exploit_add
 	FROM (SELECT
 		unnest($1::text[]) as cve,
 		unnest($2::text[]) as cisa_exploit_add,
 		unnest($3::text[]) as cisa_action_due,
 		unnest($4::text[]) as cisa_required_action,
-		unnest($5::text[]) as cisa_vulnerability_name
+		unnest($5::text[]) as cisa_vulnerability_name,
+		unnest(¢6::text[]) as euvd_exploit_add
 	) as new
 	WHERE cves.cve = new.cve;`
 
-	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, exploitAdds, actionDues, requiredActions, vulnNames).Error
+	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, cisaExploitAdds, actionDues, requiredActions, vulnNames, euvdExploitAdds).Error
 }

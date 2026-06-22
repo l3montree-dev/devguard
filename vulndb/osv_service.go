@@ -64,7 +64,7 @@ type syncSpec struct {
 // Both SyncAllTables (staging→live) and applyQuickDiff (QuickDiff struct→live)
 // use these specs so all apply logic lives in one place.
 var liveTableSpecs = func() []syncSpec {
-	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
 	relAllCols := []string{"target_cve", "source_cve", "relationship_type"}
 	acInsertCols := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	acInsertExprs := []string{"id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
@@ -611,7 +611,7 @@ func InsertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table str
 	if len(cves) == 0 {
 		return nil
 	}
-	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector"}
+	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{table}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
 		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
@@ -679,8 +679,8 @@ func FlushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	start := time.Now()
 
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector)
-		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector
+		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add)
+		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add
 		FROM cves_stage
 		ON CONFLICT (id) DO UPDATE SET
 			content_hash       = EXCLUDED.content_hash,
@@ -807,6 +807,7 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			epss                    numeric(6,5),
 			percentile              numeric(6,5),
 			vector                  text
+			euvd_exploit_add		date
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS cve_relationships_stage (

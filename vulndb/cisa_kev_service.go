@@ -142,6 +142,7 @@ func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.C
 					CISAActionDue:         kevData.CISAActionDue,
 					CISARequiredAction:    kevData.CISARequiredAction,
 					CISAVulnerabilityName: kevData.CISAVulnerabilityName,
+					EUVDExploitAdd:        kevData.EUVDExploitAdd,
 				}
 				cves = append(cves, relatedCVE)
 				kevMap[rel.SourceCVE] = relatedCVE
@@ -168,7 +169,7 @@ func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	// the initial CVE insert. The reset must run even when the entry list is empty,
 	// otherwise existing CVEs keep "" while newly-inserted quickdiff CVEs get NULL,
 	// and the integrity checksum (coalesce(field, '\0')) treats the two differently.
-	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL`); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL, euvd_exploit_add = NULL`); err != nil {
 		return fmt.Errorf("could not reset cisa kev fields: %w", err)
 	}
 	if len(entries) == 0 {
@@ -203,17 +204,18 @@ func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
 			cisa_vulnerability_name = ks.cisa_vulnerability_name
+			euvd_exploit_add 		= ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, ks.euvd_exploit_add
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
+			ORDER BY cve, cisa_exploit_add ASC,euvd_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
 		WHERE cves.cve = ks.cve`)
 	if err != nil {
@@ -253,17 +255,18 @@ func applyKEVToStage(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
 			cisa_vulnerability_name = ks.cisa_vulnerability_name
+			euvd_exploit_add 		= ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, ks.euvd_exploit_add
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
+			ORDER BY cve, cisa_exploit_add ASC,euvd_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
 		WHERE cves_stage.cve = ks.cve`)
 	if err != nil {
