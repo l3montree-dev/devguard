@@ -374,7 +374,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	}
 
 	aggregatorObject := gocsaf.AggregatorInfo{
-		Category:       utils.Ptr(gocsaf.AggregatorLister),
+		Category:       new(gocsaf.AggregatorLister),
 		ContactDetails: contactDetails,
 		Name:           name,
 		Namespace:      namespace,
@@ -387,7 +387,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	csafAggregatorURL := fmt.Sprintf("%s/api/v1/.well-known/csaf-aggregator/", hostURL)
 	aggregator := gocsaf.Aggregator{
 		Aggregator:   &aggregatorObject,
-		Version:      utils.Ptr(gocsaf.AggregatorVersion20),
+		Version:      new(gocsaf.AggregatorVersion20),
 		CanonicalURL: new(gocsaf.AggregatorURL(csafAggregatorURL + "aggregator.json")),
 		LastUpdated:  new(gocsaf.TimeStamp(time.Now())),
 	}
@@ -404,11 +404,11 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 		orgCSAFURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/provider-metadata.json/", hostURL, org.Slug)
 		metadata := gocsaf.AggregatorCSAFProviderMetadata{
 			Publisher: &gocsaf.Publisher{
-				Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+				Category:  new(gocsaf.CSAFCategoryVendor),
 				Name:      &org.Slug,
 				Namespace: new(os.Getenv("API_URL")),
 			},
-			Role:        utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+			Role:        new(gocsaf.MetadataRoleTrustedProvider),
 			URL:         new(gocsaf.ProviderURL(orgCSAFURL)),
 			LastUpdated: new(gocsaf.TimeStamp(time.Now())),
 		}
@@ -446,10 +446,10 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 
 		ListOnCSAFAggregators:   new(true), // TODO check if reports are published
 		MirrorOnCSAFAggregators: new(true), // TODO check if reports are published
-		MetadataVersion:         utils.Ptr(gocsaf.MetadataVersion20),
-		Role:                    utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+		MetadataVersion:         new(gocsaf.MetadataVersion20),
+		Role:                    new(gocsaf.MetadataRoleTrustedProvider),
 		Publisher: &gocsaf.Publisher{
-			Category:       utils.Ptr(gocsaf.CSAFCategoryVendor),
+			Category:       new(gocsaf.CSAFCategoryVendor),
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
 			Name:           &org.Name,
 			Namespace:      new(os.Getenv("API_URL")), // TODO add option to add namespace to an org

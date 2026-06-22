@@ -813,20 +813,20 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 	// now we can start building the document
 	// build static parts of the document field first
 	csafDoc.Document = &gocsaf.Document{
-		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
+		CSAFVersion: new(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
-			Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+			Category:  new(gocsaf.CSAFCategoryVendor),
 			Name:      &orgName,
 			Namespace: new("https://devguard.org"),
 		},
 		Title: GenerateDocumentTitle(assetName, cveID),
-		Lang:  utils.Ptr(gocsaf.Lang("en-US")),
+		Lang:  new(gocsaf.Lang("en-US")),
 	}
 
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
 	csafDoc.Document.Distribution = &gocsaf.DocumentDistribution{
 		TLP: &gocsaf.TLP{
-			DocumentTLPLabel: utils.Ptr(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
+			DocumentTLPLabel: new(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
 			URL:              new("https://first.org/tlp"),
 		},
 	}
@@ -851,9 +851,9 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 
 	// if we do not have any vulnerabilities we do not comply with the security framework anymore so we need to switch the category to the base profile
 	if len(vulnerabilities) == 0 {
-		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_base"))
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_base"))
 	} else {
-		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_vex"))
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_vex"))
 	}
 
 	// calculate the current release date based on the latest revision event
@@ -900,7 +900,7 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []m
 			}
 
 			relationship := gocsaf.Relationship{
-				Category:                  utils.Ptr(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
+				Category:                  new(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
 				ProductReference:          new(gocsaf.ProductID(vuln.ComponentPurl)),
 				RelatesToProductReference: new(gocsaf.ProductID(artifactPurl)),
 				FullProductName: &gocsaf.FullProductName{
@@ -1042,7 +1042,7 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 
 			remediations = append(remediations, &gocsaf.Remediation{
 				Details:    &details,
-				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
+				Category:   new(gocsaf.CSAFRemediationCategoryNoFixPlanned),
 				ProductIds: new(gocsaf.Products([]*gocsaf.ProductID{new(gocsaf.ProductID(productName))})),
 			})
 
@@ -1190,7 +1190,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 	cve := vulns[0].CVE
 	if cve.Description != "" {
 		cveDescriptionNote := gocsaf.Note{
-			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
+			NoteCategory: new(gocsaf.CSAFNoteCategoryDescription),
 			Title:        new(fmt.Sprintf("textual description of %s", cve.CVE)),
 			Text:         &cve.Description,
 		}
@@ -1212,7 +1212,7 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 		}
 
 		vulnDetails := gocsaf.Note{
-			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
+			NoteCategory: new(gocsaf.CSAFNoteCategoryDetails),
 			Title:        new(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
 			Text:         new(summary.String()),
 		}
@@ -1267,7 +1267,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 	version := fmt.Sprintf("%d", len(revisions))
 	tracking.ID = (*gocsaf.TrackingID)(GenerateDocumentTitle(assetName, cveID))
 	tracking.Version = new(gocsaf.RevisionNumber(version))
-	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
+	tracking.Status = new(gocsaf.CSAFTrackingStatusInterim)
 
 	engineVersion := config.Version
 	if engineVersion == "" {
