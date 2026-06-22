@@ -55,7 +55,7 @@ func VEXRuleToRecommendationDTO(rule models.VEXRule) dtos.VexRuleRecommendation 
 }
 
 func VEXRuleToSystemVEXRule(rule models.VEXRule) models.SystemVEXRule {
-	return models.SystemVEXRule{
+	transformedRule := models.SystemVEXRule{
 		ID: rule.ID,
 
 		// Composite key components
@@ -71,10 +71,12 @@ func VEXRuleToSystemVEXRule(rule models.VEXRule) models.SystemVEXRule {
 		CreatedAt:               rule.CreatedAt,
 		UpdatedAt:               rule.UpdatedAt,
 	}
+	transformedRule.SetPathPattern(rule.PathPattern)
+	return transformedRule
 }
 
 func SystemVEXRuleToVEXRule(systemRule models.SystemVEXRule) models.VEXRule {
-	return models.VEXRule{
+	transformedRule := models.VEXRule{
 		ID: systemRule.ID,
 
 		// Composite key components
@@ -96,4 +98,6 @@ func SystemVEXRuleToVEXRule(systemRule models.SystemVEXRule) models.VEXRule {
 
 		Enabled: false,
 	}
+	transformedRule.SetPathPattern(systemRule.PathPattern)
+	return transformedRule
 }

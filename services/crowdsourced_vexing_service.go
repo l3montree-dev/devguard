@@ -22,6 +22,7 @@ type CrowdsourcedVexingService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	trustedEntityRepository  shared.TrustedEntityRepository
 	rbacProvider             shared.RBACProvider
+	cveRelationshipService   shared.CVERelationshipService
 }
 
 func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationMemberIDs []string) crowdsourcevexing.Organization {
@@ -62,7 +63,16 @@ func mapAsset(asset models.Asset) crowdsourcevexing.Asset {
 	}
 }
 
-func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, systemVexRuleRepository shared.SystemVEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider) *CrowdsourcedVexingService {
+func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository,
+	systemVexRuleRepository shared.SystemVEXRuleRepository,
+	organisationRepository shared.OrganizationRepository,
+	projectRepository shared.ProjectRepository,
+	assetVersionRepository shared.AssetVersionRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	trustedEntityRepository shared.TrustedEntityRepository,
+	rbacProvider shared.RBACProvider,
+	cveRelationshipService shared.CVERelationshipService,
+) *CrowdsourcedVexingService {
 	return &CrowdsourcedVexingService{
 		vexRuleRepository:        vexRuleRepository,
 		systemVexRuleRepository:  systemVexRuleRepository,
@@ -72,6 +82,7 @@ func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, sy
 		dependencyVulnRepository: dependencyVulnRepository,
 		trustedEntityRepository:  trustedEntityRepository,
 		rbacProvider:             rbacProvider,
+		cveRelationshipService:   cveRelationshipService,
 	}
 }
 
@@ -166,17 +177,36 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 }
 
 func (s *CrowdsourcedVexingService) RecommendSystemVEXRule(ctx shared.Context, tx shared.DB, cveID string, dependencyPath []string) (models.SystemVEXRule, error) {
-	rules, err := s.systemVexRuleRepository.FindByCVE(ctx.Request().Context(), tx, cveID)
+	requestCtx := ctx.Request().Context()
+	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(requestCtx, tx, []string{cveID})
+	if err != nil {
+		slog.Info("No aliases for CVE, continuing collection of systemvexrules without aliases")
+	}
+	cveAliasArray := []string{cveID}
+	for alias := range cveAliasMap[cveID] {
+		cveAliasArray = append(cveAliasArray, alias)
+	}
+	rules, err := s.systemVexRuleRepository.FindByCVEBatch(requestCtx, tx, cveAliasArray)
 	if err != nil {
 		return models.SystemVEXRule{}, err
 	}
 	validRules := utils.Filter(rules, func(rule models.SystemVEXRule) bool {
 		return dtos.PathPattern(rule.PathPattern).MatchesSuffix(dependencyPath)
 	})
+	nonAliasDetected := false
+outer:
+	for i := range validRules {
+		for j := range validRules {
+			if !s.cveRelationshipService.IsAlias(validRules[i].CVEID, validRules[j].CVEID, cveAliasMap) {
+				nonAliasDetected = true
+				break outer
+			}
+		}
+	}
 	if len(validRules) == 0 {
 		return models.SystemVEXRule{}, fmt.Errorf("no system VEX rules found for CVE: %s", cveID)
 	}
-	if len(validRules) > 1 {
+	if len(validRules) > 1 && nonAliasDetected {
 		return models.SystemVEXRule{}, fmt.Errorf("multiple system VEX rules found for CVE: %s, cannot determine which one to recommend", cveID)
 	}
 	return validRules[0], nil

@@ -857,6 +857,104 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_C
 	return _c
 }
 
+// GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(ctx context.Context, tx shared.DB, assetTuples []struct {
+	AssetID          string
+	AssetVersionName string
+}) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetTuples)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []struct {
+		AssetID          string
+		AssetVersionName string
+	}) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetTuples)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []struct {
+		AssetID          string
+		AssetVersionName string
+	}) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetTuples)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []struct {
+		AssetID          string
+		AssetVersionName string
+	}) error); ok {
+		r1 = returnFunc(ctx, tx, assetTuples)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch'
+type DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call struct {
+	*mock.Call
+}
+
+// GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetTuples []struct{AssetID string; AssetVersionName string}
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(ctx interface{}, tx interface{}, assetTuples interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch", ctx, tx, assetTuples)}
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call) Run(run func(ctx context.Context, tx shared.DB, assetTuples []struct {
+	AssetID          string
+	AssetVersionName string
+})) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []struct {
+			AssetID          string
+			AssetVersionName string
+		}
+		if args[2] != nil {
+			arg2 = args[2].([]struct {
+				AssetID          string
+				AssetVersionName string
+			})
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetTuples []struct {
+	AssetID          string
+	AssetVersionName string
+}) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllVulnsByArtifact provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetAllVulnsByArtifact(ctx context.Context, tx shared.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, artifact)

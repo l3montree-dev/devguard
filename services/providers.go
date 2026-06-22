@@ -38,5 +38,9 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewDependencyProxyService, fx.As(new(shared.DependencyProxySecretService)))),
 	fx.Provide(fx.Annotate(NewAdminService, fx.As(new(shared.AdminService)))),
 	fx.Provide(fx.Annotate(NewCrowdsourcedVexingService, fx.As(new(shared.CrowdSourcedVexingService)))),
+<<<<<<< HEAD
 	fx.Provide(fx.Annotate(NewDBEncryptionService, fx.As(new(shared.DBEncryptionService)))),
+=======
+	fx.Provide(fx.Annotate(NewCVERelationshipService, fx.As(new(shared.CVERelationshipService)))),
+>>>>>>> f6ff53aa (Implemented Auto apply feature for systemvexrules)
 )

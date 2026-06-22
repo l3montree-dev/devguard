@@ -107,4 +107,10 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	}); err != nil {
 		slog.Error("could not update system vex rules from openvex sources", "err", err)
 	}
+
+	if err := runner.maybeRunAndMark(ctx, "systemvexrules.applySystemVEXRules", func() error {
+		return runner.ApplySystemVEXRules(ctx)
+	}); err != nil {
+		slog.Error("could not apply system vex rules to assets", "err", err)
+	}
 }

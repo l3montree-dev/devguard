@@ -38,11 +38,13 @@ import (
 )
 
 type VEXRuleService struct {
-	vexRuleRepository        shared.VEXRuleRepository
-	systemVEXRuleRepository  shared.SystemVEXRuleRepository
-	dependencyVulnRepository shared.DependencyVulnRepository
-	vulnEventRepository      shared.VulnEventRepository
-	cveRepository            shared.CveRepository
+	vexRuleRepository         shared.VEXRuleRepository
+	systemVEXRuleRepository   shared.SystemVEXRuleRepository
+	dependencyVulnRepository  shared.DependencyVulnRepository
+	vulnEventRepository       shared.VulnEventRepository
+	cveRepository             shared.CveRepository
+	cveRelationshipRepository shared.CVERelationshipRepository
+	cveRelationshipService    shared.CVERelationshipService
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
@@ -53,13 +55,17 @@ func NewVEXRuleService(
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	vulnEventRepository shared.VulnEventRepository,
 	cveRepository shared.CveRepository,
+	cveRelationshipRepository shared.CVERelationshipRepository,
+	cveRelationshipService shared.CVERelationshipService,
 ) *VEXRuleService {
 	return &VEXRuleService{
-		vexRuleRepository:        vexRuleRepository,
-		systemVEXRuleRepository:  systemVEXRuleRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
-		cveRepository:            cveRepository,
+		vexRuleRepository:         vexRuleRepository,
+		systemVEXRuleRepository:   systemVEXRuleRepository,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		vulnEventRepository:       vulnEventRepository,
+		cveRepository:             cveRepository,
+		cveRelationshipRepository: cveRelationshipRepository,
+		cveRelationshipService:    cveRelationshipService,
 	}
 }
 
@@ -109,8 +115,18 @@ func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx sha
 		return nil, fmt.Errorf("failed to find vulnerability: %w", err)
 	}
 
-	// Find rules for this CVE
-	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, vuln.CVEID)
+	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(ctx, tx, []string{vuln.CVEID})
+	if err != nil {
+		slog.Info("Failed to find CVE Aliases, continuing without")
+	}
+	var cveAliases []string
+	for alias := range cveAliasMap[vuln.CVEID] {
+		cveAliases = append(cveAliases, alias)
+	}
+	cveAliases = append(cveAliases, vuln.CVEID)
+
+	// Find rules for this CVE and aliases
+	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVEAliases(ctx, tx, assetID, assetVersionName, cveAliases)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +153,7 @@ func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, r
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	matching := matchRulesToVulns([]models.VEXRule{rule}, vulns)
+	matching := s.MatchRulesToVulns(ctx, tx, []models.VEXRule{rule}, vulns)
 
 	return len(matching[rule.ID]), nil
 }
@@ -155,7 +171,7 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shar
 
 	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, assetVersionName, assetID, nil)
 
-	vulnsByRule := matchRulesToVulns(rules, vulns)
+	vulnsByRule := s.MatchRulesToVulns(ctx, tx, rules, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
@@ -212,7 +228,7 @@ func (s *VEXRuleService) ApplyRulesToExistingForce(ctx context.Context, tx share
 }
 
 func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
-	vulnsByRule := matchRulesToVulns(rules, vulns)
+	vulnsByRule := s.MatchRulesToVulns(ctx, tx, rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
 		ruleMap[rules[i].ID] = &rules[i]
@@ -286,8 +302,26 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 	if len(rules) == 0 {
 		return nil, nil
 	}
+	assetDeduplicationMap := make(map[string]bool)
+	assetTuples := []struct {
+		AssetID          string
+		AssetVersionName string
+	}{}
+
+	for _, rule := range rules {
+		assetIDString := rule.AssetID.String()
+		compositeKey := assetIDString + rule.AssetVersionName
+		if !assetDeduplicationMap[compositeKey] {
+			assetDeduplicationMap[compositeKey] = true
+			assetTuples = append(assetTuples, struct {
+				AssetID          string
+				AssetVersionName string
+			}{AssetID: assetIDString, AssetVersionName: rule.AssetVersionName})
+		}
+	}
+
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(ctx, tx, assetTuples)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
@@ -560,6 +594,12 @@ func (s *VEXRuleService) parseVEXRulesFromOpenVEXReport(ctx context.Context, ass
 				continue
 			}
 
+			if componentPurl.Version == "" {
+				// Might SPAM logs
+				slog.Info("product identifier does not contain version, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
 			if err != nil {
 				slog.Info("failed to parse product identifier therefore no identifier present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
 				continue
@@ -768,8 +808,18 @@ func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) ma
 	return result
 }
 
-func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+func (s *VEXRuleService) MatchRulesToVulns(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
 	result := make(map[string][]models.DependencyVuln)
+	// Prepare aliases
+	// Relationship field of rules cannot be preloaded since the preload assumes that the CVEID is the source_cve in the relationship
+	// Therefore it cannot find the relationships
+	// We try to find the relationships manually and create a many-to-many crossreference so each CVE will always find each alias
+	ruleCVEIDs := utils.Map(rules, func(rule models.VEXRule) string { return rule.CVEID })
+
+	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(ctx, tx, ruleCVEIDs)
+	if err != nil {
+		slog.Info("could not find aliases to create cross relations", "err", err)
+	}
 	// Filter by each rule's cve and path pattern - only match ENABLED rules
 	// group by cve id
 	m := make(map[string][]models.VEXRule)
@@ -778,13 +828,20 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 			continue
 		}
 		m[rule.CVEID] = append(m[rule.CVEID], rule)
+		// Prepare for aliases
+		for aliasCVEID := range cveAliasMap[rule.CVEID] {
+			m[aliasCVEID] = append(m[aliasCVEID], rule)
+		}
 	}
 
 	for _, vuln := range vulns {
 		rulesForCVE := m[vuln.CVEID]
+
 		for _, rule := range rulesForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+			if vuln.Vulnerability.AssetID == rule.AssetID &&
+				vuln.Vulnerability.AssetVersionName == rule.AssetVersionName &&
+				pattern.MatchesSuffix(vuln.VulnerabilityPath) {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}
@@ -853,6 +910,7 @@ func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Conte
 	for _, rule := range systemVEXRules {
 		cveKey := strings.ToLower(strings.TrimSpace(rule.CVEID))
 		if _, exists := existingCVEMap[cveKey]; !exists {
+			// Might SPAM logs
 			slog.Info("skipping system VEX rule because CVE does not exist in database yet",
 				"cveID", rule.CVEID,
 				"vexSource", rule.VexSource,

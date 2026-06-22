@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/gorm"
@@ -18,6 +19,13 @@ func NewSystemVEXRuleRepository(db *gorm.DB) *systemVEXRuleRepository {
 	}
 }
 
+func (r *systemVEXRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.SystemVEXRule, error) {
+	var result []models.SystemVEXRule
+
+	err := r.GetDB(ctx, tx).Preload("CVE.Relationships").Find(&result).Error
+	return result, err
+}
+
 func (r *systemVEXRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
@@ -28,6 +36,16 @@ func (r *systemVEXRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.
 func (r *systemVEXRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.SystemVEXRule, error) {
 	var rules []models.SystemVEXRule
 	err := r.GetDB(ctx, tx).Preload("CVE").Where("LOWER(cve_id) = LOWER(?)", cveID).Find(&rules).Error
+	return rules, err
+}
+
+func (r *systemVEXRuleRepository) FindByCVEBatch(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.SystemVEXRule, error) {
+	var rules []models.SystemVEXRule
+	var lowercaseCVEs []string
+	for _, cve := range cveIDs {
+		lowercaseCVEs = append(lowercaseCVEs, strings.ToLower(cve))
+	}
+	err := r.GetDB(ctx, tx).Preload("CVE").Where("LOWER(cve_id) IN ?", lowercaseCVEs).Find(&rules).Error
 	return rules, err
 }
 

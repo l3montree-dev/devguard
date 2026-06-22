@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -26,4 +27,44 @@ func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(ct
 		return nil, err
 	}
 	return relations, nil
+}
+
+func (repository *cveRelationshipRepository) FindCrossRelationshipsBatch(
+	ctx context.Context,
+	tx *gorm.DB,
+	associatedCVEIDs []string,
+) ([]models.CVERelationship, error) {
+
+	const chunkSize = 10000
+
+	lowerIDs := utils.ToLowerSlice(associatedCVEIDs)
+
+	var result []models.CVERelationship
+
+	for start := 0; start < len(lowerIDs); start += chunkSize {
+		end := start + chunkSize
+		if end > len(lowerIDs) {
+			end = len(lowerIDs)
+		}
+
+		chunk := lowerIDs[start:end]
+
+		var relationships []models.CVERelationship
+
+		err := repository.GetDB(ctx, tx).
+			Where(
+				"LOWER(target_cve) IN ? OR LOWER(source_cve) IN ?",
+				chunk,
+				chunk,
+			).
+			Find(&relationships).Error
+
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, relationships...)
+	}
+
+	return result, nil
 }
