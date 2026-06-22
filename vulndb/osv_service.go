@@ -403,7 +403,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 
 	// check if we ran into any errors while fetching
 	if n := fetchFailures.Load(); n > 0 {
-		return nil, nil, fmt.Errorf("aborting export: %d ids could not be fetched; will retry on next run", n)
+		return nil, nil, fmt.Errorf("aborting export: %d osv fetch failures; will retry on next run", n)
 	}
 
 	// double check if we could fetch any data at all
@@ -505,11 +505,13 @@ func (s osvService) fetchEcosystemEntriesViaZip(ctx context.Context, zipPushWait
 	zipReader, err := s.getOSVZipContainingEcosystem(ctx, ecosystem)
 	if err != nil {
 		fetchFailures.Add(1)
+		slog.Error("could not fetch osv zip for ecosystem", "ecosystem", ecosystem, "err", err)
 		return
 	}
 
 	if len(zipReader.File) == 0 {
 		fetchFailures.Add(1)
+		slog.Error("osv zip for ecosystem contained no files", "ecosystem", ecosystem)
 		return
 	}
 
