@@ -335,7 +335,10 @@ func diffTable(ctx context.Context, tx pgx.Tx, spec diffSpec) error {
 			if i > 0 {
 				contentConditions.WriteString(" OR ")
 			}
-			contentConditions.WriteString(fmt.Sprintf("db.%s IS DISTINCT FROM gob.%s", col, col))
+			_, err := fmt.Fprintf(&contentConditions, "db.%s IS DISTINCT FROM gob.%s", col, col)
+			if err != nil {
+				return fmt.Errorf("could not build content conditions: %w", err)
+			}
 		}
 		joinWhere := contentConditions.String()
 		if spec.joinFilter != "" {

@@ -766,10 +766,3 @@ func TestUpdateLabels(t *testing.T) {
 		mockClientFactory.AssertExpectations(t)
 	})
 }
-
-// Helper function for creating string pointers
-//
-//go:fix inline
-func stringPtr(s string) *string {
-	return new(s)
-}

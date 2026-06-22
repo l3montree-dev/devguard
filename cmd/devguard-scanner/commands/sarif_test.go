@@ -9,12 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//go:fix inline
-func ptrStr(s string) *string { return new(s) }
-
-//go:fix inline
-func ptrInt(i int) *int { return new(i) }
-
 func buildSarifScan(uri string, startLine, endLine int, originalSnippet string) *sarif.SarifSchema210Json {
 	return &sarif.SarifSchema210Json{
 		Runs: []sarif.Run{

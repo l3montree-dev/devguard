@@ -37,11 +37,6 @@ type tableTest struct {
 	affectedComponents []models.AffectedComponent
 }
 
-//go:fix inline
-func ptr[T any](s T) *T {
-	return new(s)
-}
-
 func TestCalculateRawRisk(t *testing.T) {
 	t.Run("should never divide by zero - instead divide by 1", func(t *testing.T) {
 		sut := models.CVE{

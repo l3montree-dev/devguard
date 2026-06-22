@@ -420,10 +420,3 @@ func TestToCdxComponentBOMIntegration(t *testing.T) {
 		bomRefs[comp.BOMRef] = true
 	}
 }
-
-// Helper function to get pointer to string
-//
-//go:fix inline
-func getStringPtr(s string) *string {
-	return new(s)
-}

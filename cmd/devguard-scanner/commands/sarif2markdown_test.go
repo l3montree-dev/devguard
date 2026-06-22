@@ -318,8 +318,3 @@ func TestGenerateSummaryMarkdown(t *testing.T) {
 	assert.Contains(t, markdown, "## Overall Statistics")
 	assert.Contains(t, markdown, "❌ Failed: 1")
 }
-
-//go:fix inline
-func ptr[T any](v T) *T {
-	return new(v)
-}
