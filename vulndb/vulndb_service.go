@@ -189,17 +189,20 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	})
 
 	group.Go(func() error {
-		slog.Info("start fetching CISA KEV data")
+		slog.Info("start fetching KEV data")
 		kevFetchCtx, kevCancel := context.WithTimeout(groupCtx, 30*time.Second)
 		defer kevCancel()
 		cisaKEVCVEs, err := s.cisaKEV.Fetch(kevFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch CISA KEV data: %w", err)
 		}
+		slog.Info("successfully fetched CISA KEV data")
+
 		euvdKEVCVEs, err := s.euvdKEV.Fetch(ctx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EUVD KEV data: %w", err)
 		}
+		slog.Info("successfully fetched EUVD KEV data")
 
 		allKEVCVEs := mergeKEVInformation(cisaKEVCVEs, euvdKEVCVEs)
 
@@ -209,6 +212,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 				filtered = append(filtered, c)
 			}
 		}
+
 		kevEntries = kevEntriesToGob(filtered)
 		return nil
 	})
@@ -252,9 +256,9 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not write EPSS data: %w", err)
 	}
-	slog.Info("writing CISA KEV data to database")
+	slog.Info("writing KEV data to database")
 	if err := InsertKEVBulk(ctx, tx, kevEntries); err != nil {
-		return fmt.Errorf("could not write CISA KEV data: %w", err)
+		return fmt.Errorf("could not write KEV data: %w", err)
 	}
 	slog.Info("writing exploit data to database")
 	if err := insertExploitsBulk(ctx, tx, allExploits, "exploits_stage"); err != nil {

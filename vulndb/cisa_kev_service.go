@@ -226,7 +226,7 @@ func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	if err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
 	}
-	slog.Debug("InsertCISAKEVBulk: update complete", "rows_updated", tag.RowsAffected())
+	slog.Debug("InsertKEVBulk: update complete", "rows_updated", tag.RowsAffected())
 	return nil
 }
 
