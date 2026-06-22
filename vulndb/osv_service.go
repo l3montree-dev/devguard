@@ -614,7 +614,7 @@ func InsertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table str
 	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{table}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
-		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector}, nil
+		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector, row.EUVDExploitAdd}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
@@ -806,7 +806,7 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			cisa_vulnerability_name text,
 			epss                    numeric(6,5),
 			percentile              numeric(6,5),
-			vector                  text
+			vector                  text,
 			euvd_exploit_add		date
 		) ON COMMIT DROP;
 

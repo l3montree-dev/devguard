@@ -48,7 +48,7 @@ type CVE struct {
 	Risk                  dtos.RiskMetrics    `json:"risk" gorm:"-" cve:"risk"`
 	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;references:CVE;"`
 	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;references:CVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
-	EUVDExploitAdd        *datatypes.Date     `json:"evudExploitAdd" gorm:"type:date"`
+	EUVDExploitAdd        *datatypes.Date     `json:"euvdExploitAdd" gorm:"type:date"`
 }
 
 type Weakness struct {

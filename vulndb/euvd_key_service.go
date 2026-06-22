@@ -39,7 +39,7 @@ type euvdKEVEntry struct {
 	Sources   []string `json:"sources"`
 }
 
-func (service euvdService) Fetch(ctx context.Context) ([]models.CVE, error) {
+func (service euvdKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, euvdKEVURL, nil)
 	if err != nil {
 		return nil, err

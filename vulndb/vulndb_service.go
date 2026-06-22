@@ -196,7 +196,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		if err != nil {
 			return fmt.Errorf("could not fetch CISA KEV data: %w", err)
 		}
-		euvdKEVCVEs, err := s.euvdService.Fetch(ctx)
+		euvdKEVCVEs, err := s.euvdKEV.Fetch(ctx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EUVD KEV data: %w", err)
 		}

@@ -288,7 +288,7 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 		cisa_exploit_add = new.cisa_exploit_add::date,
 		cisa_action_due = new.cisa_action_due::date,
 		cisa_required_action = new.cisa_required_action,
-		cisa_vulnerability_name = new.cisa_vulnerability_name
+		cisa_vulnerability_name = new.cisa_vulnerability_name,
 		euvd_exploit_add = new.euvd_exploit_add
 	FROM (SELECT
 		unnest($1::text[]) as cve,
@@ -296,7 +296,7 @@ func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, bat
 		unnest($3::text[]) as cisa_action_due,
 		unnest($4::text[]) as cisa_required_action,
 		unnest($5::text[]) as cisa_vulnerability_name,
-		unnest(¢6::text[]) as euvd_exploit_add
+		unnest($6::text[]) as euvd_exploit_add
 	) as new
 	WHERE cves.cve = new.cve;`
 

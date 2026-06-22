@@ -432,6 +432,75 @@ func TestQuickDiffCISAViaRelationship(t *testing.T) {
 	applyQuickDiffAndVerify(ctx, t, pool, roundtripDiff(t, diff), nil, newKEV, groundTruth)
 }
 
+// queryKEVDates returns cisa_exploit_add and euvd_exploit_add of a CVE as YYYY-MM-DD
+// strings ("" when NULL). to_char renders in SQL to avoid timezone interpretation.
+func queryKEVDates(ctx context.Context, t *testing.T, pool *pgxpool.Pool, cve string) (string, string) {
+	t.Helper()
+	conn, err := pool.Acquire(ctx)
+	assert.NoError(t, err)
+	defer conn.Release()
+
+	var cisa, euvd *string
+	err = conn.QueryRow(ctx,
+		`SELECT to_char(cisa_exploit_add, 'YYYY-MM-DD'), to_char(euvd_exploit_add, 'YYYY-MM-DD') FROM cves WHERE cve = $1`,
+		cve,
+	).Scan(&cisa, &euvd)
+	assert.NoError(t, err)
+
+	deref := func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
+	}
+	return deref(cisa), deref(euvd)
+}
+
+// TestKEVBulkAliasMergesCISAAndEUVDDates verifies an alias CVE that inherits from two
+// different KEV records — one CISA-only, one EUVD-only — keeps both dates instead of
+// losing one to the single DISTINCT ON winner in InsertKEVBulk.
+func TestKEVBulkAliasMergesCISAAndEUVDDates(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
+	defer terminate()
+
+	cisaDate := time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC)
+	euvdDate := time.Date(2025, 3, 20, 0, 0, 0, 0, time.UTC)
+
+	cves := []models.CVE{
+		makeCVE(8201, "CVE-2025-8201", "alias of both", 5.0, testVector),
+		makeCVE(8202, "CVE-2025-8202", "CISA-only canonical", 9.0, testVector),
+		makeCVE(8203, "CVE-2025-8203", "EUVD-only canonical", 8.0, testVector),
+	}
+	// CVE-8201 is an alias of both canonical CVEs.
+	rels := []models.CVERelationship{
+		{SourceCVE: "CVE-2025-8201", TargetCVE: "CVE-2025-8202", RelationshipType: "alias"},
+		{SourceCVE: "CVE-2025-8201", TargetCVE: "CVE-2025-8203", RelationshipType: "alias"},
+	}
+	// One canonical is CISA-only, the other EUVD-only.
+	kev := []vulndb.KEVEntry{
+		{CVE: "CVE-2025-8202", CISAExploitAddDate: &cisaDate, RequiredAction: utils.Ptr("patch now"), VulnerabilityName: utils.Ptr("CISA Bug")},
+		{CVE: "CVE-2025-8203", EUVDExploitAddDate: &euvdDate},
+	}
+
+	seedCVEState(ctx, t, pool, cves, rels, nil, kev)
+
+	// The alias must carry the CISA date from one canonical and the EUVD date from the other.
+	cisaGot, euvdGot := queryKEVDates(ctx, t, pool, "CVE-2025-8201")
+	assert.Equal(t, cisaDate.Format("2006-01-02"), cisaGot)
+	assert.Equal(t, euvdDate.Format("2006-01-02"), euvdGot)
+
+	// Each canonical keeps only its own dimension.
+	cisaOnly, euvdOnEmpty := queryKEVDates(ctx, t, pool, "CVE-2025-8202")
+	assert.Equal(t, cisaDate.Format("2006-01-02"), cisaOnly)
+	assert.Equal(t, "", euvdOnEmpty)
+
+	cisaOnEmpty, euvdOnly := queryKEVDates(ctx, t, pool, "CVE-2025-8203")
+	assert.Equal(t, "", cisaOnEmpty)
+	assert.Equal(t, euvdDate.Format("2006-01-02"), euvdOnly)
+}
+
 // TestQuickDiff_LargeBatchManyChanges exercises a large number of simultaneous
 // inserts, deletes, updates, and EPSS changes to surface any batch-size edge cases.
 func TestQuickDiffLargeBatchManyChanges(t *testing.T) {

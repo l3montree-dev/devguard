@@ -197,16 +197,21 @@ func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	}
 
 	// Update direct CVEs and alias CVEs. DISTINCT ON with ORDER BY cisa_exploit_add ASC gives a
-	// deterministic winner when an alias maps to multiple KEV canonical CVEs.
+	// deterministic winner for the CISA fields when an alias maps to multiple KEV canonical CVEs.
+	// euvd_exploit_add is resolved with a window min over the whole CVE partition (computed before
+	// DISTINCT ON collapses the rows) so a CVE aliased to a cisa-only and a euvd-only record keeps
+	// both dates instead of losing one to the single DISTINCT ON winner.
 	tag, err := tx.Exec(ctx, `
 		UPDATE cves SET
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
-			cisa_vulnerability_name = ks.cisa_vulnerability_name
-			euvd_exploit_add 		= ks.euvd_exploit_add
+			cisa_vulnerability_name = ks.cisa_vulnerability_name,
+			euvd_exploit_add        = ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
+			SELECT DISTINCT ON (cve)
+				cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name,
+				min(euvd_exploit_add) OVER (PARTITION BY cve) AS euvd_exploit_add
 			FROM (
 				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
@@ -215,7 +220,7 @@ func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC,euvd_exploit_add ASC, cisa_vulnerability_name ASC
+			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
 		WHERE cves.cve = ks.cve`)
 	if err != nil {
@@ -254,10 +259,12 @@ func applyKEVToStage(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
-			cisa_vulnerability_name = ks.cisa_vulnerability_name
-			euvd_exploit_add 		= ks.euvd_exploit_add
+			cisa_vulnerability_name = ks.cisa_vulnerability_name,
+			euvd_exploit_add        = ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
+			SELECT DISTINCT ON (cve)
+				cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name,
+				min(euvd_exploit_add) OVER (PARTITION BY cve) AS euvd_exploit_add
 			FROM (
 				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
@@ -266,7 +273,7 @@ func applyKEVToStage(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
-			ORDER BY cve, cisa_exploit_add ASC,euvd_exploit_add ASC, cisa_vulnerability_name ASC
+			ORDER BY cve, cisa_exploit_add ASC, cisa_vulnerability_name ASC
 		) ks
 		WHERE cves_stage.cve = ks.cve`)
 	if err != nil {
