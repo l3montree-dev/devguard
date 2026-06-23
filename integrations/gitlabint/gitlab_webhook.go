@@ -258,7 +258,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 	if doUpdateArtifactRiskHistory {
 		for _, artifact := range vuln.GetArtifacts() {
-			if err := g.statisticsService.UpdateArtifactRiskAggregation(context.Background(), &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
+			if err := g.statisticsService.UpdateArtifactRiskAggregation(context.Background(), nil, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
@@ -268,16 +268,16 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	case dtos.EventTypeAccepted, dtos.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
-			StateEvent: gitlab.Ptr("close"),
-			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			StateEvent: new("close"),
+			Labels:     new(gitlab.LabelOptions(labels)),
 		})
 
 		return err
 	case dtos.EventTypeReopened:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
-			StateEvent: gitlab.Ptr("reopen"),
-			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			StateEvent: new("reopen"),
+			Labels:     new(gitlab.LabelOptions(labels)),
 		})
 		return err
 	}

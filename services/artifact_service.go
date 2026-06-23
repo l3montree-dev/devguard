@@ -55,8 +55,8 @@ func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.C
 	return artifacts, nil
 }
 
-func (s *ArtifactService) SaveArtifact(ctx context.Context, artifact *models.Artifact) error {
-	return s.artifactRepository.Save(ctx, nil, artifact)
+func (s *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
+	return s.artifactRepository.Save(ctx, tx, artifact)
 }
 
 func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {

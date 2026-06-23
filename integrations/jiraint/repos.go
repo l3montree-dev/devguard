@@ -12,7 +12,7 @@ type Project struct {
 	ID              string             `json:"id,omitempty" structs:"id,omitempty"`
 	Key             string             `json:"key,omitempty" structs:"key,omitempty"`
 	Description     string             `json:"description,omitempty" structs:"description,omitempty"`
-	Lead            User               `json:"lead,omitempty" structs:"lead,omitempty"`
+	Lead            User               `json:"lead" structs:"lead,omitempty"`
 	Components      []ProjectComponent `json:"components,omitempty" structs:"components,omitempty"`
 	IssueTypes      []IssueType        `json:"issueTypes,omitempty" structs:"issueTypes,omitempty"`
 	URL             string             `json:"url,omitempty" structs:"url,omitempty"`
@@ -21,8 +21,8 @@ type Project struct {
 	Versions        []Version          `json:"versions,omitempty" structs:"versions,omitempty"`
 	Name            string             `json:"name,omitempty" structs:"name,omitempty"`
 	Roles           map[string]string  `json:"roles,omitempty" structs:"roles,omitempty"`
-	AvatarUrls      AvatarUrls         `json:"avatarUrls,omitempty" structs:"avatarUrls,omitempty"`
-	ProjectCategory ProjectCategory    `json:"projectCategory,omitempty" structs:"projectCategory,omitempty"`
+	AvatarUrls      AvatarUrls         `json:"avatarUrls" structs:"avatarUrls,omitempty"`
+	ProjectCategory ProjectCategory    `json:"projectCategory" structs:"projectCategory,omitempty"`
 }
 
 type ProjectComponent struct {
@@ -30,7 +30,7 @@ type ProjectComponent struct {
 	ID                  string `json:"id" structs:"id,omitempty"`
 	Name                string `json:"name" structs:"name,omitempty"`
 	Description         string `json:"description" structs:"description,omitempty"`
-	Lead                User   `json:"lead,omitempty" structs:"lead,omitempty"`
+	Lead                User   `json:"lead" structs:"lead,omitempty"`
 	AssigneeType        string `json:"assigneeType" structs:"assigneeType,omitempty"`
 	Assignee            User   `json:"assignee" structs:"assignee,omitempty"`
 	RealAssigneeType    string `json:"realAssigneeType" structs:"realAssigneeType,omitempty"`
@@ -48,7 +48,7 @@ type User struct {
 	Key             string     `json:"key,omitempty" structs:"key,omitempty"`
 	Password        string     `json:"-"`
 	EmailAddress    string     `json:"emailAddress,omitempty" structs:"emailAddress,omitempty"`
-	AvatarUrls      AvatarUrls `json:"avatarUrls,omitempty" structs:"avatarUrls,omitempty"`
+	AvatarUrls      AvatarUrls `json:"avatarUrls" structs:"avatarUrls,omitempty"`
 	DisplayName     string     `json:"displayName,omitempty" structs:"displayName,omitempty"`
 	Active          bool       `json:"active,omitempty" structs:"active,omitempty"`
 	TimeZone        string     `json:"timeZone,omitempty" structs:"timeZone,omitempty"`
@@ -126,12 +126,12 @@ type ChangelogHistory struct {
 	Items   []ChangelogItems `json:"items" structs:"items"`
 }
 type ChangelogItems struct {
-	Field      string      `json:"field" structs:"field"`
-	FieldType  string      `json:"fieldtype" structs:"fieldtype"`
-	From       interface{} `json:"from" structs:"from"`
-	FromString string      `json:"fromString" structs:"fromString"`
-	To         interface{} `json:"to" structs:"to"`
-	ToString   string      `json:"toString" structs:"toString"`
+	Field      string `json:"field" structs:"field"`
+	FieldType  string `json:"fieldtype" structs:"fieldtype"`
+	From       any    `json:"from" structs:"from"`
+	FromString string `json:"fromString" structs:"fromString"`
+	To         any    `json:"to" structs:"to"`
+	ToString   string `json:"toString" structs:"toString"`
 }
 type IssueRenderedFields struct {
 	// TODO Missing fields
@@ -217,8 +217,8 @@ type IssueFields struct {
 	//      * "lastViewed": null,
 	//      * "environment": null,
 	Expand      string      `json:"expand,omitempty" structs:"expand,omitempty"`
-	Type        IssueType   `json:"issuetype,omitempty" structs:"issuetype,omitempty"`
-	Project     Project     `json:"project,omitempty" structs:"project,omitempty"`
+	Type        IssueType   `json:"issuetype" structs:"issuetype,omitempty"`
+	Project     Project     `json:"project" structs:"project,omitempty"`
 	Environment string      `json:"environment,omitempty" structs:"environment,omitempty"`
 	Resolution  *Resolution `json:"resolution,omitempty" structs:"resolution,omitempty"`
 	Priority    *Priority   `json:"priority,omitempty" structs:"priority,omitempty"`
@@ -228,7 +228,7 @@ type IssueFields struct {
 	Watches  *Watches `json:"watches,omitempty" structs:"watches,omitempty"`
 	Assignee *User    `json:"assignee,omitempty" structs:"assignee,omitempty"`
 	//Updated                       Time              `json:"updated,omitempty" structs:"updated,omitempty"`
-	Description ADF          `json:"description,omitempty" structs:"description,omitempty"`
+	Description ADF          `json:"description" structs:"description,omitempty"`
 	Summary     string       `json:"summary,omitempty" structs:"summary,omitempty"`
 	Creator     *User        `json:"creator,omitempty" structs:"creator,omitempty"`
 	Reporter    *User        `json:"reporter,omitempty" structs:"reporter,omitempty"`
@@ -419,8 +419,8 @@ type CommentVisibility struct {
 }
 
 type EntityProperty struct {
-	Key   string      `json:"key"`
-	Value interface{} `json:"value"`
+	Key   string `json:"key"`
+	Value any    `json:"value"`
 }
 
 // These structs are new und do not exist in the go-jira library.

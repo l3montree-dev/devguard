@@ -203,7 +203,10 @@ func (f *TestFixture) RemoveMember(t testing.TB, e *echo.Echo, org models.Org, c
 
 	rbac := f.App.RBACProvider.GetDomainRBAC(org.ID.String())
 
-	allowed, err := rbac.IsAllowed(context.Background(), callerUserID, shared.ObjectOrganization, shared.ActionUpdate)
+	callerSession := mocks.NewAuthSession(t)
+	callerSession.On("GetUserID").Return(callerUserID)
+
+	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate)
 	require.NoError(t, err)
 	if !allowed {
 		return echo.NewHTTPError(403, "forbidden")
@@ -229,6 +232,7 @@ func (f *TestFixture) RemoveMember(t testing.TB, e *echo.Echo, org models.Org, c
 
 // TestOrgInviteWorkflow covers the core invitation flow end-to-end.
 func TestOrgInviteWorkflow(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -292,6 +296,7 @@ func TestOrgInviteWorkflow(t *testing.T) {
 
 // TestAdminCannotChangeOwnerRole verifies that an admin cannot change the owner's role.
 func TestAdminCannotChangeOwnerRole(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -322,6 +327,7 @@ func TestAdminCannotChangeOwnerRole(t *testing.T) {
 
 // TestAdminCanDemoteAnotherAdmin verifies that an admin can demote another admin to member.
 func TestAdminCanDemoteAnotherAdmin(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -356,6 +362,7 @@ func TestAdminCanDemoteAnotherAdmin(t *testing.T) {
 
 // TestMemberCannotRemoveAdmin verifies that a member cannot remove an admin from the org.
 func TestMemberCannotRemoveAdmin(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"
@@ -390,6 +397,7 @@ func TestMemberCannotRemoveAdmin(t *testing.T) {
 
 // TestAdminCanRemoveMember verifies that an admin can remove a member from the org.
 func TestAdminCanRemoveMember(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		const (
 			userAID    = "user-a-id"

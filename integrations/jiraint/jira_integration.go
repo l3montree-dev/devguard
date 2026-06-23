@@ -101,6 +101,10 @@ func (i *JiraIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Co
 	return nil
 }
 
+func (i *JiraIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	return nil, nil
+}
+
 func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
 	asset, err := i.assetRepository.Read(context.Background(), nil, assetID)
 	if err != nil {
@@ -336,10 +340,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	assetSlug := asset.Slug
 
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, assetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
@@ -475,6 +476,8 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 	vuln.SetTicketID(fmt.Sprintf("jira:%d:%s", projectID, createdIssue.GetID()))
 	vuln.SetTicketURL(fmt.Sprintf("%s/browse/%s", client.BaseURL, createdIssue.Key))
 	vuln.SetManualTicketCreation(userID != "system")
+
+	slog.Info("created jira ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", fmt.Sprintf("%s/browse/%s", client.BaseURL, createdIssue.Key))
 
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),
@@ -675,10 +678,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(ctx, i.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraProjectID, ticketID, err := jiraTicketIDToProjectIDAndIssueID(utils.SafeDereference(dependencyVuln.GetTicketID()))
 	if err != nil {
@@ -731,6 +731,8 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 	}
 
 	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
+
+	slog.Info("updating jira ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedIssueState))
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, dependencyVuln.GetTicketID())
 	if err != nil {

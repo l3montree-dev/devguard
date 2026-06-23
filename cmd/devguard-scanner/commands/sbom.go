@@ -17,7 +17,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/pkg/errors"
@@ -75,15 +73,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 	}
 
-	// read and parse the body - it should be an array of dependencyVulns
-	// print the dependencyVulns to the console
-	var scanResponse compat.ScanResponse
-
-	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-	if err != nil {
-		return errors.Wrap(err, "could not parse response")
-	}
-	return scanner.PrintScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return handleScanResponse(resp.Body)
 }
 
 func NewSbomCommand() *cobra.Command {

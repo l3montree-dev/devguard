@@ -53,6 +53,8 @@ func init() {
 	commands.GetRootCmd().AddCommand(commands.NewMigrateCommand())
 	commands.GetRootCmd().AddCommand(commands.NewSBOMCommand())
 	commands.GetRootCmd().AddCommand(commands.NewTrustScoreCommand())
+	commands.GetRootCmd().AddCommand(commands.NewEncryptionCommand())
+	commands.GetRootCmd().AddCommand(commands.NewGenAdminKeyCommand())
 }
 
 func main() {

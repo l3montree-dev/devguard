@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gopkg.in/yaml.v2"
 )
@@ -169,7 +168,7 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 		if v, ok := value.(map[string]any); ok {
 			rawEvalResult = v
 			if v["compliant"] != nil {
-				compliant = utils.Ptr(v["compliant"].(bool))
+				compliant = new(v["compliant"].(bool))
 			}
 			if v["violations"] != nil {
 				for _, violation := range v["violations"].([]any) {

@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -31,12 +32,13 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(dtos.OpenSourceInsightsVersionResponse{}, nil)
+		gormPurl, _ := packageurl.FromString("pkg:golang/gorm.io/gorm@v1.25.12")
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, gormPurl).Return(dtos.OpenSourceInsightsVersionResponse{}, nil)
 
 		actual, err := service.GetLicense(context.Background(), component)
 
 		assert.NoError(t, err)
-		assert.Equal(t, utils.Ptr("unknown"), actual.License)
+		assert.Equal(t, new("unknown"), actual.License)
 	})
 	t.Run("should also get alpine Licenses", func(t *testing.T) {
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
@@ -55,7 +57,7 @@ func TestHandleComponent(t *testing.T) {
 		actual, err := service.GetLicense(context.Background(), component)
 		fmt.Printf("License %s", *actual.License)
 		assert.NoError(t, err)
-		assert.NotEqual(t, utils.Ptr("unknown"), actual.License)
+		assert.NotEqual(t, new("unknown"), actual.License)
 	})
 
 	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
@@ -70,14 +72,15 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(dtos.OpenSourceInsightsVersionResponse{}, assert.AnError)
+		gormPurl, _ := packageurl.FromString("pkg:golang/gorm.io/gorm@v1.25.12")
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, gormPurl).Return(dtos.OpenSourceInsightsVersionResponse{}, assert.AnError)
 		service := NewComponentService(mockOpenSourceInsightService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService, mockArtifactRepository, utils.NewSyncFireAndForgetSynchronizer())
 
 		actual, err := service.GetLicense(context.Background(), c)
 
 		assert.NoError(t, err)
 
-		assert.Equal(t, utils.Ptr("unknown"), actual.License)
+		assert.Equal(t, new("unknown"), actual.License)
 	})
 
 	t.Run("should fetch the project information if there is a SOURCE_REPO defined in the related projects", func(t *testing.T) {
@@ -92,7 +95,8 @@ func TestHandleComponent(t *testing.T) {
 			License: nil,
 		}
 
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(dtos.OpenSourceInsightsVersionResponse{
+		gormPurl, _ := packageurl.FromString("pkg:golang/gorm.io/gorm@v1.25.12")
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, gormPurl).Return(dtos.OpenSourceInsightsVersionResponse{
 			RelatedProjects: []struct {
 				ProjectKey struct {
 					ID string "json:\"id\""
@@ -121,7 +125,7 @@ func TestHandleComponent(t *testing.T) {
 		actual, err := service.FetchComponentProject(context.Background(), c)
 
 		assert.NoError(t, err)
-		assert.Equal(t, utils.Ptr("github/test/project"), actual.ComponentProjectKey)
+		assert.Equal(t, new("github/test/project"), actual.ComponentProjectKey)
 	})
 }
 

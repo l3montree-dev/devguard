@@ -29,7 +29,7 @@ type WebhookStruct struct {
 	AssetVersion shared.AssetVersionObject `json:"assetVersion"`
 	Payload      any                       `json:"payload"`
 	Type         WebhookType               `json:"type"`
-	Artifact     shared.ArtifactObject     `json:"artifact,omitempty"`
+	Artifact     shared.ArtifactObject     `json:"artifact"`
 }
 
 type WebhookType string
@@ -53,7 +53,6 @@ const (
 type webhookClient struct {
 	URL         string
 	Secret      *string
-	httpClient  *http.Client
 	retryDelays []time.Duration
 }
 
@@ -61,7 +60,6 @@ func NewWebhookService(url string, secret *string) *webhookClient {
 	return &webhookClient{
 		URL:         url,
 		Secret:      secret,
-		httpClient:  &http.Client{Transport: utils.EgressTransport},
 		retryDelays: []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second},
 	}
 }
@@ -97,7 +95,7 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, lastErr = c.httpClient.Do(req)
+		resp, lastErr = utils.EgressClient.Do(req)
 
 		// Don't retry on 2xx or permanent 4xx — only 408/429 are retryable in the 4xx range.
 		if lastErr == nil && resp.StatusCode < 500 &&

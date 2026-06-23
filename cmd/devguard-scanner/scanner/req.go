@@ -43,7 +43,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign request")
 	}
@@ -85,9 +85,9 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 		}
 	}
 
-	endpoint := fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL)
+	endpoint := fmt.Sprintf("%s/api/v2/scan", config.RuntimeBaseConfig.APIURL)
 	if config.RuntimeBaseConfig.Token == "" {
-		endpoint = fmt.Sprintf("%s/api/v1/scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
+		endpoint = fmt.Sprintf("%s/api/v2/scan-unauthenticated", config.RuntimeBaseConfig.APIURL)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
@@ -96,7 +96,7 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	}
 
 	if config.RuntimeBaseConfig.Token != "" {
-		err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+		err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return nil, cancel, errors.Wrap(err, "could not sign request")
 		}
@@ -106,6 +106,9 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	req.Header.Set("X-Origin", config.RuntimeBaseConfig.Origin)
+	if config.RuntimeBaseConfig.NoWrite {
+		req.Header.Set("X-No-Write", "1")
+	}
 
 	if config.RuntimeBaseConfig.KeepOriginalSbomRootComponent != nil {
 		// convert bool to number
@@ -191,7 +194,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}

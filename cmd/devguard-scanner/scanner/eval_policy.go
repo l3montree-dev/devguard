@@ -174,7 +174,7 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 
 	return sarif.SarifSchema210Json{
 		Version: sarif.SarifSchema210JsonVersionA210,
-		Schema:  utils.Ptr("https://json.schemastore.org/sarif-2.1.0.json"),
+		Schema:  new("https://json.schemastore.org/sarif-2.1.0.json"),
 		Runs: []sarif.Run{
 			{
 				Tool: sarif.Tool{

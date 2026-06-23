@@ -3,7 +3,9 @@ package router
 import "go.uber.org/fx"
 
 var RouterModule = fx.Options(
+	fx.Provide(NewAdminRouter),
 	fx.Provide(NewAPIV1Router),
+	fx.Provide(NewAPIV2Router),
 	fx.Provide(NewArtifactRouter),
 	fx.Provide(NewAssetRouter),
 	fx.Provide(NewAssetVersionRouter),

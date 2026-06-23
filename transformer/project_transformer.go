@@ -19,7 +19,6 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 )
 
 func ProjectCreateRequestToModel(projectCreate dtos.ProjectCreateRequest) models.Project {
@@ -79,7 +78,7 @@ func ApplyProjectPatchRequestToModel(projectPatch dtos.ProjectPatchRequest, proj
 func ProjectModelToDTO(project models.Project) dtos.ProjectDTO {
 	var parentDTO *dtos.ProjectDTO
 	if project.Parent != nil {
-		parentDTO = utils.Ptr(ProjectModelToDTO(*project.Parent))
+		parentDTO = new(ProjectModelToDTO(*project.Parent))
 	}
 
 	assets := make([]dtos.AssetDTO, len(project.Assets))

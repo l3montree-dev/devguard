@@ -44,6 +44,24 @@ func (t *thirdPartyIntegrations) CompareIssueStatesAndResolveDifferences(ctx con
 	return err
 }
 
+func (t *thirdPartyIntegrations) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	wg := utils.ErrGroup[[]string](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() ([]string, error) {
+			return i.GetExcessTicketIDs(ctx, asset, vulnsWithTickets)
+		})
+	}
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		return nil, err
+	}
+	var all []string
+	for _, r := range results {
+		all = append(all, r...)
+	}
+	return all, nil
+}
+
 func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []shared.Role, error) {
 	type projectsWithRoles struct {
 		projects []models.Project

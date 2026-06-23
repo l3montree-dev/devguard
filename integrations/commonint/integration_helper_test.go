@@ -1,7 +1,6 @@
 package commonint
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -12,11 +11,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 // devguardTemplate is the output of buildGitlabCiTemplate("full") with default env vars.
@@ -362,110 +358,25 @@ deploy-production:
 	})
 }
 
-func TestRenderPathToComponent(t *testing.T) {
-	t.Run("Everything works as expected with empty lists", func(t *testing.T) {
-		components := []models.ComponentDependency{}
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-
-		assetID := uuid.New()
-		assetVersionName := "TestName"
-		pURL := "pkg:npm:test"
-
-		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
-		if err != nil {
-			t.Fail()
-		}
-		// With empty components, the pURL is not reachable, so we get empty mermaid diagram
+func TestPathsToMermaid(t *testing.T) {
+	t.Run("Everything works as expected with empty paths", func(t *testing.T) {
+		result := PathsToMermaid([][]string{})
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n\nclassDef default stroke-width:2px\n```\n", result)
-
 	})
-	t.Run("LoadPathToComponent fails somehow should return an error", func(t *testing.T) {
-		components := []models.ComponentDependency{}
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, fmt.Errorf("Something went wrong"))
 
-		assetID := uuid.New()
-		assetVersionName := "TestName"
-		pURL := "pkg:npm:test"
-
-		_, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
-		if err == nil {
-			t.Fail()
-		}
-
-	})
-	t.Run("Everything works as expected with a non empty component list", func(t *testing.T) {
-		// Create a chain of actual components (all with pkg: prefix) to have a path with edges
-		components := []models.ComponentDependency{
-			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                           // root --> artifact
-			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
-			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
-			{ComponentID: "pkg:npm/root-dep@1.0.0", DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
-		}
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-
-		assetID := uuid.New()
-		assetVersionName := "TestName"
-		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
-
-		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
-		if err != nil {
-			t.Fail()
-		}
-
-		// FindAllComponentOnlyPathsToPURL only returns component-only paths (nodes starting with pkg:)
-		// The path should be: root-dep -> test-package
+	t.Run("Everything works as expected with a non empty path", func(t *testing.T) {
+		result := PathsToMermaid([][]string{{"pkg:npm/root-dep@1.0.0", "pkg:npm/test-package@1.0.0"}})
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
-
 	})
+
 	t.Run("should escape @ symbols", func(t *testing.T) {
-		// Create a chain of actual components to verify @ escaping in mermaid output
-		components := []models.ComponentDependency{
-			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},                           // root --> artifact
-			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},       // artifact -> sbom
-			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/root-dep@1.0.0", Dependency: models.Component{ID: "pkg:npm/root-dep@1.0.0"}},        // sbom -> root-dep (component)
-			{ComponentID: "pkg:npm/root-dep@1.0.0", DependencyID: "pkg:npm/test-package@1.0.0", Dependency: models.Component{ID: "pkg:npm/test-package@1.0.0"}}, // root-dep -> test-package (component)
-		}
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-
-		assetID := uuid.New()
-		assetVersionName := "TestName"
-
-		pURL := "pkg:npm/test-package@1.0.0" // Use a pURL that's actually in the component list
-
-		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
-		if err != nil {
-			t.Fail()
-		}
-
-		// Verify @ symbols are escaped as \@ in the mermaid output
+		result := PathsToMermaid([][]string{{"pkg:npm/root-dep@1.0.0", "pkg:npm/test-package@1.0.0"}})
 		assert.Contains(t, result, "\\@1.0.0")
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep\\@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
-
 	})
 
 	t.Run("should render single node path", func(t *testing.T) {
-		// Simulate a single node path (direct dependency with no transitive deps).
-		// The graph requires an artifact and sbom info-source node above the component
-		// so that FindAllComponentOnlyPathsToPURL can terminate the BFS correctly.
-		components := []models.ComponentDependency{
-			{ComponentID: "ROOT", DependencyID: "artifact:test-artifact", Dependency: models.Component{ID: "artifact:test-artifact"}},
-			{ComponentID: "artifact:test-artifact", DependencyID: "sbom:test@test-artifact", Dependency: models.Component{ID: "sbom:test@test-artifact"}},
-			{ComponentID: "sbom:test@test-artifact", DependencyID: "pkg:npm/single@1.0.0", Dependency: models.Component{ID: "pkg:npm/single@1.0.0"}},
-		}
-		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-
-		assetID := uuid.New()
-		assetVersionName := "TestName"
-		pURL := "pkg:npm/single@1.0.0"
-
-		result, err := RenderPathToComponent(context.Background(), componentRepository, assetID, assetVersionName, pURL)
-		assert.NoError(t, err)
-		// The output should contain the single node mermaid representation
+		result := PathsToMermaid([][]string{{"pkg:npm/single@1.0.0"}})
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 }
@@ -481,7 +392,7 @@ func TestGetLabels(t *testing.T) {
 				{ArtifactName: "container:test"},
 				{ArtifactName: "source-code:test"},
 			},
-			RawRiskAssessment: utils.Ptr(0.2),
+			RawRiskAssessment: new(0.2),
 		}
 		expectedLabels := []string{
 			"devguard",
@@ -638,7 +549,7 @@ func TestRenderMarkdown(t *testing.T) {
 
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
 			URI: "the/uri/of/the/vuln",
@@ -659,7 +570,7 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.NoError(t, err)
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message"),
+			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
 			URI: "the/uri/of/the/vuln",
 		}
@@ -694,7 +605,7 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 			vuln := &models.DependencyVuln{
 				Vulnerability:     models.Vulnerability{State: dtos.VulnStateOpen},
 				Artifacts:         order,
-				RawRiskAssessment: utils.Ptr(0.5),
+				RawRiskAssessment: new(0.5),
 			}
 			labels := GetLabels(vuln)
 			if i == 0 {
@@ -705,43 +616,28 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 		}
 	})
 
-	t.Run("RenderPathToComponent produces identical Mermaid output across repeated calls", func(t *testing.T) {
-		// Graph: sbom → route-b and route-a (intentionally "wrong" alphabetical order in slice)
-		// both routes lead to the target, producing two component-only paths.
-		// Previously, map iteration randomness caused the two path edges to appear
-		// in non-deterministic order in the Mermaid output.
-		components := []models.ComponentDependency{
-			{ComponentID: "ROOT", DependencyID: "artifact:art", Dependency: models.Component{ID: "artifact:art"}},
-			{ComponentID: "artifact:art", DependencyID: "sbom:s@art", Dependency: models.Component{ID: "sbom:s@art"}},
-			{ComponentID: "sbom:s@art", DependencyID: "pkg:npm/route-b@1.0", Dependency: models.Component{ID: "pkg:npm/route-b@1.0"}},
-			{ComponentID: "sbom:s@art", DependencyID: "pkg:npm/route-a@1.0", Dependency: models.Component{ID: "pkg:npm/route-a@1.0"}},
-			{ComponentID: "pkg:npm/route-a@1.0", DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
-			{ComponentID: "pkg:npm/route-b@1.0", DependencyID: "pkg:npm/target@1.0", Dependency: models.Component{ID: "pkg:npm/target@1.0"}},
+	t.Run("PathsToMermaid produces identical Mermaid output across repeated calls", func(t *testing.T) {
+		// Two paths to the same target via route-a and route-b.
+		// PathsToMermaid is pure so output must be identical every call.
+		paths := [][]string{
+			{"pkg:npm/route-a@1.0", "pkg:npm/target@1.0"},
+			{"pkg:npm/route-b@1.0", "pkg:npm/target@1.0"},
 		}
 
-		assetID := uuid.New()
-		pURL := "pkg:npm/target@1.0"
-
-		// Run 50 times — enough to surface any map-iteration randomness.
 		const runs = 50
 		results := make([]string, runs)
 		for i := range runs {
-			repo := mocks.NewComponentRepository(t)
-			repo.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
-			result, err := RenderPathToComponent(context.Background(), repo, assetID, "v1.0.0", pURL)
-			assert.NoError(t, err)
-			results[i] = result
+			results[i] = PathsToMermaid(paths)
 		}
 
 		for i := 1; i < runs; i++ {
 			assert.Equal(t, results[0], results[i], "Mermaid output differed on run %d", i)
 		}
 
-		// Also verify route-a edges appear before route-b edges (alphabetical DFS order).
 		assert.Less(t,
 			strings.Index(results[0], "route-a"),
 			strings.Index(results[0], "route-b"),
-			"route-a should appear before route-b in sorted DFS output",
+			"route-a should appear before route-b",
 		)
 	})
 }

@@ -18,6 +18,8 @@ const (
 	WebhookIntegrationID IntegrationID = "webhook"
 )
 
+var ErrOauth2TokenNotValidRedirectionRequired = fmt.Errorf("oauth2 token not valid, redirection required")
+
 type ThirdPartyIntegration interface {
 	WantsToHandleWebhook(ctx Context) bool
 	HandleWebhook(ctx Context) error
@@ -31,6 +33,10 @@ type ThirdPartyIntegration interface {
 	UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error
 	CreateLabels(ctx context.Context, asset models.Asset) error
 	CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error
+	// GetExcessTicketIIDs returns external ticket IDs that are open in the external
+	// system but no longer correspond to an open vulnerability in devguard.
+	// Implementations that don't track tickets return nil, nil.
+	GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error)
 	GetID() IntegrationID
 }
 

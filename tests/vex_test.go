@@ -21,6 +21,7 @@ import (
 
 // TestVEXRuleServiceUpdate tests the Update method
 func TestVEXRuleServiceUpdate(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rule := &models.VEXRule{
 		ID:               "test-rule-1",
@@ -46,6 +47,7 @@ func TestVEXRuleServiceUpdate(t *testing.T) {
 
 // TestVEXRuleServiceDelete tests the Delete method
 func TestVEXRuleServiceDelete(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
 		ID:               "test-rule-1",
@@ -71,6 +73,7 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 
 // TestVEXRuleServiceDeleteByAssetVersion tests batch deletion
 func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -88,6 +91,7 @@ func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
 
 // TestVEXRuleServiceFindByAssetVersion tests finding rules by asset version
 func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
@@ -122,6 +126,7 @@ func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
 
 // TestVEXRuleServiceFindByID tests finding a rule by ID
 func TestVEXRuleServiceFindByID(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
 		ID:               "test-rule-1",
@@ -146,6 +151,7 @@ func TestVEXRuleServiceFindByID(t *testing.T) {
 
 // TestVEXRuleServiceCountMatchingVulnsForRules tests batch vulnerability counting
 func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
@@ -205,6 +211,7 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 
 // TestVEXRuleServiceCountMatchingVulns tests counting matches for single rule
 func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
 		ID:               "rule-1",
@@ -254,6 +261,7 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 
 // TestVEXRuleServiceCreate tests rule creation
 func TestVEXRuleServiceCreate(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	rule := &models.VEXRule{
 		ID:               "ec6335130396f5af8a51ca5ba9f9400baa144cc290cd5c89c98d2800f1d41029",
@@ -280,6 +288,7 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 // TestApplyRulesToExistingIdempotent verifies that calling ApplyRulesToExisting twice
 // with the same vulns does not create duplicate events.
 func TestApplyRulesToExistingIdempotent(t *testing.T) {
+	t.Parallel()
 	assetID := uuid.New()
 	justification := "not_affected"
 
@@ -342,6 +351,7 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 
 // TestUploadVEXExampleIntegration verifies that a VEX document can be uploaded successfully
 func TestUploadVEXExampleIntegration(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 

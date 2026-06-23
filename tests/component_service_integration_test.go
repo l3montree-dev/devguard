@@ -10,13 +10,14 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
+	packageurl "github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/fx"
 )
 
 func TestGetAndSaveLicenseInformation(t *testing.T) {
+	t.Parallel()
 	// Set up a mock OSI licenses API server that returns known valid licenses
 	// This avoids external API dependencies in tests
 	mockLicenses := `[
@@ -39,10 +40,11 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
 
 		// Mock response for the component without license - simulate getting "unknown" license
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, "npm", "no-license-package", "1.0.0").
-			Return(dtos.OpenSourceInsightsVersionResponse{
-				Licenses: []string{}, // No licenses returned
-			}, nil)
+		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.MatchedBy(func(p packageurl.PackageURL) bool {
+			return p.Type == "npm" && p.Name == "no-license-package" && p.Version == "1.0.0"
+		})).Return(dtos.OpenSourceInsightsVersionResponse{
+			Licenses: []string{}, // No licenses returned
+		}, nil)
 
 		WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 			SuppressLogs: true,
@@ -56,12 +58,12 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			// Create test components with different license scenarios
 			componentWithInvalidLicense := models.Component{
 				ID:      "pkg:npm/test-package@1.0.0",
-				License: utils.Ptr("PROPRIETARY"), // Invalid OSI license
+				License: new("PROPRIETARY"), // Invalid OSI license
 			}
 
 			componentWithValidLicense := models.Component{
 				ID:      "pkg:npm/valid-package@1.0.0",
-				License: utils.Ptr("MIT"), // Valid OSI license
+				License: new("MIT"), // Valid OSI license
 			}
 
 			componentWithoutLicense := models.Component{
@@ -133,7 +135,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			}
 
 			// Call the function under test using FX-injected component service
-			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultComponents)
 
@@ -195,7 +197,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			// Create component with invalid license
 			componentWithInvalidLicense := models.Component{
 				ID:      "pkg:npm/test-package@1.0.0",
-				License: utils.Ptr("PROPRIETARY"),
+				License: new("PROPRIETARY"),
 			}
 			err := f.DB.Create(&componentWithInvalidLicense).Error
 			assert.NoError(t, err)
@@ -250,7 +252,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Call the function under test using FX-injected component service
-			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName), false)
 			assert.NoError(t, err)
 
 			// Verify that no duplicate license risk was created

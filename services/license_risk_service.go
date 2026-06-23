@@ -40,6 +40,12 @@ type licenseRiskWithNewLicense struct {
 
 var _ shared.LicenseRiskService = (*LicenseRiskService)(nil)
 
+func deduplicateLicenseRisksByID(licenseRisks []models.LicenseRisk) []models.LicenseRisk {
+	return utils.DeduplicateSlice(licenseRisks, func(lr models.LicenseRisk) string {
+		return lr.CalculateHash().String()
+	})
+}
+
 func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx *gorm.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
 	// get all license risks for the assetVersion (across artifacts) so we can deduplicate
 	existingLicenseRisks, err := s.licenseRiskRepository.GetAllLicenseRisksForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
@@ -224,7 +230,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisks(ctx context.Context, tx share
 		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
-	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, deduplicateLicenseRisksByID(licenseRisks)); err != nil {
 		return err
 	}
 	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
@@ -243,7 +249,7 @@ func (s *LicenseRiskService) UserDetectedLicenseRisks(ctx context.Context, tx sh
 		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}
-	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, deduplicateLicenseRisksByID(licenseRisks)); err != nil {
 		return err
 	}
 	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
@@ -274,7 +280,7 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(ct
 		// copy all events for this license risk
 		if len(alreadyExistingEvents[i]) != 0 {
 			events[i] = utils.Map(alreadyExistingEvents[i], func(el models.VulnEvent) models.VulnEvent {
-				el.LicenseRiskID = utils.Ptr(licenseRisk.CalculateHash())
+				el.LicenseRiskID = new(licenseRisk.CalculateHash())
 				el.ID = uuid.Nil
 				return el
 			})
@@ -294,7 +300,7 @@ func (s *LicenseRiskService) UserDetectedExistingLicenseRiskOnDifferentBranch(ct
 		}
 	}
 
-	err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisks)
+	err := s.licenseRiskRepository.SaveBatch(ctx, tx, deduplicateLicenseRisksByID(licenseRisks))
 	if err != nil {
 		return err
 	}
@@ -329,7 +335,7 @@ func diffLicenseRisksBetweenBranches(foundLicenseRisks []models.LicenseRisk, exi
 				})
 
 				existingRiskEventsOnOtherBranch = append(existingRiskEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
-					event.OriginalAssetVersionName = utils.Ptr(existingRisk.GetAssetVersionName())
+					event.OriginalAssetVersionName = new(existingRisk.GetAssetVersionName())
 					return event
 				})...)
 			}
@@ -354,7 +360,7 @@ func (s *LicenseRiskService) UserFixedLicenseRisksByAutomaticRefresh(ctx context
 		statemachine.Apply(&licenseRisks[i].LicenseRisk, ev)
 		licenseRisksToSave[i] = licenseRisks[i].LicenseRisk
 	}
-	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, licenseRisksToSave); err != nil {
+	if err := s.licenseRiskRepository.SaveBatch(ctx, tx, deduplicateLicenseRisksByID(licenseRisksToSave)); err != nil {
 		return err
 	}
 

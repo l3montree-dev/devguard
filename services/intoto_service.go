@@ -239,7 +239,10 @@ func (service InTotoService) convertPatsToInTotoKeys(pats []models.PAT) ([]strin
 	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := service.HexPublicKeyToInTotoKey(pat.PubKey)
+		if pat.PubKey == nil {
+			continue
+		}
+		key, err := service.HexPublicKeyToInTotoKey(*pat.PubKey)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not convert public key")
 		}
@@ -401,7 +404,10 @@ func publicKeyToInTotoKey(publicKey *ecdsa.PublicKey) (toto.Key, error) {
 }
 
 func (service InTotoService) HexPublicKeyToInTotoKey(hexPubKey string) (toto.Key, error) { // nosemgrep: service-method-missing-ctx
-	ecdsaPubKey := HexPubKeyToECDSA(hexPubKey)
+	ecdsaPubKey, err := HexPubKeyToECDSA(hexPubKey)
+	if err != nil {
+		return toto.Key{}, errors.Wrap(err, "could not convert hex public key to ecdsa public key")
+	}
 	return publicKeyToInTotoKey(&ecdsaPubKey)
 }
 

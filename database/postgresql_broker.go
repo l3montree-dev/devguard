@@ -31,24 +31,24 @@ import (
 )
 
 type PostgreSQLMessage struct {
-	ID        string                 `json:"id"`
-	Channel   shared.PubSubChannel   `json:"topic"`
-	Payload   map[string]interface{} `json:"payload"`
-	Timestamp time.Time              `json:"timestamp"`
-	SenderID  string                 `json:"sender_id,omitempty"` // Optional field for sender ID
+	ID        string               `json:"id"`
+	Channel   shared.PubSubChannel `json:"topic"`
+	Payload   map[string]any       `json:"payload"`
+	Timestamp time.Time            `json:"timestamp"`
+	SenderID  string               `json:"sender_id,omitempty"` // Optional field for sender ID
 }
 
 func (m PostgreSQLMessage) GetChannel() shared.PubSubChannel {
 	return m.Channel
 }
 
-func (m PostgreSQLMessage) GetPayload() map[string]interface{} {
+func (m PostgreSQLMessage) GetPayload() map[string]any {
 	return m.Payload
 }
 
 type ListeningConnection struct {
 	Conn        *pgxpool.Conn
-	Subscribers []chan map[string]interface{}
+	Subscribers []chan map[string]any
 }
 
 // PostgreSQLBroker implements the Broker interface using PostgreSQL LISTEN/NOTIFY
@@ -90,7 +90,7 @@ func (b *PostgreSQLBroker) Publish(ctx context.Context, message shared.PubSubMes
 	}
 
 	// Extract payload from the message if it has one
-	if payloadMsg, ok := message.(interface{ GetPayload() map[string]interface{} }); ok {
+	if payloadMsg, ok := message.(interface{ GetPayload() map[string]any }); ok {
 		pgMessage.Payload = payloadMsg.GetPayload()
 	} else {
 		// If no payload method, serialize the entire message
@@ -122,7 +122,7 @@ func (b *PostgreSQLBroker) Publish(ctx context.Context, message shared.PubSubMes
 }
 
 // Subscribe implements the Broker interface
-func (b *PostgreSQLBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]interface{}, error) {
+func (b *PostgreSQLBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]any, error) {
 	b.subscribeMux.Lock()
 	defer b.subscribeMux.Unlock()
 
@@ -151,7 +151,7 @@ func (b *PostgreSQLBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[str
 
 		b.subscribers[topic] = ListeningConnection{
 			Conn: conn,
-			Subscribers: []chan map[string]interface{}{
+			Subscribers: []chan map[string]any{
 				ch,
 			},
 		}

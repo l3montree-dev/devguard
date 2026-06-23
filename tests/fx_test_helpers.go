@@ -17,13 +17,11 @@ package tests
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -44,10 +42,6 @@ type TestFixture struct {
 func NewTestFixture(t testing.TB, sqlInitFile string, options *TestAppOptions) *TestFixture {
 	t.Helper()
 
-	// Reset the global casbin enforcer so each test gets a fresh one
-	// pointing to its own database container.
-	accesscontrol.ResetEnforcer()
-
 	// Initialize database container
 	db, pool, terminate := InitDatabaseContainer(sqlInitFile)
 
@@ -56,8 +50,6 @@ func NewTestFixture(t testing.TB, sqlInitFile string, options *TestAppOptions) *
 			SuppressLogs: true,
 		}
 	}
-
-	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 	// Create FX test app without automatic cleanup
 	app, fxApp := NewTestAppWithT(t, db, pool, options)
 

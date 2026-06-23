@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -65,25 +64,25 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
-
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v2/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 	if err != nil {
 		return err
 	}
 
-	err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+	err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
 	}
 
-	// set the headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
 	config.SetXAssetHeaders(req)
+	if config.RuntimeBaseConfig.NoWrite {
+		req.Header.Set("X-No-Write", "1")
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		// check for timeout
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
 			slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
 		}
@@ -93,7 +92,6 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// read the body
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return errors.Wrap(err, "could not scan file")
@@ -102,16 +100,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 	}
 
-	// read and parse the body - it should be an array of dependencyVulns
-	// print the dependencyVulns to the console
-	var scanResponse compat.FirstPartyScanResponse
-
-	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-	if err != nil {
-		return errors.Wrap(err, "could not parse response")
-	}
-
-	return scanner.PrintFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ScannerID)
+	return handleSarifResponse(resp.Body, config.RuntimeBaseConfig.ScannerID)
 }
 
 func NewSarifCommand() *cobra.Command {
@@ -263,6 +252,17 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		// expand snippet and obfuscate it
 		expandAndObfuscateSnippet(sarifResult, config.RuntimeBaseConfig.Path)
 
+		// strip inline-suppressed results before upload so the server doesn't re-surface them
+		for i := range sarifResult.Runs {
+			filtered := sarifResult.Runs[i].Results[:0]
+			for _, result := range sarifResult.Runs[i].Results {
+				if len(result.Suppressions) == 0 {
+					filtered = append(filtered, result)
+				}
+			}
+			sarifResult.Runs[i].Results = filtered
+		}
+
 		// marshal the result
 		b, err := json.Marshal(sarifResult)
 		if err != nil {
@@ -279,9 +279,9 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		slog.Info("Uploading SARIF report", "scannerID", scannerID)
 
-		endpoint := fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL)
+		endpoint := fmt.Sprintf("%s/api/v2/sarif-scan/", config.RuntimeBaseConfig.APIURL)
 		if config.RuntimeBaseConfig.Token == "" {
-			endpoint = fmt.Sprintf("%s/api/v1/sarif-scan-unauthenticated/", config.RuntimeBaseConfig.APIURL)
+			endpoint = fmt.Sprintf("%s/api/v2/sarif-scan-unauthenticated/", config.RuntimeBaseConfig.APIURL)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(b))
@@ -290,7 +290,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		if config.RuntimeBaseConfig.Token != "" {
-			err = services.SignRequest(config.RuntimeBaseConfig.Token, req)
+			err = services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req)
 			if err != nil {
 				return errors.Wrap(err, "could not sign request")
 			}
@@ -299,10 +299,12 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 		config.SetXAssetHeaders(req)
+		if config.RuntimeBaseConfig.NoWrite {
+			req.Header.Set("X-No-Write", "1")
+		}
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			// check for timeout
 			if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
 				slog.Error("request timed out after configured or default timeout - as scan commands and upload can take a while consider increasing using the --timeout flag", "timeout", timeout)
 			}
@@ -310,7 +312,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			// read the body
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return errors.Wrap(err, "could not scan file")
@@ -319,17 +320,27 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 		}
 
-		// read and parse the body - it should be an array of dependencyVulns
-		// print the dependencyVulns to the console
-		var scanResponse compat.FirstPartyScanResponse
-
-		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-		if err != nil {
-			return errors.Wrap(err, "could not parse response")
-		}
-
-		return scanner.PrintFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, scannerID)
+		return handleSarifResponse(resp.Body, scannerID)
 	}
+}
+
+func handleSarifResponse(body io.Reader, scannerID string) error {
+	bodyBytes, err := io.ReadAll(body)
+	if err != nil {
+		return errors.Wrap(err, "could not read sarif response")
+	}
+
+	output := strings.ToLower(config.RuntimeBaseConfig.Output)
+	if output == "sarif" {
+		_, err := os.Stdout.Write(bodyBytes)
+		return err
+	}
+
+	var report sarif.SarifSchema210Json
+	if err := json.Unmarshal(bodyBytes, &report); err != nil {
+		return errors.Wrap(err, "could not parse SARIF response")
+	}
+	return scanner.PrintSarifResults(report, scannerID, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref)
 }
 
 func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*sarif.SarifSchema210Json, error) {

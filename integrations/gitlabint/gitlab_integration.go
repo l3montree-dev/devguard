@@ -232,7 +232,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 	// check that the token is valid
 	if !g.checkIfTokenIsValid(ctx, *token, 0) {
 		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
-		return false, fmt.Errorf("gitlab oauth2 token is not valid for provider %s", externalEntityProviderID)
+		return false, shared.ErrOauth2TokenNotValidRedirectionRequired
 	}
 
 	return true, nil
@@ -349,27 +349,22 @@ func getAllParentGroups(idMap map[int64]*gitlab.Group, group *gitlab.Group) []*g
 	return parentGroups
 }
 
-func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	// check if we can even handle this
-	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
+// getExcessIIDs returns the GitLab client, projectID, and issue IIDs that are
+// open in GitLab but no longer correspond to an open vuln in devguard.
+func (g *GitlabIntegration) getExcessIIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) (client shared.GitlabClientFacade, projectID int, excessIIDs []int, err error) {
+	client, projectID, err = g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
-			return nil
-		}
-		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
-		return err
+		return client, 0, nil, err
 	}
 
-	// convert the dependency vulns into a list of iids for this asset
 	depVulnsIIDs := make([]int, 0, len(vulnsWithTickets))
 	for _, vuln := range vulnsWithTickets {
 		fields := strings.Split(*vuln.TicketID, "/")
 		if len(fields) == 1 {
 			continue
 		}
-		// iid is found in the last part of the ticketID
-		iid, err := strconv.Atoi(fields[len(fields)-1])
-		if err != nil {
+		iid, parseErr := strconv.Atoi(fields[len(fields)-1])
+		if parseErr != nil {
 			slog.Warn("invalid ticket id", "vulnID", vuln.ID)
 			continue
 		}
@@ -377,47 +372,72 @@ func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.
 	}
 
 	issues, err := FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
-		listIssuesOptions := gitlab.ListProjectIssuesOptions{
-			ListOptions: gitlab.ListOptions{
-				PerPage: 100,
-				Page:    int64(page),
-			},
-			State: utils.Ptr("opened"),
-			Labels: &gitlab.LabelOptions{
-				"devguard",
-			},
-		}
-		return client.GetProjectIssues(ctx, projectID, &listIssuesOptions)
+		return client.GetProjectIssues(ctx, projectID, &gitlab.ListProjectIssuesOptions{
+			ListOptions: gitlab.ListOptions{PerPage: 100, Page: int64(page)},
+			State:       new("opened"),
+			Labels:      &gitlab.LabelOptions{"devguard"},
+		})
 	})
 	if err != nil {
-		return err
+		return client, projectID, nil, err
 	}
 
 	gitlabIIDs := make([]int, 0, len(issues))
-	// only count open tickets created by devguard
 	for _, issue := range issues {
 		gitlabIIDs = append(gitlabIIDs, int(issue.IID))
 	}
 
-	// compare both states
 	comparison := utils.CompareSlices(depVulnsIIDs, gitlabIIDs, func(iid int) int { return iid })
-	excessIIDs := comparison.OnlyInB
+	return client, projectID, comparison.OnlyInB, nil
+}
 
-	// close all excess devguard tickets
+// GetExcessTicketIDs implements shared.ThirdPartyIntegration.
+func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
+	_, _, iids, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, ErrNotConnected) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ids := make([]string, len(iids))
+	for i, iid := range iids {
+		ids[i] = strconv.Itoa(iid)
+	}
+	return ids, nil
+}
+
+func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	client, projectID, excessIIDs, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, ErrNotConnected) {
+			return nil
+		}
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
+		return err
+	}
+
 	updateOptions := gitlab.UpdateIssueOptions{
-		StateEvent: utils.Ptr("close"),
+		StateEvent:  new("close"),
+		Description: new("Closed by DevGuard: this issue has the 'devguard' label but is not referenced by any vulnerability tracked in DevGuard for this asset."),
 	}
 	amountClosed := 0
+	closedURLs := make([]string, 0, len(excessIIDs))
 	for _, iid := range excessIIDs {
-		_, _, err = client.EditIssue(ctx, projectID, iid, &updateOptions)
+		updated, _, err := client.EditIssue(ctx, projectID, iid, &updateOptions)
 		if err != nil {
-			slog.Error("could not close issue", "iid", iid)
+			slog.Error("could not close excess gitlab issue", "iid", iid, "assetID", asset.ID)
 			continue
 		}
 		amountClosed++
+		if updated != nil {
+			closedURLs = append(closedURLs, updated.WebURL)
+		}
 	}
 
-	slog.Info("successfully resolved ticket state differences", "asset", asset.Slug, "amount closed", amountClosed)
+	if amountClosed > 0 {
+		slog.Info("closed excess gitlab tickets", "assetID", asset.ID, "count", amountClosed, "tickets", closedURLs)
+	}
 	return nil
 }
 
@@ -643,13 +663,13 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 	projects, err := FetchPaginatedData(func(page int) ([]*gitlab.Project, *gitlab.Response, error) {
 		// get the projects in the group
 		return gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
-			WithShared:     gitlab.Ptr(false),
+			WithShared:     new(false),
 			MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
 			ListOptions:    gitlab.ListOptions{Page: int64(page), PerPage: 100},
 		})
 	})
 	if err != nil {
-		slog.Error("failed to list projects in group", "err", err)
+		slog.Error("failed to list projects in group", "err", err, "groupID", groupID)
 		return nil, nil, err
 	}
 
@@ -981,10 +1001,10 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 
 	//create a merge request
 	mr, _, err := client.CreateMergeRequest(reqCtx, project.PathWithNamespace, &gitlab.CreateMergeRequestOptions{
-		SourceBranch:       gitlab.Ptr(branchName),
-		TargetBranch:       gitlab.Ptr(defaultBranch),
-		Title:              gitlab.Ptr("Add devguard pipeline template"),
-		RemoveSourceBranch: gitlab.Ptr(true),
+		SourceBranch:       new(branchName),
+		TargetBranch:       new(defaultBranch),
+		Title:              new("Add devguard pipeline template"),
+		RemoveSourceBranch: new(true),
 	})
 
 	if err != nil {
@@ -1062,12 +1082,12 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 		}
 	}
 
-	projectOptions.IssuesEvents = gitlab.Ptr(true)
-	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
-	projectOptions.NoteEvents = gitlab.Ptr(true)
-	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
-	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
-	projectOptions.PushEvents = gitlab.Ptr(false)
+	projectOptions.IssuesEvents = new(true)
+	projectOptions.ConfidentialIssuesEvents = new(true)
+	projectOptions.NoteEvents = new(true)
+	projectOptions.ConfidentialNoteEvents = new(true)
+	projectOptions.EnableSSLVerification = new(true)
+	projectOptions.PushEvents = new(false)
 	if instanceDomain == "" { //If no URL is provided in the environment variables default to main URL
 		slog.Debug("no URL specified in .env file defaulting to api.devguard.org")
 		defaultURL := "https://api.devguard.org/api/v1/webhook/"
@@ -1078,11 +1098,11 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 		projectOptions.URL = &constructedURL
 		// check if we should really enable ssl verification
 		if strings.HasPrefix(instanceDomain, "http://") {
-			projectOptions.EnableSSLVerification = gitlab.Ptr(false)
+			projectOptions.EnableSSLVerification = new(false)
 		}
 	}
 	if token != nil {
-		projectOptions.Token = gitlab.Ptr(token.String())
+		projectOptions.Token = new(token.String())
 	}
 
 	return projectOptions, nil
@@ -1114,8 +1134,8 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 		if _, exists := toCreate[variable.Key]; exists {
 			// the variable already exists
 			update := &gitlab.UpdateProjectVariableOptions{
-				Value:  gitlab.Ptr(toCreate[variable.Key]),
-				Masked: gitlab.Ptr(false),
+				Value:  new(toCreate[variable.Key]),
+				Masked: new(false),
 			}
 
 			_, _, err = client.UpdateVariable(ctx, gitlabProjectID, variable.Key, update)
@@ -1129,13 +1149,13 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 
 	for key, value := range toCreate {
 		variable := &gitlab.CreateProjectVariableOptions{
-			Key:    gitlab.Ptr(key),
-			Value:  gitlab.Ptr(value),
-			Masked: gitlab.Ptr(false),
+			Key:    new(key),
+			Value:  new(value),
+			Masked: new(false),
 		}
 
 		if key == "DEVGUARD_TOKEN" {
-			variable.Masked = gitlab.Ptr(true)
+			variable.Masked = new(true)
 		}
 
 		_, _, err = client.CreateVariable(ctx, gitlabProjectID, variable)
@@ -1303,10 +1323,10 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	}
 
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent:  gitlab.Ptr(stateEvent),
-		Title:       gitlab.Ptr(dependencyVuln.Title()),
-		Description: gitlab.Ptr(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
-		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+		StateEvent:  new(stateEvent),
+		Title:       new(dependencyVuln.Title()),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Labels:      new(gitlab.LabelOptions(labels)),
 	})
 	return err
 }
@@ -1316,11 +1336,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
-
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1331,16 +1347,18 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
+	slog.Info("updating gitlab ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedState))
+
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),
-		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
-		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+		StateEvent:  new(expectedState.ToGitlab()),
+		Title:       new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
+		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		Labels:      new(gitlab.LabelOptions(labels)),
 	})
 	return err
 }
 
-var notConnectedError = errors.New("not connected to gitlab")
+var ErrNotConnected = errors.New("not connected to gitlab")
 
 func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset models.Asset) (shared.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
@@ -1376,7 +1394,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 		return client, projectID, nil
 	}
 
-	return nil, 0, notConnectedError
+	return nil, 0, ErrNotConnected
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
@@ -1390,7 +1408,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	)
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1423,6 +1441,8 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	vuln.SetTicketURL(createdIssue.WebURL)
 	vuln.SetManualTicketCreation(userID != "system")
 
+	slog.Info("created gitlab ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", createdIssue.WebURL)
+
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),
 		vuln.GetType(),
@@ -1441,9 +1461,9 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	labels := commonint.GetLabels(vuln)
 
 	issue := &gitlab.CreateIssueOptions{
-		Title:       gitlab.Ptr(vuln.Title()),
-		Description: gitlab.Ptr(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
-		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+		Title:       new(vuln.Title()),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 
 	createdIssue, _, err := client.CreateIssue(ctx, projectID, issue)
@@ -1453,7 +1473,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 
 	// create a comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
-		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
+		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
@@ -1470,15 +1490,12 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(ctx, g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, exp.ComponentPurl)
-	if err != nil {
-		return nil, err
-	}
+	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &gitlab.CreateIssueOptions{
-		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
-		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+		Title:       new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
+		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 
 	createdIssue, _, err := client.CreateIssue(ctx, projectID, issue)
@@ -1488,7 +1505,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	// create a comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
-		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
+		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
 }
@@ -1498,9 +1515,9 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 	labels := commonint.GetLabels(licenseRisk)
 
 	issue := &gitlab.CreateIssueOptions{
-		Title:       gitlab.Ptr(licenseRisk.Title()),
-		Description: gitlab.Ptr(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
-		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+		Title:       new(licenseRisk.Title()),
+		Description: new(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 
 	createdIssue, _, err := client.CreateIssue(ctx, projectID, issue)
@@ -1510,7 +1527,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 
 	// create a comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
-		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
+		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
@@ -1523,7 +1540,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1536,9 +1553,9 @@ func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset
 
 	for _, label := range labels {
 		_, _, err := client.CreateNewLabel(ctx, projectID, &gitlab.CreateLabelOptions{
-			Name:        gitlab.Ptr(label.Name),
-			Color:       gitlab.Ptr(label.Color),
-			Description: gitlab.Ptr(label.Description),
+			Name:        new(label.Name),
+			Color:       new(label.Color),
+			Description: new(label.Description),
 		})
 		if err != nil {
 			if strings.Contains(err.Error(), " 409 {message: Label already exists}") {
@@ -1568,7 +1585,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, notConnectedError) {
+		if errors.Is(err, ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1589,8 +1606,8 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 	for _, labelToUpdate := range labelsToUpdate {
 		if label, exists := projectLabelsMap[labelToUpdate.Name]; exists {
 			_, _, err := client.UpdateLabel(ctx, projectID, int(label.ID), &gitlab.UpdateLabelOptions{
-				Color:       gitlab.Ptr(labelToUpdate.Color),
-				Description: gitlab.Ptr(labelToUpdate.Description),
+				Color:       new(labelToUpdate.Color),
+				Description: new(labelToUpdate.Description),
 			})
 			if err != nil {
 				slog.Error("failed to update label", "err", err, "label", label)

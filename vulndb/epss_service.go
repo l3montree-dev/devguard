@@ -20,7 +20,6 @@ import (
 type epssService struct {
 	cveRepository             shared.CveRepository
 	cveRelationshipRepository shared.CVERelationshipRepository
-	httpClient                *http.Client
 }
 
 var _ shared.EPSService = (*epssService)(nil)
@@ -29,7 +28,6 @@ func NewEPSSService(cveRepository shared.CveRepository, cveRelationshipRepositor
 	return epssService{
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
-		httpClient:                &http.Client{Transport: utils.EgressTransport},
 	}
 }
 
@@ -42,7 +40,7 @@ func (s *epssService) Fetch(ctx context.Context) (map[string]dtos.EPSS, error) {
 		return nil, err
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func secretScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting secret scanning", "path", p, "result-path", sarifFilePath)
+	slog.Info("Starting secret scanning", "path", p, "resultPath", sarifFilePath)
 	var configFileArgs []string
 	if config.RuntimeBaseConfig.ConfigFilePath != "" {
 		configFileArgs = []string{"--config", config.RuntimeBaseConfig.ConfigFilePath}

@@ -87,6 +87,7 @@ func informationSourceToString(source informationSource) string {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -169,7 +170,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifact.ArtifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -209,7 +210,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	c.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -221,6 +222,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -283,6 +285,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -377,7 +380,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -417,7 +420,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	c.FireAndForget(func() {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
+		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 		}
 	})
@@ -438,6 +441,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -471,6 +475,7 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -499,6 +504,7 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -523,6 +529,7 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -547,6 +554,7 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -602,6 +610,7 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -704,7 +713,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
 		},
 	)
 
@@ -785,7 +794,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	if pdfAPIURL == "" {
 		return fmt.Errorf("missing env variable 'PDF_GENERATION_API'")
 	}
-	req, err := http.NewRequest(http.MethodPost, pdfAPIURL, &multipartBuffer)
+	req, err := http.NewRequestWithContext(ctx.Request().Context(), http.MethodPost, pdfAPIURL, &multipartBuffer)
 	if err != nil {
 		return err
 	}
@@ -824,6 +833,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 // @Tags Artifacts
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -888,7 +898,7 @@ func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	if pdfAPIURL == "" {
 		return fmt.Errorf("missing env variable 'PDF_GENERATION_API'")
 	}
-	req, err := http.NewRequest(http.MethodPost, pdfAPIURL, &multipartBuffer)
+	req, err := http.NewRequestWithContext(ctx.Request().Context(), http.MethodPost, pdfAPIURL, &multipartBuffer)
 	if err != nil {
 		return err
 	}

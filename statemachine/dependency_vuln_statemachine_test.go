@@ -314,7 +314,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 					},
 					{
 						Type:                     dtos.EventTypeAccepted,
-						OriginalAssetVersionName: utils.Ptr("other-branch"), // already copied event
+						OriginalAssetVersionName: new("other-branch"), // already copied event
 					},
 				},
 			},

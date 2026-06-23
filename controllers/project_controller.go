@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -49,11 +50,12 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.ProjectCreateRequest true "Request body"
 // @Success 200 {object} models.Project
 // @Router /organizations/{organization}/projects [post]
-func (ProjectController *ProjectController) Create(ctx shared.Context) error {
+func (projectController *ProjectController) Create(ctx shared.Context) error {
 	var req dtos.ProjectCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -68,7 +70,7 @@ func (ProjectController *ProjectController) Create(ctx shared.Context) error {
 	// add the organization id
 	newProject.OrganizationID = shared.GetOrg(ctx).GetID()
 
-	err := ProjectController.projectService.CreateProject(ctx, &newProject)
+	err := projectController.projectService.CreateProject(ctx, &newProject)
 	if err != nil {
 		return echo.NewHTTPError(409, "could not create project").WithInternal(err)
 	}
@@ -120,11 +122,12 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {array} dtos.UserDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/members [get]
-func (ProjectController *ProjectController) Members(c shared.Context) error {
+func (projectController *ProjectController) Members(c shared.Context) error {
 	members, err := FetchMembersOfProject(c)
 	if err != nil {
 		return err
@@ -137,12 +140,13 @@ func (ProjectController *ProjectController) Members(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectInviteRequest true "Request body"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/members [post]
-func (ProjectController *ProjectController) InviteMembers(c shared.Context) error {
+func (projectController *ProjectController) InviteMembers(c shared.Context) error {
 	project := shared.GetProject(c)
 
 	// get rbac
@@ -174,7 +178,7 @@ func (ProjectController *ProjectController) InviteMembers(c shared.Context) erro
 	return c.NoContent(200)
 }
 
-func (ProjectController *ProjectController) RemoveMember(c shared.Context) error {
+func (projectController *ProjectController) RemoveMember(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
 
@@ -193,7 +197,7 @@ func (ProjectController *ProjectController) RemoveMember(c shared.Context) error
 	return c.NoContent(200)
 }
 
-func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
+func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
 
@@ -248,16 +252,47 @@ func (ProjectController *ProjectController) ChangeRole(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug} [delete]
-func (ProjectController *ProjectController) Delete(c shared.Context) error {
+func (projectController *ProjectController) Delete(c shared.Context) error {
 	project := shared.GetProject(c)
+	ctx := c.Request().Context()
 
-	err := ProjectController.projectRepository.Delete(c.Request().Context(), nil, project.ID)
+	// take care of all rbac rules associated with the project and delete those as well
+	childProjects, err := projectController.projectRepository.RecursivelyGetChildProjects(ctx, nil, project.ID)
 	if err != nil {
 		return err
+	}
+	// map projects to their ids
+	projectIDs := append([]uuid.UUID{project.ID}, utils.Map(childProjects, func(p models.Project) uuid.UUID {
+		return p.ID
+	})...)
+
+	// then collect all assets associated with the affected projects
+	assets, err := projectController.assetRepository.GetByProjectIDs(ctx, nil, projectIDs)
+	if err != nil {
+		return err
+	}
+
+	err = projectController.projectRepository.Delete(ctx, nil, project.ID)
+	if err != nil {
+		return err
+	}
+
+	// lastly iterate over all projects and assets and remove all roles associated with them
+	rbac := shared.GetRBAC(c)
+	for _, projectID := range projectIDs {
+		if err := rbac.RevokeAllRolesInProject(ctx, projectID.String()); err != nil {
+			return err
+		}
+	}
+	for _, asset := range assets {
+		if err := rbac.RevokeAllRolesInAsset(ctx, asset.ID.String()); err != nil {
+			return err
+		}
 	}
 
 	return c.NoContent(200)
@@ -267,11 +302,12 @@ func (ProjectController *ProjectController) Delete(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {object} dtos.ProjectDetailsDTO
 // @Router /organizations/{organization}/projects/{projectSlug} [get]
-func (ProjectController *ProjectController) Read(c shared.Context) error {
+func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
@@ -280,7 +316,7 @@ func (ProjectController *ProjectController) Read(c shared.Context) error {
 		return err
 	}
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(c.Request().Context(), nil, allowedAssetIDs, project.ID)
+	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(c.Request().Context(), nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -294,7 +330,7 @@ func (ProjectController *ProjectController) Read(c shared.Context) error {
 	}
 
 	//get the webhooks
-	webhooks, err := ProjectController.getWebhooks(c)
+	webhooks, err := projectController.getWebhooks(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch webhooks").WithInternal(err)
 	}
@@ -308,12 +344,12 @@ func (ProjectController *ProjectController) Read(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
+func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
 
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
 
-	webhooks, err := ProjectController.webhookRepository.GetProjectWebhooks(c.Request().Context(), nil, orgID, projectID)
+	webhooks, err := projectController.webhookRepository.GetProjectWebhooks(c.Request().Context(), nil, orgID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
@@ -334,15 +370,16 @@ func (ProjectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search query for filtering sub-projects and assets"
 // @Success 200 {array} dtos.ProjectAssetDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
 
-func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
+func (projectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
-	results, err := ProjectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
+	results, err := projectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
 	if err != nil {
 		return err
 	}
@@ -354,12 +391,13 @@ func (ProjectController *ProjectController) ListSubProjectsAndAssets(c shared.Co
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {array} models.Project
 // @Router /organizations/{organization}/projects [get]
-func (ProjectController *ProjectController) List(c shared.Context) error {
+func (projectController *ProjectController) List(c shared.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
-	projects, err := ProjectController.projectService.ListAllowedProjectsPaged(c)
+	projects, err := projectController.projectService.ListAllowedProjectsPaged(c)
 
 	if err != nil {
 		return err
@@ -368,9 +406,9 @@ func (ProjectController *ProjectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
-func (ProjectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
+func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
 
-	results, err := ProjectController.projectService.SearchProjectsWithSubProjectsAndAssetsPaged(c)
+	results, err := projectController.projectService.SearchProjectsWithSubProjectsAndAssetsPaged(c)
 	if err != nil {
 		return err
 	}
@@ -382,12 +420,13 @@ func (ProjectController *ProjectController) SearchProjectsWithSubProjectsAndAsse
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectPatchRequest true "Request body"
 // @Success 200 {object} dtos.ProjectDetailsDTO
 // @Router /organizations/{organization}/projects/{projectSlug} [patch]
-func (ProjectController *ProjectController) Update(c shared.Context) error {
+func (projectController *ProjectController) Update(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	req := c.Request().Body
 	defer req.Close()
@@ -406,7 +445,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	if updated {
-		err = ProjectController.projectRepository.Update(reqCtx, nil, &project)
+		err = projectController.projectRepository.Update(reqCtx, nil, &project)
 		if err != nil {
 			return fmt.Errorf("could not update project: %w", err)
 		}
@@ -419,7 +458,7 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 	}
 
 	// lets fetch the assets related to this project
-	assets, err := ProjectController.assetRepository.GetAllowedAssetsByProjectID(reqCtx, nil, allowedAssetIDs, project.ID)
+	assets, err := projectController.assetRepository.GetAllowedAssetsByProjectID(reqCtx, nil, allowedAssetIDs, project.ID)
 	if err != nil {
 		return err
 	}
@@ -443,13 +482,14 @@ func (ProjectController *ProjectController) Update(c shared.Context) error {
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param config-file path string true "Config file ID"
 // @Produce text/plain
 // @Success 200 {string} string "Config file content"
 // @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [get]
-func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) error {
+func (projectController *ProjectController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	configID := ctx.Param("config-file")
@@ -469,6 +509,7 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 // @Tags Projects
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param config-file path string true "Config file ID"
@@ -476,7 +517,7 @@ func (ProjectController *ProjectController) GetConfigFile(ctx shared.Context) er
 // @Produce text/plain
 // @Success 200 {string} string "Updated config file content"
 // @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [put]
-func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
+func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	configID := ctx.Param("config-file")
 
@@ -501,7 +542,7 @@ func (ProjectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	} else {
 		project.ConfigFiles[configID] = configContent
 	}
-	err = ProjectController.projectRepository.Update(ctx.Request().Context(), nil, &project)
+	err = projectController.projectRepository.Update(ctx.Request().Context(), nil, &project)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
 	}

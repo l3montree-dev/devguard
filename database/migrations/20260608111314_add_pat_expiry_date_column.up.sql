@@ -1,0 +1,2 @@
+ALTER TABLE public.pat
+  ADD COLUMN expiry_date TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '365 days';

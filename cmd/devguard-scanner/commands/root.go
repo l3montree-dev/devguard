@@ -149,6 +149,7 @@ func init() {
 		NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 		NewLoginCommand(),
+		NewAuthCommand(), // devguard-scanner login — stores PAT in system keyring
 		NewIaCCommand(),
 		NewSarifCommand(),
 		newKyvernoSarifCommand(),

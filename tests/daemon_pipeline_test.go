@@ -10,7 +10,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -127,6 +126,7 @@ func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.
 
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		t.Run("should successfully process an asset through the entire pipeline", func(t *testing.T) {
 			// Create test data
@@ -225,6 +225,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 // TestDaemonPipelineAutoReopenExceedThreshold tests that vulnerabilities are reopened when they exceed the threshold
 func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-reopen-exceed")
 		project := f.CreateProject(org.ID, "test-project-reopen-exceed")
@@ -331,6 +332,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 
 // TestDaemonPipelineAutoReopenWithinThreshold tests that vulnerabilities are not reopened within the threshold
 func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-reopen-within")
 		project := f.CreateProject(org.ID, "test-project-reopen-within")
@@ -413,6 +415,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 
 // TestDaemonPipelineErrorHandlingMissingAsset tests error handling for non-existent assets
 func TestDaemonPipelineErrorHandlingMissingAsset(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		runner := f.CreateDaemonRunner()
 		nonExistentID := uuid.New()
@@ -425,6 +428,7 @@ func TestDaemonPipelineErrorHandlingMissingAsset(t *testing.T) {
 
 // TestDaemonPipelineErrorHandlingRecordErrors tests that pipeline errors are recorded on assets
 func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		// Create an asset without required related entities to trigger an error
 		org := f.CreateOrg("test-org-error-handling")
@@ -453,6 +457,7 @@ func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
 
 // TestDaemonPipelineFetchAssetIDsNeedProcessing tests fetching only assets that need processing
 func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		// Create assets with different pipeline run times
 		org := f.CreateOrg("test-org-fetch-ids")
@@ -496,13 +501,14 @@ func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
 
 // TestDaemonPipelineFetchAssetIDsAll tests fetching all assets when none processed recently
 func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-fetch-all")
 		project := f.CreateProject(org.ID, "test-project-fetch-all")
 
 		// Create multiple assets that all need processing
 		assetIDs := make([]uuid.UUID, 0)
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			asset := models.Asset{
 				Name:            fmt.Sprintf("asset-%d", i),
 				ProjectID:       project.ID,
@@ -533,6 +539,7 @@ func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
 
 // TestDaemonPipelineScanAssetDetectVulns tests scanning assets and detecting vulnerabilities
 func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-scan-vuln")
 		project := f.CreateProject(org.ID, "test-project-scan")
@@ -620,6 +627,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 
 // TestDaemonPipelineScanAssetEmptyComponents tests handling assets with no components
 func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-scan-empty")
 		project := f.CreateProject(org.ID, "test-project-empty")
@@ -656,6 +664,7 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 // downstream CollectStats stage does not attempt to insert artifact_risk_history rows
 // for those now-deleted artifacts, which would violate the fk_artifact constraint.
 func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-fk-violation")
 		project := f.CreateProject(org.ID, "test-project-fk-violation")
@@ -722,6 +731,7 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 
 // TestDaemonPipelineRiskCalculation tests the risk calculation stage
 func TestDaemonPipelineRiskCalculation(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		t.Run("should recalculate risk for detected vulnerabilities", func(t *testing.T) {
 			org := f.CreateOrg("test-org-risk-calc")
@@ -737,7 +747,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 				Description:      "Test vulnerability for risk calculation",
 				CVSS:             8.5,
 				Vector:           "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-				EPSS:             utils.Ptr(0.7),
+				EPSS:             new(0.7),
 			}
 			err := f.DB.Create(&cve).Error
 			assert.NoError(t, err)

@@ -37,19 +37,12 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
-func (g *gormPatRepository) MarkAsLastUsedNow(ctx context.Context, tx *gorm.DB, fingerprint string) error {
-	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
+func (g *gormPatRepository) MarkAsLastUsedNowByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("id = ?", id).Update("last_used_at", time.Now()).Error
 }
 
 func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) error {
 	return g.GetDB(ctx, tx).Where("fingerprint = ?", fingerprint).Delete(&models.PAT{}).Error
-}
-
-func (g *gormPatRepository) ReadByToken(ctx context.Context, tx *gorm.DB, token string) (models.PAT, error) {
-	var t models.PAT
-	// make sure to hash the token before querying
-	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
-	return t, err
 }
 
 func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userID string) ([]models.PAT, error) {
@@ -58,15 +51,16 @@ func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userI
 	return pats, err
 }
 
-func (g *gormPatRepository) GetUserIDByToken(ctx context.Context, tx *gorm.DB, token string) (string, error) {
-	var t models.PAT
-	err := g.GetDB(ctx, tx).First(&t, "token = ?", t.HashToken(token)).Error
-	return t.UserID.String(), err
-}
-
+// checks if a valid token exists for the fingerprint, this excludes any expired tokens
 func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {
 	var t models.PAT
 	err := g.GetDB(ctx, tx).First(&t, "fingerprint = ?", fingerprint).Error
+	return t, err
+}
+
+func (g *gormPatRepository) GetByBearerTokenHash(ctx context.Context, tx *gorm.DB, tokenHash string) (models.PAT, error) {
+	var t models.PAT
+	err := g.GetDB(ctx, tx).First(&t, "bearer_token_hash = ?", tokenHash).Error
 	return t, err
 }
 

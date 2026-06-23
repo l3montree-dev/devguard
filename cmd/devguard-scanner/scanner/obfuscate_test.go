@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +34,7 @@ var exampleSarifResult = sarif.SarifSchema210Json{
 			},
 			Results: []sarif.Result{
 				{
-					RuleID: utils.Ptr("EXAMPLE001"),
+					RuleID: new("EXAMPLE001"),
 					Message: sarif.Message{
 						Text: "This is an example message.",
 					},
@@ -43,16 +42,16 @@ var exampleSarifResult = sarif.SarifSchema210Json{
 						{
 							PhysicalLocation: sarif.PhysicalLocation{
 								ArtifactLocation: sarif.ArtifactLocation{
-									URI:       utils.Ptr("file:///example/path"),
-									URIBaseID: utils.Ptr("SRCROOT"),
+									URI:       new("file:///example/path"),
+									URIBaseID: new("SRCROOT"),
 								},
 								Region: &sarif.Region{
-									StartLine:   utils.Ptr(10),
-									StartColumn: utils.Ptr(5),
-									EndLine:     utils.Ptr(10),
-									EndColumn:   utils.Ptr(20),
+									StartLine:   new(10),
+									StartColumn: new(5),
+									EndLine:     new(10),
+									EndColumn:   new(20),
 									Snippet: &sarif.ArtifactContent{
-										Text: utils.Ptr("that is an example code snippet, which are very long and should be obfuscated"),
+										Text: new("that is an example code snippet, which are very long and should be obfuscated"),
 									},
 								},
 							},

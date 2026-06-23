@@ -33,7 +33,7 @@
 </p>
 
 > [!NOTE]
-> Join the monthly [DevGuard Open Community Call](https://meet.mailbox.org/room/dad9052b-7b28-40c8-bf6c-462798a88827?invite=1b3e44cc-2e46-4050-8359-bee002d8bbfe) — always at 17:00 (UTC+2). Help shape new features and discuss contributions. For support, join the [community Matrix space](https://matrix.to/#/#devguard:matrix.org).
+> Join the monthly [DevGuard Open Community Call](https://meet.mailbox.org/room/dad9052b-7b28-40c8-bf6c-462798a88827?invite=1b3e44cc-2e46-4050-8359-bee002d8bbfe) — always at 17:00 (UTC+2) on the last thursday of the month. You can find the agenda in the [Discussions](https://github.com/l3montree-dev/devguard/discussions). Help shape new features and discuss contributions. For support, join the [community Matrix space](https://matrix.to/#/#devguard:matrix.org).
 
 ---
 

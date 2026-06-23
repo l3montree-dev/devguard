@@ -75,11 +75,14 @@ func getBestDescription(rule sarif.ReportingDescriptor) string {
 			return rule.FullDescription.Text
 		}
 	}
-	if rule.ShortDescription.Markdown != nil {
-		return utils.OrDefault(rule.ShortDescription.Markdown, "")
+	if rule.ShortDescription != nil {
+		if rule.ShortDescription.Markdown != nil {
+			return utils.OrDefault(rule.ShortDescription.Markdown, "")
+		}
+		return rule.ShortDescription.Text
 	}
 
-	return rule.ShortDescription.Text
+	return ""
 }
 
 func preferMarkdown(text sarif.MultiformatMessageString) string {
@@ -159,7 +162,7 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 	doc := vex.New()
 
 	doc.Author = organizationSlug
-	doc.Timestamp = utils.Ptr(time.Now())
+	doc.Timestamp = new(time.Now())
 	doc.Statements = make([]vex.Statement, 0)
 
 	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
@@ -216,7 +219,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 		if rules, ok := matches[dependencyVuln.ID]; ok {
 			// we have a matching rule, let's add the information to the vulnerability
 
-			properties = utils.Ptr(utils.Map(rules, func(r models.VEXRule) cdx.Property {
+			properties = new(utils.Map(rules, func(r models.VEXRule) cdx.Property {
 				// stringify the path pattern for the property value
 				b, _ := json.Marshal(r.PathPattern)
 				return cdx.Property{
@@ -228,14 +231,22 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 
 		firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 		vuln := cdx.Vulnerability{
-			ID: cve.CVE,
+			ID:          cve.CVE,
+			Description: cve.Description,
 			Source: &cdx.Source{
-				Name: "NVD",
-				URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.CVEID),
+				Name: "OSV",
+				URL:  fmt.Sprintf("https:/osv.dev/vulnerability/%s", dependencyVuln.CVEID),
 			},
-			Affects: &[]cdx.Affects{{
-				Ref: dependencyVuln.ComponentPurl,
-			}},
+			Affects: func() *[]cdx.Affects {
+				affects := cdx.Affects{Ref: dependencyVuln.ComponentPurl}
+				if dependencyVuln.ComponentFixedVersion != nil {
+					affects.Range = &[]cdx.AffectedVersions{{
+						Version: *dependencyVuln.ComponentFixedVersion,
+						Status:  cdx.VulnerabilityStatusNotAffected,
+					}}
+				}
+				return &[]cdx.Affects{affects}
+			}(),
 			Analysis: &cdx.VulnerabilityAnalysis{
 				State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
 				FirstIssued: firstIssued.UTC().Format(time.RFC3339),
@@ -243,12 +254,33 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 			},
 			Properties: properties,
 		}
+
+		if len(dependencyVuln.VulnerabilityPath) > 0 {
+			if vuln.Properties == nil {
+				vuln.Properties = &[]cdx.Property{}
+			}
+			pathJSON, _ := json.Marshal(dependencyVuln.VulnerabilityPath)
+			vuln.Properties = new(append(*vuln.Properties, cdx.Property{
+				Name:  "devguard:vulnerabilityPath",
+				Value: string(pathJSON),
+			}))
+		}
+
+		if dependencyVuln.DirectDependencyFixedVersion != nil {
+			if vuln.Properties == nil {
+				vuln.Properties = &[]cdx.Property{}
+			}
+			vuln.Properties = new(append(*vuln.Properties, cdx.Property{
+				Name:  "devguard:directDependencyFixedVersion",
+				Value: *dependencyVuln.DirectDependencyFixedVersion,
+			}))
+		}
 		if !firstResponded.IsZero() {
 			// check if we already have properties, if not create a new slice
 			if vuln.Properties == nil {
 				vuln.Properties = &[]cdx.Property{}
 			}
-			vuln.Properties = utils.Ptr(append(*vuln.Properties, cdx.Property{
+			vuln.Properties = new(append(*vuln.Properties, cdx.Property{
 				Name:  "firstResponded",
 				Value: firstResponded.UTC().Format(time.RFC3339),
 			}))
@@ -336,9 +368,9 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	// check if we have any event
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
-		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
-			if dependencyVuln.Events[i].Type != dtos.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Type != dtos.EventTypeComment && dependencyVuln.Events[i].Justification != nil {
-				return dependencyVuln.Events[i].Justification
+		for _, v := range slices.Backward(dependencyVuln.Events) {
+			if v.Type != dtos.EventTypeRawRiskAssessmentUpdated && v.Type != dtos.EventTypeComment && v.Justification != nil {
+				return v.Justification
 			}
 		}
 	}
@@ -354,7 +386,7 @@ func dependencyVulnStateToResponseStatus(state dtos.VulnState) cdx.ImpactAnalysi
 	case dtos.VulnStateAccepted:
 		return cdx.IARWillNotFix
 	case dtos.VulnStateFalsePositive:
-		return cdx.IARWillNotFix
+		return ""
 	case dtos.VulnStateMarkedForTransfer:
 		return ""
 	default:
@@ -587,9 +619,9 @@ func createTitles(name string) (string, string) {
 	const maxTitleLength = 14 //make the length easy changeable
 	title1 := ""
 	title2 := ""
-	title1Full := false            //once a field has exceeded the length of title1 we can ignore title1 from there on
-	fields := strings.Fields(name) //separate the words divided by white spaces
-	for _, field := range fields {
+	title1Full := false               //once a field has exceeded the length of title1 we can ignore title1 from there on
+	fields := strings.FieldsSeq(name) //separate the words divided by white spaces
+	for field := range fields {
 		if title1 == "" { //we have to differentiate if A tittle is empty or not before using, because of the white spaces between words in a title
 			if len(field) <= maxTitleLength { //if it fits the 14 char limit we can just write it and move to the next
 				title1 = field

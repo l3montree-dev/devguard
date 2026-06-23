@@ -15,7 +15,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -31,7 +30,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("github:123"),
+			RepositoryID: new("github:123"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -56,7 +55,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("github:owner:repo/1"),
+			RepositoryID: new("github:owner:repo/1"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -79,7 +78,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("gitlab:123"),
+			RepositoryID: new("gitlab:123"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -111,7 +110,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("github:1"),
+			RepositoryID: new("github:1"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -140,7 +139,6 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		aggregatedVulnRepository := mocks.NewVulnRepository(t)
@@ -152,9 +150,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
 			CVEID:                 "CVE-2021-1234",
-			RawRiskAssessment:     utils.Ptr(8.5),
+			RawRiskAssessment:     new(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
-			ComponentFixedVersion: utils.Ptr("1.0.1"),
+			ComponentFixedVersion: new("1.0.1"),
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
@@ -163,15 +161,15 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 			facade.On("CreateIssue", mock.Anything, "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "risk:"+"high", &github.Label{
-				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
-				Color:       github.String("FFA500"),
+				Description: new("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
+				Color:       new("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "devguard", &github.Label{
-				Description: github.String("DevGuard"),
-				Color:       github.String("182654"),
+				Description: new("DevGuard"),
+				Color:       new("182654"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssue", mock.Anything, "repo", "1", 0, &github.IssueRequest{
-				State: github.String("closed"),
+				State: new("closed"),
 			}).Return(nil, nil, fmt.Errorf("could not close issue"))
 			facade.On("CreateIssueComment", mock.Anything, "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
@@ -186,7 +184,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("github:owner:repo/1"),
+			RepositoryID: new("github:owner:repo/1"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -215,16 +213,16 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		expectDependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				ID:        uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-				TicketID:  utils.Ptr("github:0"),
-				TicketURL: utils.Ptr(""),
+				TicketID:  new("github:0"),
+				TicketURL: new(""),
 			},
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
 			CVEID:                 "CVE-2021-1234",
-			RawRiskAssessment:     utils.Ptr(8.5),
+			RawRiskAssessment:     new(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
-			ComponentFixedVersion: utils.Ptr("1.0.1"),
+			ComponentFixedVersion: new("1.0.1"),
 		}
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
@@ -233,7 +231,6 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
-		componentRepository.On("LoadComponents", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		expectedEvent := models.VulnEvent{
 			Type:   dtos.EventTypeMitigate,
@@ -241,7 +238,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 			ArbitraryJSONData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
 
-			Justification: utils.Ptr("that is a justification"),
+			Justification: new("that is a justification"),
 		}
 		expectedEvent.GetArbitraryJSONData()
 
@@ -250,12 +247,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 			facade.On("CreateIssue", mock.Anything, "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "risk:"+"high", &github.Label{
-				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
-				Color:       github.String("FFA500"),
+				Description: new("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
+				Color:       new("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", mock.Anything, "repo", "1", "devguard", &github.Label{
-				Description: github.String("DevGuard"),
-				Color:       github.String("182654"),
+				Description: new("DevGuard"),
+				Color:       new("182654"),
 			}).Return(nil, nil, nil)
 			facade.On("CreateIssueComment", mock.Anything, "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
@@ -270,7 +267,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 
 		shared.SetAsset(ctx, models.Asset{
-			RepositoryID: utils.Ptr("github:owner:repo/1"),
+			RepositoryID: new("github:owner:repo/1"),
 		})
 		shared.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
@@ -344,7 +341,7 @@ func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 func TestGetLabels(t *testing.T) {
 	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
-			RawRiskAssessment: utils.Ptr(8.0),
+			RawRiskAssessment: new(8.0),
 			CVE: &models.CVE{
 				CVSS: 8.0,
 			},
@@ -362,7 +359,7 @@ func TestGetLabels(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				State: dtos.VulnStateAccepted,
 			},
-			RawRiskAssessment: utils.Ptr(5.0),
+			RawRiskAssessment: new(5.0),
 			CVE: &models.CVE{
 				CVSS: 5.0,
 			},
@@ -380,7 +377,7 @@ func TestGetLabels(t *testing.T) {
 				CVSS: 9.8,
 			},
 		}
-		vuln.RawRiskAssessment = utils.Ptr(9.8)
+		vuln.RawRiskAssessment = new(9.8)
 
 		labels := commonint.GetLabels(vuln)
 
@@ -390,7 +387,7 @@ func TestGetLabels(t *testing.T) {
 
 	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
 		vuln := &models.DependencyVuln{}
-		vuln.RawRiskAssessment = utils.Ptr(4.0)
+		vuln.RawRiskAssessment = new(4.0)
 
 		labels := commonint.GetLabels(vuln)
 
@@ -407,7 +404,7 @@ func TestGetLabels(t *testing.T) {
 				CVSS: 0.0,
 			},
 		}
-		vuln.RawRiskAssessment = utils.Ptr(0.0)
+		vuln.RawRiskAssessment = new(0.0)
 
 		labels := commonint.GetLabels(vuln)
 
@@ -418,8 +415,8 @@ func TestGetLabels(t *testing.T) {
 func TestIsGithubUserAuthorized(t *testing.T) {
 	t.Run("If the provided user is a member of the project we want to return true", func(t *testing.T) {
 		event := github.IssueCommentEvent{
-			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
-			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+			Repo:   &github.Repository{Owner: &github.User{Login: new("l3monMan")}, Name: new("l3monRepo")},
+			Sender: &github.User{ID: new(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
@@ -429,8 +426,8 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 	})
 	t.Run("If the provided user is not a member of the project we want to return false", func(t *testing.T) {
 		event := github.IssueCommentEvent{
-			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
-			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+			Repo:   &github.Repository{Owner: &github.User{Login: new("l3monMan")}, Name: new("l3monRepo")},
+			Sender: &github.User{ID: new(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
@@ -440,8 +437,8 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 	})
 	t.Run("If the participation check of the user in the project runs into an error we also want to return that error", func(t *testing.T) {
 		event := github.IssueCommentEvent{
-			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
-			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+			Repo:   &github.Repository{Owner: &github.User{Login: new("l3monMan")}, Name: new("l3monRepo")},
+			Sender: &github.User{ID: new(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the github api was blown into pieces"))
@@ -451,7 +448,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 	})
 	t.Run("If the provided user is nil we want to abort", func(t *testing.T) {
 		event := github.IssueCommentEvent{
-			Repo: &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Repo: &github.Repository{Owner: &github.User{Login: new("l3monMan")}, Name: new("l3monRepo")},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
@@ -460,7 +457,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 	})
 	t.Run("If the provided repo is nil we want to abort", func(t *testing.T) {
 		event := github.IssueCommentEvent{
-			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+			Sender: &github.User{ID: new(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)
@@ -470,7 +467,7 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 	t.Run("If the provided owner is nil we want to abort", func(t *testing.T) {
 		event := github.IssueCommentEvent{
 			Repo:   &github.Repository{},
-			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+			Sender: &github.User{ID: new(int64(484662))},
 		}
 		client := mocks.NewGithubClientFacade(t)
 		isAuthorized, err := isGithubUserAuthorized(context.Background(), &event, client)

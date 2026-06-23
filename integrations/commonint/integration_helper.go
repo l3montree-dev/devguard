@@ -2,7 +2,6 @@ package commonint
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -25,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -174,10 +172,10 @@ func commentTrimmedPrefix(vulnType dtos.VulnType, comment string) (dtos.VulnEven
 		return dtos.EventTypeFalsePositive, dtos.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
 	} else if strings.HasPrefix(comment, "/false-positive") && vulnType == dtos.VulnTypeFirstPartyVuln {
 		return dtos.EventTypeFalsePositive, dtos.MechanicalJustificationType(strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive"))), ""
-	} else if strings.HasPrefix(comment, "/accept") {
-		return dtos.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
-	} else if strings.HasPrefix(comment, "/reopen") {
-		return dtos.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
+	} else if after, ok := strings.CutPrefix(comment, "/accept"); ok {
+		return dtos.EventTypeAccepted, "", strings.TrimSpace(after)
+	} else if after, ok := strings.CutPrefix(comment, "/reopen"); ok {
+		return dtos.EventTypeReopened, "", strings.TrimSpace(after)
 	}
 	return dtos.EventTypeComment, "", comment
 }
@@ -492,7 +490,7 @@ func beautifyNodeLabel(nodeID string) string {
 	return strings.ReplaceAll(nodeID, "@", "\\@")
 }
 
-func pathsToMermaid(paths [][]string) string {
+func PathsToMermaid(paths [][]string) string {
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
 	var builder strings.Builder
@@ -532,28 +530,6 @@ func pathsToMermaid(paths [][]string) string {
 	}
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
-}
-
-// this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(ctx context.Context, componentRepository shared.ComponentRepository, assetID uuid.UUID, assetVersionName string, pURL string) (string, error) {
-	// Load all components for the asset version
-	components, err := componentRepository.LoadComponents(ctx, nil, assetVersionName, assetID)
-	if err != nil {
-		return "", err
-	}
-
-	bom, err := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](components), nil)
-	if err != nil {
-		return "", err
-	}
-
-	paths := bom.FindAllComponentOnlyPathsToPURL(pURL, 0)
-	// we want to show fake nodes in the mermaid graph (root, artifact, info sources)
-	pathWithFakeNodes := make([][]string, 0, len(paths))
-	for _, path := range paths {
-		pathWithFakeNodes = append(pathWithFakeNodes, path.ToStringSlice())
-	}
-	return pathsToMermaid(pathWithFakeNodes), nil
 }
 
 func stateToLabel(state dtos.VulnState) string {

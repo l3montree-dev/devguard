@@ -172,6 +172,7 @@ func roundtripDiff(t *testing.T, diff *vulndb.QuickDiff) *vulndb.QuickDiff {
 // the same number of CVEs are added and deleted so row counts remain equal,
 // but checksums will differ if the quickdiff misses any change.
 func TestQuickDiffBalancedAddDelete(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -219,6 +220,7 @@ func TestQuickDiffBalancedAddDelete(t *testing.T) {
 // The CVEsUpdated row carries the new EPSS value from the export, but InsertEPSSBulk
 // resets all EPSS and re-applies — those two operations must produce the same result.
 func TestQuickDiffContentAndEPSSChangeSimultaneously(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -250,6 +252,7 @@ func TestQuickDiffContentAndEPSSChangeSimultaneously(t *testing.T) {
 // TestQuickDiff_EPSSOnlyChange verifies a CVE where content_hash is unchanged
 // but EPSS changes. The CVE must NOT appear in CVEsUpdated; InsertEPSSBulk covers it.
 func TestQuickDiffEPSSOnlyChange(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -279,6 +282,7 @@ func TestQuickDiffEPSSOnlyChange(t *testing.T) {
 // InsertCISAKEVBulk must reset all CISA fields and re-apply — the CVE should end up
 // with the new CISA values, not its old NULL values.
 func TestQuickDiffCISAKEVAdded(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -303,6 +307,7 @@ func TestQuickDiffCISAKEVAdded(t *testing.T) {
 // TestQuickDiff_CISAKEVRemoved tests a CVE that was in the KEV list and then gets removed.
 // After InsertCISAKEVBulk reset, the CISA fields must be NULL.
 func TestQuickDiffCISAKEVRemoved(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -329,6 +334,7 @@ func TestQuickDiffCISAKEVRemoved(t *testing.T) {
 // CVEs via cve_relationships. Both paths (export and quickdiff import) must produce the
 // same EPSS on the alias CVE.
 func TestQuickDiffEPSSPropagationViaRelationship(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -366,6 +372,7 @@ func TestQuickDiffEPSSPropagationViaRelationship(t *testing.T) {
 // TestQuickDiff_NewRelationshipCausesEPSSPropagation tests the case where a NEW
 // cve_relationship is added and EPSS must propagate through it.
 func TestQuickDiffNewRelationshipCausesEPSSPropagation(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -397,6 +404,7 @@ func TestQuickDiffNewRelationshipCausesEPSSPropagation(t *testing.T) {
 // TestQuickDiff_CISAViaRelationship tests CISA KEV propagation to an alias CVE
 // when the relationship already existed before this export round.
 func TestQuickDiffCISAViaRelationship(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -426,6 +434,7 @@ func TestQuickDiffCISAViaRelationship(t *testing.T) {
 // TestQuickDiff_LargeBatchManyChanges exercises a large number of simultaneous
 // inserts, deletes, updates, and EPSS changes to surface any batch-size edge cases.
 func TestQuickDiffLargeBatchManyChanges(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()
@@ -472,6 +481,7 @@ func TestQuickDiffLargeBatchManyChanges(t *testing.T) {
 // The second cycle uses the importer's DB state after the first quickdiff as its
 // baseline — any accumulated drift will surface here.
 func TestQuickDiffSequentialImports(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()

@@ -121,7 +121,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 
 		// we create a new ticket in github
 		client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
-		if err == notConnectedError {
+		if err == ErrNotConnected {
 			return nil
 		} else if err != nil {
 			return err
@@ -156,14 +156,14 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 		case dtos.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
 			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 		case dtos.EventTypeFalsePositive:
 			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -171,7 +171,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 
 		case dtos.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: new(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -179,7 +179,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 
 		case dtos.EventTypeComment:
 			_, _, err = client.CreateIssueComment(ctx, projectID, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
+				Body: new(fmt.Sprintf("<devguard> %s\n \n%s", utils.SafeDereference(ev.Justification), "*Sent from "+member.Name+" using DevGuard*")),
 			})
 			if err != nil {
 				return err

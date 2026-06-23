@@ -39,14 +39,6 @@ func NewComponentService(openSourceInsightsService shared.OpenSourceInsightServi
 	}
 }
 
-func combineNamespaceAndName(namespace, name string) string {
-	if namespace == "" {
-		return name
-	}
-
-	return namespace + "/" + name
-}
-
 func (s *ComponentService) RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject) {
 	projectKey := project.ProjectKey
 	projectResp, err := s.openSourceInsightsService.GetProject(ctx, projectKey)
@@ -86,7 +78,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
-		component.License = utils.Ptr("unknown")
+		component.License = new("unknown")
 		return component, nil
 	}
 
@@ -96,7 +88,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 		l := licenses.GetDebianLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		} else {
 			component.License = &l
 		}
@@ -104,21 +96,19 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 		l := licenses.GetAlpineLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		} else {
 			component.License = &l
 		}
 	default:
 		resp, err := s.openSourceInsightsService.GetVersion(
 			ctx,
-			parsedPurl.Type,
-			combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
-			parsedPurl.Version,
+			parsedPurl,
 		)
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 			return component, nil
 		}
 
@@ -126,7 +116,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 			component.License = &resp.Licenses[0]
 			component.Published = &resp.PublishedAt
 		} else {
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		}
 	}
 	return component, nil
@@ -141,9 +131,7 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 
 	resp, err := s.openSourceInsightsService.GetVersion(
 		ctx,
-		parsedPurl.Type,
-		combineNamespaceAndName(parsedPurl.Namespace, parsedPurl.Name),
-		parsedPurl.Version,
+		parsedPurl,
 	)
 	if err != nil {
 		slog.Warn("could not get version information for component project", "err", err, "purl", pURL)

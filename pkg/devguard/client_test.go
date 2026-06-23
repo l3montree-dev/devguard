@@ -15,7 +15,7 @@ type mockRequestSigner struct {
 	signFunc func(token string, req *http.Request) error
 }
 
-func (m *mockRequestSigner) SignRequest(token string, req *http.Request) error {
+func (m *mockRequestSigner) AuthenticateRequestWithToken(token string, req *http.Request) error {
 	if m.signFunc != nil {
 		return m.signFunc(token, req)
 	}
@@ -369,7 +369,7 @@ func TestHTTPClientAsInterface(t *testing.T) {
 func TestSimpleRequestSigner(t *testing.T) {
 	// Test the default simpleRequestSigner implementation
 	// This is an integration test that verifies the real signer works
-	// You may want to skip this if services.SignRequest requires specific setup
+	// You may want to skip this if services.AuthenticateRequestWithToken requires specific setup
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Just verify the request reaches the server
@@ -386,8 +386,8 @@ func TestSimpleRequestSigner(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/test", nil)
 	resp, err := client.Do(req)
 	if err != nil {
-		// If this fails, it might be because services.SignRequest has dependencies
-		t.Logf("Warning: client.Do() error = %v (this may be expected if services.SignRequest has dependencies)", err)
+		// If this fails, it might be because services.AuthenticateRequestWithToken has dependencies
+		t.Logf("Warning: client.Do() error = %v (this may be expected if services.AuthenticateRequestWithToken has dependencies)", err)
 		return
 	}
 	defer resp.Body.Close()

@@ -28,8 +28,8 @@ func FromJSONSnippetContents(firstPartyVuln models.FirstPartyVuln) (dtos.Snippet
 		Snippets: []dtos.SnippetContent{},
 	}
 
-	snippetsInterface := firstPartyVuln.SnippetContents["snippets"].([]any)
-	if snippetsInterface == nil {
+	snippetsInterface, ok := firstPartyVuln.SnippetContents["snippets"].([]any)
+	if !ok {
 		return res, fmt.Errorf("no snippets found in SnippetContents")
 	}
 	for _, snippetAny := range snippetsInterface {
@@ -81,6 +81,24 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVulnDTO {
 		RuleDescription: f.RuleDescription,
 		RuleProperties:  f.RuleProperties,
 	}
+}
+
+func FirstPartyVulnDTOToModel(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
+	m := models.FirstPartyVuln{
+		RuleID:          v.RuleID,
+		RuleName:        v.RuleName,
+		RuleHelpURI:     v.RuleHelpURI,
+		RuleDescription: v.RuleDescription,
+		URI:             v.URI,
+	}
+	m.State = v.State
+	if len(v.SnippetContents) > 0 {
+		snippetJSON, err := SnippetContentsToJSON(dtos.SnippetContents{Snippets: v.SnippetContents})
+		if err == nil {
+			m.SnippetContents = snippetJSON
+		}
+	}
+	return m
 }
 
 func SnippetContentsToJSON(s dtos.SnippetContents) (databasetypes.JSONB, error) {

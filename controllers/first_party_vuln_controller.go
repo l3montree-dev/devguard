@@ -38,6 +38,7 @@ func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnR
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param search query string false "Search term"
 // @Success 200 {object} object
@@ -73,6 +74,7 @@ func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
@@ -138,6 +140,7 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
 // @Router /vulns/{vulnID} [get]
@@ -159,6 +162,7 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Param body body object true "Event data"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
@@ -215,6 +219,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -249,6 +254,7 @@ func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -270,7 +276,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	}
 	report := sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
+		Schema:  new("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
 		Runs:    make([]sarif.Run, 0),
 	}
 

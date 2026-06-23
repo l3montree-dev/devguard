@@ -336,10 +336,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		Order("component_dependencies.dependency_id ASC, component_dependencies.asset_version_name ASC")
 
 	if pageInfo.PageSize > 0 {
-		page := pageInfo.Page
-		if page < 1 {
-			page = 1
-		}
+		page := max(pageInfo.Page, 1)
 		offset := (page - 1) * pageInfo.PageSize
 		query = query.Limit(pageInfo.PageSize).Offset(offset)
 	}

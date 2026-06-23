@@ -14,159 +14,46 @@
 package scanner
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/compat"
-	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
-	"github.com/package-url/packageurl-go"
+	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDependencyVulnToTableRow(t *testing.T) {
-	t.Run("should print normally with 2 strings when providing a namespace", func(t *testing.T) {
-		pURL := packageurl.PackageURL{}
-		pURL.Type = "npm"
-		pURL.Namespace = "Example Namespace"
-		pURL.Name = "next"
-
-		cveid := "Example CVEID"
-		rawRiskAssessment := 42424.42
-		componentFixedVersion := "Example Version"
-
-		v := compat.DependencyVulnDTO{}
-		v.CVEID = cveid
-		v.CVE = transformer.CVEToDTO(models.CVE{
-			CVSS: 7.0,
-		})
-
-		v.RawRiskAssessment = &rawRiskAssessment
-		v.ComponentFixedVersion = &componentFixedVersion
-		v.State = dtos.VulnState("Example State")
-
-		output := dependencyVulnToTableRow(pURL, v, false, false)
-		firstValue := fmt.Sprintln(output[0])
-		count := strings.Count(firstValue, "/")
-		assert.Equal(t, 2, count, "should be equal")
-
-	})
-	t.Run("test with empty namespace should result in only 1 slash instead of a double slash", func(t *testing.T) {
-		pURL := packageurl.PackageURL{}
-		pURL.Type = "npm"
-		pURL.Namespace = ""
-		pURL.Name = "next"
-
-		cveid := "Example CVEID"
-		rawRiskAssessment := 42424.42
-		componentFixedVersion := "Example Version"
-
-		v := compat.DependencyVulnDTO{}
-		v.CVEID = cveid
-		v.CVE = transformer.CVEToDTO(models.CVE{
-			CVSS: 7.0,
-		})
-		v.RawRiskAssessment = &rawRiskAssessment
-		v.ComponentFixedVersion = &componentFixedVersion
-		v.State = dtos.VulnState("Example State")
-
-		output := dependencyVulnToTableRow(pURL, v, false, false)
-		firstValue := fmt.Sprintln(output[0])
-		count := strings.Count(firstValue, "/")
-
-		assert.Equal(t, 1, count, "should be equal")
-
-	})
-
-	t.Run("should always show library name", func(t *testing.T) {
-		pURL := packageurl.PackageURL{}
-		pURL.Type = "npm"
-		pURL.Namespace = "example"
-		pURL.Name = "lib"
-
-		v := compat.DependencyVulnDTO{}
-		v.CVEID = "CVE-2023-12345"
-		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 5.0})
-		v.State = dtos.VulnState("open")
-
-		output := dependencyVulnToTableRow(pURL, v, false, false)
-		assert.NotEmpty(t, output[0], "library name should always be shown")
-	})
-
-	t.Run("should color row red when failed is true", func(t *testing.T) {
-		pURL := packageurl.PackageURL{}
-		pURL.Type = "npm"
-		pURL.Namespace = "example"
-		pURL.Name = "lib"
-
-		risk := 9.0
-		v := compat.DependencyVulnDTO{}
-		v.CVEID = "CVE-2023-12345"
-		v.CVE = transformer.CVEToDTO(models.CVE{CVSS: 9.0})
-		v.RawRiskAssessment = &risk
-		v.State = dtos.VulnState("open")
-
-		output := dependencyVulnToTableRow(pURL, v, true, true)
-		// The CVEID should be colored red (contains ANSI escape codes)
-		cveStr := fmt.Sprint(output[1])
-		assert.Contains(t, cveStr, "CVE-2023-12345", "should contain CVE ID")
-	})
-}
-
-func TestPrintScaResults(t *testing.T) {
+func TestPrintCycloneDXVexResults(t *testing.T) {
 	assetName := "test-asset"
 	webUI := "https://app.devguard.org"
 
 	t.Run("should return nil when no vulnerabilities found", func(t *testing.T) {
-		scanResponse := compat.ScanResponse{
-			DependencyVulns: []compat.DependencyVulnDTO{},
-			AmountOpened:    0,
-			AmountClosed:    0,
-		}
-
-		err := PrintScaResults(scanResponse, "critical", "critical", assetName, webUI)
+		bom := cdx.BOM{}
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
-	t.Run("should not fail when all vulnerabilities are closed/accepted - even with high risk/CVSS", func(t *testing.T) {
-		scanResponse := compat.ScanResponse{
-			DependencyVulns: []compat.DependencyVulnDTO{
-				{
-					CVEID:             "CVE-2023-12345",
-					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
-					State:             "closed",       // CLOSED vulnerability should not cause failure
-					RawRiskAssessment: utils.Ptr(9.5), // High risk but closed
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-12345",
-						CVSS: 9.0, // High CVSS but closed
-					}),
+	t.Run("should return nil when vulnerabilities slice is empty", func(t *testing.T) {
+		vulns := []cdx.Vulnerability{}
+		bom := cdx.BOM{Vulnerabilities: &vulns}
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
+		assert.Nil(t, err)
+	})
+
+	t.Run("should not fail when all vulnerabilities are suppressed", func(t *testing.T) {
+		score := 9.5
+		vulns := []cdx.Vulnerability{
+			{
+				ID: "CVE-2023-12345",
+				Ratings: &[]cdx.VulnerabilityRating{
+					{Score: &score, Method: cdx.ScoringMethodCVSSv31},
 				},
-				{
-					CVEID:             "CVE-2023-67890",
-					ComponentPurl:     "pkg:golang/github.com/example/lib2@v1.0.0",
-					State:             "accepted",      // ACCEPTED vulnerability should not cause failure
-					RawRiskAssessment: utils.Ptr(10.0), // High risk but accepted
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-67890",
-						CVSS: 9.8, // High CVSS but accepted
-					}),
-				},
+				Analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASFalsePositive},
 			},
-			AmountOpened: 0,
-			AmountClosed: 2,
 		}
-
-		// Should pass even with low thresholds because vulnerabilities are closed/accepted
-		err := PrintScaResults(scanResponse, "low", "low", assetName, webUI)
+		bom := cdx.BOM{Vulnerabilities: &vulns}
+		err := PrintCycloneDXVexResults(bom, "low", "low", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
-	// Test failOnRisk conditions - consolidated table-driven test
 	t.Run("failOnRisk thresholds", func(t *testing.T) {
 		testCases := []struct {
 			name       string
@@ -186,28 +73,19 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := compat.ScanResponse{
-					DependencyVulns: []compat.DependencyVulnDTO{
-						{
-							CVEID:             "CVE-2023-12345",
-							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
-							State:             "open",
-							RawRiskAssessment: utils.Ptr(tc.risk),
-							AssetVersionName:  "main",
-							CVE: transformer.CVEToDTO(models.CVE{
-								CVE:  "CVE-2023-12345",
-								CVSS: 5.0,
-							}),
+				vulns := []cdx.Vulnerability{
+					{
+						ID: "CVE-2023-12345",
+						Ratings: &[]cdx.VulnerabilityRating{
+							{Score: &tc.risk},
 						},
 					},
-					AmountOpened: 1,
-					AmountClosed: 0,
 				}
-
-				err := PrintScaResults(scanResponse, tc.threshold, "critical", assetName, webUI)
+				bom := cdx.BOM{Vulnerabilities: &vulns}
+				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI, "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), "exceeded the defined threshold")
+					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
 				} else {
 					assert.Nil(t, err)
 				}
@@ -215,11 +93,10 @@ func TestPrintScaResults(t *testing.T) {
 		}
 	})
 
-	// Test failOnCVSS conditions - consolidated table-driven test
 	t.Run("failOnCVSS thresholds", func(t *testing.T) {
 		testCases := []struct {
 			name       string
-			cvss       float32
+			cvss       float64
 			threshold  string
 			shouldFail bool
 		}{
@@ -235,28 +112,19 @@ func TestPrintScaResults(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				scanResponse := compat.ScanResponse{
-					DependencyVulns: []compat.DependencyVulnDTO{
-						{
-							CVEID:             "CVE-2023-12345",
-							ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
-							State:             "open",
-							RawRiskAssessment: utils.Ptr(1.0),
-							AssetVersionName:  "main",
-							CVE: transformer.CVEToDTO(models.CVE{
-								CVE:  "CVE-2023-12345",
-								CVSS: tc.cvss,
-							}),
+				vulns := []cdx.Vulnerability{
+					{
+						ID: "CVE-2023-12345",
+						Ratings: &[]cdx.VulnerabilityRating{
+							{Score: &tc.cvss, Method: cdx.ScoringMethodCVSSv31},
 						},
 					},
-					AmountOpened: 1,
-					AmountClosed: 0,
 				}
-
-				err := PrintScaResults(scanResponse, "critical", tc.threshold, assetName, webUI)
+				bom := cdx.BOM{Vulnerabilities: &vulns}
+				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI, "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
-					assert.Contains(t, err.Error(), "exceeded the defined threshold")
+					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
 				} else {
 					assert.Nil(t, err)
 				}
@@ -264,114 +132,123 @@ func TestPrintScaResults(t *testing.T) {
 		}
 	})
 
-	t.Run("should only consider OPEN vulnerabilities - mixed states scenario", func(t *testing.T) {
-		scanResponse := compat.ScanResponse{
-			DependencyVulns: []compat.DependencyVulnDTO{
-				{
-					CVEID:             "CVE-2023-12345",
-					ComponentPurl:     "pkg:golang/github.com/example/lib1@v1.0.0",
-					State:             "open", // OPEN - should be considered
-					RawRiskAssessment: utils.Ptr(3.0),
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-12345",
-						CVSS: 5.0,
-					}),
+	t.Run("should resolve library name from component purl via affects", func(t *testing.T) {
+		score := 5.0
+		vulns := []cdx.Vulnerability{
+			{
+				ID: "CVE-2023-99999",
+				Ratings: &[]cdx.VulnerabilityRating{
+					{Score: &score},
 				},
-				{
-					CVEID:             "CVE-2023-67890",
-					ComponentPurl:     "pkg:golang/github.com/example/lib2@v2.0.0",
-					State:             "open",         // OPEN - should be considered (highest values)
-					RawRiskAssessment: utils.Ptr(8.5), // Higher risk
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-67890",
-						CVSS: 7.8, // Higher CVSS
-					}),
-				},
-				{
-					CVEID:             "CVE-2023-11111",
-					ComponentPurl:     "pkg:golang/github.com/example/lib3@v3.0.0",
-					State:             "closed",        // CLOSED - should be IGNORED even though it has highest values
-					RawRiskAssessment: utils.Ptr(10.0), // Highest risk but closed
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-11111",
-						CVSS: 10.0, // Highest CVSS but closed
-					}),
-				},
-				{
-					CVEID:             "CVE-2023-22222",
-					ComponentPurl:     "pkg:golang/github.com/example/lib4@v4.0.0",
-					State:             "accepted",     // ACCEPTED - should be IGNORED even though it has highest values
-					RawRiskAssessment: utils.Ptr(9.8), // Very high risk but accepted
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-22222",
-						CVSS: 9.9, // Very high CVSS but accepted
-					}),
-				},
+				Affects: &[]cdx.Affects{{Ref: "comp-1"}},
 			},
-			AmountOpened: 2,
-			AmountClosed: 2,
 		}
-
-		// Should fail on high risk threshold (8.5 >= 7) - only considering open vulns
-		err := PrintScaResults(scanResponse, "high", "critical", assetName, webUI)
-		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "exceeded the defined threshold")
-
-		// Should fail on high CVSS threshold (7.8 >= 7) - only considering open vulns
-		err = PrintScaResults(scanResponse, "critical", "high", assetName, webUI)
-		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "exceeded the defined threshold")
-	})
-
-	t.Run("should handle nil RawRiskAssessment gracefully", func(t *testing.T) {
-		scanResponse := compat.ScanResponse{
-			DependencyVulns: []compat.DependencyVulnDTO{
-				{
-					CVEID:             "CVE-2023-12345",
-					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
-					State:             "open",
-					RawRiskAssessment: nil, // Should default to 0
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-12345",
-						CVSS: 5.0,
-					}),
-				},
-			},
-			AmountOpened: 1,
-			AmountClosed: 0,
+		comps := []cdx.Component{
+			{BOMRef: "comp-1", PackageURL: "pkg:golang/github.com/example/lib@v1.2.3"},
 		}
-
-		// Should pass all risk thresholds (defaults to 0)
-		err := PrintScaResults(scanResponse, "low", "critical", assetName, webUI)
+		bom := cdx.BOM{Vulnerabilities: &vulns, Components: &comps}
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
 		assert.Nil(t, err)
 	})
 
-	t.Run("should handle unknown failOn values gracefully", func(t *testing.T) {
-		scanResponse := compat.ScanResponse{
-			DependencyVulns: []compat.DependencyVulnDTO{
-				{
-					CVEID:             "CVE-2023-12345",
-					ComponentPurl:     "pkg:golang/github.com/example/lib@v1.0.0",
-					State:             "open",
-					RawRiskAssessment: utils.Ptr(10.0),
-					AssetVersionName:  "main",
-					CVE: transformer.CVEToDTO(models.CVE{
-						CVE:  "CVE-2023-12345",
-						CVSS: 10.0,
-					}),
-				},
+	t.Run("unknown failOn values should not cause failures", func(t *testing.T) {
+		score := 10.0
+		vulns := []cdx.Vulnerability{
+			{
+				ID:      "CVE-2023-12345",
+				Ratings: &[]cdx.VulnerabilityRating{{Score: &score, Method: cdx.ScoringMethodCVSSv31}},
 			},
-			AmountOpened: 1,
-			AmountClosed: 0,
 		}
-
-		// Unknown failOn values should not cause failures
-		err := PrintScaResults(scanResponse, "unknown", "invalid", assetName, webUI)
+		bom := cdx.BOM{Vulnerabilities: &vulns}
+		err := PrintCycloneDXVexResults(bom, "unknown", "invalid", assetName, webUI, "")
 		assert.Nil(t, err)
+	})
+}
+
+func TestPrintSarifResults(t *testing.T) {
+	assetName := "test-asset"
+	webUI := "https://app.devguard.org"
+	ref := "main"
+
+	ruleID := "rule-001"
+	uri := "src/main.go"
+	snippet := "password := \"secret\""
+
+	t.Run("should return nil when no runs", func(t *testing.T) {
+		report := sarif.SarifSchema210Json{Version: "2.1.0"}
+		err := PrintSarifResults(report, "sast", assetName, webUI, ref)
+		assert.Nil(t, err)
+	})
+
+	t.Run("should return nil when all results are suppressed", func(t *testing.T) {
+		justification := "accepted"
+		report := sarif.SarifSchema210Json{
+			Version: "2.1.0",
+			Runs: []sarif.Run{{
+				Results: []sarif.Result{
+					{
+						RuleID:  &ruleID,
+						Message: sarif.Message{Text: "test finding"},
+						Suppressions: []sarif.Suppression{{
+							Kind:          sarif.SuppressionKind("inSource"),
+							Justification: &justification,
+						}},
+					},
+				},
+			}},
+		}
+		err := PrintSarifResults(report, "sast", assetName, webUI, ref)
+		assert.Nil(t, err)
+	})
+
+	t.Run("should return error when open vulnerabilities exist", func(t *testing.T) {
+		report := sarif.SarifSchema210Json{
+			Version: "2.1.0",
+			Runs: []sarif.Run{{
+				Results: []sarif.Result{
+					{
+						RuleID:  &ruleID,
+						Message: sarif.Message{Text: "open finding"},
+						Locations: []sarif.Location{{
+							PhysicalLocation: sarif.PhysicalLocation{
+								ArtifactLocation: sarif.ArtifactLocation{URI: &uri},
+								Region: &sarif.Region{
+									Snippet: &sarif.ArtifactContent{Text: &snippet},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		}
+		err := PrintSarifResults(report, "sast", assetName, webUI, ref)
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "1 unhandled vulnerabilities")
+	})
+
+	t.Run("should count only open results across mixed states", func(t *testing.T) {
+		justification := "accepted"
+		report := sarif.SarifSchema210Json{
+			Version: "2.1.0",
+			Runs: []sarif.Run{{
+				Results: []sarif.Result{
+					{
+						RuleID:  &ruleID,
+						Message: sarif.Message{Text: "open finding"},
+					},
+					{
+						RuleID:  new("rule-002"),
+						Message: sarif.Message{Text: "suppressed finding"},
+						Suppressions: []sarif.Suppression{{
+							Kind:          sarif.SuppressionKind("inSource"),
+							Justification: &justification,
+						}},
+					},
+				},
+			}},
+		}
+		err := PrintSarifResults(report, "sast", assetName, webUI, ref)
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "1 unhandled vulnerabilities")
 	})
 }

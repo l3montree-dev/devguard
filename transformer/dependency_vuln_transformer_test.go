@@ -9,7 +9,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +80,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		vuln := models.VulnInPackage{
 			Purl:         purl,
 			CVEID:        "CVE-2024-1234",
-			FixedVersion: utils.Ptr("1.21.0"),
+			FixedVersion: new("1.21.0"),
 			CVE: models.CVE{
 				CVE:         "CVE-2024-1234",
 				Description: "Test vulnerability",

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -301,8 +302,8 @@ func extractRuleFromRuleID(ruleID string) string {
 }
 
 func cleanMessage(message string) string {
-	if idx := strings.Index(message, "(Resource:"); idx != -1 {
-		return strings.TrimSpace(message[:idx])
+	if before, _, ok := strings.Cut(message, "(Resource:"); ok {
+		return strings.TrimSpace(before)
 	}
 	return message
 }
@@ -312,10 +313,5 @@ func escapeMarkdown(s string) string {
 }
 
 func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, item)
 }

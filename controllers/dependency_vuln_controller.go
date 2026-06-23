@@ -121,6 +121,7 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -254,6 +255,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -369,6 +371,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 // @Tags Vulnerabilities
 // @Security CookieAuth
 // @Security PATAuth
+// @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -417,7 +420,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 
 	for _, artifact := range dependencyVuln.Artifacts {
 		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-			if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+			if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 			}
 		}
@@ -480,7 +483,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 
 		for _, artifact := range dependencyVuln.Artifacts {
 			if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-				if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
+				if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
 					slog.Error("could not recalculate risk history", "err", err)
 				}
 			}

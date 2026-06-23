@@ -2,6 +2,94 @@
 
 All notable changes to this project will be documented in this file.
 
+This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+
+
+
+## [v1.7.2] - 2026-06-23
+
+### Added
+
+- **`devguard-maint` CLI** — new Go-based maintenance tool under `cmd/devguard-maint` replacing the old shell release scripts; provides `release devguard`, `release web`, `release helm-chart`, `release ci-components`, and `docs` subcommands with changelog-entry verification, automatic version detection, and signed tag support
+- **Versioning documentation** — `VERSIONING.md` added to the repo root explaining the shared-minor-version strategy across all DevGuard components; compatibility guarantees and a component table are also surfaced in the installation docs and release bodies
+
+### Fixed
+
+- **CI release pipeline** — `devguard-scanner.yaml` now correctly extracts the minor version for release notes and marks `-rc`/`-alpha`/`-beta` tags as GitHub prereleases; `devguard-cli` binary is included in the release artifacts
+
+## [v1.7.1] - 2026-06-22
+
+### Changed
+
+- **Go modernization** — codebase updated with `gopls/modernize` to use current Go idioms (e.g. `min`/`max` builtins, loop variable capture, slice/map literals); no behaviour changes
+- **Ticket creation logging** — GitHub, GitLab, and Jira integrations now log when ticket creation is skipped or triggered, making dry-run and live pipeline debugging easier
+- **CSAF controller cleanup** — removed unnecessary pointer indirection (`Ptr` calls) in `csaf_controller.go` and `csaf_service.go`; safe nil-dereference via `utils.SafeDereference` in the dry-run integration
+
+## [v1.7.0] - 2026-06-19
+
+### Added
+
+- **Instance admin dashboard** — the instance-wide admin area introduced in v1.6.1 is now functional: the actions are wired to their backend endpoints, an "Organisation Creation" toggle gates whether users may create organisations, and the dashboard surfaces instance settings, technical info, and daemon triggers. Admin requests are signed in the browser using an in-memory signing key, and the admin session now expires after a configurable timeout
+- **`decrypt` CLI command** — counterpart to the existing `encrypt` commands, decrypts secrets for inspection/debugging
+- **Daemon asset-pipeline dry-run** — a `--dry-run` flag on the daemon asset pipeline runs the full pipeline without persisting results or firing integrations (new in-memory dry-run integration), simplifying debugging of GitHub/GitLab/Jira ticket flows
+
+### Changed
+
+- **RBAC rule cleanup on deletion** — deleting an organisation, project, or asset now cascades to remove its Casbin RBAC rules instead of leaving them orphaned; a migration cleans up rules orphaned by previous deletions. Org creation also returns a more expressive error on failure
+- **SAST scanning** — SAST suppressions are stripped before upload, scanner config discovery was improved, and Semgrep debug output was added; the project Semgrep config moved to `.semgrep.yml`
+- **SSE streaming (web)** — the admin daemon-trigger streaming was refactored into a reusable `src/lib/sse.ts` helper; signed request bodies are now enforced as strings and SSE CRLF line endings are handled correctly
+- **CI / e2e tooling** — pipelines migrated from `devguard-action` to the reusable `devguard-ci-component`; Playwright e2e suite reworked with a dedicated auth setup and updated Playwright/Ory versions
+
+### Fixed
+
+- **Scan v2 authorization** ([#2163](https://github.com/l3montree-dev/devguard/issues/2163)) — authenticated `/api/v2/scan` and `/api/v2/sarif-scan` endpoints now require only `read` on the asset (down from `update`) and reject public requests; fixes a 500/authorization regression for CI scans
+- **Panic in `getBestDescription`** — guards against a nil-pointer panic when a SARIF reporting descriptor lacks description fields
+- **Missing SARIF URI** — the unauthenticated SARIF scan path no longer drops the result URI in the generated SARIF
+- **Config file editor (web)** — config-file editor filenames now match what the scanner expects
+- **Dashboard stats (web)** — instance dashboard statistics are rounded to two decimals; dashboard loading/error states and a login-domain warning were corrected
+
+## [v1.6.1] - 2026-06-17
+
+### Added
+
+- **pprof basic auth** — profiling endpoints (`/debug/pprof`) are now protected by HTTP Basic Auth when the `PPROF_PASSWORD` environment variable is set; the Helm chart auto-generates and persists the password as a Kubernetes secret; the password is logged on startup
+- **Instance admin dashboard** (unfinished) — new `/admin` routes exposing instance-wide statistics (top CVEs, top components, malicious packages, average open risks, most vulnerable projects); asymmetric-key-based admin authentication via `devguard-cli gen-admin-key`; admin-scoped RBAC; daemon trigger endpoints with a 5-minute rate limit; separate admin router and controller
+
+### Fixed
+
+- **Goroutine leak in `errGroup`** — a `defer eg.startCollecting()` in `WaitAndCollect` pre-armed a new collector goroutine that was never drained when the `errGroup` was not reused, causing goroutines to accumulate unboundedly; fixed with a lazy re-arm via a `needsReset` flag checked in `Go`
+
+### Changed
+
+- **HTTP client hygiene** — all outgoing HTTP clients now use `utils.EgressTransport` (adds `User-Agent` and OpenTelemetry trace propagation) and carry explicit timeouts; `http.NewRequestWithContext` is used throughout; enforced via three new semgrep rules (`http-new-request-without-context`, `http-client-missing-egress-transport`, `http-client-egress-transport-missing-timeout`)
+- **Context threading** — `ctx context.Context` propagated through repository and service method signatures that were missing it; repository methods consistently carry `tx *gorm.DB` as a second parameter
+
+## [v1.6.0] - 2026-06-16
+
+### Added
+
+- **App-side encryption** — integration secrets (GitLab, Jira, webhook tokens) are now encrypted at rest using AES-GCM with an operator-provided key; a `devguard encrypt migrate` CLI command re-encrypts existing plaintext secrets (offline only), and a `devguard encrypt rotate` command swaps to a new key without service downtime; the `--key` flag on the migrate command allows seeding the key file on first-time setup
+- **PAT expiry dates** — Personal Access Tokens now carry a mandatory expiry date (default 365 days); expiry is enforced at authentication time
+- **Bearer token auth for scanner** — the scanner now accepts symmetric bearer tokens (PATs) in addition to session cookies; a new `devguard-scanner auth` command stores the token in the system keyring with a local-file fallback
+- **Scan v2 endpoints** — new `/scan/v2` API routes return VEX and SARIF directly in a single response; v1 scan endpoints are marked deprecated in Swagger docs; scanner CLI updated to invoke v2 by default
+- **Unauthenticated SARIF upload endpoint** — CI pipelines can push SARIF results without a session token; directory scan mode added for secret scanning
+- **Scanner `--noWrite` flag** — scanner runs without persisting results (dry-run mode)
+- **VulnDB relationship data** — `/vulndb` endpoints now include related CVE/GHSA relationships in responses
+- **Golang license case-insensitive fallback** — Go module license resolution retries with a `v`-prefixed version when the bare version returns no result
+
+### Changed
+
+- **Dependency path in integration tickets** — GitHub, GitLab, and Jira tickets now render the component dependency tree directly from the stored `vulnerability_path` field ([#2144](https://github.com/l3montree-dev/devguard/issues/2144)) instead of re-querying the component graph on every ticket update, removing a database round-trip per ticket operation
+- **RBAC mutex** — Casbin enforcer uses `RLock` for read operations instead of a full write-lock, reducing contention under concurrent requests
+- **SCA scanner output** — terminal print output improved; VEX documents now include CVE description, corrected source link, vulnerability path, and `directDependencyFixedVersion`
+- All Go dependencies updated; Go toolchain bumped to v1.26.3
+
+### Fixed
+
+- Reauthorization errors now return HTTP 403 with a specific `reauthorize` error code so clients can distinguish token expiry from other auth failures
+- Missing avatar URLs in sub-project and asset list queries
+- Pull request finding edge case that could miss findings in certain repository states
+
 ## [v1.5.1] - 2026-05-28
 
 ### Fixed

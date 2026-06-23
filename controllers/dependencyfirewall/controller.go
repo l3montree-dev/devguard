@@ -317,7 +317,7 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
 		}
 		configs.MinReleaseAge = raw.MinReleaseAge
-		for _, line := range strings.Split(raw.Rules, "\n") {
+		for line := range strings.SplitSeq(raw.Rules, "\n") {
 			line = strings.TrimSpace(line)
 			if line != "" && !strings.HasPrefix(line, "#") {
 				configs.Rules = append(configs.Rules, line)

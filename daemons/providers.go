@@ -18,6 +18,7 @@ package daemons
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -30,6 +31,15 @@ var daemonTracer = otel.Tracer("devguard.daemon")
 
 type DebugOptions struct {
 	LimitToAssetVersionSlug string
+	// LimitToStages, when non-empty, skips all pipeline stages not in the list.
+	// Valid values match the stage method names: "SyncTickets",
+	// "ResolveDifferencesInTicketState", "ScanAsset", "SyncUpstream",
+	// "CollectStats", "RecalculateRiskForVulnerabilities", "AutoReopenTickets",
+	// "DeleteOldAssetVersions", "ResolveFixedVersions".
+	LimitToStages []string
+	// DryRun skips all database writes. External system mutations are separately
+	// intercepted by the dryRunIntegration wrapper.
+	DryRun bool
 }
 
 // DaemonRunner encapsulates daemon dependencies and lifecycle
@@ -69,6 +79,15 @@ type DaemonRunner struct {
 
 func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
 	runner.debugOptions = options
+}
+
+// stageEnabled returns false when LimitToStage is set and does not match stageName,
+// meaning the stage should be skipped and its input passed through unchanged.
+func (runner *DaemonRunner) stageEnabled(stageName string) bool {
+	if len(runner.debugOptions.LimitToStages) == 0 {
+		return true
+	}
+	return slices.Contains(runner.debugOptions.LimitToStages, stageName)
 }
 
 func (runner *DaemonRunner) DebugMode() bool {

@@ -25,6 +25,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/ulikunitz/xz"
 	"pault.ag/go/debian/control"
@@ -166,7 +167,7 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 	}
 
 	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
-	resp, err := httpClient.Get(url)
+	resp, err := utils.EgressClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
 	}

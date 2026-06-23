@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -213,6 +214,96 @@ func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// GetOrgStatistics provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error) {
+	ret := _mock.Called(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrgStatistics")
+	}
+
+	var r0 dtos.OrgOverview
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int, int, bool) (dtos.OrgOverview, error)); ok {
+		return returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, int, int, bool) dtos.OrgOverview); ok {
+		r0 = returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	} else {
+		r0 = ret.Get(0).(dtos.OrgOverview)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, int, int, bool) error); ok {
+		r1 = returnFunc(ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetOrgStatistics_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgStatistics'
+type StatisticsService_GetOrgStatistics_Call struct {
+	*mock.Call
+}
+
+// GetOrgStatistics is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orgID uuid.UUID
+//   - orgComponentsLimit int
+//   - topCVEsLimit int
+//   - topComponentsLimit int
+//   - forceRefresh bool
+func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx interface{}, orgID interface{}, orgComponentsLimit interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, forceRefresh interface{}) *StatisticsService_GetOrgStatistics_Call {
+	return &StatisticsService_GetOrgStatistics_Call{Call: _e.mock.On("GetOrgStatistics", ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)}
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) Run(run func(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool)) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		var arg5 bool
+		if args[5] != nil {
+			arg5 = args[5].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) Return(orgOverview dtos.OrgOverview, err error) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Return(orgOverview, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetOrgStatistics_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, orgComponentsLimit int, topCVEsLimit int, topComponentsLimit int, forceRefresh bool) (dtos.OrgOverview, error)) *StatisticsService_GetOrgStatistics_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetReleaseRiskHistory provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(ctx, releaseID, start, end)
@@ -360,8 +451,8 @@ func (_c *StatisticsService_GetRemediationTimeAveragesForRelease_Call) RunAndRet
 }
 
 // GetTopEcosystemsInOrg provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error) {
-	ret := _mock.Called(ctx, orgID, limit)
+func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
+	ret := _mock.Called(ctx, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetTopEcosystemsInOrg")
@@ -369,18 +460,18 @@ func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID
 
 	var r0 []dtos.EcosystemUsage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) ([]dtos.EcosystemUsage, error)); ok {
-		return returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]dtos.EcosystemUsage, error)); ok {
+		return returnFunc(ctx, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) []dtos.EcosystemUsage); ok {
-		r0 = returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []dtos.EcosystemUsage); ok {
+		r0 = returnFunc(ctx, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.EcosystemUsage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, int) error); ok {
-		r1 = returnFunc(ctx, orgID, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -395,12 +486,11 @@ type StatisticsService_GetTopEcosystemsInOrg_Call struct {
 // GetTopEcosystemsInOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-//   - limit int
-func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}, limit interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
-	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID, limit)}
+func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
+	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID)}
 }
 
-func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context.Context, orgID uuid.UUID, limit int)) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context.Context, orgID uuid.UUID)) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -410,14 +500,9 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Run(run func(ctx context
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -428,22 +513,22 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) Return(ecosystemUsages [
 	return _c
 }
 
-func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, limit int) ([]dtos.EcosystemUsage, error)) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateArtifactRiskAggregation provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
-	ret := _mock.Called(ctx, artifact, assetID, begin, end)
+func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
+	ret := _mock.Called(ctx, tx, artifact, assetID, begin, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateArtifactRiskAggregation")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
-		r0 = returnFunc(ctx, artifact, assetID, begin, end)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
+		r0 = returnFunc(ctx, tx, artifact, assetID, begin, end)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -457,35 +542,40 @@ type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
 
 // UpdateArtifactRiskAggregation is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
 //   - artifact *models.Artifact
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
-	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, artifact, assetID, begin, end)}
+func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, tx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, tx, artifact, assetID, begin, end)}
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *models.Artifact
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(*models.Artifact)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *models.Artifact
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*models.Artifact)
 		}
-		var arg3 time.Time
+		var arg3 uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(time.Time)
+			arg3 = args[3].(uuid.UUID)
 		}
 		var arg4 time.Time
 		if args[4] != nil {
 			arg4 = args[4].(time.Time)
+		}
+		var arg5 time.Time
+		if args[5] != nil {
+			arg5 = args[5].(time.Time)
 		}
 		run(
 			arg0,
@@ -493,6 +583,7 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -503,7 +594,7 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Return(err error
 	return _c
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }

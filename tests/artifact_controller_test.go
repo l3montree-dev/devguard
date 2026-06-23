@@ -12,7 +12,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,6 +20,7 @@ import (
 )
 
 func TestArtifactControllerDeleteArtifact(t *testing.T) {
+	t.Parallel()
 	factory, client := NewTestClientFactory(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
@@ -43,7 +43,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		}
 		assert.NoError(t, f.DB.Create(&integration).Error)
 
-		asset.RepositoryID = utils.Ptr("gitlab:" + integration.ID.String() + ":123")
+		asset.RepositoryID = new("gitlab:" + integration.ID.String() + ":123")
 		assert.NoError(t, f.DB.Save(&asset).Error)
 
 		// Create multiple artifacts
@@ -86,7 +86,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					AssetID:          asset.ID,
 					AssetVersionName: assetVersion.Name,
 					State:            dtos.VulnStateOpen,
-					TicketID:         utils.Ptr("gitlab:123/456"),
+					TicketID:         new("gitlab:123/456"),
 				},
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/vulnerable-package@1.0.0",
@@ -145,7 +145,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					AssetID:          asset.ID,
 					AssetVersionName: assetVersion.Name,
 					State:            dtos.VulnStateOpen,
-					TicketID:         utils.Ptr("gitlab:123/789"),
+					TicketID:         new("gitlab:123/789"),
 				},
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/multi-artifact-package@1.0.0",
@@ -369,6 +369,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 }
 
 func TestBuildVEX(t *testing.T) {
+	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		app := echo.New()
 
@@ -434,10 +435,18 @@ func TestBuildVEX(t *testing.T) {
 			assert.Equal(t, "pkg:npm/axios@1.7.7", (*axiosVuln.Affects)[0].Ref)
 
 			//test timestamps if they have the right format
-			propertyValue1 := (*nextVuln.Properties)[0].Value
+			getFirstResponded := func(props *[]cyclonedx.Property) string {
+				for _, p := range *props {
+					if p.Name == "firstResponded" {
+						return p.Value
+					}
+				}
+				return ""
+			}
+			propertyValue1 := getFirstResponded(nextVuln.Properties)
 			responseTime1, err := time.Parse(time.RFC3339, propertyValue1)
 			assert.Nil(t, err)
-			propertyValue2 := (*axiosVuln.Properties)[0].Value
+			propertyValue2 := getFirstResponded(axiosVuln.Properties)
 			responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 			assert.Nil(t, err)
 			//test if the first responded timestamp is calculated about right
@@ -445,7 +454,7 @@ func TestBuildVEX(t *testing.T) {
 			assert.True(t, responseTime1.Before(creationTime.Add(-7*time.Minute+tolerance)) && responseTime1.After(creationTime.Add(-7*time.Minute-tolerance)))
 			assert.True(t, responseTime2.Before(creationTime.Add(-1*time.Minute+tolerance)) && responseTime2.After(creationTime.Add(-1*time.Minute-tolerance)))
 			//last updated should be the same as first responded when only 1 updateEvent happens
-			assert.Equal(t, axiosVuln.Analysis.LastUpdated, (*axiosVuln.Properties)[0].Value)
+			assert.Equal(t, axiosVuln.Analysis.LastUpdated, propertyValue2)
 		})
 
 		t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
@@ -482,7 +491,16 @@ func TestBuildVEX(t *testing.T) {
 			assert.NotNil(t, axiosVuln, "Should find axios vulnerability")
 
 			//if the vulnerability never gets handled we should have no first responded field and first issued and last updated should be the same
-			assert.Nil(t, axiosVuln.Properties)
+			hasFirstResponded := false
+			if axiosVuln.Properties != nil {
+				for _, p := range *axiosVuln.Properties {
+					if p.Name == "firstResponded" {
+						hasFirstResponded = true
+						break
+					}
+				}
+			}
+			assert.False(t, hasFirstResponded, "unhandled vuln should not have firstResponded property")
 			assert.Equal(t, axiosVuln.Analysis.FirstIssued, axiosVuln.Analysis.LastUpdated)
 		})
 
@@ -568,7 +586,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		ComponentPurl:     "pkg:npm/next@14.2.13",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
-		RawRiskAssessment: utils.Ptr(4.83),
+		RawRiskAssessment: new(4.83),
 		Artifacts:         []models.Artifact{artifact},
 		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/next@14.2.13"},
 	}
@@ -581,7 +599,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
-		RawRiskAssessment: utils.Ptr(8.89),
+		RawRiskAssessment: new(8.89),
 		Artifacts:         []models.Artifact{artifact},
 		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/axios@1.7.7"},
 	}
@@ -596,7 +614,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-10 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -606,7 +624,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-7 * time.Minute),
 		Type:             "comment",
 		UserID:           "system",
@@ -615,7 +633,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln1FixedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-3 * time.Minute),
 		Type:             "fixed",
 		UserID:           "system",
@@ -624,7 +642,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln2DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-3 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -634,7 +652,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	}
 
 	vuln2FixedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-1 * time.Minute),
 		Type:             "fixed",
 		UserID:           "system",
