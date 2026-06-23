@@ -42,7 +42,7 @@ const (
 	EventName         = "devguard-instance-start"
 	TelemetryEndpoint = "https://umami.l3montree.com/api/send"
 	WebsiteID         = "19cc127d-774c-4fb0-981d-26d110074a14"
-	DefaultTimeout    = 3 * time.Second
+	DefaultTimeout    = 30 * time.Second
 	UserAgent         = "DevguardTelemetry"
 	SchemaVersion     = 1
 	TransparencyLog   = "sending anonymized telemetry data - nothing personal or critical is included. " +
