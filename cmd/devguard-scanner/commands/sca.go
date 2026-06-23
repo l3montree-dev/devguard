@@ -202,7 +202,7 @@ func scanExternalImage(ctx context.Context) error {
 			// try to parse a version from the purl
 			parsedPurl, err := packageurl.FromString(purl)
 			if err != nil {
-				slog.Warn("could not parse purl", "purl", purl, "err", err)
+				// slog.Warn("could not parse purl", "purl", purl, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
 				continue
 			}
 
