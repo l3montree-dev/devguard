@@ -4,7 +4,19 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.7.3] - 2026-06-23
 
+### Added
+
+- **Telemetry on startup** — DevGuard now sends anonymous telemetry to the instance's configured Umami endpoint when starting up; runs in a background goroutine so it does not block the HTTP server; respects an opt-out env var and logs a info message when disabled
+
+### Changed
+
+- **Semgrep output** — Semgrep scanner output is now logged at `WARN` level instead of `DEBUG`, making SAST scan issues easier to spot in production logs
+
+### Fixed
+
+- **GitLab issue creation** — the GitLab integration now returns the created issue even when the follow-up comment creation fails, preventing a silent no-op when the comment endpoint errors
 
 ## [v1.7.2] - 2026-06-23
 
