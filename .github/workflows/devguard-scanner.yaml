@@ -381,6 +381,7 @@ jobs:
             All DevGuard components (`devguard`, `devguard-web`, Helm chart) share the same **minor version**. Any `v${{ steps.tag.outputs.minor }}.*` release of one component is compatible with any `v${{ steps.tag.outputs.minor }}.*` release of another. Patch versions are released independently per component — you do not need to upgrade all components simultaneously as long as the minor version matches.
 
             📖 See [VERSIONING.md](https://github.com/l3montree-dev/devguard/blob/main/VERSIONING.md) for the full policy.
+            📋 See [CHANGELOG](https://github.com/l3montree-dev/devguard/blob/main/CHANGELOG.md) for what changed in this release.
 
             ---
 
