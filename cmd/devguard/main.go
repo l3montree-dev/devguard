@@ -155,6 +155,7 @@ func main() {
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
+		fx.Invoke(func(AdvisoryRouter router.AdvisoryRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

@@ -22,4 +22,5 @@ var RouterModule = fx.Options(
 	fx.Provide(NewVEXRuleRouter),
 	fx.Provide(NewExternalReferenceRouter),
 	fx.Provide(NewCrowdsourcedVexingRouter),
+	fx.Provide(NewAdvisoryRouter),
 )

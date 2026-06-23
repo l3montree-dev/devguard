@@ -761,6 +761,14 @@ type RBACProvider interface {
 	GetAllUsers() ([]string, error)
 }
 
+type AdvisoryService interface {
+	CreateName(ctx context.Context, name string) error
+}
+
+type AdvisoryRepository interface {
+	CreateName(ctx context.Context, tx DB, name string) error
+}
+
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 
 type Role string
