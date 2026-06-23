@@ -11,7 +11,7 @@ go install github.com/l3montree-dev/devguard/cmd/devguard-maint@latest
 Or build from source inside the `devguard` repo:
 
 ```bash
-go build -o devguard-maint ./cmd/devguard-maint && mv devguard-maint $GOPATH/bin
+go build -o devguard-maint ./cmd/devguard-maint && mv devguard-maint $(go env GOPATH)/bin
 ```
 
 ## Directory layout requirement

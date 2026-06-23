@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+
+
+## [v1.7.1] - 2026-06-23
+
+### Added
+
+- **`devguard-maint` CLI** — new Go-based maintenance tool under `cmd/devguard-maint` replacing the old shell release scripts; provides `release devguard`, `release web`, `release helm-chart`, `release ci-components`, and `docs` subcommands with changelog-entry verification, automatic version detection, and signed tag support
+- **Versioning documentation** — `VERSIONING.md` added to the repo root explaining the shared-minor-version strategy across all DevGuard components; compatibility guarantees and a component table are also surfaced in the installation docs and release bodies
+
+### Changed
+
+- **Go modernization** — codebase updated with `gopls/modernize` to use current Go idioms (e.g. `min`/`max` builtins, loop variable capture, slice/map literals); no behaviour changes
+- **Ticket creation logging** — GitHub, GitLab, and Jira integrations now log when ticket creation is skipped or triggered, making dry-run and live pipeline debugging easier
+
+### Fixed
+
+- **CI release pipeline** — `devguard-scanner.yaml` now correctly extracts the minor version for release notes and marks `-rc`/`-alpha`/`-beta` tags as GitHub prereleases; `devguard-cli` binary is included in the release artifacts
+
 ## [v1.7.0] - 2026-06-19
 
 ### Added
