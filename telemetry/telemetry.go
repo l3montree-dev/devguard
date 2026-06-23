@@ -169,13 +169,7 @@ func ScannerStartupEvent(version, apiURL, goos, goarch string, runsInCI bool, co
 
 func SendAPIStartup(ctx context.Context, cfg Config, client HTTPDoer, statsCollector APIStatsCollector, version string) {
 	if cfg.Disabled {
-		SendStartup(ctx, cfg, client, APIStartupEvent(
-			version,
-			os.Getenv("FRONTEND_URL"),
-			os.Getenv("POSTGRES_HOST"),
-			os.Getenv("POSTGRES_DB"),
-			APIStats{},
-		))
+		slog.Info("DevGuard startup telemetry is disabled", "env", EnvDisabled, "component", ComponentAPI)
 		return
 	}
 
