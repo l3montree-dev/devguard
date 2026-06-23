@@ -35,7 +35,7 @@ else
 fi
 
 # great its a valid semver - lets check if the directories exist
-dirlist=(devguard devguard-action devguard-ci-component devguard-web)
+dirlist=(devguard devguard-web)
 for dir in "${dirlist[@]}"; do
     if [ ! -d "$dir" ]; then
         echo "Error: Directory $dir does not exist."
@@ -46,7 +46,7 @@ done
 # check if the tag does already exist
 for dir in "${dirlist[@]}"; do
     if [ -d "$dir/.git" ]; then
-        if (cd "$dir" && git tag) | grep -q "$TAG"; then
+        if (cd "$dir" && git tag) | grep -qx "$TAG"; then
             echo "Error: Tag $TAG already exists in $dir."
             exit 1
         fi
@@ -76,6 +76,11 @@ done
 
 firsttrain=(devguard devguard-web)
 
+# bump package.json version in devguard-web (no commit yet)
+if [ -f "devguard-web/package.json" ]; then
+    perl -i -pe "s/\"version\": \"[^\"]*\"/\"version\": \"$SEMVER\"/" devguard-web/package.json
+fi
+
 # Display summary and prompt before tagging
 echo ""
 echo "╔═════════════════════════════════════════╗"
@@ -90,15 +95,25 @@ for dir in "${firsttrain[@]}"; do
     fi
 done
 echo ""
+echo "package.json version bumped to $SEMVER (uncommitted — will commit on confirm)"
+echo ""
 
 # Prompt for confirmation before tagging
 read -q "CONFIRM?Continue with tagging? (y/n) " -n 1; echo ""
 if [[ "$CONFIRM" != "y" ]]; then
+    # revert the package.json change
+    (cd devguard-web && git checkout -- package.json)
     echo "Operation cancelled by user."
     exit 1
 fi
 
 echo ""
+
+# commit the version bump before tagging
+if [ -f "devguard-web/package.json" ]; then
+    (cd devguard-web && git add package.json && git commit -m "chore: bump version to $SEMVER")
+    log_change "Committed devguard-web/package.json version bump to $SEMVER"
+fi
 
 # great lets do the tagging
 for dir in "${firsttrain[@]}"; do

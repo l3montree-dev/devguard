@@ -42,7 +42,7 @@ else
 fi
 
 # great its a valid semver - lets check if the directories exist
-dirlist=(devguard devguard-action devguard-ci-component devguard-web)
+dirlist=(devguard devguard-ci-component devguard-web)
 for dir in "${dirlist[@]}"; do
     if [ ! -d "$dir" ]; then
         echo "Error: Directory $dir does not exist."
@@ -66,7 +66,7 @@ firsttrain=(devguard devguard-web)
 # check if the tag does already exist
 for dir in "${firsttrain[@]}"; do
     if [ -d "$dir/.git" ]; then
-        if (cd "$dir" && git tag) | grep -q "$TAG"; then
+        if (cd "$dir" && git tag) | grep -qx "$TAG"; then
             echo "Great! Tag $TAG exists in $dir."
         else
             echo "Tag $TAG does not exist in $dir."
@@ -76,7 +76,7 @@ for dir in "${firsttrain[@]}"; do
 done
 
 
-secondtrain=(devguard-action)
+secondtrain=(devguard-ci-component)
 # check if we need to pull the latest changes
 for dir in "${secondtrain[@]}"; do
     if [ -d "$dir/.git" ]; then
@@ -95,10 +95,10 @@ for dir in "${secondtrain[@]}"; do
     if [ -d "$dir" ]; then
         for file in $dir/**/*.yml(D); do
             if [[ -f $file ]]; then
-                local original_hash=$(md5sum "$file" | awk '{print $1}')
+                original_hash=$(md5sum "$file" | awk '{print $1}')
                 echo "Replacing in $file"
-                sed -i "s|ghcr.io/l3montree-dev/devguard/scanner:main|ghcr.io/l3montree-dev/devguard/scanner:$TAG|g" "$file"
-                local new_hash=$(md5sum "$file" | awk '{print $1}')
+                perl -i -pe "s|ghcr.io/l3montree-dev/devguard/scanner:main|ghcr.io/l3montree-dev/devguard/scanner:$TAG|g" "$file"
+                new_hash=$(md5sum "$file" | awk '{print $1}')
                 
                 if [[ "$original_hash" != "$new_hash" ]]; then
                     log_change "Replaced scanner image in $file"
@@ -111,10 +111,10 @@ for dir in "${secondtrain[@]}"; do
         # Replace version default in all full.yml files (at any depth)
         for fullfile in $dir/**/full.yml(D); do
             if [[ -f $fullfile ]]; then
-                local original_hash=$(md5sum "$fullfile" | awk '{print $1}')
+                original_hash=$(md5sum "$fullfile" | awk '{print $1}')
                 echo "Replacing version default in $fullfile"
-                sed -i "/version:/,/default:/ s/default: \"main\"/default: \"$TAG\"/" "$fullfile"
-                local new_hash=$(md5sum "$fullfile" | awk '{print $1}')
+                perl -i -pe "s/default: \"main\"/default: \"$TAG\"/ if /version:/ .. /default:/" "$fullfile"
+                new_hash=$(md5sum "$fullfile" | awk '{print $1}')
                 
                 if [[ "$original_hash" != "$new_hash" ]]; then
                     log_change "Updated version default in $fullfile"
@@ -186,10 +186,10 @@ for dir in "${secondtrain[@]}"; do
     if [ -d "$dir" ]; then
         for file in $dir/**/*.yml(D); do
             if [[ -f $file ]]; then
-                local original_hash=$(md5sum "$file" | awk '{print $1}')
+                original_hash=$(md5sum "$file" | awk '{print $1}')
                 echo "Replacing back in $file"
-                sed -i "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main|g" "$file"
-                local new_hash=$(md5sum "$file" | awk '{print $1}')
+                perl -i -pe "s|ghcr.io/l3montree-dev/devguard/scanner:$TAG|ghcr.io/l3montree-dev/devguard/scanner:main|g" "$file"
+                new_hash=$(md5sum "$file" | awk '{print $1}')
                 
                 if [[ "$original_hash" != "$new_hash" ]]; then
                     log_change "Reverted scanner image in $file"
@@ -200,10 +200,10 @@ for dir in "${secondtrain[@]}"; do
         # Replace version default back to "main" in all full.yml files (at any depth)
         for fullfile in $dir/**/full.yml(D); do
             if [[ -f $fullfile ]]; then
-                local original_hash=$(md5sum "$fullfile" | awk '{print $1}')
+                original_hash=$(md5sum "$fullfile" | awk '{print $1}')
                 echo "Replacing version default back in $fullfile"
-                sed -i "/version:/,/default:/ s/default: \"$TAG\"/default: \"main\"/" "$fullfile"
-                local new_hash=$(md5sum "$fullfile" | awk '{print $1}')
+                perl -i -pe "s/default: \"$TAG\"/default: \"main\"/ if /version:/ .. /default:/" "$fullfile"
+                new_hash=$(md5sum "$fullfile" | awk '{print $1}')
                 
                 if [[ "$original_hash" != "$new_hash" ]]; then
                     log_change "Reverted version default in $fullfile"
