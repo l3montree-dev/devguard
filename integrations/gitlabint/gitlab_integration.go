@@ -1477,7 +1477,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
-		return nil, err
+		return createdIssue, err
 	}
 
 	return createdIssue, nil
@@ -1507,7 +1507,10 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
-	return createdIssue, err
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+	}
+	return createdIssue, nil
 }
 
 func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
