@@ -68,7 +68,7 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
 			slog.Warn("Vulnerabilities found, but continuing execution.")
-			slog.Debug("Semgrep output", "stderr", stderr.String())
+			slog.Warn("Semgrep output", "stderr", stderr.String())
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
