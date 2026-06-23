@@ -331,7 +331,7 @@ func hostFromURL(rawURL string) string {
 
 	parsed, err := url.Parse(parseURL)
 	if err != nil || parsed.Host == "" {
-		return strings.ToLower(rawURL)
+		return rawURL
 	}
-	return strings.ToLower(parsed.Host)
+	return parsed.Host
 }
