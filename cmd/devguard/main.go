@@ -61,8 +61,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var release string // Will be filled at build time
-
 //	@title			DevGuard API
 //	@version		v1
 //	@description	DevGuard Backend. Secure your Software Supply Chain. Attestation-based compliance as Code, manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Security Framework Documentation made easy. OWASP Incubating Project
@@ -196,7 +194,7 @@ func main() {
 }
 
 func apiVersion() string {
-	return telemetry.RuntimeVersion(config.Version, release)
+	return telemetry.RuntimeVersion(config.Version, )
 }
 
 type fxErrorLogger struct{}
@@ -351,7 +349,7 @@ func initSentry() {
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
 		Environment: environment,
-		Release:     release,
+		Release:     config.Version,
 
 		// Configures whether SDK should generate and attach stack traces to pure
 		// capture message calls.
