@@ -38,13 +38,13 @@ const (
 	ComponentAPI     = "devguard-api"
 	ComponentScanner = "devguard-scanner"
 
-	EventName       = "devguard-instance-start"
-	DefaultEndpoint = "http://localhost:3001/api/send"
-	WebsiteID       = "2ab9fe36-42ec-485d-a592-b0f6e78dd1ad"
-	DefaultTimeout  = 3 * time.Second
-	UserAgent       = "DevguardTelemetry"
-	SchemaVersion   = 1
-	TransparencyLog = "sending anonymized telemetry data - nothing personal or critical is included. " +
+	EventName         = "devguard-instance-start"
+	TelemetryEndpoint = "https://umami.l3montree.com/api/send"
+	WebsiteID         = "2ab9fe36-42ec-485d-a592-b0f6e78dd1ad"
+	DefaultTimeout    = 3 * time.Second
+	UserAgent         = "DevguardTelemetry"
+	SchemaVersion     = 1
+	TransparencyLog   = "sending anonymized telemetry data - nothing personal or critical is included. " +
 		"This helps us understand what DevGuard versions are used and which versions we should provide patches for. " +
 		"You can disable this by setting DEVGUARD_TELEMETRY_DISABLED=true."
 
@@ -222,7 +222,7 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 	sendCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(sendCtx, http.MethodPost, DefaultEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(sendCtx, http.MethodPost, TelemetryEndpoint, bytes.NewReader(body))
 	if err != nil {
 		slog.Warn("could not create DevGuard startup telemetry request", "err", err, "component", event.Component)
 		return
