@@ -194,7 +194,7 @@ func main() {
 }
 
 func apiVersion() string {
-	return telemetry.RuntimeVersion(config.Version, )
+	return telemetry.RuntimeVersion(config.Version)
 }
 
 type fxErrorLogger struct{}
