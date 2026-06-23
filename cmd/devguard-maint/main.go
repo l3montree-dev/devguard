@@ -19,11 +19,12 @@ func main() {
 	}
 	release.AddCommand(
 		commands.ReleaseDevguardCmd,
+		commands.ReleaseWebCmd,
 		commands.ReleaseCICmd,
 		commands.ReleaseHelmCmd,
 	)
 
-	root.AddCommand(commands.LogsCmd, release)
+	root.AddCommand(commands.LogsCmd, commands.DocsCmd, release)
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

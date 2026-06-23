@@ -115,6 +115,50 @@ func (c *Changelog) PrintSummary(title string) {
 	}
 }
 
+// MinorVersion extracts the "MAJOR.MINOR" prefix from a semver tag like "v1.7.3" → "1.7".
+func MinorVersion(tag string) string {
+	bare := strings.TrimPrefix(tag, "v")
+	parts := strings.SplitN(bare, ".", 3)
+	if len(parts) < 2 {
+		return bare
+	}
+	return parts[0] + "." + parts[1]
+}
+
+// GitLatestTagWithMinor returns the most recent tag in dir whose minor version
+// matches the given minor string (e.g. "1.7"). Returns "" if none found.
+func GitLatestTagWithMinor(dir, minor string) (string, error) {
+	out, err := gitOutput(dir, "tag", "--sort=-version:refname")
+	if err != nil {
+		return "", fmt.Errorf("git tag in %s: %w", dir, err)
+	}
+	prefix := "v" + minor + "."
+	for _, t := range strings.Split(out, "\n") {
+		t = strings.TrimSpace(t)
+		if strings.HasPrefix(t, prefix) {
+			return t, nil
+		}
+	}
+	return "", nil
+}
+
+// CheckChangelogEntry returns an error if the given tag has no entry in the
+// CHANGELOG.md found at changelogPath. It looks for a line starting with
+// "## [<tag>]" (case-insensitive bracket match).
+func CheckChangelogEntry(changelogPath, tag string) error {
+	data, err := os.ReadFile(changelogPath)
+	if err != nil {
+		return fmt.Errorf("could not read %s: %w", changelogPath, err)
+	}
+	needle := "## [" + tag + "]"
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), needle) {
+			return nil
+		}
+	}
+	return fmt.Errorf("no changelog entry found for %s in %s — add a '## [%s]' section before releasing", tag, changelogPath, tag)
+}
+
 // ReplaceInFile replaces all occurrences of old with new in the file at path.
 // Returns whether the file was modified.
 func ReplaceInFile(path, old, new string) (bool, error) {

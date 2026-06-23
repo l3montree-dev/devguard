@@ -2,8 +2,8 @@ package commands
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -13,7 +13,7 @@ import (
 
 var ReleaseCICmd = &cobra.Command{
 	Use:   "ci-components <tag>",
-	Short: "Update, tag, and push devguard-ci-component (requires devguard+web already tagged)",
+	Short: "Update, tag, and push devguard-ci-component (auto-detects latest scanner version)",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runReleaseCI,
 }
@@ -23,66 +23,72 @@ func runReleaseCI(_ *cobra.Command, args []string) error {
 	if _, err := i.ValidateTag(tag); err != nil {
 		return err
 	}
+	minor := i.MinorVersion(tag)
 
-	allDirs := []string{"devguard", "devguard-ci-component", "devguard-web"}
-	for _, d := range allDirs {
+	for _, d := range []string{"devguard", "devguard-ci-component"} {
 		if _, err := os.Stat(d); os.IsNotExist(err) {
 			return fmt.Errorf("directory %q does not exist", d)
 		}
 	}
 
-	for _, d := range allDirs {
+	if err := i.CheckChangelogEntry(filepath.Join("devguard-ci-component", "CHANGELOG.md"), tag); err != nil {
+		return err
+	}
+
+	// Require at least one devguard release with the same minor version to exist.
+	scannerTag, err := i.GitLatestTagWithMinor("devguard", minor)
+	if err != nil {
+		return fmt.Errorf("could not detect latest devguard tag for minor %s: %w", minor, err)
+	}
+	if scannerTag == "" {
+		return fmt.Errorf("no devguard release found with minor version %s — run 'release devguard' first", minor)
+	}
+	fmt.Printf("✓ Using devguard/scanner tag: %s\n", scannerTag)
+
+	for _, d := range []string{"devguard", "devguard-ci-component"} {
 		if err := i.GitCheckoutMain(d); err != nil {
 			return fmt.Errorf("checkout main in %s: %w", d, err)
 		}
-	}
-
-	for _, d := range []string{"devguard", "devguard-web"} {
-		exists, err := i.GitTagExists(d, tag)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return fmt.Errorf("tag %s does not exist in %s — run 'release devguard' first", tag, d)
-		}
-		fmt.Printf("✓ Tag %s exists in %s\n", tag, d)
 	}
 
 	if err := i.GitPull("devguard-ci-component"); err != nil {
 		return fmt.Errorf("pull devguard-ci-component: %w", err)
 	}
 
-	cl := &i.Changelog{}
-	scannerOld := "ghcr.io/l3montree-dev/devguard/scanner:main"
-	scannerNew := "ghcr.io/l3montree-dev/devguard/scanner:" + tag
-
-	err := filepath.WalkDir("devguard-ci-component", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".yml") {
-			return err
-		}
-		changed, err := i.ReplaceInFile(path, scannerOld, scannerNew)
-		if err != nil {
-			return err
-		}
-		if changed {
-			cl.Change("Replaced scanner image in " + path)
-		}
-		if filepath.Base(path) == "full.yml" {
-			changed, err = replaceVersionDefault(path, "main", tag)
-			if err != nil {
-				return err
-			}
-			if changed {
-				cl.Change("Updated version default in " + path)
-			} else {
-				cl.Fail("No version default changes in " + path)
-			}
-		}
-		return nil
-	})
+	clean, err := i.GitIsClean("devguard-ci-component")
 	if err != nil {
 		return err
 	}
+	if !clean {
+		return fmt.Errorf("working directory devguard-ci-component is not clean")
+	}
+
+	versionsFile := filepath.Join("devguard-ci-component", "src", "container-image-versions.ts")
+	scannerOld := `"ghcr.io/l3montree-dev/devguard/scanner:main"`
+	scannerNew := `"ghcr.io/l3montree-dev/devguard/scanner:` + scannerTag + `"`
+
+	changed, err := i.ReplaceInFile(versionsFile, scannerOld, scannerNew)
+	if err != nil {
+		return fmt.Errorf("update container-image-versions.ts: %w", err)
+	}
+
+	cl := &i.Changelog{}
+	if changed {
+		cl.Change(fmt.Sprintf("Pinned DEVGUARD_SCANNER to %s in container-image-versions.ts", scannerTag))
+	} else {
+		cl.Fail("DEVGUARD_SCANNER entry not found in container-image-versions.ts — verify the file")
+	}
+
+	// Regenerate all templates from the TypeScript source.
+	fmt.Println("Regenerating CI component templates...")
+	generateCmd := exec.Command("bun", "run", "generate")
+	generateCmd.Dir = "devguard-ci-component"
+	generateCmd.Stdout = os.Stdout
+	generateCmd.Stderr = os.Stderr
+	if err := generateCmd.Run(); err != nil {
+		return fmt.Errorf("bun run generate failed: %w", err)
+	}
+	cl.Change("Regenerated CI component templates from TypeScript source")
 
 	cl.PrintSummary("CHANGE SUMMARY - READY FOR APPROVAL")
 	if cl.HasErrors() {
@@ -97,10 +103,10 @@ func runReleaseCI(_ *cobra.Command, args []string) error {
 	if err := i.GitAdd("devguard-ci-component", "."); err != nil {
 		return err
 	}
-	if err := i.GitCommit("devguard-ci-component", "chore: updates devguard scanner to "+tag); err != nil {
+	if err := i.GitCommit("devguard-ci-component", "chore: pin devguard scanner to "+scannerTag); err != nil {
 		return err
 	}
-	cl.Change("Committed changes in devguard-ci-component")
+	cl.Change("Committed pinned scanner version")
 
 	if err := i.GitPush("devguard-ci-component"); err != nil {
 		return err
@@ -109,47 +115,36 @@ func runReleaseCI(_ *cobra.Command, args []string) error {
 
 	if err := i.GitTagSigned("devguard-ci-component", tag); err != nil {
 		cl.Fail("Failed to tag devguard-ci-component: " + err.Error())
-	} else {
-		i.GitPushTags("devguard-ci-component")
-		cl.Change("Tagged devguard-ci-component with " + tag)
+		cl.PrintSummary("FINAL SUMMARY")
+		return fmt.Errorf("completed with errors")
+	}
+	i.GitPushTags("devguard-ci-component")
+	cl.Change("Tagged devguard-ci-component with " + tag + " and pushed")
+
+	// Revert scanner back to main in the source and regenerate.
+	_, err = i.ReplaceInFile(versionsFile, scannerNew, scannerOld)
+	if err != nil {
+		return fmt.Errorf("revert container-image-versions.ts: %w", err)
 	}
 
-	err = filepath.WalkDir("devguard-ci-component", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".yml") {
-			return err
-		}
-		changed, err := i.ReplaceInFile(path, scannerNew, scannerOld)
-		if err != nil {
-			return err
-		}
-		if changed {
-			cl.Change("Reverted scanner image in " + path)
-		}
-		if filepath.Base(path) == "full.yml" {
-			changed, err = replaceVersionDefault(path, tag, "main")
-			if err != nil {
-				return err
-			}
-			if changed {
-				cl.Change("Reverted version default in " + path)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
+	revertCmd := exec.Command("bun", "run", "generate")
+	revertCmd.Dir = "devguard-ci-component"
+	revertCmd.Stdout = os.Stdout
+	revertCmd.Stderr = os.Stderr
+	if err := revertCmd.Run(); err != nil {
+		return fmt.Errorf("bun run generate (revert) failed: %w", err)
 	}
 
 	if err := i.GitAdd("devguard-ci-component", "."); err != nil {
 		return err
 	}
-	if err := i.GitCommit("devguard-ci-component", "chore: using main devguard scanner"); err != nil {
+	if err := i.GitCommit("devguard-ci-component", "chore: revert scanner to main"); err != nil {
 		return err
 	}
 	if err := i.GitPush("devguard-ci-component"); err != nil {
 		return err
 	}
-	cl.Change("Committed and pushed revert in devguard-ci-component")
+	cl.Change("Reverted scanner to main and pushed")
 
 	cl.PrintSummary("FINAL SUMMARY")
 	if cl.HasErrors() {

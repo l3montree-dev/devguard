@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -23,11 +24,14 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	minor := i.MinorVersion(tag)
 
 	required := []string{
 		"devguard",
+		"devguard-web",
 		"devguard/docker-compose-try-it.yaml",
 		"devguard-helm-chart/Chart.yaml",
+		"devguard-helm-chart/values.yaml",
 	}
 	for _, path := range required {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -35,23 +39,49 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := i.GitCheckoutMain("devguard"); err != nil {
+	if err := i.CheckChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag); err != nil {
 		return err
 	}
-	clean, err := i.GitIsClean("devguard")
+
+	// Require at least one devguard and devguard-web release with the same minor.
+	apiTag, err := i.GitLatestTagWithMinor("devguard", minor)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not detect latest devguard tag for minor %s: %w", minor, err)
 	}
-	if !clean {
-		return fmt.Errorf("working directory devguard is not clean")
+	if apiTag == "" {
+		return fmt.Errorf("no devguard release found with minor version %s — run 'release devguard' first", minor)
+	}
+
+	webTag, err := i.GitLatestTagWithMinor("devguard-web", minor)
+	if err != nil {
+		return fmt.Errorf("could not detect latest devguard-web tag for minor %s: %w", minor, err)
+	}
+	if webTag == "" {
+		return fmt.Errorf("no devguard-web release found with minor version %s — run 'release web' first", minor)
+	}
+
+	fmt.Printf("✓ devguard latest tag for minor %s: %s\n", minor, apiTag)
+	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
+
+	for _, d := range []string{"devguard", "devguard-helm-chart"} {
+		if err := i.GitCheckoutMain(d); err != nil {
+			return fmt.Errorf("checkout main in %s: %w", d, err)
+		}
+		clean, err := i.GitIsClean(d)
+		if err != nil {
+			return err
+		}
+		if !clean {
+			return fmt.Errorf("working directory %s is not clean", d)
+		}
 	}
 
 	cl := &i.Changelog{}
 
-	if err := updateDockerCompose(tag, cl); err != nil {
+	if err := updateDockerCompose(apiTag, webTag, cl); err != nil {
 		return err
 	}
-	if err := updateHelmChart(tag, semver, cl); err != nil {
+	if err := updateHelmChart(tag, semver, apiTag, webTag, cl); err != nil {
 		return err
 	}
 
@@ -68,7 +98,7 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	if err := i.GitAdd("devguard", "docker-compose-try-it.yaml"); err != nil {
 		return err
 	}
-	if err := i.GitCommit("devguard", "chore: update docker-compose-try-it.yaml to "+tag); err != nil {
+	if err := i.GitCommit("devguard", fmt.Sprintf("chore: update docker-compose-try-it.yaml (api=%s web=%s)", apiTag, webTag)); err != nil {
 		return err
 	}
 	if err := i.GitPush("devguard"); err != nil {
@@ -76,8 +106,10 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	}
 	cl.Change("Committed and pushed docker-compose-try-it.yaml")
 
-	helmMsg := fmt.Sprintf("chore: update Helm chart to %s\n\n- Updated devguard image to %s\n- Updated devguard-web image to %s\n- Updated devguard-postgresql image to %s\n- Updated Helm chart version to %s, appVersion to %s",
-		tag, tag, tag, tag, semver, tag)
+	helmMsg := fmt.Sprintf(
+		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- Helm chart version: %s, appVersion: %s",
+		tag, apiTag, webTag, semver, tag,
+	)
 	if err := i.GitAdd("devguard-helm-chart", "."); err != nil {
 		return err
 	}
@@ -104,27 +136,30 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func updateDockerCompose(tag string, cl *i.Changelog) error {
+func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) error {
 	path := "devguard/docker-compose-try-it.yaml"
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	images := []string{
-		"ghcr.io/l3montree-dev/devguard:",
-		"ghcr.io/l3montree-dev/devguard-web:",
-		"ghcr.io/l3montree-dev/devguard/postgresql:",
+	// Replace each image prefix independently so api and web get different tags.
+	updated := string(data)
+	type replacement struct {
+		re  *regexp.Regexp
+		tag string
 	}
-	imageTagRe := regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard(?:-web|/postgresql)?:)[^\s"]+`)
-	updated := imageTagRe.ReplaceAllStringFunc(string(data), func(m string) string {
-		for _, prefix := range images {
-			if strings.HasPrefix(m, prefix) {
-				return prefix + tag
-			}
-		}
-		return m
-	})
+	replacements := []replacement{
+		{regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard-web:)[^\s"]+`), webTag},
+		{regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard/postgresql:)[^\s"]+`), apiTag},
+		{regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard:)[^\s"]+`), apiTag},
+	}
+	for _, r := range replacements {
+		updated = r.re.ReplaceAllStringFunc(updated, func(m string) string {
+			idx := strings.LastIndex(m, ":")
+			return m[:idx+1] + r.tag
+		})
+	}
 
 	if updated == string(data) {
 		cl.Fail("No changes in docker-compose-try-it.yaml — verify image patterns")
@@ -133,11 +168,11 @@ func updateDockerCompose(tag string, cl *i.Changelog) error {
 	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
 		return err
 	}
-	cl.Change("Updated docker-compose-try-it.yaml to " + tag)
+	cl.Change(fmt.Sprintf("Updated docker-compose-try-it.yaml (api=%s, web=%s)", apiTag, webTag))
 	return nil
 }
 
-func updateHelmChart(tag, semver string, cl *i.Changelog) error {
+func updateHelmChart(tag, semver, apiTag, webTag string, cl *i.Changelog) error {
 	chartPath := "devguard-helm-chart/Chart.yaml"
 	valuesPath := "devguard-helm-chart/values.yaml"
 
@@ -155,20 +190,31 @@ func updateHelmChart(tag, semver string, cl *i.Changelog) error {
 	}
 	cl.Change(fmt.Sprintf("Updated Chart.yaml: version=%s appVersion=%s", semver, tag))
 
-	inDevguardImage := false
+	// Track the current repository so each image gets the right tag.
+	currentRepo := ""
 	_, err = i.ReplaceLineInFile(valuesPath, func(line string) string {
 		if strings.Contains(line, "repository:") {
-			inDevguardImage = strings.Contains(line, "ghcr.io/l3montree-dev/")
+			if strings.Contains(line, "ghcr.io/l3montree-dev/") {
+				currentRepo = line
+			} else {
+				currentRepo = ""
+			}
 		}
-		if inDevguardImage && regexp.MustCompile(`^\s+tag:\s`).MatchString(line) {
-			return regexp.MustCompile(`tag:.*`).ReplaceAllString(line, "tag: "+tag)
+		if currentRepo != "" && regexp.MustCompile(`^\s+tag:\s`).MatchString(line) {
+			var t string
+			if strings.Contains(currentRepo, "devguard-web") {
+				t = webTag
+			} else {
+				t = apiTag
+			}
+			return regexp.MustCompile(`tag:.*`).ReplaceAllString(line, "tag: "+t)
 		}
 		return line
 	})
 	if err != nil {
 		return err
 	}
-	cl.Change("Updated values.yaml image tags to " + tag)
+	cl.Change(fmt.Sprintf("Updated values.yaml image tags (api=%s, web=%s)", apiTag, webTag))
 
 	rawURLRe := regexp.MustCompile(`gitlab\.com/l3montree/devguard/-/raw/[^"]+`)
 	data, err := os.ReadFile(valuesPath)

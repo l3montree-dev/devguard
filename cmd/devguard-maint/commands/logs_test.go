@@ -76,7 +76,9 @@ not a valid line
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.log")
-	os.WriteFile(path, []byte(content), 0o644)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	entries, err := readLogEntries(path)
 	if err != nil {

@@ -12,7 +12,9 @@ import (
 func TestUpdateDockerCompose(t *testing.T) {
 	dir := t.TempDir()
 	devguardDir := filepath.Join(dir, "devguard")
-	os.MkdirAll(devguardDir, 0o755)
+	if err := os.MkdirAll(devguardDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	compose := `services:
   api:
@@ -25,15 +27,22 @@ func TestUpdateDockerCompose(t *testing.T) {
     image: some-other-image:latest
 `
 	composeFile := filepath.Join(devguardDir, "docker-compose-try-it.yaml")
-	os.WriteFile(composeFile, []byte(compose), 0o644)
+	if err := os.WriteFile(composeFile, []byte(compose), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// updateDockerCompose uses relative paths — run from temp dir
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(orig) }()
 
 	cl := &i.Changelog{}
-	if err := updateDockerCompose("v2.0.0", cl); err != nil {
+	if err := updateDockerCompose("v2.0.1", "v2.0.3", cl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -41,9 +50,9 @@ func TestUpdateDockerCompose(t *testing.T) {
 	content := string(got)
 
 	for _, want := range []string{
-		"ghcr.io/l3montree-dev/devguard:v2.0.0",
-		"ghcr.io/l3montree-dev/devguard-web:v2.0.0",
-		"ghcr.io/l3montree-dev/devguard/postgresql:v2.0.0",
+		"ghcr.io/l3montree-dev/devguard:v2.0.1",
+		"ghcr.io/l3montree-dev/devguard/postgresql:v2.0.1",
+		"ghcr.io/l3montree-dev/devguard-web:v2.0.3",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("missing %q in output:\n%s", want, content)
@@ -61,7 +70,9 @@ func TestUpdateDockerCompose(t *testing.T) {
 func TestUpdateHelmChartYAML(t *testing.T) {
 	dir := t.TempDir()
 	helmDir := filepath.Join(dir, "devguard-helm-chart")
-	os.MkdirAll(helmDir, 0o755)
+	if err := os.MkdirAll(helmDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	chart := `apiVersion: v2
 name: devguard
@@ -81,15 +92,24 @@ exporter:
     tag: latest
 ciComponentBase: "https://gitlab.com/l3montree/devguard/-/raw/v1.0.0/components"
 `
-	os.WriteFile(filepath.Join(helmDir, "Chart.yaml"), []byte(chart), 0o644)
-	os.WriteFile(filepath.Join(helmDir, "values.yaml"), []byte(values), 0o644)
+	if err := os.WriteFile(filepath.Join(helmDir, "Chart.yaml"), []byte(chart), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(helmDir, "values.yaml"), []byte(values), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
+	orig2, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(orig2) }()
 
 	cl := &i.Changelog{}
-	if err := updateHelmChart("v2.0.0", "2.0.0", cl); err != nil {
+	if err := updateHelmChart("v2.0.0", "2.0.0", "v2.0.1", "v2.0.3", cl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,11 +124,17 @@ ciComponentBase: "https://gitlab.com/l3montree/devguard/-/raw/v1.0.0/components"
 	gotValues, _ := os.ReadFile(filepath.Join(helmDir, "values.yaml"))
 	content := string(gotValues)
 
-	if strings.Contains(content, "tag: v1.0.0") {
-		t.Errorf("old devguard tags still present in values.yaml:\n%s", content)
+	// api image should get apiTag
+	if !strings.Contains(content, "tag: v2.0.1") {
+		t.Errorf("api tag v2.0.1 missing in values.yaml:\n%s", content)
 	}
-	if !strings.Contains(content, "tag: v2.0.0") {
-		t.Errorf("new devguard tag missing in values.yaml:\n%s", content)
+	// web image should get webTag
+	if !strings.Contains(content, "tag: v2.0.3") {
+		t.Errorf("web tag v2.0.3 missing in values.yaml:\n%s", content)
+	}
+	// old tags must be gone
+	if strings.Contains(content, "tag: v1.0.0") {
+		t.Errorf("old tag v1.0.0 still present in values.yaml:\n%s", content)
 	}
 	// third-party image tag must be untouched
 	if !strings.Contains(content, "tag: latest") {

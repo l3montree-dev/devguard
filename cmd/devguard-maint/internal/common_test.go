@@ -37,7 +37,9 @@ func TestValidateTag(t *testing.T) {
 func TestReplaceInFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
-	os.WriteFile(path, []byte("hello world\nhello again\n"), 0o644)
+	if err := os.WriteFile(path, []byte("hello world\nhello again\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	changed, err := ReplaceInFile(path, "hello", "goodbye")
 	if err != nil {
@@ -56,7 +58,9 @@ func TestReplaceInFile_NoMatch(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
 	original := "nothing to change here\n"
-	os.WriteFile(path, []byte(original), 0o644)
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	changed, err := ReplaceInFile(path, "nonexistent", "replacement")
 	if err != nil {
@@ -74,7 +78,9 @@ func TestReplaceInFile_NoMatch(t *testing.T) {
 func TestReplaceLineInFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
-	os.WriteFile(path, []byte("line one\nline two\nline three\n"), 0o644)
+	if err := os.WriteFile(path, []byte("line one\nline two\nline three\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	changed, err := ReplaceLineInFile(path, func(line string) string {
 		if line == "line two" {
