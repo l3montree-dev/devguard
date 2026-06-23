@@ -7,6 +7,7 @@ stages:
   - build
   - oci-image
   - attestation
+  - release
 
 
 .common: &common
@@ -48,3 +49,21 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
+
+create-gitlab-release:
+  stage: release
+  image: alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - |
+      VERSION=${CI_COMMIT_TAG#v}
+      MINOR=$(echo "$VERSION" | cut -d. -f1-2)
+      DESCRIPTION="# DevGuard $CI_COMMIT_TAG\n\nSecure software supply chain scanning and security analysis platform.\n\n## Container Images\n\n\`\`\`bash\ndocker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG\ndocker pull $CI_REGISTRY_IMAGE/scanner:$CI_COMMIT_TAG\n\`\`\`\n\n## Versioning\n\nAll DevGuard components share the same **minor version**. Any \`v${MINOR}.*\` release of one component is compatible with any \`v${MINOR}.*\` release of another. Patch versions are released independently per component.\n\nSee [VERSIONING.md](https://github.com/l3montree-dev/devguard/blob/main/VERSIONING.md) for the full policy.\n\n---\n\n🐛 Issues: https://github.com/l3montree-dev/devguard/issues\n💬 Community: https://github.com/l3montree-dev/devguard/discussions"
+      curl --fail-with-body --request POST \
+        --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+        --header "Content-Type: application/json" \
+        --data "{\"name\":\"DevGuard $CI_COMMIT_TAG\",\"tag_name\":\"$CI_COMMIT_TAG\",\"ref\":\"$CI_COMMIT_SHA\",\"description\":\"$DESCRIPTION\"}" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
+  rules:
+    - if: $CI_COMMIT_TAG

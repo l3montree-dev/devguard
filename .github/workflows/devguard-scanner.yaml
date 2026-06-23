@@ -176,10 +176,14 @@ jobs:
         id: tag
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
             echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+            MINOR=$(echo "${TAG#v}" | cut -d. -f1-2)
+            echo "minor=${MINOR}" >> $GITHUB_OUTPUT
           else
             echo "tag=test-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "minor=0.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Build cross-platform binaries
@@ -262,7 +266,7 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: "DevGuard Release ${{ steps.tag.outputs.tag }}"
           draft: false
-          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') }}
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') || contains(steps.tag.outputs.tag, '-rc') || contains(steps.tag.outputs.tag, '-alpha') || contains(steps.tag.outputs.tag, '-beta') }}
           body: |
             # 🚀 DevGuard Release ${{ steps.tag.outputs.tag }}
 
@@ -272,7 +276,7 @@ jobs:
 
             # 🔍 DevGuard Scanner
 
-            The Scanner performs software supply chain analysis, SBOM generation, vulnerability detection, and security scanning.
+            The Scanner performs software supply chain analysis, SBOM generation, vulnerability detection, and security scanning. It communicates with a running devguard-api instance.
 
             ### 📱 Binaries
 
@@ -312,7 +316,7 @@ jobs:
 
             # 💻 DevGuard CLI
 
-            The CLI provides interaction capabilities with DevGuard.
+            The CLI provides interaction capabilities with DevGuard. It is used in conjuction with a running devguard-api server. Some tasks like generating an instance admin key can be done using the devguard-cli binary.
 
             ### 📱 Binaries
 
@@ -348,12 +352,7 @@ jobs:
             docker pull ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}
             ```
 
-            ### Available Images
-
-            | Component | Image |
-            |------------|--------|
-            | Platform Backend | `ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}` |
-            | Platform Frontend | `ghcr.io/l3montree-dev/devguard-web:${{ steps.tag.outputs.tag }}` |
+            > The frontend image (`devguard-web`) is released separately — see [devguard-web releases](https://github.com/l3montree-dev/devguard-web/releases) for the matching `v${{ steps.tag.outputs.minor }}.*` release.
 
             ---
 
@@ -374,6 +373,14 @@ jobs:
               oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard \
               --version ${{ env.TAG_NO_V }}
             ```
+
+            ---
+
+            ## Versioning
+
+            All DevGuard components (`devguard`, `devguard-web`, Helm chart) share the same **minor version**. Any `v${{ steps.tag.outputs.minor }}.*` release of one component is compatible with any `v${{ steps.tag.outputs.minor }}.*` release of another. Patch versions are released independently per component — you do not need to upgrade all components simultaneously as long as the minor version matches.
+
+            📖 See [VERSIONING.md](https://github.com/l3montree-dev/devguard/blob/main/VERSIONING.md) for the full policy.
 
             ---
 
