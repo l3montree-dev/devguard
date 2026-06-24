@@ -1,1 +1,0 @@
-ALTER TABLE cves DROP COLUMN euvd_exploit_add;
