@@ -34,6 +34,9 @@ include:
       nix_target_amd64: "devguard-amd64"
       nix_target_arm64: "devguard-arm64"
       arm64_runner_tag: "arm"
+    rules:
+      - if: $CI_COMMIT_BRANCH == "main"
+      - if: $CI_COMMIT_TAG
 
 # ── scanner-pipeline ──────────────────────────────────────────────────────────
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
@@ -44,6 +47,9 @@ include:
       nix_target_arm64: "devguard-scanner-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":scanner"
+    rules:
+      - if: $CI_COMMIT_BRANCH == "main"
+      - if: $CI_COMMIT_TAG
 
   # ── postgresql-pipeline ──────────────────────────────────────────────────────────
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
@@ -54,6 +60,9 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
+    rules:
+      - if: $CI_COMMIT_BRANCH == "main"
+      - if: $CI_COMMIT_TAG
 
 create-gitlab-release:
   stage: release
@@ -66,7 +75,7 @@ create-gitlab-release:
       MINOR=$(echo "$VERSION" | cut -d. -f1-2)
       DESCRIPTION="# DevGuard $CI_COMMIT_TAG\n\nSecure software supply chain scanning and security analysis platform.\n\n## Container Images\n\n\`\`\`bash\ndocker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG\ndocker pull $CI_REGISTRY_IMAGE/scanner:$CI_COMMIT_TAG\n\`\`\`\n\n## Versioning\n\nAll DevGuard components share the same **minor version**. Any \`v${MINOR}.*\` release of one component is compatible with any \`v${MINOR}.*\` release of another. Patch versions are released independently per component.\n\nSee [VERSIONING.md](https://github.com/l3montree-dev/devguard/blob/main/VERSIONING.md) for the full policy.\n\n📋 [CHANGELOG](https://github.com/l3montree-dev/devguard/blob/main/CHANGELOG.md) — what changed in this release.\n\n---\n\n🐛 Issues: https://github.com/l3montree-dev/devguard/issues\n💬 Community: https://github.com/l3montree-dev/devguard/discussions"
       curl --fail-with-body --request POST \
-        --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+        --header "JOB-TOKEN: $CI_JOB_TOKEN" \
         --header "Content-Type: application/json" \
         --data "{\"name\":\"DevGuard $CI_COMMIT_TAG\",\"tag_name\":\"$CI_COMMIT_TAG\",\"ref\":\"$CI_COMMIT_SHA\",\"description\":\"$DESCRIPTION\"}" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases"
