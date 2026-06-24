@@ -31,3 +31,31 @@ func (advisoryRepository *AdvisoryRepository) CreateName(ctx context.Context, tx
 	}
 	return nil
 }
+
+func (advisoryRepository *AdvisoryRepository) ReadName(ctx context.Context, tx *gorm.DB) ([]models.Advisory, error) {
+	advisory_names := []models.Advisory{}
+	db := advisoryRepository.db.WithContext(ctx)
+	if tx != nil {
+		db = tx
+	}
+	err := db.Raw(`SELECT * FROM advisories;`).Find(&advisory_names).Error
+	return advisory_names, err
+}
+
+func (advisoryRepository *AdvisoryRepository) UpdateName(ctx context.Context, tx *gorm.DB, id uuid.UUID, name string) error {
+	err := advisoryRepository.GetDB(ctx, tx).
+		Model(&models.Advisory{Model: models.Model{ID: id}}).
+		Update("advisory_name", name).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (advisoryRepository *AdvisoryRepository) DeleteName(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	err := advisoryRepository.GetDB(ctx, tx).Delete(&models.Advisory{Model: models.Model{ID: id}}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

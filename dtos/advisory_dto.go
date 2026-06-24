@@ -15,10 +15,13 @@
 
 package dtos
 
+import "github.com/google/uuid"
+
 type AdvisoryCreateName struct {
-	Name        string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required"`
 }
 
 type AdvisoryDTO struct {
-	Name		string `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }

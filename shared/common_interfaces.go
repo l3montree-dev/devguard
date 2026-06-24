@@ -763,10 +763,16 @@ type RBACProvider interface {
 
 type AdvisoryService interface {
 	CreateName(ctx context.Context, name string) error
+	ReadName(ctx context.Context) ([]models.Advisory, error)
+	UpdateName(ctx context.Context, id uuid.UUID, name string) error
+	DeleteName(ctx context.Context, id uuid.UUID) error
 }
 
 type AdvisoryRepository interface {
 	CreateName(ctx context.Context, tx DB, name string) error
+	ReadName(ctx context.Context, tx DB) ([]models.Advisory, error)
+	UpdateName(ctx context.Context, tx DB, id uuid.UUID, name string) error
+	DeleteName(ctx context.Context, tx DB, id uuid.UUID) error
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

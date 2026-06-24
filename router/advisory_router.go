@@ -31,8 +31,10 @@ func NewAdvisoryRouter(
 	advisoryController *controllers.AdvisoryController,
 ) AdvisoryRouter {
 	advisoryRouter := assetVersionGroup.Group.Group("/advisory")
-	advisoryRouter.POST("/submit/", advisoryController.CreateName)
-	//advisoryRouter.GET("/", advisoryController.ReadName)
+	advisoryRouter.POST("/", advisoryController.CreateName)
+	advisoryRouter.GET("/", advisoryController.ReadName)
+	advisoryRouter.PATCH("/:id/", advisoryController.UpdateName)
+	advisoryRouter.DELETE("/:id/", advisoryController.DeleteName)
 
 	return AdvisoryRouter{Group: advisoryRouter}
 }
