@@ -44,8 +44,7 @@ const (
 	TelemetryEndpoint = "https://umami.l3montree.com/api/send"
 	WebsiteID         = "19cc127d-774c-4fb0-981d-26d110074a14"
 	DefaultTimeout    = 30 * time.Second
-	UserAgent         = "DevguardTelemetry"
-	SchemaVersion     = 1
+	UserAgent         = "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 	TransparencyLog   = "sending anonymized telemetry data - nothing personal or critical is included. " +
 		"This helps us understand what DevGuard versions are used and which versions we should provide patches for. " +
 		"You can disable this by setting DEVGUARD_TELEMETRY_DISABLED=true."
