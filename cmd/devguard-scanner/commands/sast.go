@@ -60,6 +60,13 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	scannerCmd = exec.Command("semgrep", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	slog.Info("Starting sast scanning", "path", p, "resultPath", sarifFilePath)
 
+	// Semgrep writes state/logs to $HOME/.semgrep; in restricted CI environments (e.g. GitHub
+	// Actions) the real HOME may not be writable. Override to a temp dir to avoid PermissionError.
+	semgrepHome := path.Join(os.TempDir(), "semgrep-home")
+	if err := os.MkdirAll(semgrepHome, 0755); err == nil {
+		scannerCmd.Env = append(os.Environ(), "HOME="+semgrepHome)
+	}
+
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
