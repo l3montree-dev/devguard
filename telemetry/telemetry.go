@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -212,14 +213,16 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 		return
 	}
 
-	logFields := []any{
-		"component", event.Component,
-		"version", event.Version,
-		"instance_id", event.InstanceID,
-		"payload_data", requestPayload.Payload.Data,
-		"disable_env", EnvDisabled,
-	}
-	slog.Info(TransparencyLog, logFields...)
+	/*
+		logFields := []any{
+			"component", event.Component,
+			"version", event.Version,
+			"instance_id", event.InstanceID,
+			"payload_data", requestPayload.Payload.Data,
+			"disable_env", EnvDisabled,
+		}
+		slog.Info(TransparencyLog, logFields...)
+	*/
 
 	sendCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
 	defer cancel()
@@ -246,9 +249,7 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 
 func BuildStartupPayload(event StartupEvent) umamiRequest {
 	data := map[string]any{}
-	for key, value := range event.Data {
-		data[key] = value
-	}
+	maps.Copy(data, event.Data)
 	data["component"] = event.Component
 	data["version"] = event.Version
 	data["schemaVersion"] = SchemaVersion

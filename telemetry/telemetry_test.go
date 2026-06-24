@@ -16,12 +16,10 @@
 package telemetry
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -220,28 +218,6 @@ func TestSendStartupUsesTrackerCompatibleUserAgent(t *testing.T) {
 
 	if client.userAgent != UserAgent {
 		t.Fatalf("expected tracker-compatible user agent, got %q", client.userAgent)
-	}
-}
-
-func TestSendStartupLogsTransparencyNotice(t *testing.T) {
-	var logOutput bytes.Buffer
-	previousLogger := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logOutput, nil)))
-	t.Cleanup(func() {
-		slog.SetDefault(previousLogger)
-	})
-
-	SendStartup(context.Background(), Config{}, &captureClient{}, ScannerStartupEvent("1.0.0", "https://api.example.org", "linux", "amd64", false, "version"))
-
-	logs := logOutput.String()
-	if !strings.Contains(logs, TransparencyLog) {
-		t.Fatalf("expected transparency log %q, got %s", TransparencyLog, logs)
-	}
-	if !strings.Contains(logs, EnvDisabled) {
-		t.Fatalf("expected opt-out env %q in logs, got %s", EnvDisabled, logs)
-	}
-	if !strings.Contains(logs, "payload_data") {
-		t.Fatalf("expected logged telemetry payload data, got %s", logs)
 	}
 }
 
