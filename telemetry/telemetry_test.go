@@ -174,7 +174,7 @@ func TestScannerStartupPayloadDoesNotIncludeSensitiveRuntimeInputs(t *testing.T)
 }
 
 func TestConfigFromEnvDisabledValues(t *testing.T) {
-	for _, value := range []string{"true", "TRUE", "1", "yes", "on"} {
+	for _, value := range []string{"true", "TRUE", "True", "1", "t", "T"} {
 		t.Run(value, func(t *testing.T) {
 			t.Setenv(EnvDisabled, value)
 

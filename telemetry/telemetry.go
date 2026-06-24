@@ -27,6 +27,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,7 +41,7 @@ const (
 
 	EventName         = "devguard-instance-start"
 	TelemetryEndpoint = "https://umami.l3montree.com/api/send"
-	WebsiteID         = "2ab9fe36-42ec-485d-a592-b0f6e78dd1ad"
+	WebsiteID         = "19cc127d-774c-4fb0-981d-26d110074a14"
 	DefaultTimeout    = 30 * time.Second
 	UserAgent         = "DevguardTelemetry"
 	SchemaVersion     = 1
@@ -100,8 +101,9 @@ type umamiPayload struct {
 }
 
 func ConfigFromEnv() Config {
+	disabled, _ := strconv.ParseBool(os.Getenv(EnvDisabled))
 	return Config{
-		Disabled: isTruthyEnv(os.Getenv(EnvDisabled)),
+		Disabled: disabled,
 	}
 }
 
@@ -279,15 +281,6 @@ func HashParts(parts ...string) string {
 		hash.Write([]byte{0})
 	}
 	return hex.EncodeToString(hash.Sum(nil))[:instanceIDLength]
-}
-
-func isTruthyEnv(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "1", "true", "yes", "on":
-		return true
-	default:
-		return false
-	}
 }
 
 func RuntimeVersion(values ...string) string {
