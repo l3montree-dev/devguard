@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
@@ -117,6 +118,15 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 		}
 		if err := InsertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
 			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
+			return
+		}
+		euvdRelationships, err := readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read euvd_relationships.gob", "err", err)
+			return
+		}
+		if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+			slog.Error("show-diff: could not insert euvd cve_relationships into staging", "err", err)
 			return
 		}
 		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {

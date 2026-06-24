@@ -35,17 +35,17 @@ func NewEUVDService(cveRepository shared.CveRepository, cveRelationshipRepositor
 	}
 }
 
-func (service euvdService) importEUVDAliases(ctx context.Context, tx pgx.Tx) error {
+func (service euvdService) importEUVDAliases(ctx context.Context, tx pgx.Tx) ([]models.CVERelationship, error) {
 	aliasCSV, err := service.fetchEUVDAliases()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	relationships, err := service.convertAliasesToRelationships(aliasCSV)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return service.writeCVERelationshipsToTable(ctx, tx, relationships)
+	return relationships, service.writeCVERelationshipsToTable(ctx, tx, relationships)
 }
 
 func (service euvdService) fetchEUVDAliases() ([][]string, error) {

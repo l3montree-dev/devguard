@@ -1062,13 +1062,27 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		slog.Info("successfully cleaned up orphan cves", "took", time.Since(start))
 	}
 
+	// drop all orphaned euvd cve relationships as well
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
-	DELETE FROM 
+	DELETE FROM cve_relationships cr
+	WHERE cr.relationship_type <> 'euvd'
+	AND NOT EXISTS (
+		SELECT FROM cves WHERE cves.cve = cr.source_cve
+	);`)
+	if err != nil {
+		slog.Error("could not clean up dangling cve_relationships, continuing...", "error", err)
+	} else {
+		slog.Info("successfully cleaned up dangling cve_relationships", "took", time.Since(start))
+	}
+
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+	DELETE FROM
 		affected_components
-	WHERE NOT EXISTS 
+	WHERE NOT EXISTS
 		(
-			SELECT FROM cve_affected_component 
+			SELECT FROM cve_affected_component
 			WHERE affected_component_id = id
 		)
 	;`)

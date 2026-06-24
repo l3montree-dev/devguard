@@ -151,7 +151,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	// then we can add the additional data sources
 	// load the EUVD aliases into the cve_relationship table
-	err = s.euvdService.importEUVDAliases(ctx, tx)
+	euvdRelationships, err := s.euvdService.importEUVDAliases(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
 	}
@@ -164,6 +164,11 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		return fmt.Errorf("could not write OSV gob: %w", err)
 	}
 	slog.Info("wrote osv.gob", "entries", len(osvEntries))
+
+	if err := writeGobFileItems(euvdRelationships, "euvd_relationships.gob"); err != nil {
+		return fmt.Errorf("could not write EUVD gob: %w", err)
+	}
+	slog.Info("wrote euvd relationships data", "entries", len(euvdRelationships))
 
 	// Fetch the remaining sources in parallel (network only — no DB writes yet).
 	var (
@@ -325,6 +330,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	archiveFiles := []string{
 		"osv.gob",
+		"euvd_relationships.gob",
 		"epss.gob",
 		"cisakev.gob",
 		"exploits.gob",
@@ -492,6 +498,11 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 		kevEntries []KEVEntry
 	)
 
+	euvdRelationships, err := readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+	if err != nil {
+		return fmt.Errorf("could not read euvd relationships gob: %w", err)
+	}
+
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
@@ -545,7 +556,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan)
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -574,10 +585,11 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	group, _ := errgroup.WithContext(ctx)
 
 	var (
-		osvEntries []OSVEntry
-		epssData   map[string]dtos.EPSS
-		kevEntries []KEVEntry
-		gobExploit []GobExploit
+		osvEntries        []OSVEntry
+		euvdRelationships []models.CVERelationship
+		epssData          map[string]dtos.EPSS
+		kevEntries        []KEVEntry
+		gobExploit        []GobExploit
 	)
 
 	group.Go(func() error {
@@ -588,6 +600,16 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "entries", len(osvEntries), "took", time.Since(t))
+		return nil
+	})
+	group.Go(func() error {
+		t := time.Now()
+		var err error
+		euvdRelationships, err = readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+		if err != nil {
+			return fmt.Errorf("could not read EUVD gob: %w", err)
+		}
+		slog.Info("decoded euvd_relationships.gob", "entries", len(euvdRelationships), "took", time.Since(t))
 		return nil
 	})
 	group.Go(func() error {
@@ -625,7 +647,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	malRows := gobOSVToMalTransformer(osvEntries)
 	exploits := gobExploitFilterTransformer(gobExploit)
 
-	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries); err != nil {
+	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships); err != nil {
 		return err
 	}
 	return nil
@@ -640,7 +662,7 @@ func heapMB() uint64 {
 	return m.HeapAlloc / 1024 / 1024
 }
 
-func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry) error {
+func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship) error {
 	slog.Info("start writing rows to database", "heap_alloc_mb", heapMB())
 	start := time.Now()
 
@@ -667,6 +689,12 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 		return fmt.Errorf("could not copy cve relationships to staging: %w", err)
 	}
 	slog.Info("copied cve_relationships to staging", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
+	if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+		return fmt.Errorf("could not copy euvd cve relationships to staging: %w", err)
+	}
+	slog.Info("copied euvd cve_relationships to staging", "count", len(euvdRelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents, "affected_components_stage"); err != nil {
@@ -939,7 +967,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 // streamToDatabase drains all three input channels in a single goroutine, writes all rows
 // into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
 // flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows) error {
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1044,6 +1072,11 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			malAffectedComponentCount += len(malPkg.comps)
 		}
 	}
+
+	if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+		return fmt.Errorf("could not insert euvd cve relationships: %w", err)
+	}
+	relationshipCount += len(euvdRelationships)
 
 	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
