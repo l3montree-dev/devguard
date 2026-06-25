@@ -24,8 +24,8 @@ func NewAdvisoryRepository(db *gorm.DB) *AdvisoryRepository {
 
 var _ shared.AdvisoryRepository = (*AdvisoryRepository)(nil)
 
-func (advisoryRepository *AdvisoryRepository) CreateName(ctx context.Context, tx *gorm.DB, name string) error {
-	err := advisoryRepository.GetDB(ctx, tx).Create(&models.Advisory{AdvisoryName: name}).Error
+func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *gorm.DB, advisory *models.Advisory) error {
+	err := advisoryRepository.GetDB(ctx, tx).Create(advisory).Error
 	if err != nil {
 		return err
 	}
@@ -33,13 +33,13 @@ func (advisoryRepository *AdvisoryRepository) CreateName(ctx context.Context, tx
 }
 
 func (advisoryRepository *AdvisoryRepository) ReadName(ctx context.Context, tx *gorm.DB) ([]models.Advisory, error) {
-	advisory_names := []models.Advisory{}
+	advisoryNames := []models.Advisory{}
 	db := advisoryRepository.db.WithContext(ctx)
 	if tx != nil {
 		db = tx
 	}
-	err := db.Raw(`SELECT * FROM advisories;`).Find(&advisory_names).Error
-	return advisory_names, err
+	err := db.Raw(`SELECT * FROM advisories;`).Find(&advisoryNames).Error
+	return advisoryNames, err
 }
 
 func (advisoryRepository *AdvisoryRepository) UpdateName(ctx context.Context, tx *gorm.DB, id uuid.UUID, name string) error {

@@ -20,16 +20,16 @@ func NewAdvisoryService(advisoryRepository shared.AdvisoryRepository) *AdvisoryS
 
 var _ shared.AdvisoryService = (*AdvisoryService)(nil)
 
-func (s *AdvisoryService) CreateName(ctx context.Context, name string) error {
-	return s.advisoryRepository.CreateName(ctx, nil, name)
+func (s *AdvisoryService) Create(ctx context.Context, advisory *models.Advisory) error {
+	return s.advisoryRepository.Create(ctx, nil, advisory)
 }
 
 func (s *AdvisoryService) ReadName(ctx context.Context) ([]models.Advisory, error) {
-	advisory_names, err := s.advisoryRepository.ReadName(ctx, nil)
+	advisoryNames, err := s.advisoryRepository.ReadName(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return advisory_names, nil
+	return advisoryNames, nil
 }
 
 func (s *AdvisoryService) UpdateName(ctx context.Context, id uuid.UUID, name string) error {

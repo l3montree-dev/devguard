@@ -17,11 +17,34 @@ package dtos
 
 import "github.com/google/uuid"
 
-type AdvisoryCreateName struct {
-	Name string `json:"name" validate:"required"`
+type AdvisoryCreate struct {
+	Title            string            `json:"title" validate:"required"`
+	Description      string            `json:"description" validate:"required"`
+	AffectedPackages []AffectedPackage `json:"affectedPackages"`
+	Severity         string            `json:"severity"`
+	VectorString     string            `json:"vectorString"`
+}
+type AdvisoryUpdate struct {
+	Title            *string           `json:"title"`
+	Description      *string           `json:"description"`
+	AffectedPackages []AffectedPackage `json:"affectedPackages"`
+	Severity         *string           `json:"severity"`
+	VectorString     *string           `json:"vectorString"`
 }
 
 type AdvisoryDTO struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	ID               uuid.UUID         `json:"id"`
+	Title            string            `json:"title" validate:"required"`
+	Description      string            `json:"description" validate:"required"`
+	AffectedPackages []AffectedPackage `json:"affectedPackages"`
+	Severity         string            `json:"severity"`
+	VectorString     string            `json:"vectorString"`
+}
+
+type AffectedPackage struct {
+	ID               uuid.UUID `json:"id,omitempty"`
+	Ecosystem        string    `json:"ecosystem"`
+	PackageName      string    `json:"packageName"`
+	SemverIntroduced *string   `json:"semverStart"`
+	SemverFixed      *string   `json:"semverEnd"`
 }

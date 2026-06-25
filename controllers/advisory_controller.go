@@ -16,9 +16,9 @@
 package controllers
 
 import (
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,66 +32,66 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 	}
 }
 
-func (controller *AdvisoryController) CreateName(ctx shared.Context) error {
-	var req dtos.AdvisoryCreateName
+func (controller *AdvisoryController) Create(ctx shared.Context) error {
+	var req dtos.AdvisoryCreate
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	newName := req.Name
+	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)
 
-	err := controller.advisoryService.CreateName(ctx.Request().Context(), newName)
+	err := controller.advisoryService.Create(ctx.Request().Context(), &newAdvisory)
 
 	if err != nil {
 		return echo.NewHTTPError(409, "could not set name").WithInternal(err)
 	}
 
-	return ctx.JSON(200, newName)
-}
-
-func (controller *AdvisoryController) ReadName(ctx shared.Context) error {
-	advisory_names, err := controller.advisoryService.ReadName(ctx.Request().Context())
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get any name").WithInternal(err)
-	}
-	return ctx.JSON(200, advisory_names)
-}
-
-func (controller *AdvisoryController) UpdateName(ctx shared.Context) error {
-	var req dtos.AdvisoryCreateName // Change to own struct
-	if err := ctx.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
-	}
-
-	updateName := req.Name
-
-	advisoryID := ctx.Param("id")
-	parsedID, err := uuid.Parse(advisoryID)
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid uuid provided")
-	}
-
-	err = controller.advisoryService.UpdateName(ctx.Request().Context(), parsedID, updateName)
-
-	if err != nil {
-		return echo.NewHTTPError(409, "could not update name").WithInternal(err)
-	}
-
-	return ctx.JSON(200, updateName)
-}
-
-func (controller *AdvisoryController) DeleteName(ctx shared.Context) error {
-	advisoryID := ctx.Param("id")
-	parsedID, err := uuid.Parse(advisoryID)
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid uuid provided")
-	}
-
-	err = controller.advisoryService.DeleteName(ctx.Request().Context(), parsedID)
-
-	if err != nil {
-		return echo.NewHTTPError(409, "could not remove name").WithInternal(err)
-	}
-
 	return ctx.NoContent(200)
 }
+
+// func (controller *advisoryController) ReadName(ctx shared.Context) error {
+// 	advisoryNames, err := controller.advisoryService.ReadName(ctx.Request().Context())
+// 	if err != nil {
+// 		return echo.NewHTTPError(500, "could not get any name").WithInternal(err)
+// 	}
+// 	return ctx.JSON(200, advisoryNames)
+// }
+
+// func (controller *advisoryController) UpdateName(ctx shared.Context) error {
+// 	var req dtos.AdvisoryUpdate // Change to own struct
+// 	if err := ctx.Bind(&req); err != nil {
+// 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+// 	}
+
+// 	updateName := req.Name
+
+// 	advisoryID := ctx.Param("id")
+// 	parsedID, err := uuid.Parse(advisoryID)
+// 	if err != nil {
+// 		return echo.NewHTTPError(400, "invalid uuid provided")
+// 	}
+
+// 	err = controller.advisoryService.UpdateName(ctx.Request().Context(), parsedID, updateName)
+
+// 	if err != nil {
+// 		return echo.NewHTTPError(409, "could not update name").WithInternal(err)
+// 	}
+
+// 	return ctx.JSON(200, updateName)
+// }
+
+// func (controller *advisoryController) DeleteName(ctx shared.Context) error {
+// 	advisoryID := ctx.Param("id")
+// 	parsedID, err := uuid.Parse(advisoryID)
+// 	if err != nil {
+// 		return echo.NewHTTPError(400, "invalid uuid provided")
+// 	}
+
+// 	err = controller.advisoryService.DeleteName(ctx.Request().Context(), parsedID)
+
+// 	if err != nil {
+// 		return echo.NewHTTPError(409, "could not remove name").WithInternal(err)
+// 	}
+
+// 	return ctx.NoContent(200)
+// }
