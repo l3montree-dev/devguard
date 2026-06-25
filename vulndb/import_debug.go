@@ -48,7 +48,7 @@ func diffCVEsByIntegrityHash(ctx context.Context, tx pgx.Tx) error {
 		FROM (SELECT cve, %s AS db_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves) db
 		JOIN (SELECT cve, %s AS gob_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves_stage) gob
 			ON db.cve = gob.cve
-		WHERE db_hash <> gob_hash
+		WHERE db_hash != gob_hash
 		LIMIT 20
 	`, hashExpr, hashExpr))
 	if err != nil {

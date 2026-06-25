@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,7 +47,55 @@ func (service euvdService) importEUVDAliases(ctx context.Context, tx pgx.Tx) ([]
 	if err != nil {
 		return nil, err
 	}
-	return relationships, service.writeCVERelationshipsToTable(ctx, tx, relationships)
+	return service.resolveAndInsertEUVDRelationships(ctx, tx, relationships)
+}
+
+// after fetching the CVE aliases of the EUVD we want to resolve those 'original' CVEs to their downstream relations
+// for CVEs with no downstream alias we only keep them if they exist in the cves so the fk on source_cve holds
+func (service euvdService) resolveAndInsertEUVDRelationships(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) ([]models.CVERelationship, error) {
+	euvdStageTable := "euvd_relationships_stage"
+
+	start := time.Now()
+	slog.Info("start resolving and inserting euvd relationships into cve_relationships")
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TEMP TABLE %s (LIKE cve_relationships) ON COMMIT DROP`, euvdStageTable)); err != nil {
+		return nil, fmt.Errorf("could not create euvd stage table: %w", err)
+	}
+
+	if err := InsertCVERelationshipsBulk(ctx, tx, relationships, euvdStageTable); err != nil {
+		return nil, fmt.Errorf("could not insert euvd relationships bulk: %w", err)
+	}
+
+	rows, err := tx.Query(ctx, `
+	INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
+	-- first resolve the euvd relations via a join to the downstream relations
+	SELECT euvd.source_cve AS target_cve, cr.source_cve, cr.relationship_type
+	FROM cve_relationships cr
+	JOIN euvd_relationships_stage euvd ON euvd.target_cve = cr.target_cve
+	UNION
+	-- then combine them with all cves that do not have a relationship but are present in the cves table
+	SELECT euvd.source_cve AS target_cve, euvd.target_cve AS source_cve, 'euvd' AS relationship_type
+	FROM euvd_relationships_stage euvd
+	WHERE NOT EXISTS (SELECT 1 FROM cve_relationships cr WHERE cr.target_cve = euvd.target_cve)
+	AND EXISTS (SELECT 1 FROM cves c WHERE c.cve = euvd.target_cve)
+	ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING
+	-- return the resolved rows to be written in the exported gob files
+	RETURNING target_cve, source_cve, relationship_type`)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve and insert euvd relationships: %w", err)
+	}
+	defer rows.Close()
+	slog.Info("finished inserting euvd relationships", "took", time.Since(start))
+
+	// convert rows into cveRelationships model
+	resolved := make([]models.CVERelationship, 0, len(relationships))
+	for rows.Next() {
+		var rel models.CVERelationship
+		if err := rows.Scan(&rel.TargetCVE, &rel.SourceCVE, &rel.RelationshipType); err != nil {
+			return nil, fmt.Errorf("could not scan resolved euvd relationship: %w", err)
+		}
+		resolved = append(resolved, rel)
+	}
+	return resolved, rows.Err()
 }
 
 func (service euvdService) fetchEUVDAliases() ([][]string, error) {
@@ -84,31 +134,4 @@ func (service euvdService) convertAliasesToRelationships(aliasesCSV [][]string) 
 	}
 
 	return relationships, nil
-}
-
-func (service euvdService) writeCVERelationshipsToTable(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) error {
-	if len(relationships) == 0 {
-		return nil
-	}
-
-	targetCVEs := make([]string, len(relationships))
-	sourceCVEs := make([]string, len(relationships))
-	relationshipTypes := make([]string, len(relationships))
-	for i, rel := range relationships {
-		targetCVEs[i] = rel.TargetCVE
-		sourceCVEs[i] = rel.SourceCVE
-		relationshipTypes[i] = rel.RelationshipType
-	}
-
-	// insert directly into the live table; the cve_relationships primary key is kept
-	// during bulk import so ON CONFLICT can deduplicate against rows already present.
-	_, err := tx.Exec(ctx, `
-		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
-		SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[])
-		ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING`,
-		targetCVEs, sourceCVEs, relationshipTypes)
-	if err != nil {
-		return fmt.Errorf("could not insert euvd relationships into cve_relationships table: %w", err)
-	}
-	return nil
 }

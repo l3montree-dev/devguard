@@ -966,8 +966,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	_, err = tx.Exec(ctx, `
 	-- Then add the foreign key constraints
 	ALTER TABLE public.cves ADD CONSTRAINT cves_cve_unique UNIQUE (cve);
-	-- ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE;
-	-- euvd ids are not present in the cves table, but need the id mapping (CHECK BEFORE MERGE)
+	ALTER TABLE public.cve_relationships ADD CONSTRAINT fk_cve_relationships_source FOREIGN KEY (source_cve) REFERENCES public.cves (cve) ON DELETE CASCADE;
 
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE;
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cve_id) REFERENCES public.cves (id) ON DELETE CASCADE;
@@ -1066,7 +1065,7 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	DELETE FROM cve_relationships cr
-	WHERE cr.relationship_type <> 'euvd'
+	WHERE cr.relationship_type != 'euvd'
 	AND NOT EXISTS (
 		SELECT FROM cves WHERE cves.cve = cr.source_cve
 	);`)
