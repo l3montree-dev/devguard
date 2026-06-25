@@ -47,12 +47,12 @@ func (service euvdService) importEUVDAliases(ctx context.Context, tx pgx.Tx) ([]
 	if err != nil {
 		return nil, err
 	}
-	return service.resolveAndInsertEUVDRelationships(ctx, tx, relationships)
+	return service.ResolveAndInsertEUVDRelationships(ctx, tx, relationships)
 }
 
 // after fetching the CVE aliases of the EUVD we want to resolve those 'original' CVEs to their downstream relations
 // for CVEs with no downstream alias we only keep them if they exist in the cves so the fk on source_cve holds
-func (service euvdService) resolveAndInsertEUVDRelationships(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) ([]models.CVERelationship, error) {
+func (service euvdService) ResolveAndInsertEUVDRelationships(ctx context.Context, tx pgx.Tx, relationships []models.CVERelationship) ([]models.CVERelationship, error) {
 	euvdStageTable := "euvd_relationships_stage"
 
 	start := time.Now()
