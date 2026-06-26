@@ -23,6 +23,7 @@ type AdvisoryCreate struct {
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
 	Severity         string            `json:"severity"`
 	VectorString     string            `json:"vectorString"`
+	AssetID          uuid.UUID         `json:"assetID"`
 }
 type AdvisoryUpdate struct {
 	Title            *string           `json:"title"`
@@ -30,6 +31,7 @@ type AdvisoryUpdate struct {
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
 	Severity         *string           `json:"severity"`
 	VectorString     *string           `json:"vectorString"`
+	AssetID          *uuid.UUID        `json:"assetID"`
 }
 
 type AdvisoryDTO struct {
@@ -39,6 +41,7 @@ type AdvisoryDTO struct {
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
 	Severity         string            `json:"severity"`
 	VectorString     string            `json:"vectorString"`
+	AssetID          uuid.UUID         `json:"assetID"`
 }
 
 type AffectedPackage struct {

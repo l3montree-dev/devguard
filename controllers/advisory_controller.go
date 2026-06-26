@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -43,55 +44,77 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 	err := controller.advisoryService.Create(ctx.Request().Context(), &newAdvisory)
 
 	if err != nil {
-		return echo.NewHTTPError(409, "could not set name").WithInternal(err)
+		return echo.NewHTTPError(409, "could not set advisory").WithInternal(err)
 	}
 
 	return ctx.NoContent(200)
 }
 
-// func (controller *advisoryController) ReadName(ctx shared.Context) error {
-// 	advisoryNames, err := controller.advisoryService.ReadName(ctx.Request().Context())
-// 	if err != nil {
-// 		return echo.NewHTTPError(500, "could not get any name").WithInternal(err)
-// 	}
-// 	return ctx.JSON(200, advisoryNames)
-// }
+func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
+	}
+	return ctx.JSON(200, advisories)
+}
 
-// func (controller *advisoryController) UpdateName(ctx shared.Context) error {
-// 	var req dtos.AdvisoryUpdate // Change to own struct
-// 	if err := ctx.Bind(&req); err != nil {
-// 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
-// 	}
+func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
+	advisoryID := ctx.Param("id")
+	parsedID, err := uuid.Parse(advisoryID)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid uuid provided")
+	}
 
-// 	updateName := req.Name
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
 
-// 	advisoryID := ctx.Param("id")
-// 	parsedID, err := uuid.Parse(advisoryID)
-// 	if err != nil {
-// 		return echo.NewHTTPError(400, "invalid uuid provided")
-// 	}
+	if err != nil {
+		return echo.NewHTTPError(409, "could not get any data").WithInternal(err)
+	}
 
-// 	err = controller.advisoryService.UpdateName(ctx.Request().Context(), parsedID, updateName)
+	return ctx.JSON(200, advisory)
+}
 
-// 	if err != nil {
-// 		return echo.NewHTTPError(409, "could not update name").WithInternal(err)
-// 	}
+func (controller *AdvisoryController) Update(ctx shared.Context) error {
+	var req dtos.AdvisoryUpdate
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
 
-// 	return ctx.JSON(200, updateName)
-// }
+	advisoryID := ctx.Param("id")
+	parsedID, err := uuid.Parse(advisoryID)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid uuid provided")
+	}
 
-// func (controller *advisoryController) DeleteName(ctx shared.Context) error {
-// 	advisoryID := ctx.Param("id")
-// 	parsedID, err := uuid.Parse(advisoryID)
-// 	if err != nil {
-// 		return echo.NewHTTPError(400, "invalid uuid provided")
-// 	}
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
+	if err != nil {
+		return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+	}
 
-// 	err = controller.advisoryService.DeleteName(ctx.Request().Context(), parsedID)
+	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
 
-// 	if err != nil {
-// 		return echo.NewHTTPError(409, "could not remove name").WithInternal(err)
-// 	}
+	err = controller.advisoryService.Update(ctx.Request().Context(), parsedID, &advisory)
 
-// 	return ctx.NoContent(200)
-// }
+	if err != nil {
+		return echo.NewHTTPError(409, "could not update advisory").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
+}
+
+func (controller *AdvisoryController) Delete(ctx shared.Context) error {
+	advisoryID := ctx.Param("id")
+	parsedID, err := uuid.Parse(advisoryID)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid uuid provided")
+	}
+
+	err = controller.advisoryService.Delete(ctx.Request().Context(), parsedID)
+
+	if err != nil {
+		return echo.NewHTTPError(409, "could not remove name").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
+}

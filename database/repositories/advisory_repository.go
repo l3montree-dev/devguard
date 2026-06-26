@@ -32,28 +32,36 @@ func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *go
 	return nil
 }
 
-func (advisoryRepository *AdvisoryRepository) ReadName(ctx context.Context, tx *gorm.DB) ([]models.Advisory, error) {
-	advisoryNames := []models.Advisory{}
+func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.Advisory, error) {
+	advisories := []models.Advisory{}
 	db := advisoryRepository.db.WithContext(ctx)
 	if tx != nil {
 		db = tx
 	}
-	err := db.Raw(`SELECT * FROM advisories;`).Find(&advisoryNames).Error
-	return advisoryNames, err
+	err := db.Preload("AffectedPackages").Where("asset_id = ?", assetID).Find(&advisories).Error
+	return advisories, err
 }
 
-func (advisoryRepository *AdvisoryRepository) UpdateName(ctx context.Context, tx *gorm.DB, id uuid.UUID, name string) error {
-	err := advisoryRepository.GetDB(ctx, tx).
-		Model(&models.Advisory{Model: models.Model{ID: id}}).
-		Update("advisory_name", name).Error
-	if err != nil {
-		return err
+func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Advisory, error) {
+	advisory := models.Advisory{}
+	db := advisoryRepository.db.WithContext(ctx)
+	if tx != nil {
+		db = tx
 	}
-	return nil
+	err := db.Preload("AffectedPackages").Where("id = ?", id).Find(&advisory).Error
+	return advisory, err
 }
 
-func (advisoryRepository *AdvisoryRepository) DeleteName(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	err := advisoryRepository.GetDB(ctx, tx).Delete(&models.Advisory{Model: models.Model{ID: id}}).Error
+func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *gorm.DB, id uuid.UUID, advisory *models.Advisory) error {
+	return advisoryRepository.GetDB(ctx, tx).Session(&gorm.Session{FullSaveAssociations: true}).Save(advisory).Error
+}
+
+func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	db := advisoryRepository.db.WithContext(ctx)
+	if tx != nil {
+		db = tx
+	}
+	err := db.Preload("AffectedPackages").Delete(&models.Advisory{Model: models.Model{ID: id}}).Error
 	if err != nil {
 		return err
 	}

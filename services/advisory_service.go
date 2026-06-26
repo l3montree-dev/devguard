@@ -24,18 +24,22 @@ func (s *AdvisoryService) Create(ctx context.Context, advisory *models.Advisory)
 	return s.advisoryRepository.Create(ctx, nil, advisory)
 }
 
-func (s *AdvisoryService) ReadName(ctx context.Context) ([]models.Advisory, error) {
-	advisoryNames, err := s.advisoryRepository.ReadName(ctx, nil)
+func (s *AdvisoryService) ReadAll(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	advisories, err := s.advisoryRepository.ReadAll(ctx, nil, assetID)
 	if err != nil {
 		return nil, err
 	}
-	return advisoryNames, nil
+	return advisories, nil
 }
 
-func (s *AdvisoryService) UpdateName(ctx context.Context, id uuid.UUID, name string) error {
-	return s.advisoryRepository.UpdateName(ctx, nil, id, name)
+func (s *AdvisoryService) ReadAdvisory(ctx context.Context, id uuid.UUID) (models.Advisory, error) {
+	return s.advisoryRepository.ReadAdvisory(ctx, nil, id)
 }
 
-func (s *AdvisoryService) DeleteName(ctx context.Context, id uuid.UUID) error {
-	return s.advisoryRepository.DeleteName(ctx, nil, id)
+func (s *AdvisoryService) Update(ctx context.Context, id uuid.UUID, advisory *models.Advisory) error {
+	return s.advisoryRepository.Update(ctx, nil, id, advisory)
+}
+
+func (s *AdvisoryService) Delete(ctx context.Context, id uuid.UUID) error {
+	return s.advisoryRepository.Delete(ctx, nil, id)
 }

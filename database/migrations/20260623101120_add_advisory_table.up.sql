@@ -5,7 +5,8 @@ CREATE TABLE public.advisories (
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     severity TEXT,
-    vector_string TEXT
+    vector_string TEXT,
+    asset_id UUID
 );
 
 CREATE TABLE public.affected_packages (
