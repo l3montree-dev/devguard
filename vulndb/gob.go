@@ -12,6 +12,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
 
@@ -22,8 +23,8 @@ type KEVEntry struct {
 	CISAExploitAddDate *time.Time
 	EUVDExploitAddDate *time.Time
 	ActionDueDate      *time.Time
-	RequiredAction     *string
-	VulnerabilityName  *string
+	RequiredAction     string
+	VulnerabilityName  string
 }
 
 // GobExploit is the gob-safe representation of models.Exploit.
@@ -76,8 +77,8 @@ func kevEntriesToGob(cves []models.CVE) []KEVEntry {
 			CISAExploitAddDate: dateToTimePtr(c.CISAExploitAdd),
 			EUVDExploitAddDate: dateToTimePtr(c.EUVDExploitAdd),
 			ActionDueDate:      dateToTimePtr(c.CISAActionDue),
-			RequiredAction:     c.CISARequiredAction,
-			VulnerabilityName:  c.CISAVulnerabilityName,
+			RequiredAction:     utils.SafeDereference(c.CISARequiredAction),
+			VulnerabilityName:  utils.SafeDereference(c.CISAVulnerabilityName),
 		})
 	}
 	return out

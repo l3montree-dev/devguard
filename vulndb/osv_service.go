@@ -554,7 +554,7 @@ func (s osvService) getOSVZipContainingEcosystem(ctx context.Context, ecosystem 
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	res, err := utils.EgressClient.Do(req)
+	res, err := utils.NewEgressClient(time.Second * 90).Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download zip")
 	}

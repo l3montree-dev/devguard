@@ -27,7 +27,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
 )
@@ -295,7 +294,7 @@ func TestQuickDiffCISAKEVAdded(t *testing.T) {
 	prevVersion := time.Now()
 
 	newKEV := []vulndb.KEVEntry{
-		{CVE: "CVE-2024-4001", RequiredAction: utils.Ptr("patch immediately"), VulnerabilityName: utils.Ptr("Super Bug")},
+		{CVE: "CVE-2024-4001", RequiredAction: "patch immediately", VulnerabilityName: "Super Bug"},
 	}
 
 	diff, groundTruth := simulateExport(ctx, t, pool, prevVersion, prevCVEs, nil, nil, newKEV)
@@ -317,7 +316,7 @@ func TestQuickDiffCISAKEVRemoved(t *testing.T) {
 		makeCVE(5001, "CVE-2024-5001", "was in KEV", 8.0, testVector),
 	}
 	prevKEV := []vulndb.KEVEntry{
-		{CVE: "CVE-2024-5001", RequiredAction: utils.Ptr("apply workaround"), VulnerabilityName: utils.Ptr("Old Bug")},
+		{CVE: "CVE-2024-5001", RequiredAction: "apply workaround", VulnerabilityName: "Old Bug"},
 	}
 
 	seedCVEState(ctx, t, pool, prevCVEs, nil, nil, prevKEV)
@@ -423,7 +422,7 @@ func TestQuickDiffCISAViaRelationship(t *testing.T) {
 
 	// New: CVE-B added to CISA KEV — CVE-A (alias) must also get the CISA data.
 	newKEV := []vulndb.KEVEntry{
-		{CVE: "CVE-2025-8002", RequiredAction: utils.Ptr("patch now"), VulnerabilityName: utils.Ptr("Critical Bug")},
+		{CVE: "CVE-2025-8002", RequiredAction: "patch now", VulnerabilityName: "Critical Bug"},
 	}
 
 	diff, groundTruth := simulateExport(ctx, t, pool, prevVersion, prevCVEs, prevRels, nil, newKEV)
@@ -480,7 +479,7 @@ func TestKEVBulkAliasMergesCISAAndEUVDDates(t *testing.T) {
 	}
 	// One canonical is CISA-only, the other EUVD-only.
 	kev := []vulndb.KEVEntry{
-		{CVE: "CVE-2025-8202", CISAExploitAddDate: &cisaDate, RequiredAction: utils.Ptr("patch now"), VulnerabilityName: utils.Ptr("CISA Bug")},
+		{CVE: "CVE-2025-8202", CISAExploitAddDate: &cisaDate, RequiredAction: "patch now", VulnerabilityName: "CISA Bug"},
 		{CVE: "CVE-2025-8203", EUVDExploitAddDate: &euvdDate},
 	}
 

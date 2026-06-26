@@ -29,10 +29,14 @@ var EgressTransport http.RoundTripper = otelhttp.NewTransport(EgressRoundTripper
 	R: http.DefaultTransport,
 })
 
-var EgressClient = http.Client{
-	Timeout:   30 * time.Second,
-	Transport: EgressTransport,
+func NewEgressClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: EgressTransport,
+	}
 }
+
+var EgressClient = *NewEgressClient(30 * time.Second)
 
 type EgressRoundTripper struct {
 	R http.RoundTripper
