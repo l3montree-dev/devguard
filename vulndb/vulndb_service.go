@@ -27,6 +27,7 @@ import (
 )
 
 const vulnDBArchiveName = "vulndb.tar.zst"
+const vulnDBURI = "ghcr.io/l3montree-dev/devguard/vulndb/v3"
 
 var _ shared.VulnDBService = (*VulnDBService)(nil)
 
@@ -917,8 +918,7 @@ func pullVulnDBDebug(ctx context.Context) (string, string, error) {
 }
 
 func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v2"
-	repo, err := remote.NewRepository(reg)
+	repo, err := remote.NewRepository(vulnDBURI)
 	if err != nil {
 		return "", "", fmt.Errorf("could not connect to remote repository: %w", err)
 	}
