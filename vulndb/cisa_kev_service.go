@@ -111,58 +111,6 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-// Apply writes pre-fetched CISA KEV entries to the database using the provided transaction,
-// expanding KEV data to alias CVEs via the relationship table.
-// The caller is responsible for committing or rolling back the transaction.
-func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.CVE) error {
-	kevMap := make(map[string]models.CVE, len(cves))
-	cveIDs := make([]string, len(cves))
-	for i, cve := range cves {
-		kevMap[cve.CVE] = cve
-		cveIDs[i] = cve.CVE
-	}
-
-	var relationships []models.CVERelationship
-	for i := 0; i < len(cveIDs); i += kevBatchSize {
-		end := min(i+kevBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(ctx, tx, cveIDs[i:end])
-		if err != nil {
-			slog.Error("could not fetch CVE relationships", "error", err)
-			return err
-		}
-		relationships = append(relationships, batch...)
-	}
-
-	for _, rel := range relationships {
-		if kevData, ok := kevMap[rel.TargetCVE]; ok {
-			if _, exists := kevMap[rel.SourceCVE]; !exists {
-				relatedCVE := models.CVE{
-					CVE:                   rel.SourceCVE,
-					CISAExploitAdd:        kevData.CISAExploitAdd,
-					CISAActionDue:         kevData.CISAActionDue,
-					CISARequiredAction:    kevData.CISARequiredAction,
-					CISAVulnerabilityName: kevData.CISAVulnerabilityName,
-					EUVDExploitAdd:        kevData.EUVDExploitAdd,
-				}
-				cves = append(cves, relatedCVE)
-				kevMap[rel.SourceCVE] = relatedCVE
-			}
-		}
-	}
-
-	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "viaRelationships", len(cves)-len(cveIDs))
-
-	for i := 0; i < len(cves); i += kevBatchSize {
-		end := min(i+kevBatchSize, len(cves))
-		if err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end]); err != nil {
-			slog.Error("error when trying to save CISA KEV information batch")
-			return err
-		}
-	}
-
-	return nil
-}
-
 func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	// Always reset CISA fields so CVEs that are no longer in the catalog (or were
 	// never in it) end up with NULL — not the empty-string zero-value written by
