@@ -89,11 +89,11 @@ func (service euvdService) ResolveAndInsertEUVDRelationships(ctx context.Context
 	// convert rows into cveRelationships model
 	resolved := make([]models.CVERelationship, 0, len(relationships))
 	for rows.Next() {
-		var rel models.CVERelationship
-		if err := rows.Scan(&rel.TargetCVE, &rel.SourceCVE, &rel.RelationshipType); err != nil {
+		var relation models.CVERelationship
+		if err := rows.Scan(&relation.TargetCVE, &relation.SourceCVE, &relation.RelationshipType); err != nil {
 			return nil, fmt.Errorf("could not scan resolved euvd relationship: %w", err)
 		}
-		resolved = append(resolved, rel)
+		resolved = append(resolved, relation)
 	}
 	return resolved, rows.Err()
 }
@@ -129,7 +129,7 @@ func (service euvdService) convertAliasesToRelationships(aliasesCSV [][]string) 
 		relationships = append(relationships, models.CVERelationship{
 			SourceCVE:        row[0],
 			TargetCVE:        row[1],
-			RelationshipType: dtos.RelationshipTypeEUVD, // use explicit euvd relationships type to clearly identify them later on
+			RelationshipType: dtos.RelationshipTypeEUVD, // placeholder relationship type before resolving actual relations via the cve_relationships table
 		})
 	}
 

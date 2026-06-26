@@ -1015,27 +1015,9 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 // from deleting the given pivot rows. Only checks the specific IDs involved rather
 // than scanning the full tables.
 func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
-	slog.Info("start running sanity checks")
-	// first manually check if all cve_relationship rows have a valid reference to a cve,
-	// this is a substitute for the removed foreign key (which does not work with the EUVD entries)
+	slog.Info("start running clean up jobs")
+	// first delete all cves which have no affected components and also none of their relationships does
 	start := time.Now()
-	var orphanCount int64
-	if err := tx.QueryRow(ctx, `
-	SELECT COUNT(*)
-	FROM cve_relationships cr
-	WHERE NOT EXISTS (
-		SELECT FROM cves WHERE cves.cve = cr.source_cve
-	);`).Scan(&orphanCount); err != nil {
-		return fmt.Errorf("could not calculate orphan cve_relationships rows: %w", err)
-	}
-	// throw an error and stop the import to be consistent with the old FK logic
-	if orphanCount > 0 {
-		return fmt.Errorf("found %d orphan cve_relationships rows referencing a missing cve", orphanCount)
-	}
-	slog.Info("no orphan cve_relationships rows found", "took", time.Since(start))
-
-	// then delete all cves which have no affected components and also none of their relationships does
-	start = time.Now()
 	_, err := tx.Exec(ctx, `
 	DELETE FROM cves 
 	WHERE id IN (
@@ -1059,20 +1041,6 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		slog.Error("could not clean up orphan cves, continuing...", "error", err)
 	} else {
 		slog.Info("successfully cleaned up orphan cves", "took", time.Since(start))
-	}
-
-	// drop all orphaned euvd cve relationships as well
-	start = time.Now()
-	_, err = tx.Exec(ctx, `
-	DELETE FROM cve_relationships cr
-	WHERE cr.relationship_type != 'euvd'
-	AND NOT EXISTS (
-		SELECT FROM cves WHERE cves.cve = cr.source_cve
-	);`)
-	if err != nil {
-		slog.Error("could not clean up dangling cve_relationships, continuing...", "error", err)
-	} else {
-		slog.Info("successfully cleaned up dangling cve_relationships", "took", time.Since(start))
 	}
 
 	start = time.Now()
