@@ -38,7 +38,7 @@ func TestHandleComponent(t *testing.T) {
 		actual, err := service.GetLicense(context.Background(), component)
 
 		assert.NoError(t, err)
-		assert.Equal(t, utils.Ptr("unknown"), actual.License)
+		assert.Equal(t, new("unknown"), actual.License)
 	})
 	t.Run("should also get alpine Licenses", func(t *testing.T) {
 		mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
@@ -57,7 +57,7 @@ func TestHandleComponent(t *testing.T) {
 		actual, err := service.GetLicense(context.Background(), component)
 		fmt.Printf("License %s", *actual.License)
 		assert.NoError(t, err)
-		assert.NotEqual(t, utils.Ptr("unknown"), actual.License)
+		assert.NotEqual(t, new("unknown"), actual.License)
 	})
 
 	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestHandleComponent(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		assert.Equal(t, utils.Ptr("unknown"), actual.License)
+		assert.Equal(t, new("unknown"), actual.License)
 	})
 
 	t.Run("should fetch the project information if there is a SOURCE_REPO defined in the related projects", func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestHandleComponent(t *testing.T) {
 		actual, err := service.FetchComponentProject(context.Background(), c)
 
 		assert.NoError(t, err)
-		assert.Equal(t, utils.Ptr("github/test/project"), actual.ComponentProjectKey)
+		assert.Equal(t, new("github/test/project"), actual.ComponentProjectKey)
 	})
 }
 

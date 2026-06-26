@@ -365,7 +365,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		// update the license information in the background
 		s.FireAndForget(func() {
 			slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-			_, err := s.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifactName), false)
+			_, err := s.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifactName), false)
 			if err != nil {
 				slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 			} else {
@@ -936,7 +936,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 func firstPartyVulnsToSARIF(scannerID string, vulns []models.FirstPartyVuln) sarif.SarifSchema210Json {
 	report := sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
+		Schema:  new("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
 		Runs:    make([]sarif.Run, 0),
 	}
 

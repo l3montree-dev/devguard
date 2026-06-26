@@ -43,7 +43,9 @@ type EgressRoundTripper struct {
 }
 
 func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Add("User-Agent", config.UserAgent)
+	if r.UserAgent() == "" {
+		r.Header.Set("User-Agent", config.UserAgent)
+	}
 
 	return mrt.R.RoundTrip(r)
 }

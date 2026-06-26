@@ -55,7 +55,7 @@ func NewGitlabBatchClient(clients []shared.GitlabClientFacade) *gitlabBatchClien
 func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string) models.Project {
 	var externalEntityParentID *string = nil
 	if group.ParentID > 0 {
-		externalEntityParentID = utils.Ptr(fmt.Sprintf("%d", group.ParentID))
+		externalEntityParentID = new(fmt.Sprintf("%d", group.ParentID))
 	}
 
 	state := models.ProjectStateActive
@@ -70,7 +70,7 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 		Slug:                     slug.Make(group.Path),
 		ExternalEntityProviderID: &providerID,
 		ExternalEntityParentID:   externalEntityParentID,
-		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", group.ID)),
+		ExternalEntityID:         new(fmt.Sprintf("%d", group.ID)),
 		State:                    state,
 	}
 }
@@ -89,7 +89,7 @@ func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID st
 		Description:              project.Description,
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
-		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", project.ID)),
+		ExternalEntityID:         new(fmt.Sprintf("%d", project.ID)),
 		State:                    state,
 	}
 }
@@ -98,11 +98,11 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(ctx context.Context, 
 	wg := utils.ErrGroup[[]gitlabRepository](10)
 	options := &gitlab.ListProjectsOptions{
 		MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
-		Membership:     gitlab.Ptr(true),
+		Membership:     new(true),
 	}
 
 	if search != "" {
-		options.Search = gitlab.Ptr(search)
+		options.Search = new(search)
 	}
 
 	for _, client := range gitlabOrgClient.clients {
@@ -210,7 +210,7 @@ func (client gitlabClient) RemoveVariable(ctx context.Context, projectID int, ke
 
 func (client gitlabClient) InviteReporter(ctx context.Context, projectID int, userID int) (*gitlab.ProjectMember, *gitlab.Response, error) {
 	opt := &gitlab.AddProjectMemberOptions{
-		UserID:      gitlab.Ptr(userID),
+		UserID:      new(userID),
 		AccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
 	}
 	return client.ProjectMembers.AddProjectMember(projectID, opt, gitlab.WithContext(ctx))
@@ -329,7 +329,7 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectID int, is
 	}
 
 	_, _, err = client.Issues.UpdateIssue(int64(projectID), int64(issueID), &gitlab.UpdateIssueOptions{
-		Labels: gitlab.Ptr(gitlab.LabelOptions(issueLabels)),
+		Labels: new(gitlab.LabelOptions(issueLabels)),
 	}, gitlab.WithContext(ctx))
 
 	return nil, err

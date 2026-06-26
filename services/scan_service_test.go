@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -49,7 +48,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			URI:             "test-uri",
 			SnippetContents: snippetJSON1,
 			Vulnerability: models.Vulnerability{
-				Message: utils.Ptr("Test message"),
+				Message: new("Test message"),
 			},
 		}
 
@@ -70,7 +69,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			URI:             "test-uri",
 			SnippetContents: snippetJSON2,
 			Vulnerability: models.Vulnerability{
-				Message: utils.Ptr("other message"),
+				Message: new("other message"),
 			},
 		}
 
@@ -94,7 +93,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			URI:             "test-uri",
 			SnippetContents: snippetJSON1,
 			Vulnerability: models.Vulnerability{
-				Message: utils.Ptr("Test message"),
+				Message: new("Test message"),
 			},
 		}
 
@@ -115,7 +114,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			URI:             "another-uri",
 			SnippetContents: snippetJSON2,
 			Vulnerability: models.Vulnerability{
-				Message: utils.Ptr("Another message"),
+				Message: new("Another message"),
 			},
 		}
 
@@ -125,23 +124,23 @@ func TestFirstPartyVulnHash(t *testing.T) {
 	t.Run("should take the hash of the vulnerability, if it exists", func(t *testing.T) {
 		vuln := sarif.SarifSchema210Json{
 			Version: "2.1.0",
-			Schema:  utils.Ptr("https://json.schemastore.org/sarif-2.1.0.json"),
+			Schema:  new("https://json.schemastore.org/sarif-2.1.0.json"),
 			Runs: []sarif.Run{
 				{
 					Results: []sarif.Result{
 						{
-							RuleID: utils.Ptr("test-rule"),
+							RuleID: new("test-rule"),
 							Locations: []sarif.Location{
 								{
 									PhysicalLocation: sarif.PhysicalLocation{
 										ArtifactLocation: sarif.ArtifactLocation{
-											URI: utils.Ptr("test-uri"),
+											URI: new("test-uri"),
 										},
 										Region: &sarif.Region{
-											StartLine: utils.Ptr(1),
+											StartLine: new(1),
 											Snippet: &sarif.ArtifactContent{
 
-												Text: utils.Ptr("TestSnippet"),
+												Text: new("TestSnippet"),
 											},
 										},
 									},

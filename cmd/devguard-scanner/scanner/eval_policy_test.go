@@ -20,7 +20,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/utils"
 )
 
 func resultKey(r sarif.Result) string {
@@ -115,7 +114,7 @@ func TestBuildSarifFromPolicy_NoDuplicateResults(t *testing.T) {
 
 	t.Run("single evaluation with no violations produces no results", func(t *testing.T) {
 		evaluations := []compliance.PolicyEvaluation{
-			{Compliant: utils.Ptr(true), Violations: nil},
+			{Compliant: new(true), Violations: nil},
 		}
 
 		result := buildSarifFromPolicy("registry.example.com/image:latest", policy, evaluations)

@@ -63,12 +63,12 @@ jobs:
       contents: read
       security-events: write
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      devguard-api-url: https://api.main.devguard.org
       fail-on-risk: high
       fail-on-cvss: high
-      web-ui: https://main.devguard.org
-      continue-on-open-code-risk: true
+      devguard-web-ui: https://main.devguard.org
+      allow-failure: true
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
@@ -76,6 +76,7 @@ jobs:
   api-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
+    needs: [tests]
     permissions:
       contents: read
       packages: write
@@ -85,9 +86,9 @@ jobs:
       nix-target-arm64: devguard-arm64
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      web-ui: https://main.devguard.org
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      devguard-api-url: https://api.main.devguard.org
+      devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
       nix-cache-substituter: https://nix.garage.l3montree.cloud
@@ -111,9 +112,9 @@ jobs:
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/scanner
       artifact-name-suffix: scanner
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
-      api-url: https://api.main.devguard.org
-      web-ui: https://main.devguard.org
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      devguard-api-url: https://api.main.devguard.org
+      devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
       nix-cache-substituter: https://nix.garage.l3montree.cloud
@@ -136,9 +137,9 @@ jobs:
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/postgresql
       artifact-name-suffix: postgresql
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
-      api-url: https://api.main.devguard.org
-      web-ui: https://main.devguard.org
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      devguard-api-url: https://api.main.devguard.org
+      devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
       fail-on-risk: high
       nix-cache-substituter: https://nix.garage.l3montree.cloud
@@ -176,10 +177,14 @@ jobs:
         id: tag
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
             echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+            MINOR=$(echo "${TAG#v}" | cut -d. -f1-2)
+            echo "minor=${MINOR}" >> $GITHUB_OUTPUT
           else
             echo "tag=test-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+            echo "minor=0.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Build cross-platform binaries
@@ -195,6 +200,13 @@ jobs:
           GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-scanner-windows-arm64.exe ./cmd/devguard-scanner
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-scanner-darwin-amd64 ./cmd/devguard-scanner
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-scanner-darwin-arm64 ./cmd/devguard-scanner
+
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-linux-amd64 ./cmd/devguard-cli
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-linux-arm64 ./cmd/devguard-cli
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-windows-amd64.exe ./cmd/devguard-cli
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-windows-arm64.exe ./cmd/devguard-cli
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-darwin-amd64 ./cmd/devguard-cli
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags=\"\$BUILD_FLAGS\" -o dist/devguard-cli-darwin-arm64 ./cmd/devguard-cli
           "
         env:
           STEPS_TAG_OUTPUTS_TAG: ${{ steps.tag.outputs.tag }}
@@ -208,14 +220,24 @@ jobs:
           tar -czf devguard-scanner-linux-arm64.tar.gz devguard-scanner-linux-arm64
           tar -czf devguard-scanner-darwin-amd64.tar.gz devguard-scanner-darwin-amd64
           tar -czf devguard-scanner-darwin-arm64.tar.gz devguard-scanner-darwin-arm64
+
+          tar -czf devguard-cli-linux-arm64.tar.gz devguard-cli-linux-arm64
+          tar -czf devguard-cli-linux-amd64.tar.gz devguard-cli-linux-amd64
+          tar -czf devguard-cli-darwin-amd64.tar.gz devguard-cli-darwin-amd64
+          tar -czf devguard-cli-darwin-arm64.tar.gz devguard-cli-darwin-arm64
           
           # Create zip archives for Windows
           zip devguard-scanner-windows-amd64.zip devguard-scanner-windows-amd64.exe
           zip devguard-scanner-windows-arm64.zip devguard-scanner-windows-arm64.exe
+
+          zip devguard-cli-windows-amd64.zip devguard-cli-windows-amd64.exe
+          zip devguard-cli-windows-arm64.zip devguard-cli-windows-arm64.exe
           
           # Remove individual binaries, keep archives
           rm -f devguard-scanner-linux-amd64 devguard-scanner-linux-arm64 devguard-scanner-darwin-amd64 devguard-scanner-darwin-arm64
+          rm -f devguard-cli-linux-amd64 devguard-cli-linux-arm64 devguard-cli-darwin-amd64 devguard-cli-darwin-arm64
           rm -f devguard-scanner-windows-amd64.exe devguard-scanner-windows-arm64.exe
+          rm -f devguard-cli-windows-amd64.exe devguard-cli-windows-arm64.exe
 
 
       - name: Generate checksums
@@ -243,70 +265,135 @@ jobs:
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: "DevGuard Scanner ${{ steps.tag.outputs.tag }}"
+          name: "DevGuard Release ${{ steps.tag.outputs.tag }}"
           draft: false
-          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') }}
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'test-') || contains(steps.tag.outputs.tag, '-rc') || contains(steps.tag.outputs.tag, '-alpha') || contains(steps.tag.outputs.tag, '-beta') }}
           body: |
-            ## 🚀 DevGuard Release ${{ steps.tag.outputs.tag }}
-            
-            **Secure software supply chain scanning and security analysis toolkit**
-            
-            ### Release Assets
-            
-            #### **📱 Binaries**
-            - `devguard-scanner-linux-amd64.tar.gz` - Linux x64 binary
-            - `devguard-scanner-linux-arm64.tar.gz` - Linux ARM64 binary  
-            - `devguard-scanner-darwin-amd64.tar.gz` - macOS x64 binary
-            - `devguard-scanner-darwin-arm64.tar.gz` - macOS ARM64 (Apple Silicon) binary
-            - `devguard-scanner-windows-amd64.zip` - Windows x64 binary
-            - `devguard-scanner-windows-arm64.zip` - Windows ARM64 binary
-            
-            #### **🐳 Container Images**
-            - **Registry**: 
-              - `ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}` (Main platform)
-              - `ghcr.io/l3montree-dev/devguard-web:${{ steps.tag.outputs.tag }}` (Frontend of the platform)
-              - `ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}` (Scanner tool)
+            # 🚀 DevGuard Release ${{ steps.tag.outputs.tag }}
 
-            #### Helm Charts
-            
-            `oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard` (Main platform Helm chart)
+            **Secure software supply chain scanning and security analysis platform**
 
+            ---
+
+            # 🔍 DevGuard Scanner
+
+            The Scanner performs software supply chain analysis, SBOM generation, vulnerability detection, and security scanning. It communicates with a running devguard-api instance.
+
+            ### 📱 Binaries
+
+            | Platform | Binary |
+            |-----------|---------|
+            | Linux x64 | `devguard-scanner-linux-amd64.tar.gz` |
+            | Linux ARM64 | `devguard-scanner-linux-arm64.tar.gz` |
+            | macOS x64 | `devguard-scanner-darwin-amd64.tar.gz` |
+            | macOS ARM64 (Apple Silicon) | `devguard-scanner-darwin-arm64.tar.gz` |
+            | Windows x64 | `devguard-scanner-windows-amd64.zip` |
+            | Windows ARM64 | `devguard-scanner-windows-arm64.zip` |
+
+            **Download and Install**
             ```bash
-            helm install my-devguard oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard --version ${{ env.TAG_NO_V }}
-            ```
-            
-            ### Quick Start
-            
-            #### **Download and Install**
-            ```bash
-            # Linux/macOS - Download and extract
             curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/devguard-scanner-linux-amd64.tar.gz | tar -xz
+
             chmod +x devguard-scanner-linux-amd64
             sudo mv devguard-scanner-linux-amd64 /usr/local/bin/devguard-scanner
-            
-            # Verify installation
-            devguard-scanner --version
+
+            #Verify
+            devguard-scanner --help
             ```
-            
-            #### **Docker Usage**
+
+            ### 🐳 Container Image
+
             ```bash
-            # Pull DevGuard Scanner from registry
             docker pull ghcr.io/l3montree-dev/devguard/scanner:${{ steps.tag.outputs.tag }}
-            
-            # Pull DevGuard Platform from registry
-            docker pull ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}
             ```
-            
-            #### **Go Install**
+
+            ### Go Install
+
             ```bash
             go install github.com/l3montree-dev/devguard/cmd/devguard-scanner@${{ steps.tag.outputs.tag }}
             ```
-            
+
             ---
-            
-            📖 **Documentation**: [DevGuard Documentation](https://github.com/l3montree-dev/devguard)  
-            🐛 **Report Issues**: [GitHub Issues](https://github.com/l3montree-dev/devguard/issues)  
-            💬 **Community**: [Discussions](https://github.com/l3montree-dev/devguard/discussions)
+
+            # 💻 DevGuard CLI
+
+            The CLI provides interaction capabilities with DevGuard. It is used in conjuction with a running devguard-api server. Some tasks like generating an instance admin key can be done using the devguard-cli binary.
+
+            ### 📱 Binaries
+
+            | Platform | Binary |
+            |-----------|---------|
+            | Linux x64 | `devguard-cli-linux-amd64.tar.gz` |
+            | Linux ARM64 | `devguard-cli-linux-arm64.tar.gz` |
+            | macOS x64 | `devguard-cli-darwin-amd64.tar.gz` |
+            | macOS ARM64 (Apple Silicon) | `devguard-cli-darwin-arm64.tar.gz` |
+            | Windows x64 | `devguard-cli-windows-amd64.zip` |
+            | Windows ARM64 | `devguard-cli-windows-arm64.zip` |
+
+            **Download and Install**
+            ```bash
+            curl -L https://github.com/l3montree-dev/devguard/releases/download/${{ steps.tag.outputs.tag }}/devguard-cli-linux-amd64.tar.gz | tar -xz
+
+            chmod +x devguard-cli-linux-amd64
+            sudo mv devguard-cli-linux-amd64 /usr/local/bin/devguard-cli
+
+            #Verify
+            devguard-cli --help
+            ```
+
+            ---
+
+            # 🛡️ DevGuard Platform
+
+            The DevGuard Platform provides centralized security visibility, findings management, and reporting.
+
+            ### 🐳 Container Image
+
+            ```bash
+            docker pull ghcr.io/l3montree-dev/devguard:${{ steps.tag.outputs.tag }}
+            ```
+
+            > The frontend image (`devguard-web`) is released separately — see [devguard-web releases](https://github.com/l3montree-dev/devguard-web/releases) for the matching `v${{ steps.tag.outputs.minor }}.*` release.
+
+            ---
+
+            # ☸️ Kubernetes Deployment
+
+            Deploy DevGuard to Kubernetes using the official Helm chart.
+
+            ### Helm Chart
+
+            ```text
+            oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard
+            ```
+
+            ### Install
+
+            ```bash
+            helm install my-devguard \
+              oci://ghcr.io/l3montree-dev/devguard-helm-chart/devguard \
+              --version ${{ env.TAG_NO_V }}
+            ```
+
+            ---
+
+            ## Versioning
+
+            All DevGuard components (`devguard`, `devguard-web`, Helm chart) share the same **minor version**. Any `v${{ steps.tag.outputs.minor }}.*` release of one component is compatible with any `v${{ steps.tag.outputs.minor }}.*` release of another. Patch versions are released independently per component — you do not need to upgrade all components simultaneously as long as the minor version matches.
+
+            📖 See [VERSIONING.md](https://github.com/l3montree-dev/devguard/blob/main/VERSIONING.md) for the full policy.
+            📋 See [CHANGELOG](https://github.com/l3montree-dev/devguard/blob/main/CHANGELOG.md) for what changed in this release.
+
+            ---
+
+            ## Resources
+
+            📖 Documentation: https://github.com/l3montree-dev/devguard
+
+            🐛 Report Issues: https://github.com/l3montree-dev/devguard/issues
+
+            💬 Community Discussions: https://github.com/l3montree-dev/devguard/discussions
+
           files: |
             dist/*.tar.gz
             dist/*.zip

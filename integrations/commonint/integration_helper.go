@@ -172,10 +172,10 @@ func commentTrimmedPrefix(vulnType dtos.VulnType, comment string) (dtos.VulnEven
 		return dtos.EventTypeFalsePositive, dtos.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
 	} else if strings.HasPrefix(comment, "/false-positive") && vulnType == dtos.VulnTypeFirstPartyVuln {
 		return dtos.EventTypeFalsePositive, dtos.MechanicalJustificationType(strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive"))), ""
-	} else if strings.HasPrefix(comment, "/accept") {
-		return dtos.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
-	} else if strings.HasPrefix(comment, "/reopen") {
-		return dtos.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
+	} else if after, ok := strings.CutPrefix(comment, "/accept"); ok {
+		return dtos.EventTypeAccepted, "", strings.TrimSpace(after)
+	} else if after, ok := strings.CutPrefix(comment, "/reopen"); ok {
+		return dtos.EventTypeReopened, "", strings.TrimSpace(after)
 	}
 	return dtos.EventTypeComment, "", comment
 }

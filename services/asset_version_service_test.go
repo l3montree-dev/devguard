@@ -13,9 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -249,7 +249,7 @@ func TestBuildVeX(t *testing.T) {
 				Events: []models.VulnEvent{
 					{
 						Type:          dtos.EventTypeDetected,
-						Justification: utils.Ptr("Initial detection event without justification"),
+						Justification: new("Initial detection event without justification"),
 						CreatedAt:     time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
 					},
 					{
@@ -259,7 +259,7 @@ func TestBuildVeX(t *testing.T) {
 					},
 					{
 						Type:          dtos.EventTypeComment,
-						Justification: utils.Ptr("This is a comment and should be ignored"),
+						Justification: new("This is a comment and should be ignored"),
 						CreatedAt:     time.Date(2023, 1, 3, 12, 0, 0, 0, time.UTC),
 					},
 				},
@@ -327,7 +327,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeAccepted,
-					Justification: utils.Ptr("Risk accepted"),
+					Justification: new("Risk accepted"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -382,7 +382,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected in this context"),
+					Justification: new("Not affected in this context"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -453,7 +453,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected via path 1"),
+					Justification: new("Not affected via path 1"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -471,7 +471,7 @@ func TestBuildVeX(t *testing.T) {
 				},
 				Events: []models.VulnEvent{{
 					Type:          dtos.EventTypeFalsePositive,
-					Justification: utils.Ptr("Not affected via path 2"),
+					Justification: new("Not affected via path 2"),
 					CreatedAt:     time.Now(),
 				}},
 			},
@@ -621,5 +621,34 @@ func TestBuildVeX(t *testing.T) {
 			}
 		}
 		assert.False(t, hasPathPattern, "vulnerability should have no pathPattern property when no rules match")
+	})
+}
+
+func TestGetBestDescription(t *testing.T) {
+	t.Run("nil ShortDescription does not panic", func(t *testing.T) {
+		rule := sarif.ReportingDescriptor{
+			ShortDescription: nil,
+			FullDescription:  nil,
+		}
+		assert.NotPanics(t, func() {
+			result := getBestDescription(rule)
+			assert.Equal(t, "", result)
+		})
+	})
+
+	t.Run("returns FullDescription Markdown when present", func(t *testing.T) {
+		md := "full markdown"
+		rule := sarif.ReportingDescriptor{
+			FullDescription: &sarif.MultiformatMessageString{Markdown: &md},
+		}
+		assert.Equal(t, md, getBestDescription(rule))
+	})
+
+	t.Run("falls back to ShortDescription when FullDescription absent", func(t *testing.T) {
+		text := "short text"
+		rule := sarif.ReportingDescriptor{
+			ShortDescription: &sarif.MultiformatMessageString{Text: text},
+		}
+		assert.Equal(t, text, getBestDescription(rule))
 	})
 }

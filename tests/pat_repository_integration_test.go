@@ -24,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,11 +44,11 @@ func TestPATCheckForValidTokenByFingerprintEnforcesExpiry(t *testing.T) {
 		pat := models.PAT{
 			ID:          uuid.New(),
 			UserID:      uuid.New(),
-			PubKey:      utils.Ptr("deadbeef"),
+			PubKey:      new("deadbeef"),
 			Description: "expiry test token",
-			Fingerprint: utils.Ptr(fingerprint),
+			Fingerprint: new(fingerprint),
 			Scopes:      "scan",
-			ExpiryDate:  utils.Ptr(expiry),
+			ExpiryDate:  new(expiry),
 		}
 		require.NoError(t, db.Create(&pat).Error)
 	}

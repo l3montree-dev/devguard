@@ -164,6 +164,12 @@ func (a *AssetController) Delete(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// remove all rbac rules of the asset
+	if err := shared.GetRBAC(ctx).RevokeAllRolesInAsset(ctx.Request().Context(), asset.GetID().String()); err != nil {
+		return err
+	}
+
 	return ctx.NoContent(200)
 }
 

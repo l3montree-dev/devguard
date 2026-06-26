@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -339,16 +340,19 @@ func diffTable(ctx context.Context, tx pgx.Tx, spec diffSpec) error {
 
 	// Rows present on both sides but with different content
 	if len(spec.contentCols) > 0 {
-		contentConditions := ""
+		var contentConditions strings.Builder
 		for i, col := range spec.contentCols {
 			if i > 0 {
-				contentConditions += " OR "
+				contentConditions.WriteString(" OR ")
 			}
-			contentConditions += fmt.Sprintf("db.%s IS DISTINCT FROM gob.%s", col, col)
+			_, err := fmt.Fprintf(&contentConditions, "db.%s IS DISTINCT FROM gob.%s", col, col)
+			if err != nil {
+				return fmt.Errorf("could not build content conditions: %w", err)
+			}
 		}
-		joinWhere := contentConditions
+		joinWhere := contentConditions.String()
 		if spec.joinFilter != "" {
-			joinWhere = spec.joinFilter + " AND (" + contentConditions + ")"
+			joinWhere = spec.joinFilter + " AND (" + contentConditions.String() + ")"
 		}
 		mismatchRows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT db.%s, row_to_json(db)::text, row_to_json(gob)::text

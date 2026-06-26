@@ -123,7 +123,7 @@ func Concurrently(fns ...func() (any, error)) concurrentResultSlice {
 			ch <- concurrentResult{index: i, value: v, err: err}
 		}(i, fn)
 	}
-	for i := 0; i < len(fns); i++ {
+	for i := range fns {
 		results[i] = <-ch
 	}
 

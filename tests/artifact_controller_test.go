@@ -12,7 +12,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +43,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		}
 		assert.NoError(t, f.DB.Create(&integration).Error)
 
-		asset.RepositoryID = utils.Ptr("gitlab:" + integration.ID.String() + ":123")
+		asset.RepositoryID = new("gitlab:" + integration.ID.String() + ":123")
 		assert.NoError(t, f.DB.Save(&asset).Error)
 
 		// Create multiple artifacts
@@ -87,7 +86,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					AssetID:          asset.ID,
 					AssetVersionName: assetVersion.Name,
 					State:            dtos.VulnStateOpen,
-					TicketID:         utils.Ptr("gitlab:123/456"),
+					TicketID:         new("gitlab:123/456"),
 				},
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/vulnerable-package@1.0.0",
@@ -146,7 +145,7 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 					AssetID:          asset.ID,
 					AssetVersionName: assetVersion.Name,
 					State:            dtos.VulnStateOpen,
-					TicketID:         utils.Ptr("gitlab:123/789"),
+					TicketID:         new("gitlab:123/789"),
 				},
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/multi-artifact-package@1.0.0",
@@ -587,7 +586,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		ComponentPurl:     "pkg:npm/next@14.2.13",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
-		RawRiskAssessment: utils.Ptr(4.83),
+		RawRiskAssessment: new(4.83),
 		Artifacts:         []models.Artifact{artifact},
 		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/next@14.2.13"},
 	}
@@ -600,7 +599,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
-		RawRiskAssessment: utils.Ptr(8.89),
+		RawRiskAssessment: new(8.89),
 		Artifacts:         []models.Artifact{artifact},
 		VulnerabilityPath: []string{"root", "artifact:test", "pkg:npm/axios@1.7.7"},
 	}
@@ -615,7 +614,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-10 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -625,7 +624,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-7 * time.Minute),
 		Type:             "comment",
 		UserID:           "system",
@@ -634,7 +633,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln1FixedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-3 * time.Minute),
 		Type:             "fixed",
 		UserID:           "system",
@@ -643,7 +642,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln2DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-3 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -653,7 +652,7 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	}
 
 	vuln2FixedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-1 * time.Minute),
 		Type:             "fixed",
 		UserID:           "system",

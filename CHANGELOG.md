@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file.
 
+This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+
+## [v1.7.3] - 2026-06-23
+
+### Added
+
+- **Telemetry on startup** — DevGuard now sends anonymous telemetry to the instance's configured Umami endpoint when starting up; runs in a background goroutine so it does not block the HTTP server; respects an opt-out env var and logs a info message when disabled
+
+### Changed
+
+- **Semgrep output** — Semgrep scanner output is now logged at `WARN` level instead of `DEBUG`, making SAST scan issues easier to spot in production logs
+
+### Fixed
+
+- **GitLab issue creation** — the GitLab integration now returns the created issue even when the follow-up comment creation fails, preventing a silent no-op when the comment endpoint errors
+
+## [v1.7.2] - 2026-06-23
+
+### Added
+
+- **`devguard-maint` CLI** — new Go-based maintenance tool under `cmd/devguard-maint` replacing the old shell release scripts; provides `release devguard`, `release web`, `release helm-chart`, `release ci-components`, and `docs` subcommands with changelog-entry verification, automatic version detection, and signed tag support
+- **Versioning documentation** — `VERSIONING.md` added to the repo root explaining the shared-minor-version strategy across all DevGuard components; compatibility guarantees and a component table are also surfaced in the installation docs and release bodies
+
+### Fixed
+
+- **CI release pipeline** — `devguard-scanner.yaml` now correctly extracts the minor version for release notes and marks `-rc`/`-alpha`/`-beta` tags as GitHub prereleases; `devguard-cli` binary is included in the release artifacts
+
+## [v1.7.1] - 2026-06-22
+
+### Changed
+
+- **Go modernization** — codebase updated with `gopls/modernize` to use current Go idioms (e.g. `min`/`max` builtins, loop variable capture, slice/map literals); no behaviour changes
+- **Ticket creation logging** — GitHub, GitLab, and Jira integrations now log when ticket creation is skipped or triggered, making dry-run and live pipeline debugging easier
+- **CSAF controller cleanup** — removed unnecessary pointer indirection (`Ptr` calls) in `csaf_controller.go` and `csaf_service.go`; safe nil-dereference via `utils.SafeDereference` in the dry-run integration
+
+## [v1.7.0] - 2026-06-19
+
+### Added
+
+- **Instance admin dashboard** — the instance-wide admin area introduced in v1.6.1 is now functional: the actions are wired to their backend endpoints, an "Organisation Creation" toggle gates whether users may create organisations, and the dashboard surfaces instance settings, technical info, and daemon triggers. Admin requests are signed in the browser using an in-memory signing key, and the admin session now expires after a configurable timeout
+- **`decrypt` CLI command** — counterpart to the existing `encrypt` commands, decrypts secrets for inspection/debugging
+- **Daemon asset-pipeline dry-run** — a `--dry-run` flag on the daemon asset pipeline runs the full pipeline without persisting results or firing integrations (new in-memory dry-run integration), simplifying debugging of GitHub/GitLab/Jira ticket flows
+
+### Changed
+
+- **RBAC rule cleanup on deletion** — deleting an organisation, project, or asset now cascades to remove its Casbin RBAC rules instead of leaving them orphaned; a migration cleans up rules orphaned by previous deletions. Org creation also returns a more expressive error on failure
+- **SAST scanning** — SAST suppressions are stripped before upload, scanner config discovery was improved, and Semgrep debug output was added; the project Semgrep config moved to `.semgrep.yml`
+- **SSE streaming (web)** — the admin daemon-trigger streaming was refactored into a reusable `src/lib/sse.ts` helper; signed request bodies are now enforced as strings and SSE CRLF line endings are handled correctly
+- **CI / e2e tooling** — pipelines migrated from `devguard-action` to the reusable `devguard-ci-component`; Playwright e2e suite reworked with a dedicated auth setup and updated Playwright/Ory versions
+
+### Fixed
+
+- **Scan v2 authorization** ([#2163](https://github.com/l3montree-dev/devguard/issues/2163)) — authenticated `/api/v2/scan` and `/api/v2/sarif-scan` endpoints now require only `read` on the asset (down from `update`) and reject public requests; fixes a 500/authorization regression for CI scans
+- **Panic in `getBestDescription`** — guards against a nil-pointer panic when a SARIF reporting descriptor lacks description fields
+- **Missing SARIF URI** — the unauthenticated SARIF scan path no longer drops the result URI in the generated SARIF
+- **Config file editor (web)** — config-file editor filenames now match what the scanner expects
+- **Dashboard stats (web)** — instance dashboard statistics are rounded to two decimals; dashboard loading/error states and a login-domain warning were corrected
+
 ## [v1.6.1] - 2026-06-17
 
 ### Added

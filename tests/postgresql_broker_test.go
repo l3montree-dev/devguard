@@ -138,7 +138,7 @@ func TestPostgreSQLBroker(t *testing.T) {
 		// Publish simple policy change message
 		policyMsg := testMessage{
 			channel: shared.PolicyChange,
-			payload: map[string]interface{}{
+			payload: map[string]any{
 				"policy_id": "policy-123",
 				"action":    "updated",
 				"user_id":   "user-456",

@@ -18,7 +18,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -238,7 +237,7 @@ func TestPrintSarifResults(t *testing.T) {
 						Message: sarif.Message{Text: "open finding"},
 					},
 					{
-						RuleID:  utils.Ptr("rule-002"),
+						RuleID:  new("rule-002"),
 						Message: sarif.Message{Text: "suppressed finding"},
 						Suppressions: []sarif.Suppression{{
 							Kind:          sarif.SuppressionKind("inSource"),

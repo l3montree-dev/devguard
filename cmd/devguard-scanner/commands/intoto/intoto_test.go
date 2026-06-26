@@ -26,7 +26,7 @@ func TestRedactSecret(t *testing.T) {
 	})
 
 	t.Run("RedactSecret in map", func(t *testing.T) {
-		result := removeSecretsFromMap(map[string]interface{}{
+		result := removeSecretsFromMap(map[string]any{
 			"INPUT_ARGS": "devguard-scanner intoto stop --step=build --products=image-digest.txt --products=image-tag.txt --products=image-tag.txt --token=20b232bf8fde72ebdc2e6e7fe599de4325bdad71b555e2d35e7df8783b4e4e54 --apiURL=https://api.devguard.org",
 		})
 

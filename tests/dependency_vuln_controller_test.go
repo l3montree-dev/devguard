@@ -14,7 +14,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -248,8 +247,8 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 
 		// Mark the asset as external provider
-		asset.ExternalEntityProviderID = utils.Ptr("gitlab")
-		asset.ExternalEntityID = utils.Ptr("123")
+		asset.ExternalEntityProviderID = new("gitlab")
+		asset.ExternalEntityID = new("123")
 		assert.Nil(t, f.DB.Save(&asset).Error)
 
 		t.Run("should reopen a ticket, if the dependency vuln is reopened", func(t *testing.T) {
@@ -277,7 +276,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 					State:                dtos.VulnStateAccepted,
 					AssetVersionName:     assetVersion.Name,
 					AssetID:              asset.ID,
-					TicketID:             utils.Ptr("gitlab:0/123"),
+					TicketID:             new("gitlab:0/123"),
 					ManualTicketCreation: true,
 				},
 				ComponentPurl: "pkg:npm/test-package@1.0.0",

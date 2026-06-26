@@ -378,7 +378,7 @@ func convertCsafVulnToCdxVuln(productID gocsaf.ProductID, affectedPurl packageur
 	}
 	cdxVuln := cyclonedx.Vulnerability{
 		ID: string(*vuln.CVE),
-		Affects: utils.Ptr([]cyclonedx.Affects{
+		Affects: new([]cyclonedx.Affects{
 			{
 				Ref: purlString,
 			},
@@ -813,21 +813,21 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 	// now we can start building the document
 	// build static parts of the document field first
 	csafDoc.Document = &gocsaf.Document{
-		CSAFVersion: utils.Ptr(gocsaf.CSAFVersion20),
+		CSAFVersion: new(gocsaf.CSAFVersion20),
 		Publisher: &gocsaf.DocumentPublisher{
-			Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+			Category:  new(gocsaf.CSAFCategoryVendor),
 			Name:      &orgName,
-			Namespace: utils.Ptr("https://devguard.org"),
+			Namespace: new("https://devguard.org"),
 		},
 		Title: GenerateDocumentTitle(assetName, cveID),
-		Lang:  utils.Ptr(gocsaf.Lang("en-US")),
+		Lang:  new(gocsaf.Lang("en-US")),
 	}
 
 	// TODO change tlp based off of visibility of csaf report, white for public and TLP:AMBER or TLP:RED for access protected reports
 	csafDoc.Document.Distribution = &gocsaf.DocumentDistribution{
 		TLP: &gocsaf.TLP{
-			DocumentTLPLabel: utils.Ptr(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
-			URL:              utils.Ptr("https://first.org/tlp"),
+			DocumentTLPLabel: new(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
+			URL:              new("https://first.org/tlp"),
 		},
 	}
 
@@ -851,9 +851,9 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 
 	// if we do not have any vulnerabilities we do not comply with the security framework anymore so we need to switch the category to the base profile
 	if len(vulnerabilities) == 0 {
-		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_base"))
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_base"))
 	} else {
-		csafDoc.Document.Category = utils.Ptr(gocsaf.DocumentCategory("csaf_vex"))
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_vex"))
 	}
 
 	// calculate the current release date based on the latest revision event
@@ -875,9 +875,9 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []m
 		// first append the component itself
 		productName := &gocsaf.FullProductName{
 			Name:      &vuln.ComponentPurl,
-			ProductID: utils.Ptr(gocsaf.ProductID(vuln.ComponentPurl)),
+			ProductID: new(gocsaf.ProductID(vuln.ComponentPurl)),
 			ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-				PURL: utils.Ptr(gocsaf.PURL(vuln.ComponentPurl)),
+				PURL: new(gocsaf.PURL(vuln.ComponentPurl)),
 			},
 		}
 		productNames = append(productNames, productName)
@@ -890,9 +890,9 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []m
 			if _, ok := seenArtifact[artifactPurl]; !ok {
 				productName := &gocsaf.FullProductName{
 					Name:      &artifactPurl,
-					ProductID: utils.Ptr(gocsaf.ProductID(artifactPurl)),
+					ProductID: new(gocsaf.ProductID(artifactPurl)),
 					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
-						PURL: utils.Ptr(gocsaf.PURL(artifactPurl)),
+						PURL: new(gocsaf.PURL(artifactPurl)),
 					},
 				}
 				productNames = append(productNames, productName)
@@ -900,15 +900,15 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []m
 			}
 
 			relationship := gocsaf.Relationship{
-				Category:                  utils.Ptr(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
-				ProductReference:          utils.Ptr(gocsaf.ProductID(vuln.ComponentPurl)),
-				RelatesToProductReference: utils.Ptr(gocsaf.ProductID(artifactPurl)),
+				Category:                  new(gocsaf.CSAFRelationshipCategoryDefaultComponentOf),
+				ProductReference:          new(gocsaf.ProductID(vuln.ComponentPurl)),
+				RelatesToProductReference: new(gocsaf.ProductID(artifactPurl)),
 				FullProductName: &gocsaf.FullProductName{
 					ProductIdentificationHelper: &gocsaf.ProductIdentificationHelper{
 						PURL: (*gocsaf.PURL)(&vuln.ComponentPurl),
 					},
-					ProductID: utils.Ptr(artifactNameAndComponentPurlToProductID(artifactPurl, vuln.ComponentPurl)),
-					Name:      utils.Ptr(fmt.Sprintf("Package %s is a default component of artifact %s", vuln.ComponentPurl, artifactPurl)),
+					ProductID: new(artifactNameAndComponentPurlToProductID(artifactPurl, vuln.ComponentPurl)),
+					Name:      new(fmt.Sprintf("Package %s is a default component of artifact %s", vuln.ComponentPurl, artifactPurl)),
 				},
 			}
 			relationships = append(relationships, &relationship)
@@ -922,8 +922,8 @@ func generateProductTree(ctx context.Context, assetID uuid.UUID, vulnsForCVE []m
 		return string(*relationship.FullProductName.ProductID)
 	})
 
-	tree.FullProductNames = utils.Ptr(gocsaf.FullProductNames(productNames))
-	tree.RelationShips = utils.Ptr(gocsaf.Relationships(relationships))
+	tree.FullProductNames = new(gocsaf.FullProductNames(productNames))
+	tree.RelationShips = new(gocsaf.Relationships(relationships))
 
 	return tree, nil
 }
@@ -952,8 +952,8 @@ func generateVulnerabilityObjects(ctx context.Context, cveID string, allVulnsOfC
 
 	// built the vulnerability object for the CVE
 	vulnObject := gocsaf.Vulnerability{
-		IDs:           []*gocsaf.VulnerabilityID{{SystemName: utils.Ptr("OSV (OSV.dev)"), Text: &cveID}},
-		Title:         utils.Ptr(fmt.Sprintf("Additional information about %s", cveID)),
+		IDs:           []*gocsaf.VulnerabilityID{{SystemName: new("OSV (OSV.dev)"), Text: &cveID}},
+		Title:         new(fmt.Sprintf("Additional information about %s", cveID)),
 		DiscoveryDate: initialRelease,
 	}
 
@@ -1042,8 +1042,8 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 
 			remediations = append(remediations, &gocsaf.Remediation{
 				Details:    &details,
-				Category:   utils.Ptr(gocsaf.CSAFRemediationCategoryNoFixPlanned),
-				ProductIds: utils.Ptr(gocsaf.Products([]*gocsaf.ProductID{utils.Ptr(gocsaf.ProductID(productName))})),
+				Category:   new(gocsaf.CSAFRemediationCategoryNoFixPlanned),
+				ProductIds: new(gocsaf.Products([]*gocsaf.ProductID{new(gocsaf.ProductID(productName))})),
 			})
 
 			affected[productName] = struct{}{}
@@ -1076,17 +1076,17 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 
 	// after putting each vuln in their respective category we build the product status lists with them
 	productStatus := &gocsaf.ProductStatus{
-		Fixed: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
-			return utils.Ptr(gocsaf.ProductID(el))
+		Fixed: emptySliceThenNil(new(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(fixed)), func(el string) *gocsaf.ProductID {
+			return new(gocsaf.ProductID(el))
 		})))),
-		KnownAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(affected)), func(el string) *gocsaf.ProductID {
-			return utils.Ptr(gocsaf.ProductID(el))
+		KnownAffected: emptySliceThenNil(new(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(affected)), func(el string) *gocsaf.ProductID {
+			return new(gocsaf.ProductID(el))
 		})))),
-		KnownNotAffected: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(notAffected)), func(el string) *gocsaf.ProductID {
-			return utils.Ptr(gocsaf.ProductID(el))
+		KnownNotAffected: emptySliceThenNil(new(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(notAffected)), func(el string) *gocsaf.ProductID {
+			return new(gocsaf.ProductID(el))
 		})))),
-		UnderInvestigation: emptySliceThenNil(utils.Ptr(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(underInvestigation)), func(el string) *gocsaf.ProductID {
-			return utils.Ptr(gocsaf.ProductID(el))
+		UnderInvestigation: emptySliceThenNil(new(gocsaf.Products(utils.Map(slices.Collect(maps.Keys(underInvestigation)), func(el string) *gocsaf.ProductID {
+			return new(gocsaf.ProductID(el))
 		})))),
 	}
 	return productStatus, falsePositiveFlags, distributions, remediations
@@ -1171,7 +1171,7 @@ func generateFlagsForVulnerabilityObject(flags []falsePositiveFlag) gocsaf.Flags
 
 		// optional fields
 		if flagValues.Date != nil {
-			flag.Date = utils.Ptr(flagValues.Date.Format(time.RFC3339))
+			flag.Date = new(flagValues.Date.Format(time.RFC3339))
 		}
 
 		vulnFlags = append(vulnFlags, &flag)
@@ -1190,8 +1190,8 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 	cve := vulns[0].CVE
 	if cve.Description != "" {
 		cveDescriptionNote := gocsaf.Note{
-			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDescription),
-			Title:        utils.Ptr(fmt.Sprintf("textual description of %s", cve.CVE)),
+			NoteCategory: new(gocsaf.CSAFNoteCategoryDescription),
+			Title:        new(fmt.Sprintf("textual description of %s", cve.CVE)),
 			Text:         &cve.Description,
 		}
 		notes = append(notes, &cveDescriptionNote)
@@ -1212,9 +1212,9 @@ func generateNotesForVulnerabilityObject(vulns []models.DependencyVuln, distribu
 		}
 
 		vulnDetails := gocsaf.Note{
-			NoteCategory: utils.Ptr(gocsaf.CSAFNoteCategoryDetails),
-			Title:        utils.Ptr(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
-			Text:         utils.Ptr(summary.String()),
+			NoteCategory: new(gocsaf.CSAFNoteCategoryDetails),
+			Title:        new(fmt.Sprintf("State of vulnerability paths in product %s", distribution.productID)),
+			Text:         new(summary.String()),
 		}
 		notes = append(notes, &vulnDetails)
 	}
@@ -1266,8 +1266,8 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 	// fill in the last attributes
 	version := fmt.Sprintf("%d", len(revisions))
 	tracking.ID = (*gocsaf.TrackingID)(GenerateDocumentTitle(assetName, cveID))
-	tracking.Version = utils.Ptr(gocsaf.RevisionNumber(version))
-	tracking.Status = utils.Ptr(gocsaf.CSAFTrackingStatusInterim)
+	tracking.Version = new(gocsaf.RevisionNumber(version))
+	tracking.Status = new(gocsaf.CSAFTrackingStatusInterim)
 
 	engineVersion := config.Version
 	if engineVersion == "" {
@@ -1275,7 +1275,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 	}
 	tracking.Generator = &gocsaf.Generator{
 		Engine: &gocsaf.Engine{
-			Name:    utils.Ptr("DevGuard CSAF Generator"),
+			Name:    new("DevGuard CSAF Generator"),
 			Version: &engineVersion,
 		},
 		Date: tracking.CurrentReleaseDate,
@@ -1332,7 +1332,7 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 				}
 
 				revisionObject := gocsaf.Revision{
-					Date: utils.Ptr((*earliestDate).Format(time.RFC3339)),
+					Date: new((*earliestDate).Format(time.RFC3339)),
 				}
 
 				artifactNames = utils.DeduplicateSlice(artifactNames, func(t string) string { return t })
@@ -1360,7 +1360,7 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 
 	version := 1
 	for _, entry := range revisions {
-		entry.Number = utils.Ptr(gocsaf.RevisionNumber(strconv.Itoa(version)))
+		entry.Number = new(gocsaf.RevisionNumber(strconv.Itoa(version)))
 		version++
 	}
 	return revisions, nil
@@ -1438,7 +1438,7 @@ func SignCSAFReport(csafJSON []byte) ([]byte, error) {
 }
 
 func GenerateDocumentTitle(assetName, cveID string) *string {
-	return utils.Ptr(fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName))
+	return new(fmt.Sprintf("Security advisory for vulnerability %s in asset %s", cveID, assetName))
 }
 
 func (service *csafService) GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error) {

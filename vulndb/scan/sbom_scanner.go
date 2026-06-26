@@ -17,7 +17,6 @@ package scan
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -51,7 +50,7 @@ func (s *sbomScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]mod
 		if c.Component.PackageURL != "" {
 			parsed, err := packageurl.FromString(c.Component.PackageURL)
 			if err != nil {
-				slog.Warn("could not parse purl", "purl", c.Component.PackageURL, "err", err)
+				// slog.Warn("could not parse purl", "purl", c.Component.PackageURL, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
 				continue
 			}
 			purls = append(purls, parsed)

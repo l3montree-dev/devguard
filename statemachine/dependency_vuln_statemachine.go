@@ -248,7 +248,7 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 
 		// Tag events with their source branch
 		taggedEvents := utils.Map(relevantEvents, func(event models.VulnEvent) models.VulnEvent {
-			event.OriginalAssetVersionName = utils.Ptr(vuln.GetAssetVersionName())
+			event.OriginalAssetVersionName = new(vuln.GetAssetVersionName())
 			return event
 		})
 

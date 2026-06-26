@@ -305,14 +305,14 @@ func statePriority(state cdx.ImpactAnalysisState) int {
 // When the same CVE+Affects combination exists, state priority determines which one to keep:
 // exploitable > in_triage > false_positive
 func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
-	affectsStr := ""
+	var affectsStr strings.Builder
 	if vuln.Affects != nil {
 		for _, aff := range *vuln.Affects {
-			affectsStr += aff.Ref + ";"
+			affectsStr.WriteString(aff.Ref + ";")
 		}
 	}
 
-	key := vuln.ID + "@" + affectsStr
+	key := vuln.ID + "@" + affectsStr.String()
 
 	existing, exists := g.Vulnerabilities[key]
 	if !exists {
@@ -398,9 +398,8 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 	}
 
 	// Deep copy vulnerabilities
-	for id, vuln := range g.Vulnerabilities {
-		clone.Vulnerabilities[id] = vuln // Note: Vuln is shared, make deep copy if needed
-	}
+	// Note: Vuln is shared, make deep copy if needed
+	maps.Copy(clone.Vulnerabilities, g.Vulnerabilities)
 
 	return clone
 }
@@ -1157,13 +1156,7 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 
 			// Record the edge (parent -> child)
 			deps := dependencies[parentID]
-			found := false
-			for _, d := range deps {
-				if d == current.nodeID {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(deps, current.nodeID)
 			if !found {
 				dependencies[parentID] = append(dependencies[parentID], current.nodeID)
 			}

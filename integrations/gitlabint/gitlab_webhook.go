@@ -268,16 +268,16 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	case dtos.EventTypeAccepted, dtos.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
-			StateEvent: gitlab.Ptr("close"),
-			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			StateEvent: new("close"),
+			Labels:     new(gitlab.LabelOptions(labels)),
 		})
 
 		return err
 	case dtos.EventTypeReopened:
 		labels := commonint.GetLabels(vuln)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
-			StateEvent: gitlab.Ptr("reopen"),
-			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			StateEvent: new("reopen"),
+			Labels:     new(gitlab.LabelOptions(labels)),
 		})
 		return err
 	}

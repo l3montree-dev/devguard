@@ -30,8 +30,9 @@ import (
 // we use Set 1 of ISO 639 language codes to identify languages based on 2 letters
 var supportedLanguageCodes = []string{"de", "en"}
 
+//go:fix inline
 func Ptr[T any](t T) *T {
-	return &t
+	return new(t)
 }
 
 func PtrMap[T any, U any](t *T, f func(T) U) *U {
@@ -82,7 +83,7 @@ func EmptyThenNil(s string) *string {
 	if s == "" {
 		return nil
 	}
-	return Ptr(s)
+	return new(s)
 }
 
 func OrDefault[T any](val *T, def T) T {

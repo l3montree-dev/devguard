@@ -151,7 +151,7 @@ func TestToCdxComponentCompliance(t *testing.T) {
 		assert.NotEmpty(t, data)
 
 		// Verify the JSON is valid
-		var result map[string]interface{}
+		var result map[string]any
 		err = json.Unmarshal(data, &result)
 		assert.NoError(t, err, "Marshaled component should be valid JSON")
 	})
@@ -189,7 +189,7 @@ func TestToCdxComponentCompliance(t *testing.T) {
 		assert.NoError(t, err, "Component should be encodable in a CycloneDX BOM")
 
 		// Verify the encoded JSON is valid
-		var result interface{}
+		var result any
 		err = json.Unmarshal(buf.Bytes(), &result)
 		assert.NoError(t, err, "Encoded BOM should contain valid JSON")
 	})
@@ -283,7 +283,7 @@ func TestToCdxComponentCompliance(t *testing.T) {
 			Dependency: Component{
 				ID:            "pkg:npm/express@4.18.2",
 				ComponentType: dtos.ComponentTypeLibrary,
-				License:       getStringPtr("MIT"),
+				License:       new("MIT"),
 			},
 		}
 
@@ -300,7 +300,7 @@ func TestToCdxComponentCompliance(t *testing.T) {
 			Dependency: Component{
 				ID:            "pkg:npm/express@4.18.2",
 				ComponentType: dtos.ComponentTypeLibrary,
-				License:       getStringPtr("MIT"),
+				License:       new("MIT"),
 			},
 		}
 
@@ -406,7 +406,7 @@ func TestToCdxComponentBOMIntegration(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify it's valid JSON
-	var result interface{}
+	var result any
 	err = json.Unmarshal(buf.Bytes(), &result)
 	assert.NoError(t, err)
 
@@ -419,9 +419,4 @@ func TestToCdxComponentBOMIntegration(t *testing.T) {
 		}
 		bomRefs[comp.BOMRef] = true
 	}
-}
-
-// Helper function to get pointer to string
-func getStringPtr(s string) *string {
-	return &s
 }

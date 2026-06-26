@@ -24,11 +24,11 @@ type NPMResponse struct {
 	Versions             map[string]VersionData `json:"versions"`
 	Time                 map[string]string      `json:"time"`
 	Bugs                 Bugs                   `json:"bugs"`
-	Author               interface{}            `json:"author"`
-	License              interface{}            `json:"license"`
+	Author               any                    `json:"author"`
+	License              any                    `json:"license"`
 	Homepage             string                 `json:"homepage"`
 	Keywords             []string               `json:"keywords"`
-	Repository           interface{}            `json:"repository"`
+	Repository           any                    `json:"repository"`
 	Contributors         []Person               `json:"contributors"`
 	Maintainers          []Person               `json:"maintainers"`
 	ReadMe               string                 `json:"readme"`
@@ -45,26 +45,26 @@ type DistTags struct {
 }
 
 type VersionData struct {
-	Name         string                 `json:"name"`
-	Version      string                 `json:"version"`
-	Keywords     []string               `json:"keywords"`
-	Author       interface{}            `json:"author"`
-	License      interface{}            `json:"license"`
-	ID           string                 `json:"_id"`
-	Maintainers  []Person               `json:"maintainers"`
-	Contributors []Person               `json:"contributors"`
-	Homepage     string                 `json:"homepage"`
-	Bugs         Bugs                   `json:"bugs"`
-	Jam          map[string]interface{} `json:"jam"`
-	Dist         Dist                   `json:"dist"`
-	Main         string                 `json:"main"`
-	From         string                 `json:"from"`
-	Engines      interface{}            `json:"engines"`
-	NpmUser      Person                 `json:"_npmUser"`
-	Repository   interface{}            `json:"repository"`
-	NpmVersion   string                 `json:"_npmVersion"`
-	Description  string                 `json:"description"`
-	Directories  map[string]string      `json:"directories"`
+	Name         string            `json:"name"`
+	Version      string            `json:"version"`
+	Keywords     []string          `json:"keywords"`
+	Author       any               `json:"author"`
+	License      any               `json:"license"`
+	ID           string            `json:"_id"`
+	Maintainers  []Person          `json:"maintainers"`
+	Contributors []Person          `json:"contributors"`
+	Homepage     string            `json:"homepage"`
+	Bugs         Bugs              `json:"bugs"`
+	Jam          map[string]any    `json:"jam"`
+	Dist         Dist              `json:"dist"`
+	Main         string            `json:"main"`
+	From         string            `json:"from"`
+	Engines      any               `json:"engines"`
+	NpmUser      Person            `json:"_npmUser"`
+	Repository   any               `json:"repository"`
+	NpmVersion   string            `json:"_npmVersion"`
+	Description  string            `json:"description"`
+	Directories  map[string]string `json:"directories"`
 }
 
 type Person struct {

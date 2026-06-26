@@ -23,8 +23,8 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 	t.Run("test getPubKey Using Fingerprint", func(t *testing.T) {
 
 		var pat = models.PAT{
-			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
-			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -90,7 +90,7 @@ func TestVerifyAPIToken(t *testing.T) {
 
 	t.Run("returns userID and scopes for a valid token", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000010")
-		pat := models.PAT{Scopes: "read write", Fingerprint: utils.Ptr("fp1")}
+		pat := models.PAT{Scopes: "read write", Fingerprint: new("fp1")}
 		pat.UserID = userID
 		pat.ID = patID
 
@@ -141,7 +141,7 @@ func TestVerifyAPIToken(t *testing.T) {
 
 	t.Run("still returns success when MarkAsLastUsedNowByID fails", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000011")
-		pat := models.PAT{Scopes: "scan", Fingerprint: utils.Ptr("fp2")}
+		pat := models.PAT{Scopes: "scan", Fingerprint: new("fp2")}
 		pat.UserID = userID
 		pat.ID = patID
 
@@ -234,8 +234,8 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
 		var pat = models.PAT{
-			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
-			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -266,8 +266,8 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 	})
 	t.Run("test signing and verifying fails, after having tampered with the request", func(t *testing.T) {
 		var pat = models.PAT{
-			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
-			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -326,8 +326,8 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 
 	t.Run("test signing and verifying fails, after having tampered with the method header", func(t *testing.T) {
 		var pat = models.PAT{
-			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
-			ExpiryDate: utils.Ptr(time.Now().Add(time.Hour)),
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
@@ -364,7 +364,7 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 	t.Run("rejects a valid signature from an expired PAT", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		var pat = models.PAT{
-			PubKey:     utils.Ptr("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
 			ExpiryDate: &past,
 		}
 

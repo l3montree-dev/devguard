@@ -310,7 +310,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: new(time.Now())}
 
 	span.SetAttributes(
 		attribute.Int("scan.opened", len(opened)),
@@ -462,7 +462,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: new(time.Now())}
 
 	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(ctx, tx, "system", newState, "", asset)
 	if err != nil {

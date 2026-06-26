@@ -61,7 +61,6 @@ func TestArtifactNameGeneration(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// set viper keys used by ParseBaseConfig (mapstructure tags)
 			viper.Set("assetName", tc.assetName)

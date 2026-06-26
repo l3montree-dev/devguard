@@ -44,7 +44,7 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 			parts := strings.Split(distro, "-")
 			if len(parts) >= 2 {
 				distroName := parts[0]
-				majorVersion := strings.Split(parts[1], ".")[0]     // Get major version (13.2 -> 13)
+				majorVersion, _, _ := strings.Cut(parts[1], ".")    // Get major version (13.2 -> 13)
 				ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
 
 				query = query.Where("ecosystem LIKE ?", ecosystemPattern+"%")

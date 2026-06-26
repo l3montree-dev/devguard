@@ -170,7 +170,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifact.ArtifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifact.ArtifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -380,7 +380,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	// update the license information in the background
 	c.FireAndForget(func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, utils.Ptr(artifactName), false)
+		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifactName), false)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

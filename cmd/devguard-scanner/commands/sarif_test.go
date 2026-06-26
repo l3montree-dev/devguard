@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func ptrStr(s string) *string { return &s }
-func ptrInt(i int) *int       { return &i }
-
 func buildSarifScan(uri string, startLine, endLine int, originalSnippet string) *sarif.SarifSchema210Json {
 	return &sarif.SarifSchema210Json{
 		Runs: []sarif.Run{
@@ -22,13 +19,13 @@ func buildSarifScan(uri string, startLine, endLine int, originalSnippet string) 
 							{
 								PhysicalLocation: sarif.PhysicalLocation{
 									ArtifactLocation: sarif.ArtifactLocation{
-										URI: ptrStr(uri),
+										URI: new(uri),
 									},
 									Region: &sarif.Region{
-										StartLine: ptrInt(startLine),
-										EndLine:   ptrInt(endLine),
+										StartLine: new(startLine),
+										EndLine:   new(endLine),
 										Snippet: &sarif.ArtifactContent{
-											Text: ptrStr(originalSnippet),
+											Text: new(originalSnippet),
 										},
 									},
 								},

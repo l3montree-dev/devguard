@@ -276,7 +276,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	}
 	report := sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
+		Schema:  new("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json"),
 		Runs:    make([]sarif.Run, 0),
 	}
 
