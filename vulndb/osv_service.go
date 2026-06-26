@@ -1043,6 +1043,17 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		slog.Info("successfully cleaned up orphan cves", "took", time.Since(start))
 	}
 
+	// after deleting orphan cves make sure to drop any orphaned relationships as well so the fk on source_cve holds
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+	DELETE FROM cve_relationships cr
+	WHERE NOT EXISTS (SELECT 1 FROM cves c WHERE c.cve = cr.source_cve);`)
+	if err != nil {
+		slog.Error("could not clean up dangling cve_relationships, continuing...", "error", err)
+	} else {
+		slog.Info("successfully cleaned up dangling cve_relationships", "took", time.Since(start))
+	}
+
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	DELETE FROM
