@@ -591,7 +591,7 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 // @Summary Sync or delete an externally managed project/asset tree
 // @Description Called by external inventory providers (e.g. k8s-devguard-image-inventory) to upsert or delete a dynamically managed project hierarchy. On verb=update, creates or updates the project, sub-project, asset, asset version and artifact, then processes the supplied CycloneDX SBOM and triggers a vulnerability scan. On verb=delete, removes the artifact/asset-version/asset/project entries cascading upward as long as no other data references them.
-// @Tags Projects
+// @Tags External Entity
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
@@ -726,7 +726,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 
 // @Summary List externally managed project/asset tree
 // @Description Returns the full tree of projects, sub-projects, assets, asset versions and artifacts that were dynamically created by an external inventory provider (e.g. k8s-devguard-image-inventory) for the given providerID.
-// @Tags Projects
+// @Tags External Entity
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
