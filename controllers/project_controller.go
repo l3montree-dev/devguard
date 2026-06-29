@@ -564,7 +564,7 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	return ctx.String(200, configContent)
 }
 
-func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Context) error {
+func (projectController *ProjectController) HandleDynamicProject(ctx shared.Context) error {
 
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -580,45 +580,29 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, "verb, projectExternalEntityId, and assetExternalEntityId are required")
 	}
 
-	action := probe.Verb
-	projectName := probe.ProjectName
-	projectExternalEntityID := probe.ProjectExternalEntityID
-	projectDescription := probe.ProjectDescription
-
-	subProjectExternalEntityID := probe.SubProjectExternalEntityID
-	subProjectName := probe.SubProjectName
-	subProjectDescription := probe.SubProjectDescription
-
-	assetName := probe.AssetName
-	assetExternalEntityID := probe.AssetExternalEntityID
-	assetDescription := probe.AssetDescription
-
-	assetVersionName := probe.AssetVersionName
-	artifactName := probe.Artifact
-
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	if action == "delete" {
+	if probe.Verb == "delete" {
 		parentProjectID := parentProject.ID
-		proExternalEntityID := projectExternalEntityID
-		if subProjectExternalEntityID != "" {
-			subProjectParent, err := ProjectController.projectRepository.GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx.Request().Context(), nil, parentProject.ID, providerID, projectExternalEntityID)
+		proExternalEntityID := probe.ProjectExternalEntityID
+		if probe.SubProjectExternalEntityID != "" {
+			subProjectParent, err := projectController.projectRepository.GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx.Request().Context(), nil, parentProject.ID, providerID, probe.ProjectExternalEntityID)
 			if err != nil {
 				return echo.NewHTTPError(500, fmt.Sprintf("could not fetch sub-projects: %s", err.Error())).WithInternal(err)
 			}
 			parentProjectID = subProjectParent.ID
-			proExternalEntityID = subProjectExternalEntityID
+			proExternalEntityID = probe.SubProjectExternalEntityID
 		}
-		err := ProjectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProjectID, providerID, proExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
+		err := projectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProjectID, providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact)
 		if err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
 		}
 
 		return ctx.JSON(200, map[string]string{"message": "project and asset deleted successfully"})
-	} else if action != "update" {
+	} else if probe.Verb != "update" {
 		return echo.NewHTTPError(400, "invalid verb, only 'update' and 'delete' are allowed")
 	}
 
@@ -631,15 +615,15 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
 	}
 
-	project, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), projectName, projectExternalEntityID, parentProject.ID, projectDescription)
+	project, err := projectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), probe.ProjectName, probe.ProjectExternalEntityID, parentProject.ID, probe.ProjectDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create project: %s", err.Error())).WithInternal(err)
 	}
 
 	pID := project.ID
 
-	if subProjectExternalEntityID != "" {
-		subProject, err := ProjectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), subProjectName, subProjectExternalEntityID, project.ID, subProjectDescription)
+	if probe.SubProjectExternalEntityID != "" {
+		subProject, err := projectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), probe.SubProjectName, probe.SubProjectExternalEntityID, project.ID, probe.SubProjectDescription)
 		if err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not create sub-project: %s", err.Error())).WithInternal(err)
 		}
@@ -647,27 +631,27 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	}
 
 	rbac := shared.GetRBAC(ctx)
-	asset, err := ProjectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, assetName, assetExternalEntityID, userID, assetDescription)
+	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, userID, probe.AssetDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
 
-	assetVersion, err := ProjectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, assetVersionName, asset.ID, false, nil)
+	assetVersion, err := projectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, probe.AssetVersionName, asset.ID, false, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset version: %s", err.Error())).WithInternal(err)
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
+		ArtifactName:     probe.Artifact,
 		AssetVersionName: assetVersion.Name,
 		AssetID:          asset.ID,
 	}
-	if err := ProjectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
+	if err := projectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
 		slog.Error("trivy operator: could not save artifact", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not save artifact"})
 	}
 
-	release, err := ProjectController.releaseService.FindOrCreate(ctx.Request().Context(), parentProject.ID, providerID)
+	release, err := projectController.releaseService.FindOrCreate(ctx.Request().Context(), parentProject.ID, providerID)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create release: %s", err.Error())).WithInternal(err)
 	}
@@ -680,29 +664,29 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		AssetVersionName: &assetVersion.Name,
 	}
 
-	err = ProjectController.releaseService.AddItem(ctx.Request().Context(), &releaseItem)
+	err = projectController.releaseService.AddItem(ctx.Request().Context(), &releaseItem)
 	if err != nil {
 		slog.Error("could not add release item", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
 	}
 
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, artifactName, "operator", asset.KeepOriginalSbomRootComponent)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator", asset.KeepOriginalSbomRootComponent)
 	if err != nil {
 		slog.Error("trivy operator: failed to normalize BOM", "err", err)
 		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})
 	}
 
-	wholeSBOM, err := ProjectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), nil, organization, *project, *asset, assetVersion, artifactName, normalized)
+	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), nil, organization, *project, *asset, assetVersion, probe.Artifact, normalized)
 	if err != nil {
 		slog.Error("trivy operator: could not update SBOM", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not update SBOM"})
 	}
 
-	tx := ProjectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+	tx := projectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
 	defer tx.Rollback()
 
 	userAgent := ctx.Request().UserAgent()
-	_, _, _, err = ProjectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
 	if err != nil {
 		slog.Error("trivy operator: scan failed", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})
@@ -712,13 +696,13 @@ func (ProjectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
-func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
+func (projectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
 	providerID := shared.GetProviderID(ctx)
 
 	// Query 1: direct child projects filtered by providerID
-	projects, err := ProjectController.projectRepository.GetDirectChildProjectsWithProviderID(reqCtx, nil, parentProject.ID, providerID)
+	projects, err := projectController.projectRepository.GetDirectChildProjectsWithProviderID(reqCtx, nil, parentProject.ID, providerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
 	}
@@ -732,7 +716,7 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 	}
 
 	// Query 2: all sub-projects for all parent projects in one shot
-	subProjects, err := ProjectController.projectRepository.GetChildProjectsForParents(reqCtx, nil, projectIDs, providerID)
+	subProjects, err := projectController.projectRepository.GetChildProjectsForParents(reqCtx, nil, projectIDs, providerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list sub-projects").WithInternal(err)
 	}
@@ -744,7 +728,7 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 
 	// Query 3: all assets for projects + sub-projects, filtered by providerID
 	allProjectIDs := append(projectIDs, subProjectIDs...)
-	allAssets, err := ProjectController.assetRepository.GetByProjectIDsWithProviderID(reqCtx, nil, allProjectIDs, providerID)
+	allAssets, err := projectController.assetRepository.GetByProjectIDsWithProviderID(reqCtx, nil, allProjectIDs, providerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
 	}
@@ -755,13 +739,13 @@ func (ProjectController *ProjectController) ListDynamicProjects(ctx shared.Conte
 	}
 
 	// Query 4: all asset versions for all assets
-	allAssetVersions, err := ProjectController.assetVersionRepository.GetAssetVersionsByAssetIDs(reqCtx, nil, allAssetIDs)
+	allAssetVersions, err := projectController.assetVersionRepository.GetAssetVersionsByAssetIDs(reqCtx, nil, allAssetIDs)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
 	}
 
 	// Query 5: all artifacts for all assets
-	allArtifacts, err := ProjectController.artifactRepository.GetByAssetIDs(reqCtx, nil, allAssetIDs)
+	allArtifacts, err := projectController.artifactRepository.GetByAssetIDs(reqCtx, nil, allAssetIDs)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list artifacts").WithInternal(err)
 	}
