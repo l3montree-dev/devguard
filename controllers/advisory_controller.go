@@ -16,11 +16,14 @@
 package controllers
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type AdvisoryController struct {
@@ -39,7 +42,12 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
+	if err := shared.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, "invalid request").WithInternal(err)
+	}
+
 	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)
+	newAdvisory.AssetID = shared.GetAsset(ctx).ID
 
 	err := controller.advisoryService.Create(ctx.Request().Context(), &newAdvisory)
 
@@ -69,7 +77,10 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
 
 	if err != nil {
-		return echo.NewHTTPError(409, "could not get any data").WithInternal(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+		}
+		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
 
 	return ctx.JSON(200, advisory)
@@ -89,10 +100,14 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 
 	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
 	if err != nil {
-		return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+		}
+		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
 
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
+	advisory.AssetID = shared.GetAsset(ctx).ID
 
 	err = controller.advisoryService.Update(ctx.Request().Context(), parsedID, &advisory)
 

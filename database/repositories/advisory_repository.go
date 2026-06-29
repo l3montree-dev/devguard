@@ -48,7 +48,7 @@ func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, 
 	if tx != nil {
 		db = tx
 	}
-	err := db.Preload("AffectedPackages").Where("id = ?", id).Find(&advisory).Error
+	err := db.Preload("AffectedPackages").Where("id = ?", id).First(&advisory).Error
 	return advisory, err
 }
 

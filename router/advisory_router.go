@@ -17,7 +17,6 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -26,7 +25,6 @@ type AdvisoryRouter struct {
 }
 
 func NewAdvisoryRouter(
-	assetRepository shared.AssetRepository,
 	assetVersionGroup AssetVersionRouter,
 	advisoryController *controllers.AdvisoryController,
 ) AdvisoryRouter {
