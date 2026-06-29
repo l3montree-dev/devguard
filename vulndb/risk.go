@@ -45,7 +45,7 @@ func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth i
 		EPSS:      utils.OrDefault(cve.EPSS, 0),
 		BaseScore: float64(cve.CVSS),
 
-		UnderAttack:   cve.CISAActionDue != nil,
+		UnderAttack:   activelyExploited(*cve),
 		ExploitExists: len(cve.Exploits) > 0,
 		VerifiedExploitExists: utils.Any(
 			cve.Exploits,
@@ -175,7 +175,7 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 		if len(cve.Exploits) > 0 {
 			cvss.Set("E", "P") // nolint:errcheck
 		}
-		if cve.CISAActionDue != nil {
+		if activelyExploited(*cve) {
 			cvss.Set("E", "A") // nolint:errcheck
 		}
 
@@ -323,4 +323,9 @@ func setEnv(cvss cvssInterface, env shared.Environmental) {
 	if env.AvailabilityRequirements != "" {
 		cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
 	}
+}
+
+// determines for a vulnerability if its actively being exploited by using available KEV data
+func activelyExploited(cve models.CVE) bool {
+	return cve.CISAExploitAdd != nil || cve.EUVDExploitAdd != nil
 }
