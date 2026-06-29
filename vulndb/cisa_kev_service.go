@@ -52,8 +52,6 @@ type cisaKEVEntry struct {
 	CWEs                       []string `json:"cwes"`
 }
 
-const kevBatchSize int = 50_000
-
 func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, CisaKEVURL, nil)
 	if err != nil {
