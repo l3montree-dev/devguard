@@ -17,8 +17,8 @@ package controllers
 
 import (
 	"errors"
+	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -39,20 +39,20 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 func (controller *AdvisoryController) Create(ctx shared.Context) error {
 	var req dtos.AdvisoryCreate
 	if err := ctx.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+		return echo.NewHTTPError(400, "unable to process request")
 	}
 
 	if err := shared.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, "invalid request").WithInternal(err)
+		return echo.NewHTTPError(400, err.Error())
 	}
 
 	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)
 	newAdvisory.AssetID = shared.GetAsset(ctx).ID
 
-	err := controller.advisoryService.Create(ctx.Request().Context(), &newAdvisory)
+	err := controller.advisoryService.Create(ctx.Request().Context(), nil, &newAdvisory)
 
 	if err != nil {
-		return echo.NewHTTPError(409, "could not set advisory").WithInternal(err)
+		return echo.NewHTTPError(500, "could not create advisory").WithInternal(err)
 	}
 
 	return ctx.NoContent(200)
@@ -60,7 +60,8 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 
 func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), asset.ID)
+	visibility := ctx.QueryParam("visibility")
+	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), nil, asset.ID, visibility, shared.GetPageInfo(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
@@ -69,12 +70,12 @@ func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 
 func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
-	parsedID, err := uuid.Parse(advisoryID)
+	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid uuid provided")
+		return echo.NewHTTPError(400, "invalid id provided")
 	}
 
-	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -89,16 +90,16 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	var req dtos.AdvisoryUpdate
 	if err := ctx.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+		return echo.NewHTTPError(400, "unable to process request")
 	}
 
 	advisoryID := ctx.Param("id")
-	parsedID, err := uuid.Parse(advisoryID)
+	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid uuid provided")
+		return echo.NewHTTPError(400, "invalid id provided")
 	}
 
-	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), parsedID)
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
@@ -109,10 +110,10 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
 	advisory.AssetID = shared.GetAsset(ctx).ID
 
-	err = controller.advisoryService.Update(ctx.Request().Context(), parsedID, &advisory)
+	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory)
 
 	if err != nil {
-		return echo.NewHTTPError(409, "could not update advisory").WithInternal(err)
+		return echo.NewHTTPError(500, "could not update advisory").WithInternal(err)
 	}
 
 	return ctx.NoContent(200)
@@ -120,15 +121,15 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 
 func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
-	parsedID, err := uuid.Parse(advisoryID)
+	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid uuid provided")
+		return echo.NewHTTPError(400, "invalid id provided")
 	}
 
-	err = controller.advisoryService.Delete(ctx.Request().Context(), parsedID)
+	err = controller.advisoryService.Delete(ctx.Request().Context(), nil, parsedID)
 
 	if err != nil {
-		return echo.NewHTTPError(409, "could not remove name").WithInternal(err)
+		return echo.NewHTTPError(500, "could not remove name").WithInternal(err)
 	}
 
 	return ctx.NoContent(200)

@@ -45,6 +45,10 @@ func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisor
 	if c.AssetID != nil {
 		advisory.AssetID = *c.AssetID
 	}
+	if c.Visibility != nil {
+		advisory.Visibility = *c.Visibility
+	}
+
 	return advisory
 }
 

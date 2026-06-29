@@ -20,26 +20,22 @@ func NewAdvisoryService(advisoryRepository shared.AdvisoryRepository) *AdvisoryS
 
 var _ shared.AdvisoryService = (*AdvisoryService)(nil)
 
-func (s *AdvisoryService) Create(ctx context.Context, advisory *models.Advisory) error {
-	return s.advisoryRepository.Create(ctx, nil, advisory)
+func (s *AdvisoryService) Create(ctx context.Context, tx shared.DB, advisory *models.Advisory) error {
+	return s.advisoryRepository.Create(ctx, tx, advisory)
 }
 
-func (s *AdvisoryService) ReadAll(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
-	advisories, err := s.advisoryRepository.ReadAll(ctx, nil, assetID)
-	if err != nil {
-		return nil, err
-	}
-	return advisories, nil
+func (s *AdvisoryService) ReadAll(ctx context.Context, tx shared.DB, assetID uuid.UUID, visibility string, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
+	return s.advisoryRepository.ReadAll(ctx, tx, assetID, visibility, pagnation)
 }
 
-func (s *AdvisoryService) ReadAdvisory(ctx context.Context, id uuid.UUID) (models.Advisory, error) {
-	return s.advisoryRepository.ReadAdvisory(ctx, nil, id)
+func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error) {
+	return s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 }
 
-func (s *AdvisoryService) Update(ctx context.Context, id uuid.UUID, advisory *models.Advisory) error {
-	return s.advisoryRepository.Update(ctx, nil, id, advisory)
+func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory) error {
+	return s.advisoryRepository.Update(ctx, tx, id, advisory)
 }
 
-func (s *AdvisoryService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.advisoryRepository.Delete(ctx, nil, id)
+func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id int64) error {
+	return s.advisoryRepository.Delete(ctx, tx, id)
 }

@@ -17,6 +17,8 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -27,13 +29,17 @@ type AdvisoryRouter struct {
 func NewAdvisoryRouter(
 	assetVersionGroup AssetVersionRouter,
 	advisoryController *controllers.AdvisoryController,
+	assetRepository shared.AssetRepository,
 ) AdvisoryRouter {
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 	advisoryRouter := assetVersionGroup.Group.Group("/advisory")
-	advisoryRouter.POST("/", advisoryController.Create)
+
 	advisoryRouter.GET("/", advisoryController.ReadAll)
 	advisoryRouter.GET("/:id/", advisoryController.ReadAdvisory)
-	advisoryRouter.PATCH("/:id/", advisoryController.Update)
-	advisoryRouter.DELETE("/:id/", advisoryController.Delete)
+
+	advisoryRouter.POST("/", advisoryController.Create, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.PATCH("/:id/", advisoryController.Update, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.DELETE("/:id/", advisoryController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 
 	return AdvisoryRouter{Group: advisoryRouter}
 }

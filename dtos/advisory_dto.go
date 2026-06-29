@@ -32,16 +32,18 @@ type AdvisoryUpdate struct {
 	Severity         *string           `json:"severity"`
 	VectorString     *string           `json:"vectorString"`
 	AssetID          *uuid.UUID        `json:"assetID"`
+	Visibility       *string           `json:"visibility"`
 }
 
 type AdvisoryDTO struct {
-	ID               uuid.UUID         `json:"id"`
+	ID               int64             `json:"id"`
 	Title            string            `json:"title" validate:"required"`
 	Description      string            `json:"description" validate:"required"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
 	Severity         string            `json:"severity"`
 	VectorString     string            `json:"vectorString"`
 	AssetID          uuid.UUID         `json:"assetID"`
+	Visibility       string            `json:"visibility"`
 }
 
 type AffectedPackage struct {

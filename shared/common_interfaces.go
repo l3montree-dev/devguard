@@ -762,19 +762,19 @@ type RBACProvider interface {
 }
 
 type AdvisoryService interface {
-	Create(ctx context.Context, advisory *models.Advisory) error
-	ReadAll(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
-	ReadAdvisory(ctx context.Context, id uuid.UUID) (models.Advisory, error)
-	Update(ctx context.Context, id uuid.UUID, advisory *models.Advisory) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, visibility string, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
 }
 
 type AdvisoryRepository interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
-	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Advisory, error)
-	ReadAdvisory(ctx context.Context, tx DB, id uuid.UUID) (models.Advisory, error)
-	Update(ctx context.Context, tx DB, id uuid.UUID, advisory *models.Advisory) error
-	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, visibility string, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

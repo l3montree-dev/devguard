@@ -12,13 +12,13 @@ import (
 
 type AdvisoryRepository struct {
 	db *gorm.DB
-	utils.Repository[uuid.UUID, models.Advisory, *gorm.DB]
+	utils.Repository[int64, models.Advisory, *gorm.DB]
 }
 
 func NewAdvisoryRepository(db *gorm.DB) *AdvisoryRepository {
 	return &AdvisoryRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.Advisory](db),
+		Repository: newGormRepository[int64, models.Advisory](db),
 	}
 }
 
@@ -32,36 +32,39 @@ func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *go
 	return nil
 }
 
-func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.Advisory, error) {
+func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, visibility string, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
 	advisories := []models.Advisory{}
-	db := advisoryRepository.db.WithContext(ctx)
-	if tx != nil {
-		db = tx
+	db := advisoryRepository.GetDB(ctx, tx)
+	query := db.Model(&models.Advisory{}).Preload("AffectedPackages").Where("asset_id = ?", assetID)
+	if visibility != "" {
+		query = query.Where("visibility = ?", visibility)
 	}
-	err := db.Preload("AffectedPackages").Where("asset_id = ?", assetID).Find(&advisories).Error
-	return advisories, err
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return shared.Paged[models.Advisory]{}, err
+	}
+
+	if err := pagnation.ApplyOnDB(query).Find(&advisories).Error; err != nil {
+		return shared.Paged[models.Advisory]{}, err
+	}
+
+	return shared.NewPaged(pagnation, count, advisories), nil
 }
 
-func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Advisory, error) {
+func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id int64) (models.Advisory, error) {
 	advisory := models.Advisory{}
-	db := advisoryRepository.db.WithContext(ctx)
-	if tx != nil {
-		db = tx
-	}
+	db := advisoryRepository.GetDB(ctx, tx)
 	err := db.Preload("AffectedPackages").Where("id = ?", id).First(&advisory).Error
 	return advisory, err
 }
 
-func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *gorm.DB, id uuid.UUID, advisory *models.Advisory) error {
+func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *gorm.DB, id int64, advisory *models.Advisory) error {
 	return advisoryRepository.GetDB(ctx, tx).Session(&gorm.Session{FullSaveAssociations: true}).Save(advisory).Error
 }
 
-func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	db := advisoryRepository.db.WithContext(ctx)
-	if tx != nil {
-		db = tx
-	}
-	err := db.Preload("AffectedPackages").Delete(&models.Advisory{Model: models.Model{ID: id}}).Error
+func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *gorm.DB, id int64) error {
+	err := advisoryRepository.GetDB(ctx, tx).Delete(&models.Advisory{ID: id}).Error
 	if err != nil {
 		return err
 	}
