@@ -36,6 +36,10 @@ func (s *releaseService) ReadRecursive(ctx context.Context, id uuid.UUID) (model
 	return s.releaseRepository.ReadRecursive(ctx, nil, id)
 }
 
+func (s *releaseService) FindOrCreate(ctx context.Context, projectID uuid.UUID, name string) (models.Release, error) {
+	return s.releaseRepository.FindOrCreate(ctx, nil, projectID, name)
+}
+
 func (s *releaseService) Create(ctx context.Context, r *models.Release) error {
 	return s.releaseRepository.Create(ctx, nil, r)
 }

@@ -20,6 +20,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -43,6 +44,31 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 	}
+}
+
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error) {
+
+	asset := &models.Asset{
+		Name:                     name,
+		Slug:                     slug.Make(name),
+		ProjectID:                projectID,
+		ExternalEntityID:         &externalEntityID,
+		ExternalEntityProviderID: &providerID,
+		Description:              description,
+	}
+
+	newAssets, _, err := s.assetRepository.UpsertSplit(ctx, nil, providerID, []*models.Asset{asset})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(newAssets) > 0 {
+		if err := s.BootstrapAsset(ctx, rbac, asset); err != nil {
+			return nil, err
+		}
+	}
+
+	return asset, nil
 }
 
 func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {

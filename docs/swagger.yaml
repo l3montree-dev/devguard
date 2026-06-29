@@ -3315,6 +3315,33 @@ components:
         assetVersionName:
           type: string
       type: object
+    dtos.ArtifactVulnDistribution:
+      properties:
+        assetSlug:
+          type: string
+        assetVersionName:
+          type: string
+        critical:
+          type: integer
+        criticalCvss:
+          type: integer
+        high:
+          type: integer
+        highCvss:
+          type: integer
+        low:
+          type: integer
+        lowCvss:
+          type: integer
+        medium:
+          type: integer
+        mediumCvss:
+          type: integer
+        name:
+          type: string
+        projectSlug:
+          type: string
+      type: object
     dtos.AssetCreateRequest:
       properties:
         availabilityRequirement:
@@ -3484,6 +3511,18 @@ components:
         vulnAutoReopenAfterDays:
           type: integer
       type: object
+    dtos.AssetEntryDTO:
+      properties:
+        assetExternalEntityId:
+          type: string
+        assetName:
+          type: string
+        assetVersions:
+          items:
+            $ref: '#/components/schemas/dtos.AssetVersionEntryDTO'
+          type: array
+          uniqueItems: false
+      type: object
     dtos.AssetPatchRequest:
       properties:
         availabilityRequirement:
@@ -3556,23 +3595,74 @@ components:
         updatedAt:
           type: string
       type: object
+    dtos.AssetVersionEntryDTO:
+      properties:
+        artifacts:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        assetVersionName:
+          type: string
+      type: object
+    dtos.AssetVulnDistribution:
+      properties:
+        critical:
+          type: integer
+        criticalCvss:
+          type: integer
+        high:
+          type: integer
+        highCvss:
+          type: integer
+        low:
+          type: integer
+        lowCvss:
+          type: integer
+        medium:
+          type: integer
+        mediumCvss:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+      type: object
     dtos.AverageRemediationTimes:
       properties:
-        criticalCVSSAverage:
+        criticalCVSSOpen:
           type: number
-        criticalRiskAverage:
+        criticalCVSSRemediated:
           type: number
-        highCVSSAverage:
+        criticalRiskOpen:
           type: number
-        highRiskAverage:
+        criticalRiskRemediated:
           type: number
-        lowCVSSAverage:
+        highCVSSOpen:
           type: number
-        lowRiskAverage:
+        highCVSSRemediated:
           type: number
-        mediumCVSSAverage:
+        highRiskOpen:
           type: number
-        mediumRiskAverage:
+        highRiskRemediated:
+          type: number
+        lowCVSSOpen:
+          type: number
+        lowCVSSRemediated:
+          type: number
+        lowRiskOpen:
+          description: average age of non remediated (open) vulns
+          type: number
+        lowRiskRemediated:
+          description: average time until vulns are remediated
+          type: number
+        mediumCVSSOpen:
+          type: number
+        mediumCVSSRemediated:
+          type: number
+        mediumRiskOpen:
+          type: number
+        mediumRiskRemediated:
           type: number
       type: object
     dtos.AverageVulnEventsPerWeek:
@@ -3635,7 +3725,7 @@ components:
         vector:
           type: string
       type: object
-    dtos.CVEOccurrencesAcrossOrg:
+    dtos.CVEOccurrence:
       properties:
         cveID:
           type: string
@@ -3656,6 +3746,13 @@ components:
             $ref: '#/components/schemas/dtos.ReleaseDTO'
           type: array
           uniqueItems: false
+      type: object
+    dtos.ComponentOccurrenceAcrossOrg:
+      properties:
+        purl:
+          type: string
+        totalAmount:
+          type: integer
       type: object
     dtos.ComponentType:
       enum:
@@ -3685,13 +3782,6 @@ components:
       - ComponentTypeMachineLearningModel
       - ComponentTypeOS
       - ComponentTypePlatform
-    dtos.ComponentUsageAcrossOrg:
-      properties:
-        purl:
-          type: string
-        totalAmount:
-          type: integer
-      type: object
     dtos.DependencyVulnDTO:
       properties:
         artifacts:
@@ -3869,81 +3959,14 @@ components:
         uri:
           type: string
       type: object
-    dtos.Distribution:
-      properties:
-        critical:
-          type: integer
-        criticalCvss:
-          type: integer
-        cvePurlCritical:
-          type: integer
-        cvePurlCriticalCvss:
-          type: integer
-        cvePurlFixableCritical:
-          type: integer
-        cvePurlFixableCriticalCVSS:
-          type: integer
-        cvePurlFixableHigh:
-          type: integer
-        cvePurlFixableHighCVSS:
-          type: integer
-        cvePurlFixableLow:
-          type: integer
-        cvePurlFixableLowCVSS:
-          type: integer
-        cvePurlFixableMedium:
-          type: integer
-        cvePurlFixableMediumCVSS:
-          type: integer
-        cvePurlHigh:
-          type: integer
-        cvePurlHighCvss:
-          type: integer
-        cvePurlLow:
-          type: integer
-        cvePurlLowCvss:
-          type: integer
-        cvePurlMedium:
-          type: integer
-        cvePurlMediumCvss:
-          type: integer
-        fixableCritical:
-          type: integer
-        fixableCriticalCvss:
-          type: integer
-        fixableHigh:
-          type: integer
-        fixableHighCvss:
-          type: integer
-        fixableLow:
-          type: integer
-        fixableLowCvss:
-          type: integer
-        fixableMedium:
-          type: integer
-        fixableMediumCvss:
-          type: integer
-        high:
-          type: integer
-        highCvss:
-          type: integer
-        low:
-          type: integer
-        lowCvss:
-          type: integer
-        medium:
-          type: integer
-        mediumCvss:
-          type: integer
-      type: object
     dtos.EcosystemUsage:
       properties:
+        absoluteAmount:
+          type: integer
         ecosystem:
           type: string
         relativeAmount:
           type: number
-        totalCount:
-          type: integer
       type: object
     dtos.ExploitDTO:
       properties:
@@ -3975,6 +3998,8 @@ components:
           type: boolean
         watchers:
           type: integer
+      type: object
+    dtos.ExternalSubprojectRequestDTO:
       type: object
     dtos.FirstPartyScanResponse:
       properties:
@@ -4247,30 +4272,28 @@ components:
             $ref: '#/components/schemas/dtos.OrgRiskHistory'
           type: array
           uniqueItems: false
-        projectOpenVulnAverage:
-          $ref: '#/components/schemas/dtos.ProjectVulnCountAverageBySeverity'
         remediationTypeDistribution:
           $ref: '#/components/schemas/dtos.RemediationTypeDistribution'
         structure:
           $ref: '#/components/schemas/dtos.OrgStructureDistribution'
         topArtifacts:
           items:
-            $ref: '#/components/schemas/dtos.VulnDistributionInStructure'
+            $ref: '#/components/schemas/dtos.ArtifactVulnDistribution'
           type: array
           uniqueItems: false
         topAssets:
           items:
-            $ref: '#/components/schemas/dtos.VulnDistributionInStructure'
+            $ref: '#/components/schemas/dtos.AssetVulnDistribution'
           type: array
           uniqueItems: false
         topCVEs:
           items:
-            $ref: '#/components/schemas/dtos.CVEOccurrencesAcrossOrg'
+            $ref: '#/components/schemas/dtos.CVEOccurrence'
           type: array
           uniqueItems: false
         topComponents:
           items:
-            $ref: '#/components/schemas/dtos.ComponentUsageAcrossOrg'
+            $ref: '#/components/schemas/dtos.ComponentOccurrenceAcrossOrg'
           type: array
           uniqueItems: false
         topEcosystems:
@@ -4280,11 +4303,11 @@ components:
           uniqueItems: false
         topProjects:
           items:
-            $ref: '#/components/schemas/dtos.VulnDistributionInStructure'
+            $ref: '#/components/schemas/dtos.ProjectVulnDistribution'
           type: array
           uniqueItems: false
         vulnDistribution:
-          $ref: '#/components/schemas/dtos.Distribution'
+          $ref: '#/components/schemas/dtos.VulnSeverityDistribution'
         vulnEventAverage:
           $ref: '#/components/schemas/dtos.AverageVulnEventsPerWeek'
       type: object
@@ -4535,6 +4558,16 @@ components:
         updatedAt:
           type: string
       type: object
+    dtos.ProjectChangeRoleRequest:
+      properties:
+        role:
+          enum:
+          - member
+          - admin
+          type: string
+      required:
+      - role
+      type: object
     dtos.ProjectCreateRequest:
       properties:
         description:
@@ -4647,6 +4680,23 @@ components:
           type: array
           uniqueItems: false
       type: object
+    dtos.ProjectExternalEntityTree:
+      properties:
+        assets:
+          items:
+            $ref: '#/components/schemas/dtos.AssetEntryDTO'
+          type: array
+          uniqueItems: false
+        projectExternalEntityId:
+          type: string
+        projectName:
+          type: string
+        subProjects:
+          items:
+            $ref: '#/components/schemas/dtos.SubProjectEntryDTO'
+          type: array
+          uniqueItems: false
+      type: object
     dtos.ProjectInviteRequest:
       properties:
         ids:
@@ -4675,24 +4725,28 @@ components:
         type:
           type: string
       type: object
-    dtos.ProjectVulnCountAverageBySeverity:
+    dtos.ProjectVulnDistribution:
       properties:
-        cvssCriticalAverage:
-          type: number
-        cvssHighAverage:
-          type: number
-        cvssLowAverage:
-          type: number
-        cvssMediumAverage:
-          type: number
-        riskCriticalAverage:
-          type: number
-        riskHighAverage:
-          type: number
-        riskLowAverage:
-          type: number
-        riskMediumAverage:
-          type: number
+        critical:
+          type: integer
+        criticalCvss:
+          type: integer
+        high:
+          type: integer
+        highCvss:
+          type: integer
+        low:
+          type: integer
+        lowCvss:
+          type: integer
+        medium:
+          type: integer
+        mediumCvss:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
       type: object
     dtos.RelationshipDTO:
       properties:
@@ -4941,6 +4995,20 @@ components:
         startLine:
           type: integer
       type: object
+    dtos.SubProjectEntryDTO:
+      properties:
+        assets:
+          items:
+            $ref: '#/components/schemas/dtos.AssetEntryDTO'
+          type: array
+          uniqueItems: false
+        subProjectDescription:
+          type: string
+        subProjectExternalEntityId:
+          type: string
+        subProjectName:
+          type: string
+      type: object
     dtos.UserDTO:
       properties:
         avatarUrl:
@@ -4984,83 +5052,6 @@ components:
         updatedAt:
           type: string
         vexSource:
-          type: string
-      type: object
-    dtos.VulnDistributionInStructure:
-      properties:
-        assetSlug:
-          type: string
-        assetVersionName:
-          type: string
-        critical:
-          type: integer
-        criticalCvss:
-          type: integer
-        cvePurlCritical:
-          type: integer
-        cvePurlCriticalCvss:
-          type: integer
-        cvePurlFixableCritical:
-          type: integer
-        cvePurlFixableCriticalCVSS:
-          type: integer
-        cvePurlFixableHigh:
-          type: integer
-        cvePurlFixableHighCVSS:
-          type: integer
-        cvePurlFixableLow:
-          type: integer
-        cvePurlFixableLowCVSS:
-          type: integer
-        cvePurlFixableMedium:
-          type: integer
-        cvePurlFixableMediumCVSS:
-          type: integer
-        cvePurlHigh:
-          type: integer
-        cvePurlHighCvss:
-          type: integer
-        cvePurlLow:
-          type: integer
-        cvePurlLowCvss:
-          type: integer
-        cvePurlMedium:
-          type: integer
-        cvePurlMediumCvss:
-          type: integer
-        fixableCritical:
-          type: integer
-        fixableCriticalCvss:
-          type: integer
-        fixableHigh:
-          type: integer
-        fixableHighCvss:
-          type: integer
-        fixableLow:
-          type: integer
-        fixableLowCvss:
-          type: integer
-        fixableMedium:
-          type: integer
-        fixableMediumCvss:
-          type: integer
-        high:
-          type: integer
-        highCvss:
-          type: integer
-        low:
-          type: integer
-        lowCvss:
-          type: integer
-        medium:
-          type: integer
-        mediumCvss:
-          type: integer
-        name:
-          type: string
-        projectSlug:
-          type: string
-        slug:
           type: string
       type: object
     dtos.VulnEventDTO:
@@ -5121,6 +5112,25 @@ components:
       - EventTypeComment
       - EventTypeDetected
       - EventTypeRawRiskAssessmentUpdated
+    dtos.VulnSeverityDistribution:
+      properties:
+        critical:
+          type: integer
+        criticalCvss:
+          type: integer
+        high:
+          type: integer
+        highCvss:
+          type: integer
+        low:
+          type: integer
+        lowCvss:
+          type: integer
+        medium:
+          type: integer
+        mediumCvss:
+          type: integer
+      type: object
     dtos.VulnState:
       enum:
       - open
@@ -5165,6 +5175,10 @@ components:
           type: string
         vulnEnabled:
           type: boolean
+      type: object
+    echo.HTTPError:
+      properties:
+        message: {}
       type: object
     github_com_l3montree-dev_devguard_database_models.AffectedComponent:
       properties:
@@ -6020,13 +6034,11 @@ components:
     github_com_l3montree-dev_devguard_database_models.ProjectType:
       enum:
       - default
-      - kubernetesNamespace
-      - kubernetesCluster
+      - dynamic
       type: string
       x-enum-varnames:
       - ProjectTypeDefault
-      - ProjectTypeKubernetesNamespace
-      - ProjectTypeKubernetesCluster
+      - ProjectTypeDynamic
     github_com_l3montree-dev_devguard_database_models.SupplyChain:
       properties:
         assetId:
@@ -6119,6 +6131,12 @@ components:
       additionalProperties: {}
       type: object
   securitySchemes:
+    AdminSignedAuth:
+      description: Instance admin authentication using ECDSA P-256 HTTP message signing.
+        Requires Signature, Signature-Input and Content-Digest headers.
+      in: header
+      name: Signature
+      type: apiKey
     BearerAuth:
       description: 'Bearer token authentication. Set value to: Bearer dvg_…'
       in: header
@@ -6185,6 +6203,137 @@ paths:
       summary: Accept organization invitation
       tags:
       - Organizations
+  /admin/daemons/asset-pipeline-all/trigger:
+    post:
+      description: Runs the full asset pipeline (scan, sync, risk calculation, statistics)
+        for every asset on this instance. Returns an SSE stream with log, done, and
+        error events. Subject to a 5-minute cooldown.
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          description: 'SSE stream (event: log | done | error)'
+        "429":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Cooldown not elapsed – try again later
+      security:
+      - AdminSignedAuth: []
+      summary: Trigger the asset pipeline for all assets
+      tags:
+      - Admin Daemons
+  /admin/daemons/asset-pipeline-single/trigger:
+    post:
+      description: Runs the full asset pipeline for one asset identified by its UUID.
+        Returns an SSE stream with log, done, and error events. Subject to a 5-minute
+        cooldown per asset.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+          text/plain:
+            schema:
+              title: body
+              type: object
+        description: Request body
+        required: true
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          description: 'SSE stream (event: log | done | error)'
+        "400":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Invalid or missing assetId
+        "429":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Cooldown not elapsed – try again later
+      security:
+      - AdminSignedAuth: []
+      summary: Trigger the asset pipeline for a single asset
+      tags:
+      - Admin Daemons
+  /admin/daemons/fixed-versions/trigger:
+    post:
+      description: Updates known fixed versions for tracked vulnerabilities. Returns
+        an SSE stream with log, done, and error events. Subject to a 5-minute cooldown.
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          description: 'SSE stream (event: log | done | error)'
+        "429":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Cooldown not elapsed – try again later
+      security:
+      - AdminSignedAuth: []
+      summary: Trigger the Fixed Versions daemon
+      tags:
+      - Admin Daemons
+  /admin/daemons/open-source-insights/trigger:
+    post:
+      description: Syncs open-source project metadata from deps.dev. Returns an SSE
+        stream with log, done, and error events. Subject to a 5-minute cooldown (enforced
+        across all API instances via the config DB).
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          description: 'SSE stream (event: log | done | error)'
+        "429":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Cooldown not elapsed – try again later
+      security:
+      - AdminSignedAuth: []
+      summary: Trigger the Open Source Insights daemon
+      tags:
+      - Admin Daemons
+  /admin/daemons/vulndb/trigger:
+    post:
+      description: Runs an incremental VulnDB import from upstream diffs. Sets the
+        vulndb.vulndb config timestamp at the start of processing. Returns an SSE
+        stream with log, done, and error events. Subject to a 5-minute cooldown.
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          description: 'SSE stream (event: log | done | error)'
+        "429":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/echo.HTTPError'
+          description: Cooldown not elapsed – try again later
+      security:
+      - AdminSignedAuth: []
+      summary: Trigger the VulnDB import daemon
+      tags:
+      - Admin Daemons
   /api/v2/sarif-scan:
     post:
       requestBody:
@@ -9058,6 +9207,91 @@ paths:
       summary: Update project config file
       tags:
       - Projects
+  /organizations/{organization}/projects/{projectSlug}/external/{providerID}:
+    get:
+      description: Returns the full tree of projects, sub-projects, assets, asset
+        versions and artifacts that were dynamically created by an external inventory
+        provider (e.g. k8s-devguard-image-inventory) for the given providerID.
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: External provider ID
+        in: path
+        name: providerID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ProjectExternalEntityTree'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List externally managed project/asset tree
+      tags:
+      - Projects
+    post:
+      description: Called by external inventory providers (e.g. k8s-devguard-image-inventory)
+        to upsert or delete a dynamically managed project hierarchy. On verb=update,
+        creates or updates the project, sub-project, asset, asset version and artifact,
+        then processes the supplied CycloneDX SBOM and triggers a vulnerability scan.
+        On verb=delete, removes the artifact/asset-version/asset/project entries cascading
+        upward as long as no other data references them.
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: External provider ID
+        in: path
+        name: providerID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.ExternalSubprojectRequestDTO'
+              description: Request body
+              summary: body
+        description: Request body
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Sync or delete an externally managed project/asset tree
+      tags:
+      - Projects
   /organizations/{organization}/projects/{projectSlug}/members:
     get:
       parameters:
@@ -9120,6 +9354,76 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Invite members to project
+      tags:
+      - Projects
+  /organizations/{organization}/projects/{projectSlug}/members/{userID}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove member from project
+      tags:
+      - Projects
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.ProjectChangeRoleRequest'
+              description: Request body
+              summary: body
+        description: Request body
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Change member role in project
       tags:
       - Projects
   /organizations/{organization}/projects/{projectSlug}/releases:
@@ -9674,6 +9978,36 @@ paths:
       summary: List first-party vulnerabilities by project
       tags:
       - Vulnerabilities
+  /organizations/{organization}/projects/search/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Search query
+        in: query
+        name: search
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ProjectDTO'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Search projects with sub-projects and assets
+      tags:
+      - Projects
   /organizations/{organization}/settings:
     get:
       parameters:
