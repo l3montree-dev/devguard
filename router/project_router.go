@@ -70,8 +70,8 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 
-	projectRouter.POST("/dynamic-project/dn/:providerID", projectController.HandleDynamicProject, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
-	projectRouter.GET("/dynamic-project/dn/:providerID", projectController.ListDynamicProjects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.POST("/external/:providerID", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.GET("/external/:providerID", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 

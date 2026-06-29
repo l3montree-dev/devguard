@@ -559,14 +559,14 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	return ctx.String(200, configContent)
 }
 
-func (projectController *ProjectController) HandleDynamicProject(ctx shared.Context) error {
+func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx shared.Context) error {
 
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not read request body: %s", err.Error())).WithInternal(err)
 	}
 
-	var probe dtos.DynamicProjectRequestDTO
+	var probe dtos.ExternalSubprojectRequestDTO
 	if err := json.Unmarshal(body, &probe); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
 	}
@@ -580,19 +580,12 @@ func (projectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	if probe.Verb == "delete" { // "update" is the implicit else handled after this block
-		parentProjectID := parentProject.ID
+	if probe.Verb == "delete" {
 		proExternalEntityID := probe.ProjectExternalEntityID
 		if probe.SubProjectExternalEntityID != "" {
-			subProjectParent, err := projectController.projectRepository.GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx.Request().Context(), nil, parentProject.ID, providerID, probe.ProjectExternalEntityID)
-			if err != nil {
-				return echo.NewHTTPError(500, fmt.Sprintf("could not fetch sub-projects: %s", err.Error())).WithInternal(err)
-			}
-			parentProjectID = subProjectParent.ID
 			proExternalEntityID = probe.SubProjectExternalEntityID
 		}
-		err := projectController.projectRepository.CleanupDynamicProject(ctx.Request().Context(), nil, organization.GetID(), parentProjectID, providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact)
-		if err != nil {
+		if err := projectController.projectRepository.CleanupExternalProject(ctx.Request().Context(), nil, organization.GetID(), providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact); err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
 		}
 
@@ -689,7 +682,7 @@ func (projectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
-func (projectController *ProjectController) ListDynamicProjects(ctx shared.Context) error {
+func (projectController *ProjectController) ListExternalSubprojects(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
 	providerID := shared.GetProviderID(ctx)

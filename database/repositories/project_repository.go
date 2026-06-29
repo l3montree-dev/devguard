@@ -459,12 +459,6 @@ func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm
 	return projects, err
 }
 
-func (g *projectRepository) GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx context.Context, tx *gorm.DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error) {
-	var project models.Project
-	err := g.GetDB(ctx, tx).Debug().Where("parent_id = ? AND external_entity_provider_id = ? AND external_entity_id = ?", parentID, providerID, externalEntityID).First(&project).Error
-	return project, err
-}
-
 func (g *projectRepository) GetDirectChildProjectsWithProviderID(ctx context.Context, tx *gorm.DB, parentID uuid.UUID, providerID string) ([]models.Project, error) {
 	var projects []models.Project
 	err := g.GetDB(ctx, tx).Where("parent_id = ? AND external_entity_provider_id = ?", parentID, providerID).Find(&projects).Error
@@ -643,7 +637,10 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 	return g.GetDB(ctx, tx).Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-func (g *projectRepository) CleanupDynamicProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
+// This function deletes a specific asset version in a dynamic tree of projects
+// if this is the last asset version, the asset will be deleted as well
+// if this is the last asset in the project, the project will be deleted as well
+func (g *projectRepository) CleanupExternalProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
 
 	query := `
 WITH
@@ -656,11 +653,10 @@ WITH
     JOIN assets         a  ON a.project_id = p.id AND a.external_entity_id = ?
     JOIN asset_versions av ON av.asset_id  = a.id AND av.name = ?
 	JOIN artifacts      ar ON ar.asset_version_name = av.name AND ar.asset_id = a.id
-    WHERE p.organization_id 	= ?
-      AND p.parent_id       = ?
-	  AND p.external_entity_provider_id      = ?
-      AND p.external_entity_id  = ?
-	  AND p.type            = 'dynamic'
+    WHERE p.organization_id              = ?
+	  AND p.external_entity_provider_id  = ?
+      AND p.external_entity_id           = ?
+	  AND p.type                         = 'dynamic'
     LIMIT 1
   ),
   del_artifact AS (
@@ -700,6 +696,6 @@ SELECT 1`
 
 	return g.GetDB(ctx, tx).Exec(query,
 		assetExternalEntityID, assetVersionName,
-		organizationID, parentProjectID, providerID, projectExternalEntityID, artifactName,
+		organizationID, providerID, projectExternalEntityID, artifactName,
 	).Error
 }

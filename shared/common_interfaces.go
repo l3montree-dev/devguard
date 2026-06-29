@@ -114,8 +114,7 @@ type ProjectRepository interface {
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
-	GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error)
-	CleanupDynamicProject(ctx context.Context, tx DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
+	CleanupExternalProject(ctx context.Context, tx DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
 }
 
 type Verifier interface {

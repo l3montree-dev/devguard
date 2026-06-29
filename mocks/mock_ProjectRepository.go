@@ -173,43 +173,42 @@ func (_c *ProjectRepository_All_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
-// CleanupDynamicProject provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) CleanupDynamicProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
-	ret := _mock.Called(ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
+// CleanupExternalProject provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) CleanupExternalProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
+	ret := _mock.Called(ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CleanupDynamicProject")
+		panic("no return value specified for CleanupExternalProject")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string, string, string, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// ProjectRepository_CleanupDynamicProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupDynamicProject'
-type ProjectRepository_CleanupDynamicProject_Call struct {
+// ProjectRepository_CleanupExternalProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupExternalProject'
+type ProjectRepository_CleanupExternalProject_Call struct {
 	*mock.Call
 }
 
-// CleanupDynamicProject is a helper method to define mock.On call
+// CleanupExternalProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-//   - parentProjectID uuid.UUID
 //   - providerID string
 //   - projectExternalEntityID string
 //   - assetExternalEntityID string
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ProjectRepository_Expecter) CleanupDynamicProject(ctx interface{}, tx interface{}, organizationID interface{}, parentProjectID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}, artifactName interface{}) *ProjectRepository_CleanupDynamicProject_Call {
-	return &ProjectRepository_CleanupDynamicProject_Call{Call: _e.mock.On("CleanupDynamicProject", ctx, tx, organizationID, parentProjectID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)}
+func (_e *ProjectRepository_Expecter) CleanupExternalProject(ctx interface{}, tx interface{}, organizationID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}, artifactName interface{}) *ProjectRepository_CleanupExternalProject_Call {
+	return &ProjectRepository_CleanupExternalProject_Call{Call: _e.mock.On("CleanupExternalProject", ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)}
 }
 
-func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string)) *ProjectRepository_CleanupDynamicProject_Call {
+func (_c *ProjectRepository_CleanupExternalProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string)) *ProjectRepository_CleanupExternalProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -223,9 +222,9 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg3 = args[3].(string)
 		}
 		var arg4 string
 		if args[4] != nil {
@@ -243,10 +242,6 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context
 		if args[7] != nil {
 			arg7 = args[7].(string)
 		}
-		var arg8 string
-		if args[8] != nil {
-			arg8 = args[8].(string)
-		}
 		run(
 			arg0,
 			arg1,
@@ -256,18 +251,17 @@ func (_c *ProjectRepository_CleanupDynamicProject_Call) Run(run func(ctx context
 			arg5,
 			arg6,
 			arg7,
-			arg8,
 		)
 	})
 	return _c
 }
 
-func (_c *ProjectRepository_CleanupDynamicProject_Call) Return(err error) *ProjectRepository_CleanupDynamicProject_Call {
+func (_c *ProjectRepository_CleanupExternalProject_Call) Return(err error) *ProjectRepository_CleanupExternalProject_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ProjectRepository_CleanupDynamicProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, parentProjectID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error) *ProjectRepository_CleanupDynamicProject_Call {
+func (_c *ProjectRepository_CleanupExternalProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error) *ProjectRepository_CleanupExternalProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -977,90 +971,6 @@ func (_c *ProjectRepository_GetDirectChildProjectsWithProviderID_Call) Return(pr
 }
 
 func (_c *ProjectRepository_GetDirectChildProjectsWithProviderID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, parentID uuid.UUID, providerID string) ([]models.Project, error)) *ProjectRepository_GetDirectChildProjectsWithProviderID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetDirectChildProjectsWithProviderIDAndExternalEntityID provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx context.Context, tx shared.DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error) {
-	ret := _mock.Called(ctx, tx, parentID, providerID, externalEntityID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDirectChildProjectsWithProviderIDAndExternalEntityID")
-	}
-
-	var r0 models.Project
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) (models.Project, error)); ok {
-		return returnFunc(ctx, tx, parentID, providerID, externalEntityID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) models.Project); ok {
-		r0 = returnFunc(ctx, tx, parentID, providerID, externalEntityID)
-	} else {
-		r0 = ret.Get(0).(models.Project)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r1 = returnFunc(ctx, tx, parentID, providerID, externalEntityID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDirectChildProjectsWithProviderIDAndExternalEntityID'
-type ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call struct {
-	*mock.Call
-}
-
-// GetDirectChildProjectsWithProviderIDAndExternalEntityID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - parentID uuid.UUID
-//   - providerID string
-//   - externalEntityID string
-func (_e *ProjectRepository_Expecter) GetDirectChildProjectsWithProviderIDAndExternalEntityID(ctx interface{}, tx interface{}, parentID interface{}, providerID interface{}, externalEntityID interface{}) *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call {
-	return &ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call{Call: _e.mock.On("GetDirectChildProjectsWithProviderIDAndExternalEntityID", ctx, tx, parentID, providerID, externalEntityID)}
-}
-
-func (_c *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call) Run(run func(ctx context.Context, tx shared.DB, parentID uuid.UUID, providerID string, externalEntityID string)) *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call) Return(project models.Project, err error) *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call {
-	_c.Call.Return(project, err)
-	return _c
-}
-
-func (_c *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, parentID uuid.UUID, providerID string, externalEntityID string) (models.Project, error)) *ProjectRepository_GetDirectChildProjectsWithProviderIDAndExternalEntityID_Call {
 	_c.Call.Return(run)
 	return _c
 }
