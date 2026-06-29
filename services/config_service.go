@@ -94,8 +94,10 @@ func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.In
 		}
 	}
 
+	instanceSettingsCacheMutex.Lock()
 	instanceSettingsCache = &settings
 	instanceSettingsExpiry = time.Now().Add(5 * time.Minute) // cache for 5 minutes
+	instanceSettingsCacheMutex.Unlock()
 
 	return settings, nil
 }
