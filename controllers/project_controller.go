@@ -193,6 +193,16 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 	return c.NoContent(200)
 }
 
+// @Summary Remove member from project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param userID path string true "User ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/members/{userID}/ [delete]
 func (projectController *ProjectController) RemoveMember(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
@@ -212,6 +222,17 @@ func (projectController *ProjectController) RemoveMember(c shared.Context) error
 	return c.NoContent(200)
 }
 
+// @Summary Change member role in project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param userID path string true "User ID"
+// @Param body body dtos.ProjectChangeRoleRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/members/{userID}/ [put]
 func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
@@ -416,6 +437,15 @@ func (projectController *ProjectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
+// @Summary Search projects with sub-projects and assets
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param search query string false "Search query"
+// @Success 200 {array} dtos.ProjectDTO
+// @Router /organizations/{organization}/projects/search/ [get]
 func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
 
 	results, err := projectController.projectService.SearchProjectsWithSubProjectsAndAssetsPaged(c)
@@ -559,6 +589,18 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 	return ctx.String(200, configContent)
 }
 
+// @Summary Sync or delete an externally managed project/asset tree
+// @Description Called by external inventory providers (e.g. k8s-devguard-image-inventory) to upsert or delete a dynamically managed project hierarchy. On verb=update, creates or updates the project, sub-project, asset, asset version and artifact, then processes the supplied CycloneDX SBOM and triggers a vulnerability scan. On verb=delete, removes the artifact/asset-version/asset/project entries cascading upward as long as no other data references them.
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param providerID path string true "External provider ID"
+// @Param body body dtos.ExternalSubprojectRequestDTO true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/external/{providerID} [post]
 func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx shared.Context) error {
 
 	body, err := io.ReadAll(ctx.Request().Body)
@@ -682,6 +724,17 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
+// @Summary List externally managed project/asset tree
+// @Description Returns the full tree of projects, sub-projects, assets, asset versions and artifacts that were dynamically created by an external inventory provider (e.g. k8s-devguard-image-inventory) for the given providerID.
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param providerID path string true "External provider ID"
+// @Success 200 {array} dtos.ProjectExternalEntityTree
+// @Router /organizations/{organization}/projects/{projectSlug}/external/{providerID} [get]
 func (projectController *ProjectController) ListExternalSubprojects(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	parentProject := shared.GetProject(ctx)
@@ -736,80 +789,5 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 		return echo.NewHTTPError(500, "could not list artifacts").WithInternal(err)
 	}
 
-	// Build in-memory lookup maps
-	subProjectsByParentID := make(map[uuid.UUID][]models.Project)
-	for _, sp := range subProjects {
-		if sp.ParentID != nil {
-			subProjectsByParentID[*sp.ParentID] = append(subProjectsByParentID[*sp.ParentID], sp)
-		}
-	}
-
-	assetsByProjectID := make(map[uuid.UUID][]models.Asset)
-	for _, a := range allAssets {
-		assetsByProjectID[a.ProjectID] = append(assetsByProjectID[a.ProjectID], a)
-	}
-
-	versionsByAssetID := make(map[uuid.UUID][]models.AssetVersion)
-	for _, av := range allAssetVersions {
-		versionsByAssetID[av.AssetID] = append(versionsByAssetID[av.AssetID], av)
-	}
-
-	artifactsByAssetIDAndVersion := make(map[uuid.UUID]map[string][]string)
-	for _, art := range allArtifacts {
-		if artifactsByAssetIDAndVersion[art.AssetID] == nil {
-			artifactsByAssetIDAndVersion[art.AssetID] = make(map[string][]string)
-		}
-		artifactsByAssetIDAndVersion[art.AssetID][art.AssetVersionName] = append(
-			artifactsByAssetIDAndVersion[art.AssetID][art.AssetVersionName], art.ArtifactName,
-		)
-	}
-
-	buildAssetEntries := func(projectID uuid.UUID) []dtos.AssetEntryDTO {
-		var entries []dtos.AssetEntryDTO
-		for _, asset := range assetsByProjectID[projectID] {
-			if asset.ExternalEntityID == nil {
-				continue
-			}
-			versions := versionsByAssetID[asset.ID]
-			if len(versions) == 0 {
-				continue
-			}
-			assetEntry := dtos.AssetEntryDTO{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
-			for _, av := range versions {
-				assetEntry.AssetVersions = append(assetEntry.AssetVersions, dtos.AssetVersionEntryDTO{
-					AssetVersionName: av.Name,
-					Artifacts:        artifactsByAssetIDAndVersion[asset.ID][av.Name],
-				})
-			}
-			entries = append(entries, assetEntry)
-		}
-		return entries
-	}
-
-	result := make([]dtos.ProjectExternalEntityTree, 0, len(projects))
-	for _, project := range projects {
-		if project.ExternalEntityID == nil {
-			continue
-		}
-		entry := dtos.ProjectExternalEntityTree{
-			ProjectExternalEntityID: *project.ExternalEntityID,
-			ProjectName:             project.Name,
-		}
-
-		for _, sp := range subProjectsByParentID[project.ID] {
-			if sp.ExternalEntityID == nil {
-				continue
-			}
-			entry.SubProjects = append(entry.SubProjects, dtos.SubProjectEntryDTO{
-				SubProjectExternalEntityID: *sp.ExternalEntityID,
-				SubProjectName:             sp.Name,
-				Assets:                     buildAssetEntries(sp.ID),
-			})
-		}
-
-		entry.Assets = buildAssetEntries(project.ID)
-		result = append(result, entry)
-	}
-
-	return ctx.JSON(200, result)
+	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
 }
