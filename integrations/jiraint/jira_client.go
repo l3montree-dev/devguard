@@ -92,7 +92,7 @@ func (c *Client) GetAccountIDByEmail(ctx context.Context, email string) (string,
 
 func (c *Client) CreateIssueComment(ctx context.Context, issueID string, projectID string, comment ADF) error {
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"body": comment,
 	}
 
@@ -121,7 +121,7 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 
 func (c *Client) TransitionIssue(ctx context.Context, issueID string, transitionID string) error {
 	// Create the request body for the transition
-	body := map[string]interface{}{
+	body := map[string]any{
 		"transition": map[string]string{
 			"id": transitionID,
 		},

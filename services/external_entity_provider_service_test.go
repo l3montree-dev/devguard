@@ -14,7 +14,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 )
 
 func TestTriggerSync(t *testing.T) {
@@ -69,7 +68,7 @@ func TestTriggerSync(t *testing.T) {
 				Model: models.Model{ID: uuid.New()},
 			}
 			if tt.isExternalOrg {
-				org.ExternalEntityProviderID = utils.Ptr("gitlab")
+				org.ExternalEntityProviderID = new("gitlab")
 			}
 
 			// Setup session
@@ -241,13 +240,13 @@ func TestSyncOrgs(t *testing.T) {
 				Model:                    models.Model{ID: uuid.New()},
 				Slug:                     "org1",
 				Name:                     "Organization 1",
-				ExternalEntityProviderID: utils.Ptr("github"),
+				ExternalEntityProviderID: new("github"),
 			},
 			{
 				Model:                    models.Model{ID: uuid.New()},
 				Slug:                     "org2",
 				Name:                     "Organization 2",
-				ExternalEntityProviderID: utils.Ptr("github"),
+				ExternalEntityProviderID: new("github"),
 			},
 		}
 
@@ -344,7 +343,7 @@ func TestSyncOrgs(t *testing.T) {
 				Model:                    models.Model{ID: uuid.New()},
 				Slug:                     "org1",
 				Name:                     "Organization 1",
-				ExternalEntityProviderID: utils.Ptr("github"),
+				ExternalEntityProviderID: new("github"),
 			},
 		}
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
@@ -388,7 +387,7 @@ func TestSyncOrgs(t *testing.T) {
 				Model:                    models.Model{ID: uuid.New()},
 				Slug:                     "org1",
 				Name:                     "Organization 1",
-				ExternalEntityProviderID: utils.Ptr("github"),
+				ExternalEntityProviderID: new("github"),
 			},
 		}
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
@@ -589,8 +588,8 @@ func TestSyncProjectAssets(t *testing.T) {
 		ctx := createTestContext()
 		project := &models.Project{
 			Model:                    models.Model{ID: uuid.New()},
-			ExternalEntityProviderID: utils.Ptr("gitlab"),
-			ExternalEntityID:         utils.Ptr("123"),
+			ExternalEntityProviderID: new("gitlab"),
+			ExternalEntityID:         new("123"),
 		}
 
 		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)

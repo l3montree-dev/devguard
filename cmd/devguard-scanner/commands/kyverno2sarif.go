@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -148,7 +147,7 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) sarif.SarifSchema
 					LogicalLocations: []sarif.LogicalLocation{
 						{
 							Name: &resourceName,
-							Kind: utils.Ptr("resource"),
+							Kind: new("resource"),
 						},
 					},
 				},
@@ -165,15 +164,15 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) sarif.SarifSchema
 
 	return sarif.SarifSchema210Json{
 		Version: "2.1.0",
-		Schema:  utils.Ptr("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"),
+		Schema:  new("https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"),
 		Runs: []sarif.Run{
 			{
 				Tool: sarif.Tool{
 					Driver: sarif.ToolComponent{
 						Name:            "Kyverno",
-						InformationURI:  utils.Ptr("https://kyverno.io/"),
-						Version:         utils.Ptr("1.0.0"),
-						SemanticVersion: utils.Ptr("1.0.0"),
+						InformationURI:  new("https://kyverno.io/"),
+						Version:         new("1.0.0"),
+						SemanticVersion: new("1.0.0"),
 						Rules:           rules,
 					},
 				},

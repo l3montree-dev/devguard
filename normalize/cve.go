@@ -19,7 +19,7 @@ import "strings"
 func UppercaseCVEID(cveID string) string {
 	// make sure ghsa is uppercase
 	// extract the prefix
-	prefix := strings.Split(cveID, "-")[0]
+	prefix, _, _ := strings.Cut(cveID, "-")
 	switch strings.ToLower(prefix) {
 	case "ghsa":
 		return "GHSA-" + strings.ToLower(cveID[len(prefix)+1:])

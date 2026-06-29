@@ -30,19 +30,19 @@ type PackagistPackageVersion struct {
 
 	Support *PackagistSupport `json:"support,omitempty"`
 
-	Require    StringMapField `json:"require,omitempty"`
-	RequireDev StringMapField `json:"require-dev,omitempty"`
+	Require    StringMapField `json:"require"`
+	RequireDev StringMapField `json:"require-dev"`
 
-	Suggest  StringMapField `json:"suggest,omitempty"`
-	Provide  StringMapField `json:"provide,omitempty"`
-	Replace  StringMapField `json:"replace,omitempty"`
-	Conflict StringMapField `json:"conflict,omitempty"`
+	Suggest  StringMapField `json:"suggest"`
+	Provide  StringMapField `json:"provide"`
+	Replace  StringMapField `json:"replace"`
+	Conflict StringMapField `json:"conflict"`
 
 	Time string `json:"time,omitempty"`
 
-	Autoload StringMapField `json:"autoload,omitempty"`
+	Autoload StringMapField `json:"autoload"`
 
-	Extra StringMapField `json:"extra,omitempty"`
+	Extra StringMapField `json:"extra"`
 }
 
 type PackagistAuthor struct {
@@ -77,7 +77,6 @@ type PackagistSupport struct {
 	Chat     string `json:"chat,omitempty"`
 	Security string `json:"security,omitempty"`
 }
-
 
 type StringMapField struct {
 	Map map[string]any

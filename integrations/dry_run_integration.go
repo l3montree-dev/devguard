@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 // dryRunIntegration wraps a real IntegrationAggregate and intercepts all
@@ -40,7 +41,7 @@ func (d *dryRunIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	default:
 		expectedState = "unknown"
 	}
-	slog.Info("[DRY-RUN] would update ticket", "vuln", vuln.GetID(), "asset", asset.Slug, "ticketID", vuln.GetTicketID(), "expectedState", expectedState)
+	slog.Info("[DRY-RUN] would update ticket", "vuln", vuln.GetID(), "asset", asset.Slug, "ticketID", utils.SafeDereference(vuln.GetTicketID()), "expectedState", expectedState)
 	return nil
 }
 

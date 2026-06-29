@@ -29,7 +29,7 @@ type WebhookStruct struct {
 	AssetVersion shared.AssetVersionObject `json:"assetVersion"`
 	Payload      any                       `json:"payload"`
 	Type         WebhookType               `json:"type"`
-	Artifact     shared.ArtifactObject     `json:"artifact,omitempty"`
+	Artifact     shared.ArtifactObject     `json:"artifact"`
 }
 
 type WebhookType string

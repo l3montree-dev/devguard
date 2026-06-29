@@ -18,7 +18,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/fx"
@@ -237,7 +236,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		ComponentPurl:     "pkg:npm/next@14.2.13",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
-		RawRiskAssessment: utils.Ptr(4.83),
+		RawRiskAssessment: new(4.83),
 		Artifacts:         []models.Artifact{artifact},
 	}
 
@@ -249,7 +248,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               &cve2,
 		CVEID:             cve2.CVE,
-		RawRiskAssessment: utils.Ptr(8.89),
+		RawRiskAssessment: new(8.89),
 		Artifacts:         []models.Artifact{artifact},
 	}
 	if err = db.Create(&vuln2).Error; err != nil {
@@ -263,7 +262,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-10 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -273,7 +272,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln1.ID),
+		DependencyVulnID: new(vuln1.ID),
 		CreatedAt:        time.Now().Add(-7 * time.Minute),
 		Type:             "comment",
 		UserID:           "system",
@@ -283,7 +282,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	}
 
 	vuln2DetectedEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-3 * time.Minute),
 		Type:             "detected",
 		UserID:           "system",
@@ -293,7 +292,7 @@ func createDependencyVulns(db shared.DB, assetID uuid.UUID, assetVersionName str
 	}
 
 	vuln2FalsePositiveEvent := models.VulnEvent{
-		DependencyVulnID: utils.Ptr(vuln2.ID),
+		DependencyVulnID: new(vuln2.ID),
 		CreatedAt:        time.Now().Add(-1 * time.Minute),
 		Type:             "falsePositive",
 		UserID:           "xyz",

@@ -15,7 +15,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
@@ -26,18 +25,18 @@ import (
 func TestCompareStatesAndResolveDifferences(t *testing.T) {
 	t.Run("the same state should result in no changes", func(t *testing.T) {
 		depVulns := []models.DependencyVuln{
-			{Vulnerability: models.Vulnerability{TicketID: utils.Ptr("abc/42")}},
-			{Vulnerability: models.Vulnerability{TicketID: utils.Ptr("abc/57")}},
+			{Vulnerability: models.Vulnerability{TicketID: new("abc/42")}},
+			{Vulnerability: models.Vulnerability{TicketID: new("abc/57")}},
 		}
 		client := mocks.NewGitlabClientFacade(t)
 
 		asset := models.Asset{
-			RepositoryID: utils.Ptr("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
+			RepositoryID: new("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
 		}
 		projectID := 69787207
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
-		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, new(gitlab.Response{}), nil)
 
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
 		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
@@ -54,13 +53,13 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		client := mocks.NewGitlabClientFacade(t)
 
 		asset := models.Asset{
-			RepositoryID: utils.Ptr("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
+			RepositoryID: new("gitlab:a73edfce-10f6-402d-9073-157cbc220c0f:69787207"),
 		}
 		projectID := 69787207
 		issue1 := gitlab.Issue{IID: 57, State: "opened", Labels: []string{"devguard"}}
 		issue2 := gitlab.Issue{IID: 42, State: "opened", Labels: []string{"devguard"}}
 
-		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, utils.Ptr(gitlab.Response{}), nil)
+		client.On("GetProjectIssues", mock.Anything, projectID, mock.Anything).Return([]*gitlab.Issue{&issue1, &issue2}, new(gitlab.Response{}), nil)
 		client.On("EditIssue", mock.Anything, projectID, 57, mock.Anything).Return(nil, nil, nil)
 		client.On("EditIssue", mock.Anything, projectID, 42, mock.Anything).Return(nil, nil, nil)
 
@@ -79,7 +78,7 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		depVulns := []models.DependencyVuln{}
 
 		asset := models.Asset{
-			RepositoryID: utils.Ptr("gitschlapp:a73edfce-10f6-402d-9073-157cbc220c0f6978720d7"),
+			RepositoryID: new("gitschlapp:a73edfce-10f6-402d-9073-157cbc220c0f6978720d7"),
 		}
 
 		integration := &GitlabIntegration{
@@ -267,7 +266,7 @@ func TestCreateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		ctx := context.Background()
@@ -312,8 +311,8 @@ func TestCreateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			ExternalEntityProviderID: stringPtr("test-provider"),
-			ExternalEntityID:         stringPtr("123"),
+			ExternalEntityProviderID: new("test-provider"),
+			ExternalEntityID:         new("123"),
 		}
 
 		ctx := context.Background()
@@ -352,7 +351,7 @@ func TestCreateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		ctx := context.Background()
@@ -365,7 +364,7 @@ func TestCreateLabels(t *testing.T) {
 		labels := commonint.GetAllRiskLabelsWithColors()
 
 		// Mock all labels: first 6 succeed, last 2 already exist (409 conflict)
-		for i := 0; i < 6; i++ {
+		for i := range 6 {
 			labelName := labels[i].Name
 			mockClient.On("CreateNewLabel", ctx, projectID, mock.MatchedBy(func(opts *gitlab.CreateLabelOptions) bool {
 				return *opts.Name == labelName
@@ -433,7 +432,7 @@ func TestCreateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		ctx := context.Background()
@@ -460,7 +459,7 @@ func TestCreateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		ctx := context.Background()
@@ -498,7 +497,7 @@ func TestUpdateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		labelsToUpdate := []commonint.Label{
@@ -600,7 +599,7 @@ func TestUpdateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		labelsToUpdate := []commonint.Label{
@@ -631,7 +630,7 @@ func TestUpdateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		labelsToUpdate := []commonint.Label{
@@ -667,7 +666,7 @@ func TestUpdateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		labelsToUpdate := []commonint.Label{
@@ -719,7 +718,7 @@ func TestUpdateLabels(t *testing.T) {
 		}
 
 		asset := models.Asset{
-			RepositoryID: stringPtr("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
+			RepositoryID: new("gitlab:550e8400-e29b-41d4-a716-446655440000:123"),
 		}
 
 		labelsToUpdate := []commonint.Label{
@@ -766,9 +765,4 @@ func TestUpdateLabels(t *testing.T) {
 		mockClient.AssertExpectations(t)
 		mockClientFactory.AssertExpectations(t)
 	})
-}
-
-// Helper function for creating string pointers
-func stringPtr(s string) *string {
-	return &s
 }

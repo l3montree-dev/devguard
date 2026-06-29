@@ -24,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,10 +35,6 @@ type tableTest struct {
 	expectedVector     string
 	cvss               float32
 	affectedComponents []models.AffectedComponent
-}
-
-func ptr[T any](s T) *T {
-	return &s
 }
 
 func TestCalculateRawRisk(t *testing.T) {
@@ -163,7 +158,7 @@ func TestCalculateRisk(t *testing.T) {
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
 			affectedComponents: []models.AffectedComponent{{
-				SemverFixed: ptr("v1.0.0"), // this should not matter. Reducing the score, since a fix is available, makes no sense in this application. Actually we want those cves to be handled first, since they are easy to handle.
+				SemverFixed: new("v1.0.0"), // this should not matter. Reducing the score, since a fix is available, makes no sense in this application. Actually we want those cves to be handled first, since they are easy to handle.
 			}},
 		},
 		{
@@ -237,7 +232,7 @@ func TestCalculateRisk(t *testing.T) {
 				},
 			},
 			affectedComponents: []models.AffectedComponent{{
-				SemverFixed: ptr("v1.0.0"),
+				SemverFixed: new("v1.0.0"),
 			}},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
 			cvss:           2.6,
@@ -358,28 +353,28 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 	t.Run("invalid package URL should result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pk:golang/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pk:golang/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:golang/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get crypto@0 \n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:npm/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 
 		assert.Equal(t, "```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install crypto@0 \n```", result)
@@ -387,7 +382,7 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:crates.io/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# crypto = \"=0\"\n```", result)
 	})
@@ -395,14 +390,14 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 
 		result := Explanation{
 			ComponentPurl: "pkg:pypi/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install crypto==0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:apk/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 
 		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0\n```", result)
@@ -410,14 +405,14 @@ func TestGenerateCommandsToFixPackage(t *testing.T) {
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:deb/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install crypto=0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
 		result := Explanation{
 			ComponentPurl: "pkg:NuGet/crypto@0.0.32",
-			FixedVersion:  utils.Ptr("0"),
+			FixedVersion:  new("0"),
 		}.GenerateCommandsToFixPackage()
 		assert.Equal(t, "```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package crypto --version 0\n```", result)
 	})
@@ -463,7 +458,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVEDescription:         "This is a test vulnerability description with potential security implications.",
 			ComponentPurl:          "pkg:npm/test-package@1.0.0",
 			ArtifactNames:          "artifact1 artifact2",
-			FixedVersion:           ptr("1.2.3"),
+			FixedVersion:           new("1.2.3"),
 			ShortenedComponentPurl: "npm/test-package@1.0.0",
 		}
 
@@ -544,7 +539,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVEDescription:         "Critical vulnerability",
 			ComponentPurl:          "pkg:golang/critical-package@1.0.0",
 			ArtifactNames:          "critical-artifact",
-			FixedVersion:           ptr("2.0.0"),
+			FixedVersion:           new("2.0.0"),
 			ShortenedComponentPurl: "golang/critical-package@1.0.0",
 			Risk:                   9.5,
 		}
@@ -564,7 +559,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVEDescription:         "Low severity vulnerability",
 			ComponentPurl:          "pkg:deb/low-risk-package@1.0.0",
 			ArtifactNames:          "low-risk-artifact",
-			FixedVersion:           ptr("1.0.1"),
+			FixedVersion:           new("1.0.1"),
 			ShortenedComponentPurl: "deb/low-risk-package@1.0.0",
 			Risk:                   2.1,
 		}
@@ -584,7 +579,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVEDescription:         "Multi-artifact vulnerability",
 			ComponentPurl:          "pkg:npm/multi-package@1.0.0",
 			ArtifactNames:          "artifact1 artifact2 artifact3",
-			FixedVersion:           ptr("1.1.0"),
+			FixedVersion:           new("1.1.0"),
 			ShortenedComponentPurl: "npm/multi-package@1.0.0",
 			Risk:                   6.0,
 		}
@@ -622,7 +617,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			CVEDescription:         "Formatting test vulnerability",
 			ComponentPurl:          "pkg:maven/format-test@1.0.0",
 			ArtifactNames:          "format-artifact",
-			FixedVersion:           ptr("1.1.0"),
+			FixedVersion:           new("1.1.0"),
 			ShortenedComponentPurl: "maven/format-test@1.0.0",
 			Risk:                   5.5,
 		}

@@ -318,7 +318,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			// copyStateFrom is guaranteed to be non-nil now (we filter above)
 			for _, event := range create.copyStateFrom.Events {
 				event.ID = uuid.New() // Generate new ID to avoid duplicates
-				event.DependencyVulnID = utils.Ptr(vulnHash)
+				event.DependencyVulnID = new(vulnHash)
 				eventsToCreate = append(eventsToCreate, event)
 			}
 		}
@@ -648,7 +648,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 							vulnsToCreate = append(vulnsToCreate, newVuln)
 							for _, event := range oldVuln.Events {
 								event.ID = uuid.New()
-								event.DependencyVulnID = utils.Ptr(newVuln.ID)
+								event.DependencyVulnID = new(newVuln.ID)
 								eventsToCreate = append(eventsToCreate, event)
 							}
 						}
@@ -669,7 +669,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 								vulnsToCreate = append(vulnsToCreate, newVuln)
 								for _, event := range oldVuln.Events {
 									event.ID = uuid.New()
-									event.DependencyVulnID = utils.Ptr(newVuln.ID)
+									event.DependencyVulnID = new(newVuln.ID)
 									eventsToCreate = append(eventsToCreate, event)
 								}
 							}

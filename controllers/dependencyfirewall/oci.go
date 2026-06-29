@@ -158,7 +158,7 @@ func isAllowedRegistry(registry string) bool {
 // touches the cache or the upstream registry. reference and digest may be
 // empty for routes that don't carry them (e.g. /tags/list).
 func validateOCIPathParams(upstreamImagePath, reference, digest string) error {
-	for _, segment := range strings.Split(upstreamImagePath, "/") {
+	for segment := range strings.SplitSeq(upstreamImagePath, "/") {
 		if !ociNameSegmentRe.MatchString(segment) {
 			return echo.NewHTTPError(http.StatusBadRequest, "invalid image name")
 		}
@@ -243,7 +243,7 @@ func validateRealmHost(realm, upstreamHost string) error {
 // OCI-compliant registry without hardcoding auth URLs.
 func parseBearerChallenge(header string) (realm, service, scope string) {
 	header = strings.TrimPrefix(header, "Bearer ")
-	for _, part := range strings.Split(header, ",") {
+	for part := range strings.SplitSeq(header, ",") {
 		part = strings.TrimSpace(part)
 		if kv := strings.SplitN(part, "=", 2); len(kv) == 2 {
 			key := strings.TrimSpace(kv[0])

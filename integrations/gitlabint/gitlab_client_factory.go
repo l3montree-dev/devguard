@@ -71,7 +71,7 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(ctx context.Context, to
 
 			return gitlabOauth2Client{
 				gitlabUserID: token.GitLabUserID,
-				gitlabClient: gitlabClient{Client: client, clientID: fmt.Sprintf("oauth2-%s", token.ID.String()), gitProviderID: utils.Ptr(integration.ProviderID)}}, nil
+				gitlabClient: gitlabClient{Client: client, clientID: fmt.Sprintf("oauth2-%s", token.ID.String()), gitProviderID: new(integration.ProviderID)}}, nil
 		}
 	}
 	return nil, errors.New("could not find gitlab oauth2 integration")

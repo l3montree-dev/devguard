@@ -35,7 +35,7 @@ object according to the OLPC canonical JSON specification (see
 http://wiki.laptop.org/go/Canonical_JSON) and write it to the passed
 *bytes.Buffer.  If canonicalization fails it returns an error.
 */
-func encodeCanonical(obj interface{}, result *strings.Builder) (err error) {
+func encodeCanonical(obj any, result *strings.Builder) (err error) {
 	switch objAsserted := obj.(type) {
 	case string:
 		result.WriteString(encodeCanonicalString(objAsserted))
@@ -63,7 +63,7 @@ func encodeCanonical(obj interface{}, result *strings.Builder) (err error) {
 		result.WriteString("null")
 
 	// Canonicalize slice
-	case []interface{}:
+	case []any:
 		result.WriteString("[")
 		for i, val := range objAsserted {
 			if err := encodeCanonical(val, result); err != nil {
@@ -75,7 +75,7 @@ func encodeCanonical(obj interface{}, result *strings.Builder) (err error) {
 		}
 		result.WriteString("]")
 
-	case map[string]interface{}:
+	case map[string]any:
 		result.WriteString("{")
 
 		// Make a list of keys
@@ -116,7 +116,7 @@ slice.  It uses the OLPC canonical JSON specification (see
 http://wiki.laptop.org/go/Canonical_JSON).  If canonicalization fails the byte
 slice is nil and the second return value contains the error.
 */
-func EncodeCanonical(obj interface{}) (out []byte, err error) {
+func EncodeCanonical(obj any) (out []byte, err error) {
 	// We use panic if an error occurs and recover in a deferred function,
 	// which is always called before returning.
 	// There we set the error that is returned eventually.
@@ -132,7 +132,7 @@ func EncodeCanonical(obj interface{}) (out []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	var jsonMap interface{}
+	var jsonMap any
 
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()

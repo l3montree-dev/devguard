@@ -21,10 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"regexp"
 	"github.com/in-toto/go-witness/attestation"
 	envAttestor "github.com/in-toto/go-witness/attestation/environment"
 	"github.com/in-toto/go-witness/attestation/git"
@@ -37,6 +33,10 @@ import (
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"io"
+	"net/http"
+	"os"
+	"regexp"
 )
 
 var patterns = []*regexp.Regexp{
@@ -52,12 +52,12 @@ func redactSecrets(input string) string {
 	return input
 }
 
-func removeSecretsFromMap(m map[string]interface{}) map[string]interface{} {
+func removeSecretsFromMap(m map[string]any) map[string]any {
 	for k, v := range m {
 		switch v := v.(type) {
 		case string:
 			m[k] = redactSecrets(v)
-		case map[string]interface{}:
+		case map[string]any:
 			m[k] = removeSecretsFromMap(v)
 		}
 	}
@@ -269,7 +269,6 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 
 	return cmd
 }
-
 
 func NewInTotoCommand() *cobra.Command {
 	cmd := &cobra.Command{

@@ -164,7 +164,7 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 		Description:    policy.Description,
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
-		OrganizationID: utils.Ptr(org.ID),
+		OrganizationID: new(org.ID),
 		OpaqueID:       nil,
 	}
 
@@ -199,7 +199,7 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 		Description:    policy.Description,
 		Title:          policy.Title,
 		PredicateType:  policy.PredicateType,
-		OrganizationID: utils.Ptr(org.ID),
+		OrganizationID: new(org.ID),
 	}
 
 	if err := c.policyRepository.Save(ctx.Request().Context(), nil, &policyModel); err != nil {

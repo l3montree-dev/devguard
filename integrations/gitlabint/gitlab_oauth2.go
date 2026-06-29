@@ -66,10 +66,10 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 			continue
 		}
 		key, value := parts[0], parts[1]
-		if strings.HasPrefix(key, "GITLAB_") {
+		if after, ok := strings.CutPrefix(key, "GITLAB_"); ok {
 			// there should be a "BASE_URL", "APP_ID", "APP_SECRET" and "REDIRECT_URL" env var
 			// get the name of the instance - between GITLAB_ and _
-			name := strings.TrimPrefix(key, "GITLAB_")
+			name := after
 			name = strings.ToLower(strings.Split(name, "_")[0])
 			// check what kind of value this is
 			valueName := strings.TrimPrefix(strings.ToLower(key), "gitlab_"+name+"_")
@@ -343,7 +343,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
-		tokenModel.Verifier = utils.Ptr(verifier)
+		tokenModel.Verifier = new(verifier)
 		err = c.GitlabOauth2TokenRepository.Save(ctx.Request().Context(), nil, tokenModel)
 		if err != nil {
 			return ctx.JSON(500, map[string]any{
@@ -355,7 +355,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 
 	// save the verifier in the database
 	tokenModel = &models.GitLabOauth2Token{
-		Verifier:   utils.Ptr(verifier),
+		Verifier:   new(verifier),
 		UserID:     userID,
 		BaseURL:    c.GitlabBaseURL,
 		CreatedAt:  time.Now(),
@@ -389,7 +389,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 	// check if oidc creds exist
 	for _, provider := range creds.Config["providers"].([]any) {
 		// cast to map[string]interface{}
-		provider, ok := provider.(map[string]interface{})
+		provider, ok := provider.(map[string]any)
 		if !ok {
 			continue
 		}

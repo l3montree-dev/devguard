@@ -477,6 +477,8 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 	vuln.SetTicketURL(fmt.Sprintf("%s/browse/%s", client.BaseURL, createdIssue.Key))
 	vuln.SetManualTicketCreation(userID != "system")
 
+	slog.Info("created jira ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", fmt.Sprintf("%s/browse/%s", client.BaseURL, createdIssue.Key))
+
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),
 		vuln.GetType(),
@@ -729,6 +731,8 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 	}
 
 	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
+
+	slog.Info("updating jira ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedIssueState))
 
 	err = i.updateIssueState(ctx, expectedIssueState, client, dependencyVuln.GetTicketID())
 	if err != nil {

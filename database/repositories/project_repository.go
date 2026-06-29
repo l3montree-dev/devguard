@@ -129,13 +129,13 @@ func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *mo
 func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
 	var results []dtos.ProjectAssetDTO
 
-	assetParams := []interface{}{
+	assetParams := []any{
 		"%" + search + "%",
 		pq.Array(allowedAssetIDs),
 		orgID,
 	}
 
-	projectParams := []interface{}{
+	projectParams := []any{
 		"%" + search + "%",
 		pq.Array(allowedProjectIDs),
 		orgID,
@@ -143,11 +143,11 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 
 	// When parentID is set, stop the upward recursion once we reach that project.
 	var assetChainStopCond, projectChainStopCond string
-	var parentStopParam []interface{}
+	var parentStopParam []any
 	if parentID != nil {
 		assetChainStopCond = " WHERE apc.id != ?"
 		projectChainStopCond = " WHERE pc.id != ?"
-		parentStopParam = []interface{}{*parentID}
+		parentStopParam = []any{*parentID}
 	}
 
 	searchResultsCTE := `
@@ -168,7 +168,7 @@ searchResults AS (
 )`
 
 	// Count only the matched assets and projects, not the parent chain.
-	countParams := make([]interface{}, 0, len(assetParams)+len(projectParams))
+	countParams := make([]any, 0, len(assetParams)+len(projectParams))
 	countParams = append(countParams, assetParams...)
 	countParams = append(countParams, projectParams...)
 
@@ -215,7 +215,7 @@ SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid
 UNION
 SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
 
-	dataParams := make([]interface{}, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
+	dataParams := make([]any, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
 	dataParams = append(dataParams, assetParams...)
 	dataParams = append(dataParams, projectParams...)
 	dataParams = append(dataParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)

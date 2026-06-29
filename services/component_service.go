@@ -78,7 +78,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
-		component.License = utils.Ptr("unknown")
+		component.License = new("unknown")
 		return component, nil
 	}
 
@@ -88,7 +88,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 		l := licenses.GetDebianLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		} else {
 			component.License = &l
 		}
@@ -96,7 +96,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 		l := licenses.GetAlpineLicense(parsedPurl)
 		if l == "" {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		} else {
 			component.License = &l
 		}
@@ -108,7 +108,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 			return component, nil
 		}
 
@@ -116,7 +116,7 @@ func (s *ComponentService) GetLicense(ctx context.Context, component models.Comp
 			component.License = &resp.Licenses[0]
 			component.Published = &resp.PublishedAt
 		} else {
-			component.License = utils.Ptr("unknown")
+			component.License = new("unknown")
 		}
 	}
 	return component, nil

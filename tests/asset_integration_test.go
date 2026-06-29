@@ -10,7 +10,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,8 +43,8 @@ func TestHandleLookup(t *testing.T) {
 
 		t.Run("should find the asset and return the correct values", func(t *testing.T) {
 			// update the asset to have a external entity provider and external entity id
-			asset1.ExternalEntityProviderID = utils.Ptr("gitlab")
-			asset1.ExternalEntityID = utils.Ptr("123")
+			asset1.ExternalEntityProviderID = new("gitlab")
+			asset1.ExternalEntityID = new("123")
 
 			// save the updated asset using FX-injected repository
 			assert.Nil(t, f.App.AssetRepository.Save(context.Background(), nil, &asset1))
@@ -90,11 +89,11 @@ func TestAssetUpdate(t *testing.T) {
 			org, project, asset1, _ := f.CreateOrgProjectAssetAndVersion()
 
 			updateRequest := dtos.AssetPatchRequest{
-				Name:                         utils.Ptr("test-asset"),
-				Description:                  utils.Ptr("test description"),
-				EnableTicketRange:            utils.Ptr(true),
-				CVSSAutomaticTicketThreshold: utils.Ptr(7.0),
-				RiskAutomaticTicketThreshold: utils.Ptr(5.0),
+				Name:                         new("test-asset"),
+				Description:                  new("test description"),
+				EnableTicketRange:            new(true),
+				CVSSAutomaticTicketThreshold: new(7.0),
+				RiskAutomaticTicketThreshold: new(5.0),
 			}
 
 			updateRequestBytes, err := json.Marshal(updateRequest)

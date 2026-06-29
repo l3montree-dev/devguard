@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,7 +42,7 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 			// Create a component with an invalid license
 			componentWithInvalidLicense := models.Component{
 				ID:      "pkg:npm/test-package@1.0.0",
-				License: utils.Ptr("PROPRIETARY"),
+				License: new("PROPRIETARY"),
 			}
 
 			// Persist the component
@@ -117,7 +116,7 @@ func TestLicenseRiskClosedByRefresh(t *testing.T) {
 		// Component starts with an invalid license
 		comp := models.Component{
 			ID:      "pkg:npm/bad-license-package@1.0.0",
-			License: utils.Ptr("PROPRIETARY"),
+			License: new("PROPRIETARY"),
 		}
 		assert.NoError(t, f.DB.Create(&comp).Error)
 

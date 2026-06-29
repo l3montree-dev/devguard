@@ -69,13 +69,13 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	}
 
 	// then write each revision entry version to the index string
-	index := ""
+	var index strings.Builder
 	for _, vuln := range vulns {
 		year := vuln.CreatedAt.Year()
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
-		index += fmt.Sprintf("%d/%s\n", year, fileName)
+		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
 	}
-	return ctx.String(200, index)
+	return ctx.String(200, index.String())
 }
 
 // @Summary Get CSAF changes CSV
@@ -96,7 +96,7 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	}
 
 	// then write each revision entry version to the index string
-	csvContents := ""
+	var csvContents strings.Builder
 	for _, vuln := range vulns {
 		if len(vuln.Events) == 0 {
 			continue
@@ -106,10 +106,10 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 		entry := vuln.Events[len(vuln.Events)-1]
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		// then write each entry to the csv string and return the result
-		csvContents += fmt.Sprintf("\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
+		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
 	}
 
-	return ctx.String(200, csvContents)
+	return ctx.String(200, csvContents.String())
 }
 
 // returns the html to display each subdirectory present under the csaf url
@@ -374,7 +374,7 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	}
 
 	aggregatorObject := gocsaf.AggregatorInfo{
-		Category:       utils.Ptr(gocsaf.AggregatorLister),
+		Category:       new(gocsaf.AggregatorLister),
 		ContactDetails: contactDetails,
 		Name:           name,
 		Namespace:      namespace,
@@ -387,9 +387,9 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 	csafAggregatorURL := fmt.Sprintf("%s/api/v1/.well-known/csaf-aggregator/", hostURL)
 	aggregator := gocsaf.Aggregator{
 		Aggregator:   &aggregatorObject,
-		Version:      utils.Ptr(gocsaf.AggregatorVersion20),
-		CanonicalURL: utils.Ptr(gocsaf.AggregatorURL(csafAggregatorURL + "aggregator.json")),
-		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
+		Version:      new(gocsaf.AggregatorVersion20),
+		CanonicalURL: new(gocsaf.AggregatorURL(csafAggregatorURL + "aggregator.json")),
+		LastUpdated:  new(gocsaf.TimeStamp(time.Now())),
 	}
 
 	orgs, err := controller.organizationRepository.GetOrgsWithVulnSharingAssets(ctx.Request().Context(), nil)
@@ -404,13 +404,13 @@ func (controller *CSAFController) GetAggregatorJSON(ctx shared.Context) error {
 		orgCSAFURL := fmt.Sprintf("%s/api/v1/organizations/%s/csaf/provider-metadata.json/", hostURL, org.Slug)
 		metadata := gocsaf.AggregatorCSAFProviderMetadata{
 			Publisher: &gocsaf.Publisher{
-				Category:  utils.Ptr(gocsaf.CSAFCategoryVendor),
+				Category:  new(gocsaf.CSAFCategoryVendor),
 				Name:      &org.Slug,
-				Namespace: utils.Ptr(os.Getenv("API_URL")),
+				Namespace: new(os.Getenv("API_URL")),
 			},
-			Role:        utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
-			URL:         utils.Ptr(gocsaf.ProviderURL(orgCSAFURL)),
-			LastUpdated: utils.Ptr(gocsaf.TimeStamp(time.Now())),
+			Role:        new(gocsaf.MetadataRoleTrustedProvider),
+			URL:         new(gocsaf.ProviderURL(orgCSAFURL)),
+			LastUpdated: new(gocsaf.TimeStamp(time.Now())),
 		}
 		providers = append(providers, metadata)
 	}
@@ -441,23 +441,23 @@ func (controller *CSAFController) GetProviderMetadataForOrganization(ctx shared.
 	fingerprint := getPublicKeyFingerprint()
 
 	metadata := gocsaf.ProviderMetadata{
-		CanonicalURL: utils.Ptr(gocsaf.ProviderURL(csafURL + "provider-metadata.json")),
-		LastUpdated:  utils.Ptr(gocsaf.TimeStamp(time.Now())),
+		CanonicalURL: new(gocsaf.ProviderURL(csafURL + "provider-metadata.json")),
+		LastUpdated:  new(gocsaf.TimeStamp(time.Now())),
 
-		ListOnCSAFAggregators:   utils.Ptr(true), // TODO check if reports are published
-		MirrorOnCSAFAggregators: utils.Ptr(true), // TODO check if reports are published
-		MetadataVersion:         utils.Ptr(gocsaf.MetadataVersion20),
-		Role:                    utils.Ptr(gocsaf.MetadataRoleTrustedProvider),
+		ListOnCSAFAggregators:   new(true), // TODO check if reports are published
+		MirrorOnCSAFAggregators: new(true), // TODO check if reports are published
+		MetadataVersion:         new(gocsaf.MetadataVersion20),
+		Role:                    new(gocsaf.MetadataRoleTrustedProvider),
 		Publisher: &gocsaf.Publisher{
-			Category:       utils.Ptr(gocsaf.CSAFCategoryVendor),
+			Category:       new(gocsaf.CSAFCategoryVendor),
 			ContactDetails: utils.SafeDereference(org.ContactPhoneNumber),
 			Name:           &org.Name,
-			Namespace:      utils.Ptr(os.Getenv("API_URL")), // TODO add option to add namespace to an org
+			Namespace:      new(os.Getenv("API_URL")), // TODO add option to add namespace to an org
 		},
 	}
 
 	if fingerprint != "" {
-		metadata.PGPKeys = []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: utils.Ptr(csafURL + "openpgp/" + fingerprint + ".asc")}}
+		metadata.PGPKeys = []gocsaf.PGPKey{{Fingerprint: gocsaf.Fingerprint(fingerprint), URL: new(csafURL + "openpgp/" + fingerprint + ".asc")}}
 	}
 	assets, err := controller.assetRepository.GetAssetsWithVulnSharingEnabled(ctx.Request().Context(), nil, org.ID)
 	if err != nil {

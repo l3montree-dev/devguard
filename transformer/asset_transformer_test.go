@@ -8,7 +8,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,8 +25,8 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update Name and Description",
 			patch: dtos.AssetPatchRequest{
-				Name:        utils.Ptr("New Name"),
-				Description: utils.Ptr("New Description"),
+				Name:        new("New Name"),
+				Description: new("New Description"),
 			},
 			initial: models.Asset{
 				Name:        "Old Name",
@@ -42,7 +41,7 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update ReachableFromInternet",
 			patch: dtos.AssetPatchRequest{
-				ReachableFromInternet: utils.Ptr(true),
+				ReachableFromInternet: new(true),
 			},
 			initial: models.Asset{
 
@@ -57,18 +56,18 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update RepositoryID and RepositoryName",
 			patch: dtos.AssetPatchRequest{
-				RepositoryID:   utils.Ptr("new-repo-id"),
-				RepositoryName: utils.Ptr("new-repo-name"),
+				RepositoryID:   new("new-repo-id"),
+				RepositoryName: new("new-repo-name"),
 			},
 			initial: models.Asset{
 
-				RepositoryID:   utils.Ptr("old-repo-id"),
-				RepositoryName: utils.Ptr("old-repo-name"),
+				RepositoryID:   new("old-repo-id"),
+				RepositoryName: new("old-repo-name"),
 			},
 			expected: models.Asset{
 
-				RepositoryID:   utils.Ptr("new-repo-id"),
-				RepositoryName: utils.Ptr("new-repo-name"),
+				RepositoryID:   new("new-repo-id"),
+				RepositoryName: new("new-repo-name"),
 			},
 			updated: true,
 		},
@@ -90,7 +89,7 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update nil Badge Secret",
 			patch: dtos.AssetPatchRequest{
-				WebhookSecret: utils.Ptr(webhookSecret.String()),
+				WebhookSecret: new(webhookSecret.String()),
 			},
 			initial: models.Asset{
 				WebhookSecret: nil,
@@ -103,10 +102,10 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update Webhook Secret",
 			patch: dtos.AssetPatchRequest{
-				WebhookSecret: utils.Ptr(webhookSecret.String()),
+				WebhookSecret: new(webhookSecret.String()),
 			},
 			initial: models.Asset{
-				WebhookSecret: utils.Ptr(uuid.New()),
+				WebhookSecret: new(uuid.New()),
 			},
 			expected: models.Asset{
 				WebhookSecret: &webhookSecret,

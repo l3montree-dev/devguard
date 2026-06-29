@@ -214,8 +214,7 @@ func (g *GormRepository[ID, T]) CleanupOrphanedRecords(ctx context.Context) erro
 }
 
 func isIgnorableUpsertError(err error) bool {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgErr.Code {
 		case "23503": // FK violation
 			return true
