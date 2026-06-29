@@ -689,7 +689,6 @@ WITH
       AND NOT EXISTS (
         SELECT 1 FROM assets
         WHERE project_id = (SELECT project_id FROM target)
-          AND id        != (SELECT asset_id FROM target)
       )
   )
 SELECT 1`
