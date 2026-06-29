@@ -2,6 +2,7 @@ package vulndb
 
 import (
 	"log/slog"
+	"math"
 	"strings"
 
 	gocvss20 "github.com/pandatix/go-cvss/20"
@@ -29,15 +30,13 @@ func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth i
 	one := float64(1)
 	epss := float64(utils.OrDefault(cve.EPSS, 0))
 	tmp := risk * (epss + one)
-	// return the risk with 2 decimal places
-	tmp = float64(int(tmp*100)) / 100
 	// the risk might be in the range of 0.0 to 20.0
 	// crop that down to 0.0 to 10.0
 	tmp = tmp / 2
 	// use the affectedComponent depth to further decrease the risk, if its deep inside the dependency tree
 	tmp = tmp / float64(affectedComponentDepth)
 	// round to 2 decimal places
-	tmp = float64(int(tmp*100)) / 100
+	tmp = math.Round(tmp*100) / 100
 
 	return dtos.RiskCalculationReport{
 		Risk: tmp,
@@ -158,6 +157,10 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 				}
 			}
 		}
+		// being actively exploited in the wild (KEV) is the strongest threat signal and outranks any exploit maturity below High
+		if activelyExploited(*cve) {
+			cvss.Set("E", "H") // nolint:errcheck
+		}
 		setEnv(cvss, env)
 		vector = cvss.Vector()
 		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:3.0")
@@ -181,7 +184,6 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 
 		temporalScore := cvss.Score()
 
-		// reset the temporal score again to calculate the environmental score
 		oldE, _ := cvss.Get("E")
 		cvss.Set("E", "X") // nolint:errcheck
 		// set the env manually
@@ -246,6 +248,11 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 					break
 				}
 			}
+		}
+
+		// being actively exploited in the wild (KEV) is the strongest threat signal and outranks any exploit maturity below High
+		if activelyExploited(*cve) {
+			cvss.Set("E", "H") // nolint:errcheck
 		}
 
 		setEnv(cvss, env)
