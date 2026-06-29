@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -45,7 +46,21 @@ func (service ConfigService) SetJSONConfig(ctx context.Context, key string, v an
 		Val: string(b),
 	}
 
-	return service.repository.Save(ctx, nil, &config)
+	if err := service.repository.Save(ctx, nil, &config); err != nil {
+		return err
+	}
+
+	// Keep the in-memory instance settings cache in sync with the DB write
+	if key == "instanceSettings" && instanceSettingsCache != nil {
+		if settings, ok := v.(shared.InstanceSettings); ok {
+			instanceSettingsCacheMutex.Lock()
+			instanceSettingsCache = &settings
+			instanceSettingsExpiry = time.Now().Add(5 * time.Minute)
+			instanceSettingsCacheMutex.Unlock()
+		}
+	}
+
+	return nil
 }
 
 func (service ConfigService) RemoveConfig(ctx context.Context, key string) error {
@@ -54,6 +69,7 @@ func (service ConfigService) RemoveConfig(ctx context.Context, key string) error
 
 var instanceSettingsCache *shared.InstanceSettings
 var instanceSettingsExpiry time.Time
+var instanceSettingsCacheMutex = sync.Mutex{}
 
 func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
 	if instanceSettingsCache != nil && time.Now().Before(instanceSettingsExpiry) {
