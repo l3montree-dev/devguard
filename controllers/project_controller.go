@@ -238,11 +238,6 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	// check if role is valid
-	if role := req.Role; role != "admin" && role != "member" {
-		return echo.NewHTTPError(400, "invalid role")
-	}
-
 	members, err := rbac.GetAllMembersOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -576,8 +571,8 @@ func (projectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
 	}
 
-	if probe.ProjectExternalEntityID == "" || probe.AssetExternalEntityID == "" {
-		return echo.NewHTTPError(400, "verb, projectExternalEntityId, and assetExternalEntityId are required")
+	if err := shared.V.Struct(probe); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	providerID := shared.GetProviderID(ctx)
@@ -585,7 +580,7 @@ func (projectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 	parentProject := shared.GetProject(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	if probe.Verb == "delete" {
+	if probe.Verb == "delete" { // "update" is the implicit else handled after this block
 		parentProjectID := parentProject.ID
 		proExternalEntityID := probe.ProjectExternalEntityID
 		if probe.SubProjectExternalEntityID != "" {
@@ -602,8 +597,6 @@ func (projectController *ProjectController) HandleDynamicProject(ctx shared.Cont
 		}
 
 		return ctx.JSON(200, map[string]string{"message": "project and asset deleted successfully"})
-	} else if probe.Verb != "update" {
-		return echo.NewHTTPError(400, "invalid verb, only 'update' and 'delete' are allowed")
 	}
 
 	bom := new(cdx.BOM)

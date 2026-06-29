@@ -123,14 +123,14 @@ type ProjectsAssetAssetVersionsDTO struct {
 	} `json:"assets"`
 }
 type DynamicProjectRequestDTO struct {
-	Verb                       string          `json:"verb"`
-	ProjectExternalEntityID    string          `json:"projectExternalEntityId"`
+	Verb                       string          `json:"verb" validate:"required,oneof=update delete"`
+	ProjectExternalEntityID    string          `json:"projectExternalEntityId" validate:"required"`
 	ProjectName                string          `json:"projectName"`
 	ProjectDescription         string          `json:"projectDescription"`
 	SubProjectExternalEntityID string          `json:"subProjectExternalEntityId,omitempty"`
 	SubProjectName             string          `json:"subProjectName,omitempty"`
 	SubProjectDescription      string          `json:"subProjectDescription,omitempty"`
-	AssetExternalEntityID      string          `json:"assetExternalEntityId"`
+	AssetExternalEntityID      string          `json:"assetExternalEntityId" validate:"required"`
 	AssetName                  string          `json:"assetName"`
 	AssetDescription           string          `json:"assetDescription"`
 	AssetVersionName           string          `json:"assetVersionName"`
