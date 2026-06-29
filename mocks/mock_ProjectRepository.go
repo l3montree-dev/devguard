@@ -173,12 +173,12 @@ func (_c *ProjectRepository_All_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
-// CleanupExternalProject provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) CleanupExternalProject(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
+// CleanupExternalProjectAssetVersion provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) CleanupExternalProjectAssetVersion(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
 	ret := _mock.Called(ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CleanupExternalProject")
+		panic("no return value specified for CleanupExternalProjectAssetVersion")
 	}
 
 	var r0 error
@@ -190,12 +190,12 @@ func (_mock *ProjectRepository) CleanupExternalProject(ctx context.Context, tx s
 	return r0
 }
 
-// ProjectRepository_CleanupExternalProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupExternalProject'
-type ProjectRepository_CleanupExternalProject_Call struct {
+// ProjectRepository_CleanupExternalProjectAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupExternalProjectAssetVersion'
+type ProjectRepository_CleanupExternalProjectAssetVersion_Call struct {
 	*mock.Call
 }
 
-// CleanupExternalProject is a helper method to define mock.On call
+// CleanupExternalProjectAssetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
@@ -204,11 +204,11 @@ type ProjectRepository_CleanupExternalProject_Call struct {
 //   - assetExternalEntityID string
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ProjectRepository_Expecter) CleanupExternalProject(ctx interface{}, tx interface{}, organizationID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}, artifactName interface{}) *ProjectRepository_CleanupExternalProject_Call {
-	return &ProjectRepository_CleanupExternalProject_Call{Call: _e.mock.On("CleanupExternalProject", ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)}
+func (_e *ProjectRepository_Expecter) CleanupExternalProjectAssetVersion(ctx interface{}, tx interface{}, organizationID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}, artifactName interface{}) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
+	return &ProjectRepository_CleanupExternalProjectAssetVersion_Call{Call: _e.mock.On("CleanupExternalProjectAssetVersion", ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)}
 }
 
-func (_c *ProjectRepository_CleanupExternalProject_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string)) *ProjectRepository_CleanupExternalProject_Call {
+func (_c *ProjectRepository_CleanupExternalProjectAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string)) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -256,12 +256,12 @@ func (_c *ProjectRepository_CleanupExternalProject_Call) Run(run func(ctx contex
 	return _c
 }
 
-func (_c *ProjectRepository_CleanupExternalProject_Call) Return(err error) *ProjectRepository_CleanupExternalProject_Call {
+func (_c *ProjectRepository_CleanupExternalProjectAssetVersion_Call) Return(err error) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ProjectRepository_CleanupExternalProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error) *ProjectRepository_CleanupExternalProject_Call {
+func (_c *ProjectRepository_CleanupExternalProjectAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }

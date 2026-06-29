@@ -640,7 +640,7 @@ func (g *projectRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*model
 // This function deletes a specific asset version in a dynamic tree of projects
 // if this is the last asset version, the asset will be deleted as well
 // if this is the last asset in the project, the project will be deleted as well
-func (g *projectRepository) CleanupExternalProject(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
+func (g *projectRepository) CleanupExternalProjectAssetVersion(ctx context.Context, tx *gorm.DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error {
 
 	query := `
 WITH

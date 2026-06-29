@@ -585,7 +585,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		if probe.SubProjectExternalEntityID != "" {
 			proExternalEntityID = probe.SubProjectExternalEntityID
 		}
-		if err := projectController.projectRepository.CleanupExternalProject(ctx.Request().Context(), nil, organization.GetID(), providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact); err != nil {
+		if err := projectController.projectRepository.CleanupExternalProjectAssetVersion(ctx.Request().Context(), nil, organization.GetID(), providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact); err != nil {
 			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
 		}
 
@@ -693,7 +693,7 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
 	}
 	if len(projects) == 0 {
-		return ctx.JSON(200, []dtos.ProjectsAssetAssetVersionsDTO{})
+		return ctx.JSON(200, []dtos.ProjectExternalEntityTree{})
 	}
 
 	projectIDs := make([]uuid.UUID, len(projects))
@@ -764,22 +764,8 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 		)
 	}
 
-	buildAssetEntries := func(projectID uuid.UUID) []struct {
-		AssetExternalEntityID string `json:"assetExternalEntityId"`
-		AssetName             string `json:"assetName"`
-		AssetVersions         []struct {
-			AssetVersionName string   `json:"assetVersionName"`
-			Artifacts        []string `json:"artifacts"`
-		} `json:"assetVersions"`
-	} {
-		var entries []struct {
-			AssetExternalEntityID string `json:"assetExternalEntityId"`
-			AssetName             string `json:"assetName"`
-			AssetVersions         []struct {
-				AssetVersionName string   `json:"assetVersionName"`
-				Artifacts        []string `json:"artifacts"`
-			} `json:"assetVersions"`
-		}
+	buildAssetEntries := func(projectID uuid.UUID) []dtos.AssetEntryDTO {
+		var entries []dtos.AssetEntryDTO
 		for _, asset := range assetsByProjectID[projectID] {
 			if asset.ExternalEntityID == nil {
 				continue
@@ -788,32 +774,24 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 			if len(versions) == 0 {
 				continue
 			}
-			assetEntry := struct {
-				AssetExternalEntityID string `json:"assetExternalEntityId"`
-				AssetName             string `json:"assetName"`
-				AssetVersions         []struct {
-					AssetVersionName string   `json:"assetVersionName"`
-					Artifacts        []string `json:"artifacts"`
-				} `json:"assetVersions"`
-			}{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
+			assetEntry := dtos.AssetEntryDTO{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
 			for _, av := range versions {
-				avEntry := struct {
-					AssetVersionName string   `json:"assetVersionName"`
-					Artifacts        []string `json:"artifacts"`
-				}{AssetVersionName: av.Name, Artifacts: artifactsByAssetIDAndVersion[asset.ID][av.Name]}
-				assetEntry.AssetVersions = append(assetEntry.AssetVersions, avEntry)
+				assetEntry.AssetVersions = append(assetEntry.AssetVersions, dtos.AssetVersionEntryDTO{
+					AssetVersionName: av.Name,
+					Artifacts:        artifactsByAssetIDAndVersion[asset.ID][av.Name],
+				})
 			}
 			entries = append(entries, assetEntry)
 		}
 		return entries
 	}
 
-	result := make([]dtos.ProjectsAssetAssetVersionsDTO, 0, len(projects))
+	result := make([]dtos.ProjectExternalEntityTree, 0, len(projects))
 	for _, project := range projects {
 		if project.ExternalEntityID == nil {
 			continue
 		}
-		entry := dtos.ProjectsAssetAssetVersionsDTO{
+		entry := dtos.ProjectExternalEntityTree{
 			ProjectExternalEntityID: *project.ExternalEntityID,
 			ProjectName:             project.Name,
 		}
@@ -822,21 +800,11 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 			if sp.ExternalEntityID == nil {
 				continue
 			}
-			spEntry := struct {
-				SubProjectExternalEntityID string `json:"subProjectExternalEntityId,omitempty"`
-				SubProjectName             string `json:"subProjectName,omitempty"`
-				SubProjectDescription      string `json:"subProjectDescription,omitempty"`
-				Assets                     []struct {
-					AssetExternalEntityID string `json:"assetExternalEntityId"`
-					AssetName             string `json:"assetName"`
-					AssetVersions         []struct {
-						AssetVersionName string   `json:"assetVersionName"`
-						Artifacts        []string `json:"artifacts"`
-					} `json:"assetVersions"`
-				} `json:"assets"`
-			}{SubProjectExternalEntityID: *sp.ExternalEntityID, SubProjectName: sp.Name}
-			spEntry.Assets = buildAssetEntries(sp.ID)
-			entry.SubProjects = append(entry.SubProjects, spEntry)
+			entry.SubProjects = append(entry.SubProjects, dtos.SubProjectEntryDTO{
+				SubProjectExternalEntityID: *sp.ExternalEntityID,
+				SubProjectName:             sp.Name,
+				Assets:                     buildAssetEntries(sp.ID),
+			})
 		}
 
 		entry.Assets = buildAssetEntries(project.ID)
