@@ -29,12 +29,15 @@ func NewAuthCommand() *cobra.Command {
 		Use:               "auth [flags]",
 		Short:             "Verify a DevGuard token and store it in the system keyring",
 		DisableAutoGenTag: true,
-		Long: `Verify a DevGuard personal access token against the API and store it in the system keyring.
+		Long: `Verify a DevGuard personal access token and store it in the OS keyring so you do not have to
+pass --token on every command.
 
-Once stored, all devguard-scanner commands will automatically use the token when
-no --token flag or DEVGUARD_TOKEN environment variable is provided. This is the
-recommended way to authenticate on developer machines and in git hooks.`,
-		Example: `  devguard-scanner login --token <hex-token> --assetName org/project/asset --apiUrl https://devguard.example.com`,
+This is the recommended setup for developer machines and git hooks. In CI pipelines, prefer the
+DEVGUARD_TOKEN environment variable instead so the token is not written to disk.
+
+Once stored, all devguard-scanner commands will automatically pick up the token from the keyring.`,
+		Example: `  # One-time setup on a developer machine
+  devguard-scanner auth --token <hex-token> --assetName org/project/asset --apiUrl https://api.devguard.org`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token := config.RuntimeBaseConfig.Token
 			assetName := config.RuntimeBaseConfig.AssetName
