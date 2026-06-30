@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createTestAffectedComponent creates a properly populated AffectedComponent for testing
@@ -818,4 +819,551 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			assert.Greater(t, *vuln.RawRiskAssessment, float64(3), "Risk should be calculated (can be 0 or greater)")
 		})
 	})
+}
+
+func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
+
+	package1 := "pkg:npm/test-package@1.0.0"
+	package2 := "pkg:npm/test-package@2.0.0"
+	lib1 := "pkg:npm/test-lib@1.0.0"
+	lib2 := "pkg:npm/test-lib@2.0.0"
+	vulnLib1 := "pkg:npm/test-vulnerableLib@1.0.0"
+	vulnLib2 := "pkg:npm/test-vulnerableLib@2.0.0"
+
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		t.Run("should apply systemVEXRules to existing vulns if path matches", func(t *testing.T) {
+			org1 := f.CreateOrg("test-org-1")
+			project1 := f.CreateProject(org1.ID, "test-project-1")
+			asset1 := f.CreateAsset(project1.ID, "test-asset-1")
+			assetVersion1 := f.CreateAssetVersion(asset1.ID, "main", true)
+
+			cve1 := models.CVE{
+				CVE:  "CVE-2025-TEST-001",
+				CVSS: 7.5,
+			}
+
+			err := f.DB.Create(&cve1).Error
+			assert.NoError(t, err)
+
+			vulnerability1 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+
+			err = f.DB.Create(&vulnerability1).Error
+			assert.NoError(t, err)
+
+			systemVEXRule1 := models.SystemVEXRule{
+				// Composite key components
+				CVEID:     cve1.CVE,
+				VexSource: "https://test-cve.com",
+
+				// Rule data
+				EventType:               dtos.EventTypeFalsePositive,
+				MechanicalJustification: dtos.ComponentNotPresent,
+				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
+				CreatedByID:             "system",
+			}
+			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+
+			err = f.DB.Create(&systemVEXRule1).Error
+			assert.NoError(t, err)
+
+			runner := f.CreateDaemonRunner()
+			err = runner.ApplySystemVEXRules(context.Background())
+			assert.NoError(t, err)
+
+			var createdDependencyVuln models.DependencyVuln
+			err = f.DB.First(&createdDependencyVuln).Error
+			assert.NoError(t, err)
+
+			// Idea is, if the SystemVEXRule is properly created/applied, there should be only one DependencyVuln with the corresponding CVEID
+			var createdVulnEvents []models.VulnEvent
+			err = f.DB.Find(&createdVulnEvents, "dependency_vuln_id = ?", createdDependencyVuln.Vulnerability.ID).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(createdVulnEvents))
+			assert.Equal(t, dtos.ComponentNotPresent, createdVulnEvents[0].MechanicalJustification)
+			assert.Equal(t, "system", createdVulnEvents[0].UserID)
+		})
+	})
+
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		t.Run("should not apply systemVEXRules to existing vulns if paths don't match", func(t *testing.T) {
+			org1 := f.CreateOrg("test-org-1")
+			project1 := f.CreateProject(org1.ID, "test-project-1")
+			asset1 := f.CreateAsset(project1.ID, "test-asset-1")
+			assetVersion1 := f.CreateAssetVersion(asset1.ID, "main", true)
+
+			cve1 := models.CVE{
+				CVE:  "CVE-2025-TEST-001",
+				CVSS: 7.5,
+			}
+
+			err := f.DB.Create(&cve1).Error
+			assert.NoError(t, err)
+
+			cve2 := models.CVE{
+				CVE:  "CVE-2025-TEST-002",
+				CVSS: 3.5,
+			}
+
+			err = f.DB.Create(&cve2).Error
+			assert.NoError(t, err)
+
+			vulnerability2 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve2.CVE,
+				ComponentPurl:     vulnLib2,
+				VulnerabilityPath: []string{package2, lib2, vulnLib2},
+				Artifacts:         []models.Artifact{},
+			}
+
+			err = f.DB.Create(&vulnerability2).Error
+			assert.NoError(t, err)
+
+			systemVEXRule1 := models.SystemVEXRule{
+				// Composite key components
+				CVEID:     cve1.CVE,
+				VexSource: "https://test-cve.com",
+
+				// Rule data
+				EventType:               dtos.EventTypeFalsePositive,
+				MechanicalJustification: dtos.ComponentNotPresent,
+				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
+				CreatedByID:             "system",
+			}
+			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+
+			err = f.DB.Create(&systemVEXRule1).Error
+			assert.NoError(t, err)
+
+			runner := f.CreateDaemonRunner()
+			err = runner.ApplySystemVEXRules(context.Background())
+			assert.NoError(t, err)
+
+			var createdDependencyVuln models.DependencyVuln
+			err = f.DB.First(&createdDependencyVuln).Error
+			assert.NoError(t, err)
+
+			// This should not be applied, so there should be no DependencyVulns here
+			var createdVulnEvents []models.VulnEvent
+			err = f.DB.Find(&createdVulnEvents, "dependency_vuln_id = ?", createdDependencyVuln.Vulnerability.ID).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 0, len(createdVulnEvents))
+		})
+	})
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		t.Run("should apply systemVEXRules to existing vulns even with cve alias", func(t *testing.T) {
+			org1 := f.CreateOrg("test-org-1")
+			project1 := f.CreateProject(org1.ID, "test-project-1")
+			asset1 := f.CreateAsset(project1.ID, "test-asset-1")
+			assetVersion1 := f.CreateAssetVersion(asset1.ID, "main", true)
+
+			cve1 := models.CVE{
+				CVE:  "CVE-2025-TEST-001",
+				CVSS: 7.5,
+			}
+
+			err := f.DB.Create(&cve1).Error
+			assert.NoError(t, err)
+
+			cve1Alias := models.CVE{
+				CVE:  "CVE-2025-TEST-ALIAS-001",
+				CVSS: 7.5,
+			}
+
+			err = f.DB.Create(&cve1Alias).Error
+			assert.NoError(t, err)
+
+			cveRelationship1 := models.CVERelationship{
+				SourceCVE:        cve1.CVE,
+				TargetCVE:        cve1Alias.CVE,
+				RelationshipType: dtos.RelationshipTypeAlias,
+			}
+
+			err = f.DB.Create(&cveRelationship1).Error
+			assert.NoError(t, err)
+
+			vulnerabilityWithAlias := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1Alias.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+
+			err = f.DB.Create(&vulnerabilityWithAlias).Error
+			assert.NoError(t, err)
+
+			systemVEXRule := models.SystemVEXRule{
+				// Composite key components
+				CVEID:     cve1.CVE,
+				VexSource: "https://test-cve.com",
+
+				// Rule data
+				EventType:               dtos.EventTypeFalsePositive,
+				MechanicalJustification: dtos.ComponentNotPresent,
+				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
+				CreatedByID:             "system",
+			}
+			systemVEXRule.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+
+			err = f.DB.Create(&systemVEXRule).Error
+			assert.NoError(t, err)
+
+			runner := f.CreateDaemonRunner()
+			err = runner.ApplySystemVEXRules(context.Background())
+			assert.NoError(t, err)
+
+			var createdDependencyVuln models.DependencyVuln
+			err = f.DB.First(&createdDependencyVuln, "cve_id = ?", cve1Alias.CVE).Error
+			assert.NoError(t, err)
+
+			// Idea is, if the SystemVEXRule is properly created/applied, there should be only one DependencyVuln with the corresponding CVEID
+			var createdVulnEvents []models.VulnEvent
+			err = f.DB.Find(&createdVulnEvents, "dependency_vuln_id = ?", createdDependencyVuln.Vulnerability.ID).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(createdVulnEvents))
+			assert.Equal(t, dtos.ComponentNotPresent, createdVulnEvents[0].MechanicalJustification)
+			assert.Equal(t, "system", createdVulnEvents[0].UserID)
+		})
+	})
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+
+		t.Run("should not apply systemVEXRules to existing vulns under paranoid mode", func(t *testing.T) {
+			org1 := f.CreateOrg("test-org-1")
+			project1 := f.CreateProject(org1.ID, "test-project-1")
+			asset1 := models.Asset{
+				Name:         "test-project-1",
+				ProjectID:    project1.ID,
+				ParanoidMode: true,
+			}
+			err := f.DB.Create(&asset1).Error
+			require.NoError(f.T, err)
+			assetVersion1 := f.CreateAssetVersion(asset1.ID, "main", true)
+
+			cve1 := models.CVE{
+				CVE:  "CVE-2025-TEST-001",
+				CVSS: 7.5,
+			}
+
+			err = f.DB.Create(&cve1).Error
+			assert.NoError(t, err)
+
+			vulnerability1 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+
+			err = f.DB.Create(&vulnerability1).Error
+			assert.NoError(t, err)
+
+			systemVEXRule1 := models.SystemVEXRule{
+				// Composite key components
+				CVEID:     cve1.CVE,
+				VexSource: "https://test-cve.com",
+
+				// Rule data
+				EventType:               dtos.EventTypeFalsePositive,
+				MechanicalJustification: dtos.ComponentNotPresent,
+				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
+				CreatedByID:             "system",
+			}
+			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+
+			err = f.DB.Create(&systemVEXRule1).Error
+			assert.NoError(t, err)
+
+			runner := f.CreateDaemonRunner()
+			err = runner.ApplySystemVEXRules(context.Background())
+			assert.NoError(t, err)
+
+			var createdDependencyVuln models.DependencyVuln
+			err = f.DB.First(&createdDependencyVuln).Error
+			assert.NoError(t, err)
+
+			// This should not be applied, so there should be no DependencyVulns here
+			var createdVulnEvents []models.VulnEvent
+			err = f.DB.Find(&createdVulnEvents, "dependency_vuln_id = ?", createdDependencyVuln.Vulnerability.ID).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 0, len(createdVulnEvents))
+		})
+	})
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		t.Run("systemVEXRules should be applied for all assets that are not in paranoid mode and all vulns that are matching", func(t *testing.T) {
+			org1 := f.CreateOrg("test-org-1")
+			project1 := f.CreateProject(org1.ID, "test-project-1")
+			asset1 := f.CreateAsset(project1.ID, "test-asset-1")
+			assetVersion1 := f.CreateAssetVersion(asset1.ID, "main", true)
+
+			org2 := f.CreateOrg("test-org-2")
+			project2 := f.CreateProject(org2.ID, "test-project-2")
+			asset2 := f.CreateAsset(project2.ID, "test-asset-2")
+			assetVersion2 := f.CreateAssetVersion(asset2.ID, "main", true)
+
+			org3 := f.CreateOrg("test-org-3")
+			project3 := f.CreateProject(org3.ID, "test-project-3")
+			asset3 := models.Asset{
+				Name:         "test-project-3",
+				ProjectID:    project3.ID,
+				ParanoidMode: true,
+			}
+			err := f.DB.Create(&asset3).Error
+			require.NoError(f.T, err)
+			assetVersion3 := f.CreateAssetVersion(asset3.ID, "main", true)
+
+			org4 := f.CreateOrg("test-org-4")
+			project4 := f.CreateProject(org4.ID, "test-project-4")
+			asset4 := f.CreateAsset(project4.ID, "test-asset-4")
+			assetVersion4 := f.CreateAssetVersion(asset4.ID, "main", true)
+
+			// Create CVEs
+			cve1 := models.CVE{
+				CVE:  "CVE-2025-TEST-001",
+				CVSS: 7.5,
+			}
+			err = f.DB.Create(&cve1).Error
+			assert.NoError(t, err)
+
+			cve1Alias := models.CVE{
+				CVE:  "CVE-2025-TEST-ALIAS-001",
+				CVSS: 7.5,
+			}
+			err = f.DB.Create(&cve1Alias).Error
+			assert.NoError(t, err)
+
+			cve2 := models.CVE{
+				CVE:  "CVE-2025-TEST-002",
+				CVSS: 3.5,
+			}
+			err = f.DB.Create(&cve2).Error
+			assert.NoError(t, err)
+
+			cve2Alias1 := models.CVE{
+				CVE:  "CVE-2025-TEST-ALIAS-102",
+				CVSS: 4.9,
+			}
+			err = f.DB.Create(&cve2Alias1).Error
+			assert.NoError(t, err)
+
+			cve2Alias2 := models.CVE{
+				CVE:  "CVE-2025-TEST-ALIAS-202",
+				CVSS: 4.9,
+			}
+			err = f.DB.Create(&cve2Alias2).Error
+			assert.NoError(t, err)
+
+			// Create CVE Aliases
+			cveRelationship1 := models.CVERelationship{
+				SourceCVE:        "CVE-2025-TEST-001",
+				TargetCVE:        "CVE-2025-TEST-ALIAS-001",
+				RelationshipType: dtos.RelationshipTypeAlias,
+			}
+			err = f.DB.Create(&cveRelationship1).Error
+			assert.NoError(t, err)
+
+			cveRelationship2 := models.CVERelationship{
+				SourceCVE:        "CVE-2025-TEST-002",
+				TargetCVE:        "CVE-2025-TEST-ALIAS-102",
+				RelationshipType: dtos.RelationshipTypeAlias,
+			}
+			err = f.DB.Create(&cveRelationship2).Error
+			assert.NoError(t, err)
+
+			cveRelationship3 := models.CVERelationship{
+				SourceCVE:        "CVE-2025-TEST-002",
+				TargetCVE:        "CVE-2025-TEST-ALIAS-202",
+				RelationshipType: dtos.RelationshipTypeAlias,
+			}
+			err = f.DB.Create(&cveRelationship3).Error
+			assert.NoError(t, err)
+
+			vulnerability1 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability1).Error
+			assert.NoError(t, err)
+
+			vulnerability2 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset1.ID,
+					AssetVersionName: assetVersion1.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve2.CVE,
+				ComponentPurl:     vulnLib2,
+				VulnerabilityPath: []string{package2, lib2, vulnLib2},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability2).Error
+			assert.NoError(t, err)
+
+			vulnerability3 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset2.ID,
+					AssetVersionName: assetVersion2.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability3).Error
+			assert.NoError(t, err)
+
+			// Exists in different asset as vulnnerabilty1 and has a different CVE
+			vulnerability4 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset2.ID,
+					AssetVersionName: assetVersion2.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve2.CVE,
+				ComponentPurl:     vulnLib2,
+				VulnerabilityPath: []string{package2, lib2, vulnLib2},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability4).Error
+			assert.NoError(t, err)
+
+			vulnerability5 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset2.ID,
+					AssetVersionName: assetVersion2.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve2Alias1.CVE,
+				ComponentPurl:     vulnLib2,
+				VulnerabilityPath: []string{package2, lib2, vulnLib2},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability5).Error
+			assert.NoError(t, err)
+
+			// Vuln created for asset3, this should not be matched since the asset is in paranoid mode
+			vulnerability6 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset3.ID,
+					AssetVersionName: assetVersion3.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib1, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability6).Error
+			assert.NoError(t, err)
+
+			// Vuln created for asset4, alias test
+			vulnerability7 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetID:          asset4.ID,
+					AssetVersionName: assetVersion4.Name,
+					State:            dtos.VulnStateOpen,
+					LastDetected:     time.Now(),
+				},
+				CVEID:             cve1Alias.CVE,
+				ComponentPurl:     vulnLib1,
+				VulnerabilityPath: []string{package1, lib2, vulnLib1},
+				Artifacts:         []models.Artifact{},
+			}
+			err = f.DB.Create(&vulnerability7).Error
+			assert.NoError(t, err)
+
+			//Create SystemVEXRules
+			systemVEXRule1 := models.SystemVEXRule{
+				// Composite key components
+				CVEID:     cve1.CVE,
+				VexSource: "https://test-cve.com",
+
+				// Rule data
+				EventType:               dtos.EventTypeFalsePositive,
+				MechanicalJustification: dtos.ComponentNotPresent,
+				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
+				CreatedByID:             "system",
+			}
+			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+
+			err = f.DB.Create(&systemVEXRule1).Error
+			assert.NoError(t, err)
+
+			runner := f.CreateDaemonRunner()
+			err = runner.ApplySystemVEXRules(context.Background())
+			assert.NoError(t, err)
+
+			var createdDependencyVulns []models.DependencyVuln
+			err = f.DB.Find(&createdDependencyVulns).Error
+			assert.NoError(t, err)
+
+			var createdRels []models.CVERelationship
+			err = f.DB.Find(&createdRels).Error
+			assert.NoError(t, err)
+
+			createdDependencyVulnsIDs := utils.Map(createdDependencyVulns, func(vuln models.DependencyVuln) uuid.UUID {
+				return vuln.ID
+			})
+
+			// This should not be applied, so there should be no DependencyVulns here
+			var createdVulnEvents []models.VulnEvent
+			err = f.DB.Find(&createdVulnEvents, "dependency_vuln_id IN (?)", createdDependencyVulnsIDs).Error
+			assert.NoError(t, err)
+			assert.Equal(t, 3, len(createdVulnEvents))
+
+			resultsMap := make(map[string]models.VulnEvent)
+			for _, ve := range createdVulnEvents {
+				resultsMap[ve.DependencyVulnID.String()] = ve
+			}
+
+			for _, dv := range createdDependencyVulns {
+				if _, ok := resultsMap[dv.ID.String()]; !ok {
+					continue
+				}
+				assert.Equal(t, dtos.ComponentNotPresent, resultsMap[dv.ID.String()].MechanicalJustification)
+				assert.Equal(t, "system", resultsMap[dv.ID.String()].UserID)
+			}
+		})
+	})
+
 }

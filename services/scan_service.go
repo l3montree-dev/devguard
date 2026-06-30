@@ -22,6 +22,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path"
 	"slices"
 	"strings"
 	"time"
@@ -38,6 +40,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
@@ -62,6 +65,8 @@ type scanService struct {
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
+
+var downloadRawFileFn = DownloadGithubRepoAsZip
 
 var _ shared.ScanService = (*scanService)(nil)
 
@@ -921,4 +926,124 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
+}
+
+func (s *scanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*normalize.VexReportOpenVEX, err error) {
+	owner, repo, err := ParseGitHubURL(targetURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine default branch
+	branch := targetBranch
+	if branch == "" {
+		branch = "main"
+	}
+
+	resp, err := downloadRawFileFn(ctx, owner, repo, branch)
+	if err != nil {
+		return nil, err
+	}
+
+	repoZip, err := utils.ZipReaderFromResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("could not read obtained zip: %w", err)
+	}
+	defer resp.Body.Close()
+
+	for _, fileEntry := range repoZip.File {
+		if fileEntry.FileInfo().IsDir() {
+			continue
+		}
+		filename := strings.ToLower(path.Base(fileEntry.Name))
+		if !strings.HasSuffix(filename, ".json") {
+			continue
+		}
+
+		fileRead, err := fileEntry.Open()
+		if err != nil {
+			slog.Info("openvex document could not be opened, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
+			continue
+		}
+		data, err := io.ReadAll(fileRead)
+		fileRead.Close()
+		if err != nil {
+			slog.Info("openvex document could not be opened, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
+			continue
+		}
+
+		if !json.Valid(data) {
+			slog.Info("skipping non-JSON file in OpenVEX repo", "filename", fileEntry.Name)
+			continue
+		}
+
+		var openVEX ov.VEX
+		err = json.Unmarshal(data, &openVEX)
+		if err != nil {
+			slog.Info("could not unmarshal openVEX failed", "err", err, "filename", filename)
+			continue
+		}
+		newVexReport, err := normalize.NewVexReportOpenVEX(&openVEX, targetURL)
+		if err != nil {
+			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
+			continue
+		}
+		vexReports = append(vexReports, newVexReport)
+	}
+	return vexReports, nil
+}
+
+func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", "", err
+	}
+	const githubDomain = "github.com"
+	const gitSuffix = ".git"
+	const trailingSlashSuffix = "/"
+	if u.Host != githubDomain {
+		return "", "", fmt.Errorf("invalid github repository url")
+	}
+	parts := strings.Split(strings.TrimSuffix(strings.Trim(u.Path, trailingSlashSuffix), gitSuffix), "/")
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid github repository url path: expected /{owner}/{repo}, got %q", u.Path)
+	}
+	owner = parts[0]
+	repo = parts[1]
+	if owner == "" || repo == "" {
+		return "", "", fmt.Errorf("invalid github repository url path: expected non-empty owner and repo, got %q", u.Path)
+	}
+	return owner, repo, nil
+}
+
+func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
+	url := fmt.Sprintf(
+		"https://github.com/%s/%s/archive/refs/heads/%s.zip",
+		owner,
+		repo,
+		branch,
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return resp, nil
+	case http.StatusNotFound:
+		return nil, fmt.Errorf("404 Source not found")
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("401 Unauthorized")
+	case http.StatusInternalServerError:
+		return nil, fmt.Errorf("500 Internal Server error")
+	default:
+		return nil, fmt.Errorf("Unexpected status: %d\n", resp.StatusCode)
+	}
 }

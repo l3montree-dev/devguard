@@ -1319,6 +1319,77 @@ func (_c *VEXRuleService_IngestVexes_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// MatchRulesToVulns provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) MatchRulesToVulns(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+	ret := _mock.Called(ctx, tx, rules, vulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MatchRulesToVulns")
+	}
+
+	var r0 map[string][]models.DependencyVuln
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.VEXRule, []models.DependencyVuln) map[string][]models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, rules, vulns)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string][]models.DependencyVuln)
+		}
+	}
+	return r0
+}
+
+// VEXRuleService_MatchRulesToVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MatchRulesToVulns'
+type VEXRuleService_MatchRulesToVulns_Call struct {
+	*mock.Call
+}
+
+// MatchRulesToVulns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - rules []models.VEXRule
+//   - vulns []models.DependencyVuln
+func (_e *VEXRuleService_Expecter) MatchRulesToVulns(ctx interface{}, tx interface{}, rules interface{}, vulns interface{}) *VEXRuleService_MatchRulesToVulns_Call {
+	return &VEXRuleService_MatchRulesToVulns_Call{Call: _e.mock.On("MatchRulesToVulns", ctx, tx, rules, vulns)}
+}
+
+func (_c *VEXRuleService_MatchRulesToVulns_Call) Run(run func(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln)) *VEXRuleService_MatchRulesToVulns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.VEXRule
+		if args[2] != nil {
+			arg2 = args[2].([]models.VEXRule)
+		}
+		var arg3 []models.DependencyVuln
+		if args[3] != nil {
+			arg3 = args[3].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_MatchRulesToVulns_Call) Return(stringToDependencyVulns map[string][]models.DependencyVuln) *VEXRuleService_MatchRulesToVulns_Call {
+	_c.Call.Return(stringToDependencyVulns)
+	return _c
+}
+
+func (_c *VEXRuleService_MatchRulesToVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln) *VEXRuleService_MatchRulesToVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type VEXRuleService
 func (_mock *VEXRuleService) Update(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
 	ret := _mock.Called(ctx, tx, rule)
@@ -1378,6 +1449,63 @@ func (_c *VEXRuleService_Update_Call) Return(err error) *VEXRuleService_Update_C
 }
 
 func (_c *VEXRuleService_Update_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rule *models.VEXRule) error) *VEXRuleService_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateSystemVEXRulesFromStaticSources provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error {
+	ret := _mock.Called(ctx, reports)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSystemVEXRulesFromStaticSources")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []*normalize.VexReportOpenVEX) error); ok {
+		r0 = returnFunc(ctx, reports)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSystemVEXRulesFromStaticSources'
+type VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call struct {
+	*mock.Call
+}
+
+// UpdateSystemVEXRulesFromStaticSources is a helper method to define mock.On call
+//   - ctx context.Context
+//   - reports []*normalize.VexReportOpenVEX
+func (_e *VEXRuleService_Expecter) UpdateSystemVEXRulesFromStaticSources(ctx interface{}, reports interface{}) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	return &VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call{Call: _e.mock.On("UpdateSystemVEXRulesFromStaticSources", ctx, reports)}
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) Run(run func(ctx context.Context, reports []*normalize.VexReportOpenVEX)) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []*normalize.VexReportOpenVEX
+		if args[1] != nil {
+			arg1 = args[1].([]*normalize.VexReportOpenVEX)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) Return(err error) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call) RunAndReturn(run func(ctx context.Context, reports []*normalize.VexReportOpenVEX) error) *VEXRuleService_UpdateSystemVEXRulesFromStaticSources_Call {
 	_c.Call.Return(run)
 	return _c
 }

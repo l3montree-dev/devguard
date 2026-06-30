@@ -89,6 +89,7 @@ func (f *TestFixture) CreateOrg(name string) models.Org {
 	org := models.Org{
 		Name:        name,
 		Description: "Test Organization",
+		Slug:        name,
 	}
 	err := f.DB.Create(&org).Error
 	require.NoError(f.T, err)
@@ -172,6 +173,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.VulnDBService,
 		f.App.VexRuleService,
 		f.App.FixedVersionResolver,
+		f.App.SystemVEXRuleRepository,
 	)
 }
 
