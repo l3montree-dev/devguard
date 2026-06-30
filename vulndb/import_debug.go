@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
@@ -48,7 +49,7 @@ func diffCVEsByIntegrityHash(ctx context.Context, tx pgx.Tx) error {
 		FROM (SELECT cve, %s AS db_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves) db
 		JOIN (SELECT cve, %s AS gob_hash, id, cisa_required_action, cisa_vulnerability_name, epss, percentile FROM cves_stage) gob
 			ON db.cve = gob.cve
-		WHERE db_hash <> gob_hash
+		WHERE db_hash != gob_hash
 		LIMIT 20
 	`, hashExpr, hashExpr))
 	if err != nil {
@@ -120,6 +121,15 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not insert cve_relationships into staging", "err", err)
 			return
 		}
+		euvdRelationships, err := readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read euvd_relationships.gob", "err", err)
+			return
+		}
+		if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+			slog.Error("show-diff: could not insert euvd cve_relationships into staging", "err", err)
+			return
+		}
 		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
 			slog.Error("show-diff: could not insert affected_components into staging", "err", err)
 			return
@@ -154,12 +164,12 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			return
 		}
 
-		var kevEntries []CISAKEVEntry
+		var kevEntries []KEVEntry
 		if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
 			slog.Error("show-diff: could not read cisakev.gob", "err", err)
 			return
 		}
-		if err := applyCISAKEVToStage(ctx, tx, kevEntries); err != nil {
+		if err := applyKEVToStage(ctx, tx, kevEntries); err != nil {
 			slog.Error("show-diff: could not apply CISA KEV to staging", "err", err)
 			return
 		}

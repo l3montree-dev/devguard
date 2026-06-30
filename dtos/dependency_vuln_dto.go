@@ -56,6 +56,7 @@ type CVEDTO struct {
 	Risk                  RiskMetrics       `json:"risk"`
 	Exploits              []ExploitDTO      `json:"exploits"`
 	Relationships         []RelationshipDTO `json:"relationships"`
+	EUVDExploitAdd        *datatypes.Date   `json:"euvdExploitAdd" format:"date"`
 }
 
 type VulnState string

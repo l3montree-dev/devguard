@@ -215,7 +215,6 @@ type CveRepository interface {
 	CreateCVEWithConflictHandling(ctx context.Context, tx DB, cve *models.CVE) error
 	CreateCVEAffectedComponentsEntries(ctx context.Context, tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(ctx context.Context, tx DB, batch []models.CVE) error
-	UpdateCISAKEVBatch(ctx context.Context, tx DB, batch []models.CVE) error
 }
 
 type EPSService interface {

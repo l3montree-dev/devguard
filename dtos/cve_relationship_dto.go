@@ -6,6 +6,7 @@ const (
 	RelationshipTypeAlias    RelationshipType = "alias"
 	RelationshipTypeUpstream RelationshipType = "upstream"
 	RelationshipTypeRelated  RelationshipType = "related"
+	RelationshipTypeEUVD     RelationshipType = "euvd" // flag relationships only imported through euvd explicitly
 )
 
 // CVERelationshipDTO is the API response shape.
