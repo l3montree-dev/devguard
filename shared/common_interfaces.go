@@ -763,7 +763,7 @@ type RBACProvider interface {
 
 type AdvisoryService interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
-	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, visibility string, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagnation PageInfo) (Paged[models.Advisory], error)
 	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
 	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
 	Delete(ctx context.Context, tx DB, id int64) error
@@ -771,7 +771,7 @@ type AdvisoryService interface {
 
 type AdvisoryRepository interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
-	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, visibility string, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagnation PageInfo) (Paged[models.Advisory], error)
 	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
 	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
 	Delete(ctx context.Context, tx DB, id int64) error

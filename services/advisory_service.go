@@ -24,8 +24,8 @@ func (s *AdvisoryService) Create(ctx context.Context, tx shared.DB, advisory *mo
 	return s.advisoryRepository.Create(ctx, tx, advisory)
 }
 
-func (s *AdvisoryService) ReadAll(ctx context.Context, tx shared.DB, assetID uuid.UUID, visibility string, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
-	return s.advisoryRepository.ReadAll(ctx, tx, assetID, visibility, pagnation)
+func (s *AdvisoryService) ReadAll(ctx context.Context, tx shared.DB, assetID uuid.UUID, filter []shared.FilterQuery, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
+	return s.advisoryRepository.ReadAll(ctx, tx, assetID, filter, pagnation)
 }
 
 func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error) {

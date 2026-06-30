@@ -60,8 +60,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 
 func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	visibility := ctx.QueryParam("visibility")
-	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), nil, asset.ID, visibility, shared.GetPageInfo(ctx))
+	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), nil, asset.ID, shared.GetFilterQuery(ctx), shared.GetPageInfo(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}

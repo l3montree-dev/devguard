@@ -32,12 +32,13 @@ func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *go
 	return nil
 }
 
-func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, visibility string, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
+func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, filter []shared.FilterQuery, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
 	advisories := []models.Advisory{}
 	db := advisoryRepository.GetDB(ctx, tx)
 	query := db.Model(&models.Advisory{}).Preload("AffectedPackages").Where("asset_id = ?", assetID)
-	if visibility != "" {
-		query = query.Where("visibility = ?", visibility)
+
+	for _, f := range filter {
+		query = query.Where(f.SQL(), f.Value())
 	}
 
 	var count int64
