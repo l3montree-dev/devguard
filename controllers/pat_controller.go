@@ -115,7 +115,7 @@ func (p *PatController) Delete(c shared.Context) error {
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
 
 	// check if the current user is allowed to delete the token
-	pat, err := p.patRepository.Read(c.Request().Context(), nil, uuid.MustParse(tokenID))
+	pat, err := p.patRepository.Read(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.UserID != session.UserID
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}

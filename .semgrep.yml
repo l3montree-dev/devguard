@@ -248,3 +248,109 @@ rules:
       - pattern-either:
           - pattern: context.Background()
           - pattern: context.TODO()
+
+  - id: bola-gorm-first-by-id-only
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      The server checks who you are (authentication) and which route you are allowed to hit
+      (route-level RBAC), but forgets to check whether the specific object you are asking for
+      actually belongs to you.
+
+      .First() is scoped only by "id = ?" with no tenant constraint (asset_id, project_id,
+      organization_id). Any authenticated user who knows the UUID can read another tenant's
+      record by sending a valid request to their own org's route with the victim's UUID:
+
+        GET /api/v1/organizations/<attacker-org>/.../dependency-vulns/<victim-uuid>/
+
+      The middleware validates the attacker's access to attacker-org. The query then returns
+      a row from any tenant's data because the UUID alone determines what comes back.
+
+      Fix: add a tenant column to the query:
+        .First(&t, "id = ? AND asset_id = ?", id, assetID)
+      Or verify the loaded object's tenant field against the request-path context after loading.
+    severity: ERROR
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+        - "**/controllers/**"
+    patterns:
+      - pattern-either:
+          # .First(&t, "id = ?", id)
+          - pattern: $DB.First(&$T, "id = ?", $ID)
+          - pattern: $DB.First(&$T, "id = ?", $ID).Error
+          # .Where("id = ?", id).First(&t) — equally common GORM pattern, equally vulnerable
+          - pattern: $DB.Where("id = ?", $ID).First(&$T).Error
+          - pattern: $DB.Where("id = ?", $ID).First(&$T)
+      - pattern-not: $DB.First(&$T, "id = ? AND $REST", ...)
+      # Chained .Where calls with additional tenant scoping are safe
+      - pattern-not: $DB.Where($SCOPE1, ...).Where($SCOPE2, ...).First(&$T)
+
+  - id: bola-raw-gorm-first-bypasses-tenant-scope
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      A raw .First() call inside a repository method bypasses GormRepository.Read(), which
+      is the central place where autoTenantScope appends the tenant column (asset_id /
+      project_id / organization_id) to every query. Calling .First() directly returns any
+      row matching the bare UUID regardless of which tenant the caller belongs to.
+
+      Attack vector: user supplies a UUID from tenant A via tenant B's route prefix.
+      Route-level RBAC authorizes the carrier path; the unscoped First() returns tenant A's
+      row.
+
+      Fix: use GormRepository.Read(ctx, tx, id) so autoTenantScope is applied automatically,
+      or add an explicit tenant column to the raw query:
+        .First(&t, "id = ? AND asset_id = ?", id, tenantIDs.AssetID)
+    severity: ERROR
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern-either:
+          - pattern: $DB.First(&$T, "id = ?", $ID)
+          - pattern: $DB.First(&$T, "id = ?", $ID).Error
+          - pattern: $DB.Where("id = ?", $ID).First(&$T).Error
+          - pattern: $DB.Where("id = ?", $ID).First(&$T)
+      - pattern-not: $DB.First(&$T, "id = ? AND $REST", ...)
+      - pattern-not: $DB.Where($SCOPE1, ...).Where($SCOPE2, ...).First(&$T)
+
+  - id: bola-repository-read-override-missing-tenant-scope
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      This repository type overrides the generic GormRepository.Read() with a custom
+      implementation (typically to add Preload chains), but does not call withTenantScope().
+      The generic Read() applies autoTenantScope automatically; any override that skips it
+      loses that protection and returns records across tenant boundaries.
+
+      Fix: apply withTenantScope before the Preload/First chain:
+        db := withTenantScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+        err := db.Preload(...).First(&t).Error
+    severity: ERROR
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern-inside: |
+          func ($RECV $TYPE) Read(ctx context.Context, $TX *gorm.DB, $ID $IDT) ($RET, error) {
+            ...
+          }
+      - pattern-either:
+          - pattern: $DB.First(&$T, "id = ?", $ID)
+          - pattern: $DB.First(&$T, "id = ?", $ID).Error
+          - pattern: $DB.Where("id = ?", $ID).First(&$T)
+          - pattern: $DB.Where("id = ?", $ID).First(&$T).Error
+      - pattern-not-inside: |
+          func ($RECV $TYPE) Read(ctx context.Context, $TX *gorm.DB, $ID $IDT) ($RET, error) {
+            ...
+            withTenantScope(...)
+            ...
+          }
