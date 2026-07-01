@@ -281,6 +281,7 @@ rules:
       - pattern-not: $DB.Where($SCOPE1, ...).Where($SCOPE2, ...).First(&$T)
 
   - id: bola-repository-read-override-missing-tenant-scope
+    severity: ERROR
     message: |
       BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
 
