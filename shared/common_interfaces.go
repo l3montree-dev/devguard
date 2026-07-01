@@ -83,6 +83,7 @@ type CSAFService interface {
 	GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
 	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
 	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {

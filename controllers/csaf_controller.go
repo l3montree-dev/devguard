@@ -35,11 +35,13 @@ type CSAFController struct {
 	organizationRepository   shared.OrganizationRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
+	advisoryService          shared.AdvisoryService
 }
 
-func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository, advisoryService shared.AdvisoryService) *CSAFController {
 	return &CSAFController{
 		csafService:              csafService,
+		advisoryService:          advisoryService,
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		vulnEventRepository:      vulnEventRepository,
@@ -508,13 +510,29 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	org := shared.GetOrg(ctx)
 	asset := shared.GetAsset(ctx)
 
+	parsedID := strings.TrimSuffix(cveID[strings.LastIndex(cveID, "-")+1:], ".json")
+	id, err := strconv.ParseInt(parsedID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("ungültige advisory ID %q aus %q: %w", parsedID, cveID, err)
+	}
+
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, id)
+
 	// remove everything <asset-slug>_ from the beginning of the document id
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
+	var report gocsaf.Advisory
 
-	// generate the report first
-	report, err := controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
-	if err != nil {
-		return err
+	if strings.Contains(strings.ToLower(cveID), "dgsa") {
+		report, err = controller.csafService.GenerateCSAFReportForAdvisory(ctx.Request().Context(), &advisory, org.Name, asset.ID, asset.Name)
+		if err != nil {
+			return err
+		}
+	} else {
+		// generate the report first
+		report, err = controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// make the report canonical
