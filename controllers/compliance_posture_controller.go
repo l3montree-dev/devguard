@@ -183,7 +183,11 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to find or create compliance posture").WithInternal(err)
 	}
 
-	_, err = c.CompliancePostureService.UpdateCompliancePostureState(ctx.Request().Context(), nil, userID, compliancePostureNew, statusType, *state.Justification, "", &userAgent)
+	justification := ""
+	if state.Justification != nil {
+		justification = *state.Justification
+	}
+	_, err = c.CompliancePostureService.UpdateCompliancePostureState(ctx.Request().Context(), nil, userID, compliancePostureNew, statusType, justification, "", &userAgent)
 	if err != nil {
 		return err
 	}

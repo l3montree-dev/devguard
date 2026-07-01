@@ -46,7 +46,7 @@ type CompliancePostureWithControlDTO struct {
 	ControlID           string     `json:"controlId"`
 	Title               string     `json:"title"`
 	Description         string     `json:"description"`
-	CompliancePostureID string     `json:"compliancePostureId"`
+	CompliancePostureID string     `json:"compliancePostureId" gorm:"column:id"`
 	State               VulnState  `json:"state"`
 	OrgID               *uuid.UUID `json:"orgId"`
 	ProjectID           *uuid.UUID `json:"projectId"`

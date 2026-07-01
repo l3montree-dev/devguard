@@ -1,18 +1,3 @@
-ALTER TABLE public.vuln_events
-    ADD COLUMN IF NOT EXISTS compliance_posture_id uuid REFERENCES public.compliance_postures(id) ON DELETE CASCADE;
-
--- Drop the old constraint and recreate it to also allow compliance_posture_id as a valid parent
-ALTER TABLE public.vuln_events DROP CONSTRAINT IF EXISTS one_vuln_parent;
-ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
-  (dependency_vuln_id   IS NOT NULL)::int +
-  (license_risk_id      IS NOT NULL)::int +
-  (first_party_vuln_id  IS NOT NULL)::int +
-  (compliance_posture_id IS NOT NULL)::int = 1
-);
-
-
-
-
 CREATE TABLE IF NOT EXISTS public.compliance_postures (
     id uuid NOT NULL,
     message text,
@@ -45,3 +30,19 @@ ALTER TABLE ONLY public.compliance_postures
 
 ALTER TABLE ONLY public.compliance_postures
     ADD CONSTRAINT fk_compliance_postures_org FOREIGN KEY (org_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+ALTER TABLE public.vuln_events
+    ADD COLUMN IF NOT EXISTS compliance_posture_id uuid REFERENCES public.compliance_postures(id) ON DELETE CASCADE;
+
+-- Drop the old constraint and recreate it to also allow compliance_posture_id as a valid parent
+ALTER TABLE public.vuln_events DROP CONSTRAINT IF EXISTS one_vuln_parent;
+ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
+  (dependency_vuln_id   IS NOT NULL)::int +
+  (license_risk_id      IS NOT NULL)::int +
+  (first_party_vuln_id  IS NOT NULL)::int +
+  (compliance_posture_id IS NOT NULL)::int = 1
+);
+
+
+

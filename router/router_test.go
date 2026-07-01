@@ -221,6 +221,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
 		new(controllers.FirstPartyVulnController),
+		new(controllers.CompliancePostureController),
 		new(controllers.PolicyController),
 		new(controllers.IntegrationController),
 		new(controllers.WebhookController),
@@ -237,13 +238,14 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.AssetController),
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
+		new(controllers.CompliancePostureController),
 		new(controllers.PolicyController),
 		new(controllers.ReleaseController),
 		new(controllers.StatisticsController),
 		new(controllers.WebhookController),
 		projectRepo,
 		new(controllers.ComponentController),
-		nil,
+		map[string]*gitlabint.GitlabOauth2Config{},
 	)
 
 	assetRouter := NewAssetRouter(

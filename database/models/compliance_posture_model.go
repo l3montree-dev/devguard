@@ -48,6 +48,12 @@ func (m CompliancePosture) GetAssetVersionName() string {
 	}
 	return ""
 }
+func (m CompliancePosture) GetAssetID() uuid.UUID {
+	if m.AssetID != nil {
+		return *m.AssetID
+	}
+	return uuid.Nil
+}
 
 func (m CompliancePosture) AssetVersionIndependentHash() string {
 	s := fmt.Sprintf("%s:%s", m.FrameworkControlID, m.OrgID.String())

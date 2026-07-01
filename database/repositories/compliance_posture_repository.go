@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -43,6 +44,9 @@ func NewCompliancePostureRepository(db *gorm.DB) *CompliancePostureRepository {
 func (r *CompliancePostureRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, posture models.CompliancePosture) (*models.CompliancePosture, error) {
 	var existingPosture models.CompliancePosture
 	if err := r.GetDB(ctx, tx).Preload("FrameworkControl").Where("id = ?", posture.ID).First(&existingPosture).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to query compliance posture: %w", err)
+		}
 		newPosture := models.CompliancePosture{
 			Vulnerability:      models.Vulnerability{ID: posture.ID, State: posture.State},
 			FrameworkControlID: posture.FrameworkControlID,
@@ -90,7 +94,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 	// cp_asset: exact match on org+project+asset+assetVersion
 	// cp_project: match on org+project, asset fields NULL in DB
 	// cp_org: match on org only, all scope fields NULL in DB
-	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).Debug().
+	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).
 		Select(`frameworks_controls.framework_control_id,
 			frameworks_controls.title,
 			frameworks_controls.description,
@@ -122,7 +126,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 			AND cp_org.asset_version_name IS NULL`, orgID)
 
 	if search != "" {
-		query = query.Where("frameworks_controls.name ILIKE ?", "%"+search+"%")
+		query = query.Where("(frameworks_controls.title ILIKE ? OR frameworks_controls.control_id ILIKE ? OR frameworks_controls.framework ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	// Wrap in a subquery so that filter/sort can reference the aliased columns
