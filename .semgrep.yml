@@ -254,10 +254,9 @@ rules:
       BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
 
       A raw .First() call inside a repository method bypasses GormRepository.Read(), which
-      is the central place where autoTenantScope appends the tenant column (asset_id /
+      is the central place where autoOwnershipScope appends the tenant column (asset_id /
       project_id / organization_id) to every query. Calling .First() directly returns any
       row matching the bare UUID regardless of which tenant the caller belongs to.
-
       Attack vector: user supplies a UUID from tenant A via tenant B's route prefix.
       Route-level RBAC authorizes the carrier path; the unscoped First() returns tenant A's
       row.
