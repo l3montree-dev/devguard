@@ -285,14 +285,13 @@ rules:
       BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
 
       This repository type overrides the generic GormRepository.Read() with a custom
-      implementation (typically to add Preload chains), but does not call withTenantScope().
-      The generic Read() applies autoTenantScope automatically; any override that skips it
+      implementation (typically to add Preload chains), but does not call withOwnershipScope().
+      The generic Read() applies autoOwnershipScope automatically; any override that skips it
       loses that protection and returns records across tenant boundaries.
 
-      Fix: apply withTenantScope before the Preload/First chain:
-        db := withTenantScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+      Fix: apply withOwnershipScope before the Preload/First chain:
+        db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
         err := db.Preload(...).First(&t).Error
-    severity: ERROR
     languages: [go]
     paths:
       include:
