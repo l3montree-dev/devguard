@@ -68,7 +68,7 @@ jobs:
       fail-on-risk: high
       fail-on-cvss: high
       devguard-web-ui: https://main.devguard.org
-      allow-failure: true
+      allow-failure: false
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
