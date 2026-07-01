@@ -312,6 +312,6 @@ rules:
       - pattern-not-inside: |
           func ($RECV $TYPE) Read(ctx context.Context, $TX *gorm.DB, $ID $IDT) ($RET, error) {
             ...
-            withTenantScope(...)
+            withOwnershipScope(...)
             ...
           }
