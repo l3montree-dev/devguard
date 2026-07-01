@@ -66,6 +66,8 @@ const (
 	VulnStateAccepted          VulnState = "accepted"      // like ignore
 	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
 	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
+	VulnStateImplemented       VulnState = "implemented"   // for compliance posture
+	VulnStateNotApplicable     VulnState = "notApplicable" // for compliance posture
 )
 
 type ExploitDTO struct {
