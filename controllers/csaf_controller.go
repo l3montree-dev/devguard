@@ -69,12 +69,22 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
 
 	// then write each revision entry version to the index string
 	var index strings.Builder
 	for _, vuln := range vulns {
 		year := vuln.CreatedAt.Year()
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
+		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
+	}
+	for _, advisories := range allAdvisories {
+		year := advisories.CreatedAt.Year()
+		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisories.ID)
+		fileName := fmt.Sprintf("%s.json", cveID)
 		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index.String())
@@ -258,8 +268,17 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return err
 	}
 
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
+
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return vuln.CreatedAt.Year() == yearNumber
+	})
+
+	advisoriesOfThatYear := utils.Filter(allAdvisories, func(advisory models.Advisory) bool {
+		return advisory.CreatedAt.Year() == yearNumber
 	})
 
 	// sort reports alphabetically by CVEID for better usability
@@ -283,6 +302,14 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		data.Filenames = append(data.Filenames, entryData{
 			Href:  fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)),
 			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, entry.CVEID)),
+		})
+	}
+
+	for _, adv := range advisoriesOfThatYear {
+		cveID := fmt.Sprintf("DGSA-%d-%d", adv.CreatedAt.Year(), adv.ID)
+		data.Filenames = append(data.Filenames, entryData{
+			Href:  fmt.Sprintf("%s.json", strings.ToLower(cveID)),
+			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, cveID)),
 		})
 	}
 

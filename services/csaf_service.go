@@ -62,9 +62,10 @@ type csafService struct {
 	assetVersionRepository   shared.AssetVersionRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
+	advisoryRepository       shared.AdvisoryRepository
 }
 
-func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafService {
+func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository, advisoryRepository shared.AdvisoryRepository) *csafService {
 	return &csafService{
 		client:                   client,
 		dependencyVulnRepository: dependencyVulnRepository,
@@ -73,6 +74,7 @@ func NewCSAFService(client http.Client, dependencyVulnRepository shared.Dependen
 		assetVersionRepository:   assetVersionRepository,
 		cveRepository:            cveRepository,
 		artifactRepository:       artifactRepository,
+		advisoryRepository:       advisoryRepository,
 	}
 }
 
@@ -1447,6 +1449,10 @@ func (service *csafService) GetOldestVulnPerUniqueCVE(ctx context.Context, asset
 	}
 
 	return service.dependencyVulnService.GetAllUniqueCVEsForAsset(ctx, assetID, getOldestVuln)
+}
+
+func (service *csafService) GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	return service.advisoryRepository.GetAllAdvisoriesByAssetID(ctx, assetID)
 }
 
 func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (gocsaf.Advisory, error) {

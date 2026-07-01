@@ -71,3 +71,13 @@ func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *go
 	}
 	return nil
 }
+
+func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	advisories := []models.Advisory{}
+	err := advisoryRepository.GetDB(ctx, nil).
+		Preload("AffectedPackages").
+		Where("asset_id = ?", assetID).
+		Find(&advisories).Error
+	return advisories, err
+
+}
