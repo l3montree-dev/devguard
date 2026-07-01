@@ -1,6 +1,6 @@
 # Versioning Policy
 
-DevGuard uses a modified semantic versioning scheme: **all components share the same minor version**, but patch releases are independent per component.
+DevGuard uses a modified semantic versioning scheme: **all components share the same major and minor version**, patch releases are independent per component.
 
 ## Compatibility Rule
 
@@ -15,7 +15,7 @@ DevGuard uses a modified semantic versioning scheme: **all components share the 
 
 ## Rules
 
-- **Minor versions are synchronized.** A feature release bumps the minor version across all components at the same time.
+- **Major/Minor versions are synchronized.** A feature release bumps the major/minor version across all components at the same time.
 - **Patch versions are independent.** A bug fix in only one component ships as a new patch for that component only — other components are not re-released.
 - When upgrading, ensure all components share the **same minor version**. Patch versions do not need to match across components.
 

@@ -17,18 +17,10 @@ package intotocmd
 
 import (
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"regexp"
-	"strings"
 
-	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -36,43 +28,25 @@ func verify(cmd *cobra.Command, args []string) error {
 	if config.RuntimeInTotoConfig.Disabled {
 		return nil
 	}
-	imageName := args[0]
 
-	// image name regex
-	// we expect the image name to be in the format of <registry>/<image>:<tag>[@digest]
-	reg := regexp.MustCompile(`^([a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._-]+)+):([a-zA-Z0-9._-]+)(@sha256:[a-f0-9]{64})?$`)
-	if !reg.MatchString(imageName) {
-		return fmt.Errorf("invalid image name")
+	supplyChainOutputDigest, err := cmd.Flags().GetString("supplyChainOutputDigest")
+	if err != nil || supplyChainOutputDigest == "" {
+		return fmt.Errorf("--supplyChainOutputDigest is required")
 	}
 
-	if config.RuntimeInTotoConfig.SupplyChainID == "" {
-		// check if the image contains the supply chain id
-		// <registry>/<image>:<branch>-<commit>-<timestamp>
-
-		imageNameParts := strings.Split(imageName, ":")
-		if len(imageNameParts) != 2 {
-			return fmt.Errorf("invalid image name")
-		}
-
-		imageTag := imageNameParts[1]
-		imageTagParts := strings.Split(imageTag, "-")
-		if len(imageTagParts) < 3 {
-			return fmt.Errorf("tag does not contain supply chain id")
-		}
-
-		supplyChainID := imageTagParts[len(imageTagParts)-2]
-		if len(supplyChainID) != 8 {
-			return fmt.Errorf("tag does not contain supply chain id. Expected 8 characters")
-		}
-	}
-
-	// download the layout
 	c, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), nil)
+	url := fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/verify?supplyChainId=%s&supplyChainOutputDigest=%s",
+		config.RuntimeBaseConfig.APIURL,
+		config.RuntimeBaseConfig.AssetName,
+		config.RuntimeInTotoConfig.SupplyChainID,
+		supplyChainOutputDigest,
+	)
+
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -81,60 +55,13 @@ func verify(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("supply chain verification failed (HTTP %d) — check that all pipeline steps uploaded their links", resp.StatusCode)
 	}
 
-	// save the file to disk
-	err = os.WriteFile("root.layout.json", b, 0600)
-	if err != nil {
-		return errors.Wrap(err, "could not write root.layout.json")
-	}
-
-	rootLayout, err := toto.LoadMetadata("root.layout.json")
-	if err != nil {
-		return errors.Wrap(err, "could not load root.layout.json")
-	}
-
-	// remove the layout
-	os.Remove("root.layout.json")
-	linkDir, err := os.MkdirTemp("", "links")
-	if err != nil {
-		return errors.Wrap(err, "could not create temp dir")
-	}
-
-	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
-	if err != nil {
-		return errors.Wrap(err, "could not download supply chain links")
-	}
-
-	defer os.RemoveAll(linkDir)
-
-	// now get the digest from the layout argument - we expect it to be an image tag
-	// use crane to get the digest
-	craneCmd := exec.Command("sh", "-c", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
-	craneCmd.Stderr = os.Stderr
-	craneCmd.Stdout = os.Stdout
-
-	err = craneCmd.Run()
-	if err != nil {
-		return err
-	}
-
-	_, err = toto.InTotoVerify(rootLayout, map[string]toto.Key{
-		config.RuntimeInTotoConfig.LayoutKey.KeyID: config.RuntimeInTotoConfig.LayoutKey,
-	}, linkDir, "", nil, nil, true)
-	if err != nil {
-		return err
-	}
-
-	// if a verify-digest.link was created, delete it
-	os.Remove("verify-digest.link") // nolint:errcheck
-	os.Remove("image-digest.txt")   // nolint:errcheck
-
-	return err
+	return nil
 }
 
 func panicOnError(err error) {
@@ -146,17 +73,36 @@ func panicOnError(err error) {
 func NewInTotoVerifyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "verify",
-		Short: "Verify a supply chain",
-		RunE:  verify,
-		Args:  cobra.ExactArgs(1),
+		Short: "Check with DevGuard whether a supply chain is fully verified (intended for automated deployment gates, not direct use)",
+		Long: `Calls the DevGuard supply chain verification endpoint and exits 0 if the supply chain is valid,
+non-zero otherwise.
+
+This command is NOT intended to be called by human users. It exists so that automated deployment
+gates — such as an OPA policy, an admission webhook, or a CI/CD quality gate — can query DevGuard
+for the verification status of a specific image digest before allowing a deployment to proceed.
+
+DevGuard performs the verification server-side: it checks that all three required pipeline steps
+(post-commit, build, deploy) have uploaded signed links for the given supply chain ID, that each
+step was signed by an authorized token, and that the final deploy link's output digest matches
+the --supplyChainOutputDigest you provide.
+
+The underlying endpoint is a plain HTTP GET that returns 200 on success and a non-200 status on
+failure — easy to call directly from policy engines or shell scripts:
+
+  GET /api/v1/organizations/<assetName>/in-toto/verify?supplyChainId=<id>&supplyChainOutputDigest=<digest>`,
+		Example: `  # Called by an automated deployment gate (e.g. OPA external data, admission webhook, CI gate)
+  devguard-scanner intoto verify \
+    --supplyChainOutputDigest sha256:abc123… --token $TOKEN \
+    --apiUrl https://api.devguard.org --assetName org/project/app`,
+		RunE: verify,
+		Args: cobra.NoArgs,
 	}
 
-	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
-	cmd.Flags().String("token", "", "Token")
-	cmd.Flags().String("layoutKey", "", "Path to the layout key")
+	cmd.Flags().String("supplyChainOutputDigest", "", "The image supplyChainOutputDigest to verify (e.g. sha256:abc123…)")
+	cmd.Flags().String("token", "", "DevGuard personal access token")
 
 	panicOnError(cmd.MarkFlagRequired("token"))
-	panicOnError(cmd.MarkFlagRequired("layoutKey"))
+	panicOnError(cmd.MarkFlagRequired("supplyChainOutputDigest"))
 
 	return cmd
 }

@@ -8,9 +8,8 @@ import (
 type ProjectType string
 
 const (
-	ProjectTypeDefault             ProjectType = "default"
-	ProjectTypeKubernetesNamespace ProjectType = "kubernetesNamespace"
-	ProjectTypeKubernetesCluster   ProjectType = "kubernetesCluster"
+	ProjectTypeDefault ProjectType = "default"
+	ProjectTypeDynamic ProjectType = "dynamic"
 )
 
 type ProjectState string

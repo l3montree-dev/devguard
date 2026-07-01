@@ -35,8 +35,16 @@ func NewVexCommand() *cobra.Command {
 		Short:             "Upload a VEX document to DevGuard",
 		DisableAutoGenTag: true,
 		Long: `Upload a VEX (Vulnerability Exploitability eXchange) document to DevGuard.
-The VEX document must be provided as a file argument. The request is signed using the
-configured token before upload.`,
+
+A VEX document lets you tell DevGuard that a known CVE in one of your dependencies is not
+actually exploitable in your specific application — for example because you do not call the
+vulnerable code path, or because the affected feature is disabled.
+
+Without a VEX document, DevGuard will report all CVEs found in your SBOM as open findings.
+With a VEX document, suppressed findings are hidden from the dashboard and do not count against
+your risk score.
+
+VEX documents use the CycloneDX format. Most tools that generate SBOMs can also generate VEX.`,
 		Example: `  # Upload a VEX document
   devguard-scanner vex vex.json
 

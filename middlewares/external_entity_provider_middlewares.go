@@ -3,13 +3,35 @@ package middlewares
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 )
+
+// ProviderIDMiddleware extracts the :providerID URL param, normalizes it, stores it in the context,
+// and rejects IDs that collide with a configured GitLab integration.
+func ProviderIDMiddleware(gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config) shared.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx shared.Context) error {
+			providerID := ctx.Param("providerID")
+			providerID = strings.TrimSuffix(providerID, "/")
+			providerID = "ext:" + providerID // prefix to avoid collisions with other provider IDs in the future
+			if providerID == "" {
+				return echo.NewHTTPError(400, "providerID is required")
+			}
+			if _, isGitLab := gitlabIntegrations[providerID]; isGitLab {
+				return echo.NewHTTPError(400, "providerID is reserved")
+			}
+			shared.SetProviderID(ctx, providerID)
+			return next(ctx)
+		}
+	}
+}
 
 // ExternalEntityProviderOrgSyncMiddleware returns a middleware that triggers a background org sync
 // for external entity providers. It rate-limits per user so the sync runs at most once every 15 minutes.

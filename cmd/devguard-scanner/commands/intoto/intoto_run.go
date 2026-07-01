@@ -105,7 +105,15 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 
 func NewInTotoRunCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "run",
+		Use:   "run",
+		Short: "Record a single-command pipeline step and upload the signed link",
+		Long: `Run a pipeline step as a single command, snapshot input and output file hashes around it,
+sign the resulting link with the DevGuard token, and upload it to DevGuard.
+
+Use this when your entire step is one command (e.g. 'make build'). If your step involves
+multiple commands, use 'intoto start' + 'intoto stop' instead.`,
+		Example: `  # Record a build step that runs 'make build'
+  devguard-scanner intoto run --step build --apiUrl https://api.devguard.org --assetName org/project/app --token $TOKEN`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if config.RuntimeInTotoConfig.Disabled {

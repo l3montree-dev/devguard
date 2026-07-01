@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -439,7 +440,7 @@ func createDirWithLinkFiles(supplyChainLinks []models.InTotoLink) (string, error
 	// create the links
 	for _, link := range supplyChainLinks {
 		// make file from link
-		err = os.WriteFile(fmt.Sprintf("%s/%s", linkDir, link.Filename), []byte(link.Payload), 0600)
+		err = os.WriteFile(filepath.Join(linkDir, link.SafeFilePath()), []byte(link.Payload), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "could not write file")
 		}

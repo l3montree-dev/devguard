@@ -677,6 +677,80 @@ func (_c *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call) RunAnd
 	return _c
 }
 
+// GetByAssetID provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetID")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetID'
+type ArtifactRepository_GetByAssetID_Call struct {
+	*mock.Call
+}
+
+// GetByAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+func (_e *ArtifactRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *ArtifactRepository_GetByAssetID_Call {
+	return &ArtifactRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
+}
+
+func (_c *ArtifactRepository_GetByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *ArtifactRepository_GetByAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetID_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetByAssetID_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByAssetIDAndAssetVersionName provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) GetByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
@@ -753,6 +827,80 @@ func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) Return(artifa
 }
 
 func (_c *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetByAssetIDs provides a mock function for the type ArtifactRepository
+func (_mock *ArtifactRepository) GetByAssetIDs(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, assetIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetIDs")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, assetIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, assetIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactRepository_GetByAssetIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetIDs'
+type ArtifactRepository_GetByAssetIDs_Call struct {
+	*mock.Call
+}
+
+// GetByAssetIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetIDs []uuid.UUID
+func (_e *ArtifactRepository_Expecter) GetByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}) *ArtifactRepository_GetByAssetIDs_Call {
+	return &ArtifactRepository_GetByAssetIDs_Call{Call: _e.mock.On("GetByAssetIDs", ctx, tx, assetIDs)}
+}
+
+func (_c *ArtifactRepository_GetByAssetIDs_Call) Run(run func(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID)) *ArtifactRepository_GetByAssetIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetIDs_Call) Return(artifacts []models.Artifact, err error) *ArtifactRepository_GetByAssetIDs_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactRepository_GetByAssetIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID) ([]models.Artifact, error)) *ArtifactRepository_GetByAssetIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

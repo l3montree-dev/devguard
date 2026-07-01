@@ -121,8 +121,17 @@ func startInTotoRecording(cmd *cobra.Command, args []string) error {
 func NewInTotoRecordStartCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "Start in-toto recording",
-		RunE:  startInTotoRecording,
+		Short: "Snapshot input files at the beginning of a pipeline step",
+		Long: `Record the cryptographic hashes of all input files (materials) before a pipeline step runs.
+
+Use this when your step is not a single command — for example, a multi-line build script. Call
+'intoto start' before the step and 'intoto stop' after it. The pair together produce a signed
+in-toto link that proves which files went in and which came out.
+
+If your entire step is a single command, use 'intoto run' instead.`,
+		Example: `  # In a CI job: snapshot inputs before the build
+  devguard-scanner intoto start --step build --apiUrl https://api.devguard.org --assetName org/project/app --token $TOKEN`,
+		RunE: startInTotoRecording,
 	}
 
 	return cmd
@@ -131,8 +140,15 @@ func NewInTotoRecordStartCommand() *cobra.Command {
 func NewInTotoRecordStopCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stop",
-		Short: "Stop in-toto recording",
-		RunE:  stopInTotoRecording,
+		Short: "Snapshot output files at the end of a pipeline step and upload the signed link",
+		Long: `Record the cryptographic hashes of all output files (products) after a pipeline step finishes,
+sign the link with the DevGuard token, and upload it to DevGuard.
+
+This is the second half of the start/stop pair. The signed link proves which files existed before
+and after this step, and that this specific token (CI identity) performed it.`,
+		Example: `  # In a CI job: snapshot outputs and upload after the build
+  devguard-scanner intoto stop --step build --apiUrl https://api.devguard.org --assetName org/project/app --token $TOKEN`,
+		RunE: stopInTotoRecording,
 	}
 
 	cmd.Flags().String("output", "", "The output file name. Default is the <step>.link.json name")
