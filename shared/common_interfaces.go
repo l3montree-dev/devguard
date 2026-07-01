@@ -84,6 +84,8 @@ type CSAFService interface {
 	GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
 	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
 	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
+	GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {
@@ -772,6 +774,23 @@ type RBACProvider interface {
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)
+}
+
+type AdvisoryService interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
+}
+
+type AdvisoryRepository interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagnation PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
+	GetAllAdvisoriesByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
