@@ -66,9 +66,9 @@ func (unscopedModel) TableName() string { return "unscoped" }
 func TestAutoTenantScopeAssetScoped(t *testing.T) {
 	db := dryRunDB(t)
 	assetID := uuid.New()
-	ids := models.TenantIDs{AssetID: assetID}
+	ids := models.OwnershipScope{AssetID: assetID}
 
-	stmt := db.Scopes(autoTenantScope(assetScopedModel{}, ids)).
+	stmt := db.Scopes(autoOwnershipScope(assetScopedModel{}, ids)).
 		Find(&assetScopedModel{}).Statement
 
 	assert.Contains(t, stmt.SQL.String(), "asset_id")
@@ -78,9 +78,9 @@ func TestAutoTenantScopeAssetScoped(t *testing.T) {
 func TestAutoTenantScopeProjectScoped(t *testing.T) {
 	db := dryRunDB(t)
 	projectID := uuid.New()
-	ids := models.TenantIDs{ProjectID: projectID}
+	ids := models.OwnershipScope{ProjectID: projectID}
 
-	stmt := db.Scopes(autoTenantScope(projectScopedModel{}, ids)).
+	stmt := db.Scopes(autoOwnershipScope(projectScopedModel{}, ids)).
 		Find(&projectScopedModel{}).Statement
 
 	assert.Contains(t, stmt.SQL.String(), "project_id")
@@ -90,9 +90,9 @@ func TestAutoTenantScopeProjectScoped(t *testing.T) {
 func TestAutoTenantScopeOrgScoped(t *testing.T) {
 	db := dryRunDB(t)
 	orgID := uuid.New()
-	ids := models.TenantIDs{OrgID: orgID}
+	ids := models.OwnershipScope{OrgID: orgID}
 
-	stmt := db.Scopes(autoTenantScope(orgScopedModel{}, ids)).
+	stmt := db.Scopes(autoOwnershipScope(orgScopedModel{}, ids)).
 		Find(&orgScopedModel{}).Statement
 
 	assert.Contains(t, stmt.SQL.String(), "organization_id")
@@ -101,13 +101,13 @@ func TestAutoTenantScopeOrgScoped(t *testing.T) {
 
 func TestAutoTenantScopeUnscopedModelNoWhereClause(t *testing.T) {
 	db := dryRunDB(t)
-	ids := models.TenantIDs{
+	ids := models.OwnershipScope{
 		AssetID:   uuid.New(),
 		ProjectID: uuid.New(),
 		OrgID:     uuid.New(),
 	}
 
-	stmt := db.Scopes(autoTenantScope(unscopedModel{}, ids)).
+	stmt := db.Scopes(autoOwnershipScope(unscopedModel{}, ids)).
 		Find(&unscopedModel{}).Statement
 
 	sql := stmt.SQL.String()
@@ -120,9 +120,9 @@ func TestAutoTenantScopeZeroIDNotAppended(t *testing.T) {
 	db := dryRunDB(t)
 	// AssetID is zero — the scope should still append the clause but with
 	// the zero UUID (the caller is responsible for ensuring IDs are valid).
-	ids := models.TenantIDs{} // all zero
+	ids := models.OwnershipScope{} // all zero
 
-	stmt := db.Scopes(autoTenantScope(assetScopedModel{}, ids)).
+	stmt := db.Scopes(autoOwnershipScope(assetScopedModel{}, ids)).
 		Find(&assetScopedModel{}).Statement
 
 	// Clause IS added (enforcement is unconditional once a tenant column is found)

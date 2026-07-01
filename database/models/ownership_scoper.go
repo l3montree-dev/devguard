@@ -17,9 +17,11 @@ package models
 
 import "github.com/google/uuid"
 
-// TenantIDs holds the resolved tenant identifiers for the current request.
-// Fields that are not applicable at a given route level are left as uuid.Nil.
-type TenantIDs struct {
+// OwnershipScope holds the resolved org/project/asset identifiers for the
+// current request. Repository methods use it to scope queries to the caller's
+// slice of the hierarchy (BOLA protection). Fields not applicable at a given
+// route level are left as uuid.Nil.
+type OwnershipScope struct {
 	AssetID   uuid.UUID
 	ProjectID uuid.UUID
 	OrgID     uuid.UUID

@@ -239,7 +239,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPage
 
 func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.DependencyVuln, error) {
 	var t models.DependencyVuln
-	db := withTenantScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
 	err := db.Preload("CVE.Weaknesses").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error

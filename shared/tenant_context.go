@@ -22,27 +22,27 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
-type tenantContextKey struct{}
+type ownershipScopeKey struct{}
 
-// WithTenantIDs stores models.TenantIDs in a plain context.Context so that
-// repository methods can retrieve them without depending on echo.Context.
-func WithTenantIDs(ctx context.Context, ids models.TenantIDs) context.Context {
-	return context.WithValue(ctx, tenantContextKey{}, ids)
+// WithOwnershipScope stores models.OwnershipScope in a plain context.Context so
+// that repository methods can retrieve it without depending on echo.Context.
+func WithOwnershipScope(ctx context.Context, scope models.OwnershipScope) context.Context {
+	return context.WithValue(ctx, ownershipScopeKey{}, scope)
 }
 
-// TenantIDsFromCtx retrieves TenantIDs from ctx.
-// Returns (ids, true) when present, (zero-value, false) otherwise.
-func TenantIDsFromCtx(ctx context.Context) (models.TenantIDs, bool) {
-	ids, ok := ctx.Value(tenantContextKey{}).(models.TenantIDs)
-	return ids, ok
+// OwnershipScopeFromCtx retrieves an OwnershipScope from ctx.
+// Returns (scope, true) when present, (zero-value, false) otherwise.
+func OwnershipScopeFromCtx(ctx context.Context) (models.OwnershipScope, bool) {
+	scope, ok := ctx.Value(ownershipScopeKey{}).(models.OwnershipScope)
+	return scope, ok
 }
 
-// TenantIDsFromAsset builds TenantIDs from a fully-resolved asset on the
-// echo.Context. ProjectID and OrgID are carried from any existing TenantIDs
+// OwnershipScopeFromAsset builds an OwnershipScope from a fully-resolved asset
+// on the echo.Context. ProjectID and OrgID are carried from any existing scope
 // already in the request context so that coarser-grained middleware that ran
 // earlier is not lost.
-func TenantIDsFromAsset(ctx Context, asset models.Asset) models.TenantIDs {
-	existing, _ := TenantIDsFromCtx(ctx.Request().Context())
+func OwnershipScopeFromAsset(ctx Context, asset models.Asset) models.OwnershipScope {
+	existing, _ := OwnershipScopeFromCtx(ctx.Request().Context())
 	existing.AssetID = asset.ID
 	if asset.ProjectID != uuid.Nil {
 		existing.ProjectID = asset.ProjectID
@@ -50,10 +50,10 @@ func TenantIDsFromAsset(ctx Context, asset models.Asset) models.TenantIDs {
 	return existing
 }
 
-// TenantIDsFromProject builds TenantIDs from a fully-resolved project on the
-// echo.Context, preserving any OrgID already stored.
-func TenantIDsFromProject(ctx Context, project models.Project) models.TenantIDs {
-	existing, _ := TenantIDsFromCtx(ctx.Request().Context())
+// OwnershipScopeFromProject builds an OwnershipScope from a fully-resolved
+// project, preserving any OrgID already stored.
+func OwnershipScopeFromProject(ctx Context, project models.Project) models.OwnershipScope {
+	existing, _ := OwnershipScopeFromCtx(ctx.Request().Context())
 	existing.ProjectID = project.ID
 	if project.OrganizationID != uuid.Nil {
 		existing.OrgID = project.OrganizationID
@@ -61,10 +61,9 @@ func TenantIDsFromProject(ctx Context, project models.Project) models.TenantIDs 
 	return existing
 }
 
-// TenantIDsFromOrg builds TenantIDs from a fully-resolved org on the
-// echo.Context.
-func TenantIDsFromOrg(_ Context, org models.Org) models.TenantIDs {
-	return models.TenantIDs{
+// OwnershipScopeFromOrg builds an OwnershipScope from a fully-resolved org.
+func OwnershipScopeFromOrg(_ Context, org models.Org) models.OwnershipScope {
+	return models.OwnershipScope{
 		OrgID: org.ID,
 	}
 }

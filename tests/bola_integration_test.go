@@ -81,12 +81,12 @@ func bolaCtx(t *testing.T, paramName, vulnID string, orgB models.Org, projB mode
 
 	// Propagate tenant B's IDs into the plain context.Context so that
 	// GormRepository.Read() / autoTenantScope picks them up.
-	tenantIDs := models.TenantIDs{
+	tenantIDs := models.OwnershipScope{
 		AssetID:   assetB.ID,
 		ProjectID: projB.ID,
 		OrgID:     orgB.ID,
 	}
-	ctx.SetRequest(ctx.Request().WithContext(shared.WithTenantIDs(ctx.Request().Context(), tenantIDs)))
+	ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 
 	// But supply the UUID from tenant A
 	ctx.SetParamNames(paramName)
@@ -251,8 +251,8 @@ func TestBOLADependencyVulnCreateEventCrossAssetBlocked(t *testing.T) {
 		adminClient := mocks.NewAdminClient(t)
 		shared.SetAuthAdminClient(ctx, adminClient)
 		// Propagate tenant B's IDs into plain context.Context for autoTenantScope.
-		tenantIDs := models.TenantIDs{AssetID: assetB.ID, ProjectID: projB.ID, OrgID: orgB.ID}
-		ctx.SetRequest(ctx.Request().WithContext(shared.WithTenantIDs(ctx.Request().Context(), tenantIDs)))
+		tenantIDs := models.OwnershipScope{AssetID: assetB.ID, ProjectID: projB.ID, OrgID: orgB.ID}
+		ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues(vulnA.ID.String())
 
@@ -266,10 +266,6 @@ func TestBOLADependencyVulnCreateEventCrossAssetBlocked(t *testing.T) {
 
 // TestBOLAReleaseReadCrossProjectBlocked proves that reading a Release by UUID
 // is blocked when the release belongs to a different project.
-//
-// NOTE: release_repository.ReadRecursive uses a raw CTE that bypasses
-// GormRepository.Read() and therefore the autoTenantScope fix. This test is
-// expected to FAIL until ReadRecursive is updated to scope by project_id.
 func TestBOLAReleaseReadCrossProjectBlocked(t *testing.T) {
 	t.Parallel()
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{SuppressLogs: true}, func(f *TestFixture) {
@@ -304,6 +300,8 @@ func TestBOLAReleaseReadCrossProjectBlocked(t *testing.T) {
 		shared.SetProject(ctx, projB)
 		shared.SetAsset(ctx, assetB)
 		shared.SetAssetVersion(ctx, assetVersionB)
+		scope := models.OwnershipScope{AssetID: assetB.ID, ProjectID: projB.ID, OrgID: orgB.ID}
+		ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), scope)))
 		ctx.SetParamNames("releaseID")
 		ctx.SetParamValues(releaseA.ID.String())
 
@@ -335,7 +333,7 @@ func TestBOLAReleaseRepositoryReadRecursiveCrossProject(t *testing.T) {
 		_, projB, _, _ := createTenant(f, "release-repo-b")
 
 		// Build a context carrying tenant B's project ID
-		ctx := shared.WithTenantIDs(context.Background(), models.TenantIDs{
+		ctx := shared.WithOwnershipScope(context.Background(), models.OwnershipScope{
 			ProjectID: projB.ID,
 		})
 

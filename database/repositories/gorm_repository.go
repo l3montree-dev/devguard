@@ -182,24 +182,24 @@ func (g *GormRepository[ID, T]) CreateBatch(ctx context.Context, tx *gorm.DB, ts
 func (g *GormRepository[ID, T]) Read(ctx context.Context, tx *gorm.DB, id ID) (T, error) {
 	var t T
 	db := g.GetDB(ctx, tx).Where("id = ?", id)
-	if ids, ok := shared.TenantIDsFromCtx(ctx); ok {
-		db = db.Scopes(autoTenantScope(t, ids))
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(t, ids))
 	}
 	err := db.First(&t).Error
 	return t, err
 }
 
-// withTenantScope applies autoTenantScope to db when tenant IDs are present in
+// withOwnershipScope applies autoOwnershipScope to db when tenant IDs are present in
 // ctx. Use this in custom Read() overrides that need Preload chains but must
 // still enforce the tenant boundary.
-func withTenantScope(ctx context.Context, db *gorm.DB, model any) *gorm.DB {
-	if ids, ok := shared.TenantIDsFromCtx(ctx); ok {
-		return db.Scopes(autoTenantScope(model, ids))
+func withOwnershipScope(ctx context.Context, db *gorm.DB, model any) *gorm.DB {
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		return db.Scopes(autoOwnershipScope(model, ids))
 	}
 	return db
 }
 
-// autoTenantScope inspects the GORM struct tags and field names of model
+// autoOwnershipScope inspects the GORM struct tags and field names of model
 // (including embedded structs) to detect a tenant column (asset_id,
 // project_id, organization_id) and returns a scope that filters by the
 // corresponding ID from ids. Models without any tenant column (e.g.
@@ -210,7 +210,7 @@ func withTenantScope(ctx context.Context, db *gorm.DB, model any) *gorm.DB {
 //  2. Go field name AssetID / ProjectID / OrganizationID (GORM default naming)
 //
 // reflect.VisibleFields is used so embedded struct fields are included.
-func autoTenantScope(model any, ids models.TenantIDs) func(*gorm.DB) *gorm.DB {
+func autoOwnershipScope(model any, ids models.OwnershipScope) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		t := reflect.TypeOf(model)
 		if t.Kind() == reflect.Pointer {

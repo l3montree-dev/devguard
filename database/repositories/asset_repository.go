@@ -250,7 +250,8 @@ func (repository *assetRepository) Delete(ctx context.Context, tx *gorm.DB, id u
 
 func (repository *assetRepository) ReadWithAssetVersions(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := repository.GetDB(ctx, tx).Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error
+	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", assetID), asset)
+	err := db.Preload("AssetVersions").First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}

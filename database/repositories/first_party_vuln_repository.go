@@ -134,7 +134,7 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 
 func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.FirstPartyVuln, error) {
 	var t models.FirstPartyVuln
-	db := withTenantScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
 	err := db.Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).First(&t).Error
