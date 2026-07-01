@@ -4,9 +4,16 @@ Scan a SARIF report and upload results to DevGuard
 
 ### Synopsis
 
-Upload a SARIF-formatted static analysis report to DevGuard for processing and result comparison.
+Upload a SARIF report to DevGuard. DevGuard reads the report and stores the findings —
+it does NOT re-scan the files.
 
-The command signs the request using the configured token and returns scan results.
+Use this if you already run your own static analysis scanner (e.g. CodeQL, Semgrep, Trivy, or
+any other SARIF-producing tool) and just want to feed the results into DevGuard without using
+the built-in 'sast' or 'iac' commands.
+
+DevGuard compares the uploaded report against previous runs to detect new or resolved findings
+and makes them visible in the DevGuard UI. The command returns the processed SARIF report on
+stdout so you can chain it into other tools (e.g. 'sarif2markdown').
 
 ```shell
 devguard-scanner sarif <sarif.json> [flags]
@@ -33,6 +40,8 @@ devguard-scanner sarif <sarif.json> [flags]
       --defaultRef string   The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.
   -h, --help                help for sarif
       --isTag               If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
+      --noWrite             Run the scan and display results without persisting anything to DevGuard.
+      --output string       Output format for scan results. Options: 'table' (default), 'sarif' (enriched SARIF JSON). (default "table")
       --outputPath string   Path to save the SARIF report. If not specified, the report will only be uploaded to DevGuard.
       --path string         The path to the project to scan. Defaults to the current directory. (default ".")
       --ref string          The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.
