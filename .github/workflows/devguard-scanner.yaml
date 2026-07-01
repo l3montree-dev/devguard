@@ -9,6 +9,8 @@ on:
   workflow_dispatch:
   push:
 
+permissions: {}
+
 jobs:
   golangci:
     name: lint

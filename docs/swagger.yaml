@@ -9246,7 +9246,7 @@ paths:
       - BearerAuth: []
       summary: List externally managed project/asset tree
       tags:
-      - Projects
+      - External Entity
     post:
       description: Called by external inventory providers (e.g. k8s-devguard-image-inventory)
         to upsert or delete a dynamically managed project hierarchy. On verb=update,
@@ -9291,7 +9291,7 @@ paths:
       - BearerAuth: []
       summary: Sync or delete an externally managed project/asset tree
       tags:
-      - Projects
+      - External Entity
   /organizations/{organization}/projects/{projectSlug}/members:
     get:
       parameters:

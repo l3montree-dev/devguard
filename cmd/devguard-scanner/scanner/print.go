@@ -98,6 +98,8 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 	}
 
 	if openCount > 0 {
+		fmt.Printf("Found %d unhandled vulnerabilities\n", openCount)
+
 		return fmt.Errorf("found %d unhandled vulnerabilities", openCount)
 	}
 	return nil

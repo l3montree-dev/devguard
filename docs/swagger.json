@@ -13975,7 +13975,7 @@
                 ],
                 "summary": "List externally managed project/asset tree",
                 "tags": [
-                    "Projects"
+                    "External Entity"
                 ]
             },
             "post": {
@@ -14040,7 +14040,7 @@
                 ],
                 "summary": "Sync or delete an externally managed project/asset tree",
                 "tags": [
-                    "Projects"
+                    "External Entity"
                 ]
             }
         },
