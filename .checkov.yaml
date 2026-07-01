@@ -1,0 +1,16 @@
+skip-path:
+  # gitleaks baseline: intentional store of known false-positive secret references from git history
+  - leaks-baseline.json
+  # Debian package name mappings — strings are package identifiers, not secrets
+  - normalize/package_mappings.json
+
+skip-check:
+  # Generated OpenAPI docs (docs/swagger.yaml, docs/swagger.json):
+  # CKV_OPENAPI_4/5: API intentionally has public unauthenticated endpoints (public vuln DB,
+  #   CSAF feeds, unauthenticated scanner ingestion). Global security would incorrectly
+  #   require auth on these public routes.
+  # CKV_OPENAPI_21: Adding maxItems to every array schema in generated swaggo output is
+  #   impractical without swaggo native support.
+  - CKV_OPENAPI_4
+  - CKV_OPENAPI_5
+  - CKV_OPENAPI_21

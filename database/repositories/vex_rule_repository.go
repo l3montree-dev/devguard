@@ -116,7 +116,8 @@ func (r *vexRuleRepository) FindByAssetVersionPaged(ctx context.Context, tx *gor
 
 func (r *vexRuleRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.VEXRule, error) {
 	var rule models.VEXRule
-	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&rule).Error
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rule)
+	err := db.First(&rule).Error
 	return rule, err
 }
 

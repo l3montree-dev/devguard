@@ -163,6 +163,10 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 					}
 				}
 				shared.SetAsset(ctx, asset)
+				// Propagate tenant IDs into the plain context.Context so that
+				// GormRepository.Read can scope queries without echo.Context.
+				tenantIDs := shared.OwnershipScopeFromAsset(ctx, asset)
+				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 				return next(ctx)
 			}
 		}
@@ -216,6 +220,8 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 				}
 
 				ctx.Set("project", project)
+				tenantIDs := shared.OwnershipScopeFromProject(ctx, project)
+				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 
 				return next(ctx)
 			}
@@ -264,6 +270,8 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 					shared.SetOrg(ctx, *org)
 					shared.SetRBAC(ctx, domainRBAC)
 					shared.SetOrgSlug(ctx, organization)
+					tenantIDs := shared.OwnershipScopeFromOrg(ctx, *org)
+					ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 					return next(ctx)
 				}
 				return ctx.JSON(401, map[string]string{"error": err.Error()})
@@ -282,6 +290,8 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			shared.SetOrg(ctx, *org)
 			shared.SetRBAC(ctx, domainRBAC)
 			shared.SetOrgSlug(ctx, organization)
+			tenantIDs := shared.OwnershipScopeFromOrg(ctx, *org)
+			ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 			// continue to the request
 			return next(ctx)
 		}

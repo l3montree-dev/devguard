@@ -283,19 +283,19 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 
 	switch scope {
 	case "asset":
-		asset, err := d.assetRepository.Read(c.Request().Context(), nil, uuid)
+		asset, err := d.assetRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
 	case "project":
-		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid)
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
 	case "organization":
-		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid)
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}

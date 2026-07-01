@@ -75,7 +75,7 @@ func (r *jiraIntegrationRepository) FindByOrganizationID(ctx context.Context, tx
 
 func (r *jiraIntegrationRepository) GetClientByIntegrationID(ctx context.Context, tx *gorm.DB, integrationID uuid.UUID) (models.JiraIntegration, error) {
 	var integration models.JiraIntegration
-	if err := r.GetDB(ctx, tx).First(&integration, "id = ?", integrationID).Error; err != nil {
+	if err := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", integrationID), integration).First(&integration).Error; err != nil {
 		return models.JiraIntegration{}, err
 	}
 

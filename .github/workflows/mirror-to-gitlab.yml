@@ -5,6 +5,8 @@ on:
     branches: ["**"]
     tags: ["**"]
 
+permissions: read-all
+
 jobs:
   mirror:
     runs-on: ubuntu-latest

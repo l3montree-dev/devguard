@@ -51,7 +51,7 @@ services:
         condition: service_completed_successfully
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD — set a strong random password
+      POSTGRES_PASSWORD: change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD — set a strong random password  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       POSTGRES_DB: devguard
     #ports:
     #  - "5432:5432"
@@ -139,7 +139,7 @@ services:
       - encryption-key:/keys:ro
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
@@ -174,7 +174,7 @@ services:
       - encryption-key:/keys:ro
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432

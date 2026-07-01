@@ -341,7 +341,7 @@ func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.
 		if err != nil {
 			return nil, err
 		}
-		asset, err := h.assetRepository.Read(ctx, nil, av.AssetID)
+		asset, err := h.assetRepository.Read(ctx, nil, av.AssetID) // nosemgrep: bola-controller-read-without-tenant-check -- av.AssetID comes from a previously-loaded AssetVersion, not from a user-controlled path param
 		if err != nil {
 			return nil, err
 		}

@@ -39,14 +39,14 @@ devguard-cli::
 devguard-scanner::
 	go build $(FLAGS) -o devguard-scanner cmd/devguard-scanner/main.go
 
-docs::
+docs:: cli-docs
 	swag init -g cmd/devguard/main.go -o docs --v3.1 --parseDependency --parseDepth 1
 	@rm -f docs/docs.go
 	@echo "OpenAPI spec generated at docs/swagger.json and docs/swagger.yaml"
 
 cli-docs::
 	@echo "Generating CLI documentation..."
-	@go run cmd/doc-gen/main.go
+	@go run cmd/devguard-maint/main.go docs
 	@echo "CLI documentation generated in docs/scanner/"
 
 NIX_CACHE_BUCKET     ?= nix.garage.l3montree.cloud

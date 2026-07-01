@@ -4,15 +4,25 @@ Create and upload an attestation for an image or artifact
 
 ### Synopsis
 
-Create and upload an attestation for an OCI image or a local predicate file.
+Attach a signed metadata document (called a "predicate") to a container image or artifact.
 
-The first argument is a path to a local predicate JSON file that will be used as
-the attestation payload. Optionally provide a container image reference as the
-second argument to attach the attestation to that image.
+Attestations answer the question "how was this artifact produced?" by associating it with
+verifiable metadata. The --predicateType flag identifies what kind of metadata it is. Downstream
+consumers (e.g. 'devguard-scanner attestations --policy ...') match attestations by predicate type,
+so the value must match exactly what the consumer expects.
 
-This command validates the predicate file exists, signs the upload using the
-configured token, and sends it to the DevGuard backend. The HTTP header
-X-Predicate-Type is populated from the --predicateType flag (required).
+Official predicate types are maintained at:
+  https://github.com/in-toto/attestation/tree/main/spec/predicates
+
+Common ones used with DevGuard:
+  https://cyclonedx.org/bom                         CycloneDX SBOM
+  https://cyclonedx.org/vex                         CycloneDX VEX (vulnerability exceptions)
+  https://slsa.dev/provenance/v1                    SLSA build provenance
+  https://in-toto.io/attestation/release/v0.1       DevGuard release attestation
+
+The first argument is a path to a local predicate JSON file. Pass "-" to read from stdin.
+Optionally provide a container image reference as the second argument to also attach the
+attestation directly to the image in the OCI registry using cosign.
 
 ```shell
 devguard-scanner attest <predicate> [container-image] [flags]
@@ -26,6 +36,9 @@ devguard-scanner attest <predicate> [container-image] [flags]
 
   # Attest with SLSA provenance
   devguard-scanner attest provenance.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
+
+  # Pipe curl output directly into attest (no shell needed)
+  devguard-scanner curl https://api.example.com/sbom.json --token=... | devguard-scanner attest - ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom
 
   # Upload attestation without attaching to an image
   devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1
