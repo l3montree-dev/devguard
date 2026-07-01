@@ -752,6 +752,23 @@ type AccessControl interface {
 
 	GetExternalEntityProviderID() *string
 }
+type CompliancePostureRepository interface {
+	utils.Repository[uuid.UUID, models.CompliancePosture, DB]
+	ApplyAndSave(ctx context.Context, tx DB, posture *models.CompliancePosture, ev *models.VulnEvent) error
+	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
+
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (dtos.CompliancePostureStatsDTO, error)
+
+	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+}
+type CompliancePostureService interface {
+	UpdateCompliancePostureState(ctx context.Context, tx DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
+
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (dtos.CompliancePostureStatsDTO, error)
+	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+}
 
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
