@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"runtime"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -1123,4 +1126,190 @@ func mergeKEVInformation(cisaKEV, euvdKEV []models.CVE) []models.CVE {
 		unionSlice = append(unionSlice, cve)
 	}
 	return unionSlice
+}
+
+const (
+	csafFetchWorkers = 20
+)
+
+var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/"}
+
+func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) error {
+	for source, url := range csafSources {
+		slog.Info("start fetching CSAF reports", "source", source)
+		err := service.FetchCSAFData(ctx, url)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) error {
+	start := time.Now()
+
+	csafFetchingClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        csafFetchWorkers,
+			MaxIdleConnsPerHost: csafFetchWorkers,
+			MaxConnsPerHost:     csafFetchWorkers,
+		},
+	}
+
+	fileNames, err := service.ReadIndexFile(ctx, url)
+	if err != nil {
+		return err
+	}
+	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
+	slog.Info("examples", "1", fileNames[0], "2", fileNames[1], "3", fileNames[2])
+	advisories := make([]csaf.Advisory, 0, 10)
+	start = time.Now()
+	for _, fileName := range fileNames[:3] {
+		advisory, err := service.FetchCSAFReport(ctx, csafFetchingClient, url+fileName)
+		if err != nil {
+			return err
+		}
+		advisories = append(advisories, advisory)
+	}
+	slog.Info("examples", "time", time.Since(start), "1", *advisories[0].Document.Title, "2", *advisories[1].Document.Title, "3", *advisories[2].Document.Title)
+
+	cves := make([]models.CVE, 0, len(advisories))
+	cveRelationships := make([]models.CVERelationship, 0, len(advisories))
+	for _, advisory := range advisories {
+		cve, relationships, err := convertCSAFReportToModels(advisory)
+		if err != nil {
+			return err
+		}
+		cves = append(cves, cve)
+		cveRelationships = append(cveRelationships, relationships...)
+	}
+
+	err = service.osv.cveRepository.CreateBatch(ctx, nil, cves)
+	if err != nil {
+		return fmt.Errorf("could not insert advisory cves into db: %w", err)
+	}
+
+	err = service.osv.cveRelationshipRepository.CreateBatch(ctx, nil, cveRelationships)
+	return nil
+}
+
+func (service VulnDBService) ReadIndexFile(ctx context.Context, url string) ([]string, error) {
+	slog.Info("start reading index.txt")
+	buf, err := DoGetRequest(ctx, url+"index.txt", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	fileNames := strings.Fields(string(buf))
+	if len(fileNames) == 0 {
+		return nil, fmt.Errorf("no files found in index.txt file")
+	}
+	return fileNames, err
+}
+
+func (service VulnDBService) FetchCSAFReport(ctx context.Context, client *http.Client, url string) (csaf.Advisory, error) {
+	slog.Info("start fetching csaf report", "id", strings.TrimPrefix(url, "https://wid.cert-bund.de/.well-known/csaf/white/"))
+	var csafReport csaf.Advisory
+
+	buf, err := DoGetRequest(ctx, url, client)
+	if err != nil {
+		return csafReport, err
+	}
+
+	err = json.Unmarshal(buf, &csafReport)
+	if err != nil {
+		return csafReport, fmt.Errorf("could not unmarshal json into csaf struct: %w", err)
+	}
+
+	return csafReport, nil
+}
+
+// executes a GET request with an empty body to the specified url
+// if no client is passed, the function uses the default http client
+func DoGetRequest(ctx context.Context, url string, client *http.Client) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not build http request: %w", err)
+	}
+
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute http request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request was unsuccessful, status code: %d", resp.StatusCode)
+	}
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("could not read from response body: %w", err)
+	}
+	return buf, nil
+}
+
+func convertCSAFReportToModels(csafReport csaf.Advisory) (models.CVE, []models.CVERelationship, error) {
+	cve := models.CVE{}
+	if csafReport.Document == nil {
+		return models.CVE{}, nil, fmt.Errorf("invalid csaf document. document property is missing")
+	}
+
+	tracking := csafReport.Document.Tracking // improve readability
+	if tracking == nil || tracking.ID == nil {
+		return models.CVE{}, nil, fmt.Errorf("no id in tracking object can be found")
+	}
+	cve.CVE = string(*tracking.ID)
+
+	if tracking.InitialReleaseDate != nil {
+		date, err := time.Parse(time.RFC3339Nano, *tracking.InitialReleaseDate)
+		if err == nil {
+			cve.DatePublished = date
+		}
+	}
+
+	if tracking.CurrentReleaseDate != nil {
+		date, err := time.Parse(time.RFC3339Nano, *tracking.CurrentReleaseDate)
+		if err == nil {
+			cve.DateLastModified = date
+		}
+	}
+
+	cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
+
+	// lastly build the relationships from the vulnerability items
+	cveRelationships := make([]models.CVERelationship, 0, len(csafReport.Vulnerabilities))
+	for _, vuln := range csafReport.Vulnerabilities {
+		if vuln == nil {
+			continue
+		}
+		if vuln.CVE == nil {
+			return models.CVE{}, nil, fmt.Errorf("could not find cve in vulnerability")
+		}
+		cveRelationships = append(cveRelationships, models.CVERelationship{
+			TargetCVE:        string(*vuln.CVE),
+			SourceCVE:        cve.CVE,
+			RelationshipType: dtos.RelationshipTypeAdvisory,
+		})
+	}
+
+	return cve, cveRelationships, nil
+}
+
+// builds a textual description by combining different notes from the document object
+// returns an empty string if no information can be found
+func buildCVEDesciptionFromCSAFNotes(notes csaf.Notes) string {
+	description := ""
+	for _, note := range notes {
+		if note == nil || note.NoteCategory == nil || note.Title == nil || note.Text == nil || *note.NoteCategory == csaf.CSAFNoteCategoryLegalDisclaimer {
+			continue
+		}
+		// put the strings together low level
+		description += *note.Title + ": " + *note.Text + " | "
+	}
+	return description
 }
