@@ -106,6 +106,10 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
 
 	// then write each revision entry version to the index string
 	var csvContents strings.Builder
@@ -119,6 +123,14 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		// then write each entry to the csv string and return the result
 		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
+	}
+
+	// advisories don't have events yet, so use their creation as the initial change entry.
+	for _, advisory := range allAdvisories {
+		year := advisory.CreatedAt.Year()
+		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisory.ID)
+		fileName := fmt.Sprintf("%s.json", cveID)
+		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, advisory.CreatedAt.Format(time.RFC3339))
 	}
 
 	return ctx.String(200, csvContents.String())
