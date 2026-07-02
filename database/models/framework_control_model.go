@@ -3,16 +3,22 @@ package models
 import (
 	"fmt"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type FrameworkControl struct {
 	FrameworkControlID string `json:"frameworkControlId" gorm:"type:text;primaryKey;"`
 	Title              string `json:"title"`
+	Class              string `json:"class"`
 	Description        string `json:"description"`
 
 	Framework string `yaml:"framework" json:"framework"`
 	ControlID string `yaml:"controls"  json:"controls"`
+
+	Additional datatypes.JSON `yaml:"additional" json:"additional" gorm:"type:jsonb"`
+
+	ParentFrameworkControlID *string `json:"parentFrameworkControlId" gorm:"type:text;index"`
 }
 
 func (m FrameworkControl) TableName() string {

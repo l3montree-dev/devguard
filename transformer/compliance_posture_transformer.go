@@ -16,26 +16,37 @@
 package transformer
 
 import (
+	"encoding/json"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"gorm.io/datatypes"
 )
+
+func mustMarshalJSON(v any) datatypes.JSON {
+	b, _ := json.Marshal(v)
+	return datatypes.JSON(b)
+}
 
 func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetailsDTO {
 
 	p := dtos.CompliancePostureWithControlDTO{
-		FrameworkControlID:  c.FrameworkControlID,
-		CompliancePostureID: c.ID.String(),
-		ControlID:           c.FrameworkControl.ControlID,
-		Framework:           c.FrameworkControl.Framework,
-		Title:               c.FrameworkControl.Title,
-		Description:         c.FrameworkControl.Description,
-		AssetVersionName:    c.AssetVersionName,
-		AssetID:             c.AssetID,
-		ProjectID:           c.ProjectID,
-		OrgID:               &c.OrgID,
-		State:               c.State,
-		TicketID:            c.TicketID,
-		TicketURL:           c.TicketURL,
+		FrameworkControlID:       c.FrameworkControlID,
+		CompliancePostureID:      c.ID.String(),
+		ControlID:                c.FrameworkControl.ControlID,
+		Framework:                c.FrameworkControl.Framework,
+		Title:                    c.FrameworkControl.Title,
+		Description:              c.FrameworkControl.Description,
+		Class:                    c.FrameworkControl.Class,
+		Additional:               mustMarshalJSON(c.FrameworkControl.Additional),
+		ParentFrameworkControlID: c.FrameworkControl.ParentFrameworkControlID,
+		AssetVersionName:         c.AssetVersionName,
+		AssetID:                  c.AssetID,
+		ProjectID:                c.ProjectID,
+		OrgID:                    &c.OrgID,
+		State:                    c.State,
+		TicketID:                 c.TicketID,
+		TicketURL:                c.TicketURL,
 	}
 	events := make([]dtos.VulnEventDTO, len(c.Events))
 	for i, e := range c.Events {

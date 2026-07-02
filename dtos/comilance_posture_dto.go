@@ -17,6 +17,7 @@ package dtos
 
 import (
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type CompliancePostureDTO struct {
@@ -41,19 +42,22 @@ type DetailsCompliancePostureDTO struct {
 }
 
 type CompliancePostureWithControlDTO struct {
-	FrameworkControlID  string     `json:"frameworkControlId"`
-	Framework           string     `json:"framework"`
-	ControlID           string     `json:"controlId"`
-	Title               string     `json:"title"`
-	Description         string     `json:"description"`
-	CompliancePostureID string     `json:"compliancePostureId" gorm:"column:id"`
-	State               VulnState  `json:"state"`
-	OrgID               *uuid.UUID `json:"orgId"`
-	ProjectID           *uuid.UUID `json:"projectId"`
-	AssetID             *uuid.UUID `json:"assetId"`
-	AssetVersionName    *string    `json:"assetVersionName"`
-	TicketID            *string    `json:"ticketId"`
-	TicketURL           *string    `json:"ticketUrl"`
+	FrameworkControlID       string         `json:"frameworkControlId"`
+	Framework                string         `json:"framework"`
+	ControlID                string         `json:"controlId"`
+	Title                    string         `json:"title"`
+	Description              string         `json:"description"`
+	Class                    string         `json:"class"`
+	Additional               datatypes.JSON `json:"additional"`
+	ParentFrameworkControlID *string        `json:"parentFrameworkControlId"`
+	CompliancePostureID      string         `json:"compliancePostureId" gorm:"column:id"`
+	State                    VulnState      `json:"state"`
+	OrgID                    *uuid.UUID     `json:"orgId"`
+	ProjectID                *uuid.UUID     `json:"projectId"`
+	AssetID                  *uuid.UUID     `json:"assetId"`
+	AssetVersionName         *string        `json:"assetVersionName"`
+	TicketID                 *string        `json:"ticketId"`
+	TicketURL                *string        `json:"ticketUrl"`
 }
 
 type CompliancePostureWithDetailsDTO struct {
