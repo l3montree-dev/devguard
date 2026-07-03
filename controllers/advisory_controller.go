@@ -105,11 +105,12 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 		}
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
+	currentVisibility := advisory.Visibility
 
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
 	advisory.AssetID = shared.GetAsset(ctx).ID
 
-	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory)
+	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory, currentVisibility)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update advisory").WithInternal(err)

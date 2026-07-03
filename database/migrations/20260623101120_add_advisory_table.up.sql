@@ -26,3 +26,16 @@ CREATE TABLE public.advisories_affected_packages (
     CONSTRAINT advisories_affected_packages_pkey PRIMARY KEY (advisory_id, affected_package_id)
 );
 
+CREATE TABLE public.advisories_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    type TEXT,
+    user_id TEXT,
+    title TEXT,
+    description TEXT,
+    severity TEXT,
+    vector_string TEXT,
+    visibility TEXT,
+    advisory_id BIGINT NOT NULL REFERENCES public.advisories(id) ON DELETE CASCADE
+);
+

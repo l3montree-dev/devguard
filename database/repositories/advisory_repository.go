@@ -32,7 +32,7 @@ func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *go
 	return nil
 }
 
-func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, filter []shared.FilterQuery, pagnation shared.PageInfo) (shared.Paged[models.Advisory], error) {
+func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, filter []shared.FilterQuery, pagination shared.PageInfo) (shared.Paged[models.Advisory], error) {
 	advisories := []models.Advisory{}
 	db := advisoryRepository.GetDB(ctx, tx)
 	query := db.Model(&models.Advisory{}).Preload("AffectedPackages").Where("asset_id = ?", assetID)
@@ -46,11 +46,11 @@ func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *g
 		return shared.Paged[models.Advisory]{}, err
 	}
 
-	if err := pagnation.ApplyOnDB(query).Find(&advisories).Error; err != nil {
+	if err := pagination.ApplyOnDB(query).Find(&advisories).Error; err != nil {
 		return shared.Paged[models.Advisory]{}, err
 	}
 
-	return shared.NewPaged(pagnation, count, advisories), nil
+	return shared.NewPaged(pagination, count, advisories), nil
 }
 
 func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id int64) (models.Advisory, error) {

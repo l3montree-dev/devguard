@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/statemachine"
 )
 
 type AdvisoryService struct {
@@ -32,10 +34,22 @@ func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id int
 	return s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 }
 
-func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory) error {
+func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory, currentVisibility string) error {
+	if currentVisibility != advisory.Visibility {
+		if err := statemachine.CheckStateTransition(currentVisibility, advisory.Visibility); err != nil {
+			return fmt.Errorf("invalid state change from %q to %q: %w", currentVisibility, advisory.Visibility, err)
+		}
+	}
 	return s.advisoryRepository.Update(ctx, tx, id, advisory)
 }
 
 func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id int64) error {
+	advisory, err := s.advisoryRepository.ReadAdvisory(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if err := statemachine.CanDelete(advisory.Visibility); err != nil {
+		return err
+	}
 	return s.advisoryRepository.Delete(ctx, tx, id)
 }
