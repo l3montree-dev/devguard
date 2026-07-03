@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gocsaf/csaf/v3/csaf"
@@ -1128,10 +1129,6 @@ func mergeKEVInformation(cisaKEV, euvdKEV []models.CVE) []models.CVE {
 	return unionSlice
 }
 
-const (
-	csafFetchWorkers = 20
-)
-
 var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/"}
 
 func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) error {
@@ -1145,6 +1142,12 @@ func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) error {
 	return nil
 }
 
+const (
+	csafFetchWorkers     = 100
+	csafConverterWorkers = 2
+	csafWriterBatchSize  = 1000
+)
+
 func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) error {
 	start := time.Now()
 
@@ -1157,44 +1160,81 @@ func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) erro
 		},
 	}
 
-	fileNames, err := service.ReadIndexFile(ctx, url)
+	fileNames, err := readIndexFile(ctx, url)
 	if err != nil {
 		return err
 	}
 	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
-	slog.Info("examples", "1", fileNames[0], "2", fileNames[1], "3", fileNames[2])
-	advisories := make([]csaf.Advisory, 0, 10)
-	start = time.Now()
-	for _, fileName := range fileNames[:3] {
-		advisory, err := service.FetchCSAFReport(ctx, csafFetchingClient, url+fileName)
-		if err != nil {
-			return err
+
+	fetchingWorkGroup := &sync.WaitGroup{}
+	fetchingJobs := make(chan string, len(fileNames))
+	advisories := make(chan *csaf.Advisory, len(fileNames))
+
+	for range csafFetchWorkers {
+		fetchingWorkGroup.Add(1)
+		go fetchCSAFReportWorker(ctx, fetchingWorkGroup, fetchingJobs, advisories, csafFetchingClient)
+	}
+
+	go func() {
+		start := time.Now()
+		fetchingWorkGroup.Wait()
+		close(advisories)
+		slog.Info("finished pushing all fetching jobs", "time", time.Since(start))
+	}()
+
+	go func() {
+		for _, fileName := range fileNames {
+			fetchingJobs <- url + fileName
 		}
-		advisories = append(advisories, advisory)
-	}
-	slog.Info("examples", "time", time.Since(start), "1", *advisories[0].Document.Title, "2", *advisories[1].Document.Title, "3", *advisories[2].Document.Title)
+		close(fetchingJobs)
+	}()
 
-	cves := make([]models.CVE, 0, len(advisories))
-	cveRelationships := make([]models.CVERelationship, 0, len(advisories))
-	for _, advisory := range advisories {
-		cve, relationships, err := convertCSAFReportToModels(advisory)
+	convertingWaitGroup := &sync.WaitGroup{}
+	cves := make(chan *models.CVE, batchSize)
+	for range csafConverterWorkers {
+		convertingWaitGroup.Add(1)
+		go convertCSAFReportToModelsWorker(convertingWaitGroup, advisories, cves)
+	}
+
+	go func() {
+		start = time.Now()
+		convertingWaitGroup.Wait()
+		close(cves)
+		slog.Info("finished pushing all writing jobs", "time", time.Since(start))
+	}()
+
+	cveWriterWaitGroup := &sync.WaitGroup{}
+	tx := service.osv.cveRepository.Begin(ctx)
+
+	cveWriterWaitGroup.Add(1)
+	go service.cveDatabaseWriterWorker(ctx, cveWriterWaitGroup, tx, cves)
+
+	stopMonitor := make(chan struct{})
+	go monitorPipeline(stopMonitor, time.Second, []bufferGauge{
+		{"advisories", func() int { return len(advisories) }, func() int { return cap(advisories) }},
+		{"cves", func() int { return len(cves) }, func() int { return cap(cves) }},
+	})
+
+	writerStart := time.Now()
+	cveWriterWaitGroup.Wait()
+	close(stopMonitor)
+	slog.Info("finished databse writing", "time", time.Since(writerStart))
+
+	if err := tx.Commit().Error; err != nil {
+		slog.Error("could not commit transaction, trying to rollback")
+		err := tx.Rollback().Error
 		if err != nil {
-			return err
+			slog.Error("fatal: could not rollback transaction. Database possibly has an inconsistent state")
+		} else {
+			slog.Info("successfully rollbacked transaction")
 		}
-		cves = append(cves, cve)
-		cveRelationships = append(cveRelationships, relationships...)
+		return fmt.Errorf("could not commit transaction, import failed.")
 	}
-
-	err = service.osv.cveRepository.CreateBatch(ctx, nil, cves)
-	if err != nil {
-		return fmt.Errorf("could not insert advisory cves into db: %w", err)
-	}
-
-	err = service.osv.cveRelationshipRepository.CreateBatch(ctx, nil, cveRelationships)
+	slog.Info("successfully finished csaf sync", "time", time.Since(start))
 	return nil
 }
 
-func (service VulnDBService) ReadIndexFile(ctx context.Context, url string) ([]string, error) {
+func readIndexFile(ctx context.Context, url string) ([]string, error) {
 	slog.Info("start reading index.txt")
 	buf, err := DoGetRequest(ctx, url+"index.txt", nil)
 	if err != nil {
@@ -1208,21 +1248,127 @@ func (service VulnDBService) ReadIndexFile(ctx context.Context, url string) ([]s
 	return fileNames, err
 }
 
-func (service VulnDBService) FetchCSAFReport(ctx context.Context, client *http.Client, url string) (csaf.Advisory, error) {
-	slog.Info("start fetching csaf report", "id", strings.TrimPrefix(url, "https://wid.cert-bund.de/.well-known/csaf/white/"))
-	var csafReport csaf.Advisory
+func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan string, output chan *csaf.Advisory, client *http.Client) {
+	defer waitGroup.Done()
+	for url := range jobs {
+		buf, err := DoGetRequest(ctx, url, client)
+		if err != nil {
+			slog.Error("ran into error", "err", err)
+		}
 
-	buf, err := DoGetRequest(ctx, url, client)
-	if err != nil {
-		return csafReport, err
+		var csafReport csaf.Advisory
+		err = json.Unmarshal(buf, &csafReport)
+		if err != nil {
+			slog.Error("ran into error", "err", fmt.Errorf("could not unmarshal json into csaf struct: %w", err))
+		}
+		output <- &csafReport
 	}
+}
 
-	err = json.Unmarshal(buf, &csafReport)
-	if err != nil {
-		return csafReport, fmt.Errorf("could not unmarshal json into csaf struct: %w", err)
+func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *csaf.Advisory, cvesOutput chan *models.CVE) {
+	defer waitGroup.Done()
+	for csafReport := range jobs {
+		if csafReport.Document == nil {
+			slog.Error("encountered error", "err", fmt.Errorf("invalid csaf document. document property is missing"))
+			continue
+		}
+
+		if len(csafReport.Vulnerabilities) == 0 {
+			continue // no vulnerabilities means no relationships, that means it will never be found
+		}
+
+		tracking := csafReport.Document.Tracking // improve readability
+		if tracking == nil || tracking.ID == nil {
+			slog.Error("encountered error", "err", fmt.Errorf("no id in tracking object can be found"))
+		}
+		cve := models.CVE{CVE: string(*tracking.ID)}
+
+		if tracking.InitialReleaseDate != nil {
+			date, err := time.Parse(time.RFC3339Nano, *tracking.InitialReleaseDate)
+			if err == nil {
+				cve.DatePublished = date
+			}
+		}
+
+		if tracking.CurrentReleaseDate != nil {
+			date, err := time.Parse(time.RFC3339Nano, *tracking.CurrentReleaseDate)
+			if err == nil {
+				cve.DateLastModified = date
+			}
+		}
+
+		cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
+
+		for _, vuln := range csafReport.Vulnerabilities {
+			if vuln == nil || vuln.CVE == nil {
+				continue
+			}
+			cve.Relationships = append(cve.Relationships, models.CVERelationship{
+				TargetCVE:        string(*vuln.CVE),
+				SourceCVE:        cve.CVE,
+				RelationshipType: dtos.RelationshipTypeAdvisory,
+			})
+		}
+		cvesOutput <- &cve
 	}
+}
 
-	return csafReport, nil
+// builds a textual description by combining different notes from the document object
+// returns an empty string if no information can be found
+func buildCVEDesciptionFromCSAFNotes(notes csaf.Notes) string {
+	description := ""
+	for _, note := range notes {
+		if note == nil || note.NoteCategory == nil || note.Title == nil || note.Text == nil || *note.NoteCategory == csaf.CSAFNoteCategoryLegalDisclaimer {
+			continue
+		}
+		// put the strings together low level
+		description += *note.Title + ": " + *note.Text + " | "
+	}
+	return description
+}
+
+func (service VulnDBService) cveDatabaseWriterWorker(ctx context.Context, waitGroup *sync.WaitGroup, tx shared.DB, jobs chan *models.CVE) {
+	defer waitGroup.Done()
+	cves := make([]models.CVE, 0, csafWriterBatchSize)
+	flushCVEs := func() {
+		if err := service.osv.cveRepository.CreateBatch(ctx, tx, cves); err != nil {
+			slog.Error("could not save cves batch", "err", err)
+		}
+		cves = cves[:0]
+	}
+	for cve := range jobs {
+		cves = append(cves, *cve)
+		if len(cves) == csafWriterBatchSize {
+			flushCVEs()
+		}
+	}
+	flushCVEs()
+}
+
+// bufferGauge reports the current occupancy (len/cap) of a pipeline channel.
+type bufferGauge struct {
+	name string
+	len  func() int
+	cap  func() int
+}
+
+// monitorPipeline logs each channel's occupancy every interval until stop is closed.
+// len near cap means the stage reading from that channel is the bottleneck.
+func monitorPipeline(stop <-chan struct{}, interval time.Duration, gauges []bufferGauge) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			attrs := make([]any, 0, len(gauges))
+			for _, g := range gauges {
+				attrs = append(attrs, g.name, fmt.Sprintf("%d/%d", g.len(), g.cap()))
+			}
+			slog.Info("pipeline buffers", attrs...)
+		}
+	}
 }
 
 // executes a GET request with an empty body to the specified url
@@ -1251,65 +1397,4 @@ func DoGetRequest(ctx context.Context, url string, client *http.Client) ([]byte,
 		return nil, fmt.Errorf("could not read from response body: %w", err)
 	}
 	return buf, nil
-}
-
-func convertCSAFReportToModels(csafReport csaf.Advisory) (models.CVE, []models.CVERelationship, error) {
-	cve := models.CVE{}
-	if csafReport.Document == nil {
-		return models.CVE{}, nil, fmt.Errorf("invalid csaf document. document property is missing")
-	}
-
-	tracking := csafReport.Document.Tracking // improve readability
-	if tracking == nil || tracking.ID == nil {
-		return models.CVE{}, nil, fmt.Errorf("no id in tracking object can be found")
-	}
-	cve.CVE = string(*tracking.ID)
-
-	if tracking.InitialReleaseDate != nil {
-		date, err := time.Parse(time.RFC3339Nano, *tracking.InitialReleaseDate)
-		if err == nil {
-			cve.DatePublished = date
-		}
-	}
-
-	if tracking.CurrentReleaseDate != nil {
-		date, err := time.Parse(time.RFC3339Nano, *tracking.CurrentReleaseDate)
-		if err == nil {
-			cve.DateLastModified = date
-		}
-	}
-
-	cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
-
-	// lastly build the relationships from the vulnerability items
-	cveRelationships := make([]models.CVERelationship, 0, len(csafReport.Vulnerabilities))
-	for _, vuln := range csafReport.Vulnerabilities {
-		if vuln == nil {
-			continue
-		}
-		if vuln.CVE == nil {
-			return models.CVE{}, nil, fmt.Errorf("could not find cve in vulnerability")
-		}
-		cveRelationships = append(cveRelationships, models.CVERelationship{
-			TargetCVE:        string(*vuln.CVE),
-			SourceCVE:        cve.CVE,
-			RelationshipType: dtos.RelationshipTypeAdvisory,
-		})
-	}
-
-	return cve, cveRelationships, nil
-}
-
-// builds a textual description by combining different notes from the document object
-// returns an empty string if no information can be found
-func buildCVEDesciptionFromCSAFNotes(notes csaf.Notes) string {
-	description := ""
-	for _, note := range notes {
-		if note == nil || note.NoteCategory == nil || note.Title == nil || note.Text == nil || *note.NoteCategory == csaf.CSAFNoteCategoryLegalDisclaimer {
-			continue
-		}
-		// put the strings together low level
-		description += *note.Title + ": " + *note.Text + " | "
-	}
-	return description
 }
