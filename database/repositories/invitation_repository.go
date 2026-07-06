@@ -45,3 +45,9 @@ func (g *InvitationRepository) FindByCode(ctx context.Context, tx *gorm.DB, code
 func (g *InvitationRepository) Save(ctx context.Context, tx *gorm.DB, invitation *models.Invitation) error {
 	return g.Repository.GetDB(ctx, tx).Omit(clause.Associations).Save(invitation).Error
 }
+
+func (g *InvitationRepository) FindByOrgID(ctx context.Context, tx *gorm.DB, orgID string) ([]models.Invitation, error) {
+	var t []models.Invitation
+	err := g.GetDB(ctx, tx).Model(models.Invitation{}).Preload("Organization").Where("organization_id = ?", orgID).Find(&t).Error
+	return t, err
+}
