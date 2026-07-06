@@ -1159,23 +1159,23 @@ var csafFetchingClient = &http.Client{
 	},
 }
 
-func (service VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) error {
+func (service VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) ([]models.CVE, error) {
 	start := time.Now()
 
 	fileNames, err := fetchAllCSAFRecords(ctx, baseURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
 	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
 }
 
-func (service VulnDBService) FetchCSAFDataDiff(ctx context.Context, baseURL string, lastImport time.Time) error {
+func (service VulnDBService) FetchCSAFDataDiff(ctx context.Context, baseURL string, lastImport time.Time) ([]models.CVE, error) {
 	start := time.Now()
 
 	fileNames, err := fetchRecentlyChangedCSAFRecords(ctx, baseURL, lastImport)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	slog.Info("successfully fetched recently changed filenames", len(fileNames), "time", time.Since(start))
 	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
@@ -1234,7 +1234,7 @@ func fetchRecentlyChangedCSAFRecords(ctx context.Context, baseURL string, lastIm
 	return fileNames, err
 }
 
-func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) error {
+func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) ([]models.CVE, error) {
 	start := time.Now()
 	fetchingWorkGroup := &sync.WaitGroup{}
 	fetchingJobs := make(chan string, len(fileNames))
@@ -1253,46 +1253,26 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 	}()
 
 	convertingWaitGroup := &sync.WaitGroup{}
-	cves := make(chan *models.CVE, batchSize)
+	cveOutput := make(chan *models.CVE, batchSize)
 	for range csafConverterWorkers {
 		convertingWaitGroup.Add(1)
-		go convertCSAFReportToModelsWorker(convertingWaitGroup, advisories, cves)
+		go convertCSAFReportToModelsWorker(convertingWaitGroup, advisories, cveOutput)
 	}
 
 	go func() {
 		start = time.Now()
 		convertingWaitGroup.Wait()
-		close(cves)
-		slog.Info("finished pushing all writing jobs", "time", time.Since(start))
+		close(cveOutput)
+		slog.Info("finished pushing all cves", "time", time.Since(start))
 	}()
 
-	cveWriterWaitGroup := &sync.WaitGroup{}
-	tx := service.osv.cveRepository.Begin(ctx)
-
-	cveWriterWaitGroup.Add(1)
-	go service.cveDatabaseWriterWorker(ctx, cveWriterWaitGroup, tx, cves)
-
-	writerStart := time.Now()
-	cveWriterWaitGroup.Wait()
-	slog.Info("finished databse writing", "time", time.Since(writerStart))
-
-	if err := tx.Commit().Error; err != nil {
-		slog.Error("could not commit transaction, trying to rollback")
-		err := tx.Rollback().Error
-		if err != nil {
-			slog.Error("fatal: could not rollback transaction. Database possibly has an inconsistent state")
-		} else {
-			slog.Info("successfully rollbacked transaction")
-		}
-		return fmt.Errorf("could not commit transaction, import failed.")
+	cves := make([]models.CVE, 0, len(fileNames))
+	for cve := range cveOutput {
+		cves = append(cves, *cve)
 	}
 
-	start = time.Now()
-	fetchingWorkGroup.Wait()
-	close(advisories)
-	slog.Info("finished processing all fetching jobs", "time", time.Since(start))
 	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(advisories))
-	return nil
+	return cves, nil
 }
 
 // minimal struct to omit unused fields and therefore improve parsing speed and memory consumption
