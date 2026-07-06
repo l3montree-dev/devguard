@@ -18,8 +18,6 @@ package statemachine
 import (
 	"fmt"
 	"slices"
-
-	"github.com/l3montree-dev/devguard/database/models"
 )
 
 const (
@@ -45,8 +43,4 @@ func CanDelete(currentVisibility string) error {
 		return nil
 	}
 	return fmt.Errorf("advisory can not be deleted")
-}
-
-func Apply(advisory *models.Advisory, event models.Advisory) {
-
 }
