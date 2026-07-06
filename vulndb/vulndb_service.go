@@ -1,7 +1,9 @@
 package vulndb
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1143,32 +1145,100 @@ func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) error {
 }
 
 const (
-	csafFetchWorkers     = 100
+	csafFetchWorkers     = 200
 	csafConverterWorkers = 2
 	csafWriterBatchSize  = 1000
 )
 
-func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) error {
+var csafFetchingClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        csafFetchWorkers,
+		MaxIdleConnsPerHost: csafFetchWorkers,
+		MaxConnsPerHost:     csafFetchWorkers,
+	},
+}
+
+func (service VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) error {
 	start := time.Now()
 
-	csafFetchingClient := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			MaxIdleConns:        csafFetchWorkers,
-			MaxIdleConnsPerHost: csafFetchWorkers,
-			MaxConnsPerHost:     csafFetchWorkers,
-		},
-	}
-
-	fileNames, err := readIndexFile(ctx, url)
+	fileNames, err := fetchAllCSAFRecords(ctx, baseURL)
 	if err != nil {
 		return err
 	}
 	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
+	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
+}
 
+func (service VulnDBService) FetchCSAFDataDiff(ctx context.Context, baseURL string, lastImport time.Time) error {
+	start := time.Now()
+
+	fileNames, err := fetchRecentlyChangedCSAFRecords(ctx, baseURL, lastImport)
+	if err != nil {
+		return err
+	}
+	slog.Info("successfully fetched recently changed filenames", len(fileNames), "time", time.Since(start))
+	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
+
+}
+
+func fetchAllCSAFRecords(ctx context.Context, baseURL string) ([]string, error) {
+	slog.Info("start reading index.txt")
+	buf, err := DoGetRequest(ctx, baseURL+"index.txt", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	fileNames := strings.Fields(string(buf))
+	if len(fileNames) == 0 {
+		return nil, fmt.Errorf("no files found in index.txt file")
+	}
+	return fileNames, err
+}
+
+func fetchRecentlyChangedCSAFRecords(ctx context.Context, baseURL string, lastImport time.Time) ([]string, error) {
+	slog.Info("start reading index.txt")
+	buf, err := DoGetRequest(ctx, baseURL+"changes.csv", nil)
+	if err != nil {
+		return nil, err
+	}
+	bufReader := bytes.NewBuffer(buf)
+
+	cvsReader := csv.NewReader(bufReader)
+	if err != nil {
+		return nil, fmt.Errorf("could not read csv file: %w", err)
+	}
+
+	fileNames := make([]string, 0, 1000)
+	for {
+		// iterate entries one by one
+		entry, err := cvsReader.Read()
+		if err != nil {
+			if err == io.EOF { // EOF: we are done
+				break
+			}
+			// else cancel import
+			return nil, fmt.Errorf("could not parse csv row: %w", err)
+		}
+
+		timestamp, err := time.Parse(time.RFC3339Nano, entry[1])
+		if err != nil {
+			return nil, fmt.Errorf("could not parse timestamp from csv row: %w", err)
+		}
+
+		if timestamp.Before(lastImport) {
+			break // sort desc by timestamp -> all remaining files are also before
+		}
+		fileNames = append(fileNames, entry[0])
+	}
+	return fileNames, err
+}
+
+func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) error {
+	start := time.Now()
 	fetchingWorkGroup := &sync.WaitGroup{}
 	fetchingJobs := make(chan string, len(fileNames))
-	advisories := make(chan *csaf.Advisory, len(fileNames))
+	advisories := make(chan *minimalCSAFAdvisory, len(fileNames))
 
 	for range csafFetchWorkers {
 		fetchingWorkGroup.Add(1)
@@ -1176,15 +1246,8 @@ func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) erro
 	}
 
 	go func() {
-		start := time.Now()
-		fetchingWorkGroup.Wait()
-		close(advisories)
-		slog.Info("finished pushing all fetching jobs", "time", time.Since(start))
-	}()
-
-	go func() {
 		for _, fileName := range fileNames {
-			fetchingJobs <- url + fileName
+			fetchingJobs <- baseURL + fileName
 		}
 		close(fetchingJobs)
 	}()
@@ -1209,15 +1272,8 @@ func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) erro
 	cveWriterWaitGroup.Add(1)
 	go service.cveDatabaseWriterWorker(ctx, cveWriterWaitGroup, tx, cves)
 
-	stopMonitor := make(chan struct{})
-	go monitorPipeline(stopMonitor, time.Second, []bufferGauge{
-		{"advisories", func() int { return len(advisories) }, func() int { return cap(advisories) }},
-		{"cves", func() int { return len(cves) }, func() int { return cap(cves) }},
-	})
-
 	writerStart := time.Now()
 	cveWriterWaitGroup.Wait()
-	close(stopMonitor)
 	slog.Info("finished databse writing", "time", time.Since(writerStart))
 
 	if err := tx.Commit().Error; err != nil {
@@ -1230,25 +1286,43 @@ func (service VulnDBService) FetchCSAFData(ctx context.Context, url string) erro
 		}
 		return fmt.Errorf("could not commit transaction, import failed.")
 	}
-	slog.Info("successfully finished csaf sync", "time", time.Since(start))
+
+	start = time.Now()
+	fetchingWorkGroup.Wait()
+	close(advisories)
+	slog.Info("finished processing all fetching jobs", "time", time.Since(start))
+	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(advisories))
 	return nil
 }
 
-func readIndexFile(ctx context.Context, url string) ([]string, error) {
-	slog.Info("start reading index.txt")
-	buf, err := DoGetRequest(ctx, url+"index.txt", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	fileNames := strings.Fields(string(buf))
-	if len(fileNames) == 0 {
-		return nil, fmt.Errorf("no files found in index.txt file")
-	}
-	return fileNames, err
+// minimal struct to omit unused fields and therefore improve parsing speed and memory consumption
+type minimalCSAFAdvisory struct {
+	Document        *minimalCSAFDocument `json:"document"`
+	Vulnerabilities []*minimalCSAFVuln   `json:"vulnerabilities,omitempty"`
 }
 
-func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan string, output chan *csaf.Advisory, client *http.Client) {
+type minimalCSAFDocument struct {
+	Notes    []*minimalCSAFNote   `json:"notes,omitempty"`
+	Tracking *minimalCSAFTracking `json:"tracking"`
+}
+
+type minimalCSAFTracking struct {
+	ID                 *string `json:"id"`
+	CurrentReleaseDate *string `json:"current_release_date"`
+	InitialReleaseDate *string `json:"initial_release_date"`
+}
+
+type minimalCSAFNote struct {
+	Category *string `json:"category"`
+	Text     *string `json:"text"`
+	Title    *string `json:"title,omitempty"`
+}
+
+type minimalCSAFVuln struct {
+	CVE *string `json:"cve,omitempty"`
+}
+
+func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan string, output chan *minimalCSAFAdvisory, client *http.Client) {
 	defer waitGroup.Done()
 	for url := range jobs {
 		buf, err := DoGetRequest(ctx, url, client)
@@ -1256,7 +1330,7 @@ func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs 
 			slog.Error("ran into error", "err", err)
 		}
 
-		var csafReport csaf.Advisory
+		var csafReport minimalCSAFAdvisory
 		err = json.Unmarshal(buf, &csafReport)
 		if err != nil {
 			slog.Error("ran into error", "err", fmt.Errorf("could not unmarshal json into csaf struct: %w", err))
@@ -1265,7 +1339,7 @@ func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs 
 	}
 }
 
-func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *csaf.Advisory, cvesOutput chan *models.CVE) {
+func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *minimalCSAFAdvisory, cvesOutput chan *models.CVE) {
 	defer waitGroup.Done()
 	for csafReport := range jobs {
 		if csafReport.Document == nil {
@@ -1315,10 +1389,10 @@ func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *csaf.
 
 // builds a textual description by combining different notes from the document object
 // returns an empty string if no information can be found
-func buildCVEDesciptionFromCSAFNotes(notes csaf.Notes) string {
+func buildCVEDesciptionFromCSAFNotes(notes []*minimalCSAFNote) string {
 	description := ""
 	for _, note := range notes {
-		if note == nil || note.NoteCategory == nil || note.Title == nil || note.Text == nil || *note.NoteCategory == csaf.CSAFNoteCategoryLegalDisclaimer {
+		if note == nil || note.Category == nil || note.Title == nil || note.Text == nil || *note.Category == string(csaf.CSAFNoteCategoryLegalDisclaimer) {
 			continue
 		}
 		// put the strings together low level
