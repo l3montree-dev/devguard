@@ -515,7 +515,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	invitations, err := controller.invitationRepository.FindByOrgID(ctx.Request().Context(), controller.organizationRepository.GetDB(ctx.Request().Context(), nil), organization.ID.String())
+	invitations, err := controller.invitationRepository.FindByOrgID(ctx.Request().Context(), nil, organization.ID.String())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get invitations of organization").WithInternal(err)
 	}
