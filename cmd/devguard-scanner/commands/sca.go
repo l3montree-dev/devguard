@@ -104,6 +104,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning oci image", "image", image)
 		args := []string{"image", image, "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 
 		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	} else if isDir {
@@ -111,6 +112,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		prepareTrivyCommand(workDir)
 		args := []string{"fs", ".", "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 		// scanning a directory - we need to switch to the directory first because trivy needs to run in the context of the project to be able to find the dependencies
 		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 		trivyCmd.Dir = workDir
@@ -118,6 +120,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning single file", "file", maybeFilename)
 		args := []string{"image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
@@ -350,6 +353,7 @@ func handleScanResponse(body io.Reader) error {
 
 func scaCommand(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
 		config.RuntimeBaseConfig.Image = args[0]
 	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
@@ -386,7 +390,10 @@ func NewSCACommand() *cobra.Command {
 This command can accept either an OCI image reference (e.g. ghcr.io/org/image:tag) via
 --image or as the first positional argument, or a local path/tar file via --path or as
 the first positional argument. The command will generate or accept an SBOM, upload it to
-DevGuard and return vulnerability results.`,
+DevGuard and return vulnerability results.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying trivy invocation.
+See the trivy CLI reference for available flags: https://trivy.dev/docs/latest/guide/references/configuration/cli/trivy/`,
 		Example: `  # Scan a container image
   devguard-scanner sca ghcr.io/org/image:tag
 
@@ -397,7 +404,10 @@ DevGuard and return vulnerability results.`,
   devguard-scanner sca --image ghcr.io/org/image:tag --assetName my-app --token YOUR_TOKEN
 
   # Scan and fail on high risk vulnerabilities
-  devguard-scanner sca ./project --failOnRisk high`,
+  devguard-scanner sca ./project --failOnRisk high
+
+  # Forward extra flags to trivy
+  devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m`,
 		RunE: scaCommand,
 	}
 

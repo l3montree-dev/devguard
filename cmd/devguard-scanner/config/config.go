@@ -110,6 +110,10 @@ var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
 var RuntimeAttestationConfig AttestationConfig
 
+// RuntimeExtraArgs holds args passed after a "--" separator on the command line, to be
+// forwarded verbatim to the underlying scanner binary (trivy, semgrep, checkov, gitleaks).
+var RuntimeExtraArgs []string
+
 func ParseBaseConfig(runningCMD string) {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
