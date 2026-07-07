@@ -14,6 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package dtos
 
+import "time"
+
 type InvitationStatus = string
 
 const (
@@ -24,5 +26,6 @@ const (
 type InvitedUserDTO struct {
 	ID               string           `json:"id"`
 	Email            string           `json:"email"`
+	ExpiryDate       time.Time        `json:"expiryDate"`
 	InvitationStatus InvitationStatus `json:"invitationStatus"`
 }

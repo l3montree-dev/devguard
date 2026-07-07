@@ -31,6 +31,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	expiryDuration = 48 * time.Hour
+)
+
 type OrgController struct {
 	organizationRepository shared.OrganizationRepository
 	orgService             shared.OrgService
@@ -38,6 +42,11 @@ type OrgController struct {
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
 	adminService           shared.AdminService
+}
+
+func isInvitationExpired(invite models.Invitation) bool {
+	now := time.Now()
+	return now.After(invite.CreatedAt.Add(expiryDuration))
 }
 
 func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService) *OrgController {
@@ -210,9 +219,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
 
-	// Expiry of invitation set to 15 min, we don't need to save it in the database if we adhere to convention like this
-	now := time.Now()
-	if now.After(invitation.CreatedAt.Add(15 * time.Minute)) {
+	if isInvitationExpired(invitation) {
 		return echo.NewHTTPError(400, "invitation expired")
 	}
 
@@ -514,10 +521,9 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 	}
 
 	var invitedUsers []dtos.InvitedUserDTO
-	now := time.Now()
 	for _, inv := range invitations {
 		var invitationStatus dtos.InvitationStatus
-		if now.After(inv.CreatedAt.Add(15 * time.Minute)) {
+		if isInvitationExpired(inv) {
 			invitationStatus = dtos.InvitationStatusExpired
 		} else {
 			invitationStatus = dtos.InvitationStatusPending
@@ -525,6 +531,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 		invitedUsers = append(invitedUsers, dtos.InvitedUserDTO{
 			ID:               inv.ID.String(),
 			Email:            inv.Email,
+			ExpiryDate:       inv.CreatedAt.Add(expiryDuration),
 			InvitationStatus: invitationStatus,
 		})
 	}
