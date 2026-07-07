@@ -29,6 +29,7 @@ type ArtifactRouter struct {
 func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
 	artifactController *controllers.ArtifactController,
+	assetController *controllers.AssetController,
 	externalReferenceController *controllers.ExternalReferenceController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
@@ -43,6 +44,7 @@ func NewArtifactRouter(
 	artifactRouter.GET("/vex.xml/", artifactController.VEXXML)
 	artifactRouter.GET("/sbom.pdf/", artifactController.BuildPDFFromSBOM)
 	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
+	artifactRouter.GET("/badges/:badge/", assetController.GetBadges)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
