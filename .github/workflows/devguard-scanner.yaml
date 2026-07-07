@@ -22,7 +22,7 @@ jobs:
       with:
         submodules: recursive
         persist-credentials: false
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         install_url: https://releases.nixos.org/nix/nix-2.34.4/install
         extra_nix_config: |
@@ -43,7 +43,7 @@ jobs:
       with:
         submodules: recursive
         persist-credentials: false
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         install_url: https://releases.nixos.org/nix/nix-2.34.4/install
         extra_nix_config: |
