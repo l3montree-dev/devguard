@@ -154,7 +154,7 @@ func ParseBaseConfig(runningCMD string) {
 	}
 
 	if RuntimeBaseConfig.Token == "" && !utils.RunsInCI() {
-		if token, err := getTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
+		if token, err := GetTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
 			RuntimeBaseConfig.Token = token
 		}
 	}
@@ -172,7 +172,7 @@ func StoreTokenInKeyring(apiURL, assetName, token string) error {
 	return keyring.Set("devguard/"+apiURL+"/"+assetName, "token", token)
 }
 
-func getTokenFromKeyring(apiURL, assetName string) (string, error) {
+func GetTokenFromKeyring(apiURL, assetName string) (string, error) {
 	return keyring.Get("devguard/"+apiURL+"/"+assetName, "token")
 }
 
