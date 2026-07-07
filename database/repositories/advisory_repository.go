@@ -61,6 +61,7 @@ func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, 
 }
 
 func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *gorm.DB, id int64, advisory *models.Advisory) error {
+	advisory.ID = id
 	return advisoryRepository.GetDB(ctx, tx).Session(&gorm.Session{FullSaveAssociations: true}).Save(advisory).Error
 }
 

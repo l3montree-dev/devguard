@@ -548,20 +548,22 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	}
 	org := shared.GetOrg(ctx)
 	asset := shared.GetAsset(ctx)
-
-	parsedID := strings.TrimSuffix(cveID[strings.LastIndex(cveID, "-")+1:], ".json")
-	id, err := strconv.ParseInt(parsedID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("ungültige advisory ID %q aus %q: %w", parsedID, cveID, err)
-	}
-
-	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, id)
-
-	// remove everything <asset-slug>_ from the beginning of the document id
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
 	var report gocsaf.Advisory
+	var err error
 
 	if strings.Contains(strings.ToLower(cveID), "dgsa") {
+		parsedID := cveID[strings.LastIndex(cveID, "-")+1:]
+		id, parseErr := strconv.ParseInt(parsedID, 10, 64)
+		if parseErr != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid advisory ID %q in %q", parsedID, cveID))
+		}
+
+		advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, id)
+		if err != nil {
+			return err
+		}
+
 		report, err = controller.csafService.GenerateCSAFReportForAdvisory(ctx.Request().Context(), &advisory, org.Name, asset.ID, asset.Name)
 		if err != nil {
 			return err

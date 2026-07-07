@@ -1462,8 +1462,7 @@ func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, ad
 		return csafDoc, fmt.Errorf("no affected packages found for asset %s", advisory.AssetID)
 	}
 
-	now := time.Now()
-	cveID := fmt.Sprintf("DGSA-%d-%d", now.Year(), advisory.ID)
+	cveID := fmt.Sprintf("DGSA-%d-%d", advisory.CreatedAt.Year(), advisory.ID)
 
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: new(gocsaf.CSAFVersion20),
@@ -1490,11 +1489,6 @@ func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, ad
 		return csafDoc, err
 	}
 	csafDoc.Document.Tracking = &tracking
-
-	summaryText := utils.OrDefault(utils.EmptyThenNil(advisory.Description), advisory.Title)
-	if summaryText == "" {
-		summaryText = fmt.Sprintf("Security advisory %s.", cveID)
-	}
 
 	tree, err := generateProductTreeForAdvisory(ctx, assetID, advisory.AffectedPackages)
 	if err != nil {

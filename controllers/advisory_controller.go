@@ -83,6 +83,10 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
 
+	if advisory.AssetID != shared.GetAsset(ctx).ID {
+		return echo.NewHTTPError(404, "advisory not found")
+	}
+
 	return ctx.JSON(200, advisory)
 }
 
@@ -105,6 +109,11 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 		}
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
 	}
+
+	if advisory.AssetID != shared.GetAsset(ctx).ID {
+		return echo.NewHTTPError(404, "advisory not found")
+	}
+
 	currentVisibility := advisory.Visibility
 
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
@@ -126,10 +135,22 @@ func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid id provided")
 	}
 
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+		}
+		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
+	}
+
+	if advisory.AssetID != shared.GetAsset(ctx).ID {
+		return echo.NewHTTPError(404, "advisory not found")
+	}
+
 	err = controller.advisoryService.Delete(ctx.Request().Context(), nil, parsedID)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not remove name").WithInternal(err)
+		return echo.NewHTTPError(500, "could not delete advisory").WithInternal(err)
 	}
 
 	return ctx.NoContent(200)
