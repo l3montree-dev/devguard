@@ -356,7 +356,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
 		config.RuntimeBaseConfig.Image = args[0]
-	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
+	} else if len(args) > 0 && args[0] != "" {
 		config.RuntimeBaseConfig.Path = args[0]
 	}
 
