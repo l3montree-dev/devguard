@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -30,21 +31,32 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	expiryDuration = 48 * time.Hour
+)
+
 type OrgController struct {
 	organizationRepository shared.OrganizationRepository
 	orgService             shared.OrgService
 	rbacProvider           shared.RBACProvider
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
+	adminService           shared.AdminService
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository) *OrgController {
+func isInvitationExpired(invite models.Invitation) bool {
+	now := time.Now()
+	return now.After(invite.CreatedAt.Add(expiryDuration))
+}
+
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
 		rbacProvider:           rbacProvider,
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
+		adminService:           adminService,
 	}
 }
 
@@ -205,6 +217,10 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	invitation, err := controller.invitationRepository.FindByCode(reqCtx, nil, code)
 	if err != nil {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
+	}
+
+	if isInvitationExpired(invitation) {
+		return echo.NewHTTPError(400, "invitation expired")
 	}
 
 	// get the user id from the session
@@ -495,14 +511,35 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	// fetch the regular members of the current organization
 	members, err := shared.FetchMembersOfOrganization(ctx)
-
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
+	invitations, err := controller.invitationRepository.FindByOrgID(ctx.Request().Context(), nil, organization.ID.String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get invitations of organization").WithInternal(err)
+	}
+
+	var invitedUsers []dtos.InvitedUserDTO
+	for _, inv := range invitations {
+		var invitationStatus dtos.InvitationStatus
+		if isInvitationExpired(inv) {
+			invitationStatus = dtos.InvitationStatusExpired
+		} else {
+			invitationStatus = dtos.InvitationStatusPending
+		}
+		invitedUsers = append(invitedUsers, dtos.InvitedUserDTO{
+			ID:               inv.ID.String(),
+			Email:            inv.Email,
+			ExpiryDate:       inv.CreatedAt.Add(expiryDuration),
+			InvitationStatus: invitationStatus,
+		})
+	}
+
 	resp := dtos.OrgDetailsDTO{
-		OrgDTO:  transformer.OrgDTOFromModel(organization),
-		Members: members,
+		OrgDTO:         transformer.OrgDTOFromModel(organization),
+		Members:        members,
+		InvitedMembers: invitedUsers,
 	}
 
 	return ctx.JSON(200, resp)
@@ -542,4 +579,22 @@ func (controller *OrgController) List(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, organizations)
+}
+
+func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+
+	ID := ctx.Param("ID")
+
+	invitationID, err := uuid.Parse(ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not parse invitation ID").WithInternal(err)
+	}
+
+	err = controller.invitationRepository.Delete(reqCtx, nil, invitationID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
 }
