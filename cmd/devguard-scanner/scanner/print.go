@@ -142,7 +142,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	prevLibrary := ""
 
 	for _, v := range sortedVulns {
-		state := "open"
+		state := "in_triage"
 		if v.Analysis != nil && v.Analysis.State != "" {
 			state = string(v.Analysis.State)
 		}
@@ -163,14 +163,14 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		exceedsThreshold := false
-		if failOnRisk != "" && state == "open" &&
+		if failOnRisk != "" && state == "in_triage" &&
 			((failOnRisk == "low" && risk > 0.1) ||
 				(failOnRisk == "medium" && risk >= 4) ||
 				(failOnRisk == "high" && risk >= 7) ||
 				(failOnRisk == "critical" && risk >= 9)) {
 			exceedsThreshold = true
 		}
-		if failOnCVSS != "" && state == "open" &&
+		if failOnCVSS != "" && state == "in_triage" &&
 			((failOnCVSS == "low" && cvss > 0.1) ||
 				(failOnCVSS == "medium" && cvss >= 4) ||
 				(failOnCVSS == "high" && cvss >= 7) ||

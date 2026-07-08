@@ -377,7 +377,9 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	} else if config.RuntimeBaseConfig.Path != "" {
 		return scanLocalFilePath(ctx)
 	}
-	return fmt.Errorf("either --image or --path must be specified, or passed as an argument")
+	// default to scan current directory
+	config.RuntimeBaseConfig.Path = "."
+	return scanLocalFilePath(ctx)
 }
 
 func NewSCACommand() *cobra.Command {
