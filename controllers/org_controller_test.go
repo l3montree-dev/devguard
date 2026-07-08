@@ -237,7 +237,10 @@ func TestOrgControllerReadDoesNotExposeWebhooks(t *testing.T) {
 	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
 	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
 
-	controller := &OrgController{}
+	mockInvitationRepository := mocks.NewInvitationRepository(t)
+	mockInvitationRepository.On("FindByOrgID", mock.Anything, mock.Anything, mock.Anything).Return([]models.Invitation{}, nil)
+
+	controller := NewOrganizationController(nil, nil, nil, nil, mockInvitationRepository, nil)
 	err := controller.Read(ctx)
 
 	assert.NoError(t, err)
