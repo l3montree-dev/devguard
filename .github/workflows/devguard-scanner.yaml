@@ -60,7 +60,7 @@ jobs:
 
 
   code-scanning:
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@main
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@0f0d1b50be4c68c594b27162d6a4d443f3c61aee # main as of 2026-07-08
     permissions:
       contents: read
       security-events: write
@@ -162,12 +162,12 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           install_url: https://releases.nixos.org/nix/nix-2.34.4/install
           extra_nix_config: |
