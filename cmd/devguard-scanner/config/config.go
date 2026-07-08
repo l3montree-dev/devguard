@@ -157,6 +157,14 @@ func ParseBaseConfig(runningCMD string) {
 		}
 	}
 
+	if RuntimeBaseConfig.AssetName != "" {
+		// normalize the asset name. We allow two different formats.
+		RuntimeBaseConfig.AssetName, err = normalize.AssetName(RuntimeBaseConfig.AssetName)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	if RuntimeBaseConfig.Token == "" && !utils.RunsInCI() {
 		if token, err := GetTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
 			RuntimeBaseConfig.Token = token

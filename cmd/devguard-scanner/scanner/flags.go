@@ -53,7 +53,7 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 // provided. It should be called after config has been parsed for commands that support
 // unauthenticated scanning (results will not be saved to DevGuard).
 func WarnIfUnauthenticated() {
-	if config.RuntimeBaseConfig.Token == "" && config.RuntimeBaseConfig.AssetName == "" {
+	if config.RuntimeBaseConfig.Token == "" || config.RuntimeBaseConfig.AssetName == "" {
 		fmt.Fprintln(os.Stderr, "Warning: You are scanning without saving the results. Provide --token and --assetName to save results to DevGuard.")
 	}
 }
