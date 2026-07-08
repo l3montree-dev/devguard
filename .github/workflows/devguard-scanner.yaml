@@ -60,7 +60,7 @@ jobs:
 
 
   code-scanning:
-    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@0f0d1b50be4c68c594b27162d6a4d443f3c61aee # main as of 2026-07-08
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@main
     permissions:
       contents: read
       security-events: write
