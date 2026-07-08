@@ -28,6 +28,7 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/pkg/errors"
@@ -156,7 +157,12 @@ func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetNam
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/organizations/"+assetName+"/signing-key", bytes.NewBuffer(bodyBytes))
+	assetSlugPath, err := normalize.AssetSlugPath(assetName)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/organizations/"+assetSlugPath+"/signing-key/", bytes.NewBuffer(bodyBytes))
 
 	if err != nil {
 		return err

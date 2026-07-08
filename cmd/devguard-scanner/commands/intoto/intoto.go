@@ -30,6 +30,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -151,7 +152,12 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 }
 
 func downloadSupplyChainLinks(ctx context.Context, c *devguard.HTTPClient, linkDir, apiURL, assetName, supplyChainID string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiURL, assetName, supplyChainID), nil)
+	assetSlugPath, err := normalize.AssetSlugPath(assetName)
+	if err != nil {
+		return errors.Wrap(err, "failed to normalize asset name")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiURL, assetSlugPath, supplyChainID), nil)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
