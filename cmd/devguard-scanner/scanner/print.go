@@ -26,6 +26,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -93,8 +94,13 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 	fmt.Println(tw.Render())
 
 	if assetName != "" {
-		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
-		fmt.Printf("See all code risks at:\n%s\n", link)
+		assetSlugPath, err := normalize.AssetSlugPath(assetName)
+		if err != nil {
+			slog.Debug("could not build asset slug path for link", "err", err)
+		} else {
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetSlugPath, slug.Make(assetVersionName)))
+			fmt.Printf("See all code risks at:\n%s\n", link)
+		}
 	}
 
 	if openCount > 0 {
@@ -236,8 +242,13 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	fmt.Println(tw.Render())
 
 	if assetName != "" && ref != "" {
-		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(ref)))
-		fmt.Printf("See all dependency risks at:\n%s\n", link)
+		assetSlugPath, err := normalize.AssetSlugPath(assetName)
+		if err != nil {
+			slog.Debug("could not build asset slug path for link", "err", err)
+		} else {
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetSlugPath, slug.Make(ref)))
+			fmt.Printf("See all dependency risks at:\n%s\n", link)
+		}
 	}
 
 	if thresholdViolations > 0 {

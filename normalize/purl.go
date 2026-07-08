@@ -189,3 +189,14 @@ func AssetName(assetName string) (string, error) {
 
 	return fmt.Sprintf("%s/%s/%s", assetParts[0], assetParts[1], assetParts[2]), nil
 }
+
+// AssetSlugPath expands a normalized "<organization>/<project>/<asset>" name
+// into the web UI path "<organization>/projects/<project>/assets/<asset>".
+func AssetSlugPath(assetName string) (string, error) {
+	assetParts := strings.Split(assetName, "/")
+	if len(assetParts) != 3 {
+		return "", fmt.Errorf("invalid asset name: %s", assetName)
+	}
+
+	return fmt.Sprintf("%s/projects/%s/assets/%s", assetParts[0], assetParts[1], assetParts[2]), nil
+}
