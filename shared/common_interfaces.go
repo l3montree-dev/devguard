@@ -676,7 +676,7 @@ type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
 	ExportRCWithDiff(ctx context.Context, localArchive bool) error
-	FetchAllCSAFSources(ctx context.Context) error
+	FetchAllCSAFSources(ctx context.Context) ([]models.CVE, error)
 }
 
 type AdminService interface {

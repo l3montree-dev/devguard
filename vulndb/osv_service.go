@@ -364,7 +364,7 @@ var deduplicateCveMap = sync.Map{} // map[string]struct{} to track already proce
 // fetchAndImportOSV fetches all OSV vulnerabilities from the network, writes them to the
 // database via tx, runs cleanup, and returns the surviving entries plus surviving CVE IDs.
 // The caller is responsible for Begin/Commit/Rollback on tx.
-func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStart time.Time) ([]OSVEntry, map[string]struct{}, error) {
+func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStart time.Time) ([]OSVEntry, error) {
 	zipPushWaitGroup := &sync.WaitGroup{}
 	zipWorkWaitGroup := &sync.WaitGroup{}
 
@@ -403,12 +403,12 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 
 	// check if we ran into any errors while fetching
 	if n := fetchFailures.Load(); n > 0 {
-		return nil, nil, fmt.Errorf("aborting export: %d osv fetch failures; will retry on next run", n)
+		return nil, fmt.Errorf("aborting export: %d osv fetch failures; will retry on next run", n)
 	}
 
 	// double check if we could fetch any data at all
 	if len(allOSVVulns) == 0 {
-		return nil, nil, fmt.Errorf("could not fetch any OSV vulns")
+		return nil, fmt.Errorf("could not fetch any OSV vulns")
 	}
 
 	// sort the slice so the import is able to fast exit after hitting the last timestamp
@@ -419,34 +419,37 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 	slog.Info("fetched OSV vulns and malware", "entries", len(allOSVVulns), "latest", allOSVVulns[0].ModifiedTimestamp.Format(time.DateTime))
 
 	if err := CreateStagingTables(ctx, tx); err != nil {
-		return nil, nil, fmt.Errorf("could not create staging tables: %w", err)
+		return nil, fmt.Errorf("could not create staging tables: %w", err)
 	}
 	malRows := gobOSVToMalTransformer(allOSVVulns)
 	vulnRows := gobOSVToVulnTransformer()(allOSVVulns)
-	fakeRows, fakeComps, osvEntries := buildFakePackages()
+	fakeRows, fakeComps, fakeOSVEntries := buildFakePackages()
 	// add the fake packages to the allOSVVulns - that is the gob file we are writing to disk for the import, so it needs to contain all entries, including the fake ones.
-	allOSVVulns = append(allOSVVulns, osvEntries...)
+	allOSVVulns = append(allOSVVulns, fakeOSVEntries...)
 	malRows.pkgs = append(malRows.pkgs, fakeRows...)
 	malRows.comps = append(malRows.comps, fakeComps...)
 	if err := InsertCVEsBulk(ctx, tx, vulnRows.CVEs, "cves_stage"); err != nil {
-		return nil, nil, fmt.Errorf("could not insert cves: %w", err)
+		return nil, fmt.Errorf("could not insert cves: %w", err)
 	}
 	if err := InsertCVERelationshipsBulk(ctx, tx, vulnRows.CVERelationships, "cve_relationships_stage"); err != nil {
-		return nil, nil, fmt.Errorf("could not insert cve relationships: %w", err)
+		return nil, fmt.Errorf("could not insert cve relationships: %w", err)
 	}
 	if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
-		return nil, nil, fmt.Errorf("could not insert affected components: %w", err)
+		return nil, fmt.Errorf("could not insert affected components: %w", err)
 	}
 	if err := insertCVEAffectedComponentsBulk(ctx, tx, vulnRows.CVEAffectedComponents, "cve_affected_component_stage"); err != nil {
-		return nil, nil, fmt.Errorf("could not insert cve affected components: %w", err)
+		return nil, fmt.Errorf("could not insert cve affected components: %w", err)
 	}
 	if err := insertMaliciousPackagesBulk(ctx, tx, malRows.pkgs, malRows.comps, "mal_pkgs_stage", "mal_comps_stage"); err != nil {
-		return nil, nil, fmt.Errorf("could not insert malicious packages: %w", err)
+		return nil, fmt.Errorf("could not insert malicious packages: %w", err)
 	}
 	if err := FlushOSVStagingTables(ctx, tx); err != nil {
-		return nil, nil, fmt.Errorf("could not flush osv staging tables: %w", err)
+		return nil, fmt.Errorf("could not flush osv staging tables: %w", err)
 	}
+	return allOSVVulns, nil
+}
 
+func cleanUpAndFilterSurvivors(ctx context.Context, tx pgx.Tx, allOSVVulns []OSVEntry) ([]OSVEntry, map[string]struct{}, error) {
 	// Delete orphan CVEs and affected_components so the DB state matches what
 	// importers will end up with, and so integrity checksums are valid.
 	if err := runCleanUpJobs(ctx, tx); err != nil {
@@ -483,7 +486,7 @@ func (s osvService) fetchAndImportOSV(ctx context.Context, tx pgx.Tx, importStar
 			kept = append(kept, e)
 		}
 	}
-	slog.Info("filtered OSV entries after cleanup", "before", len(vulnRows.CVEs), "after", len(surviving))
+	slog.Info("filtered OSV entries after cleanup", "before", len(allOSVVulns), "after", len(surviving))
 	return kept, surviving, nil
 }
 
@@ -554,7 +557,7 @@ func (s osvService) getOSVZipContainingEcosystem(ctx context.Context, ecosystem 
 		return nil, errors.Wrap(err, "could not create request")
 	}
 
-	res, err := utils.NewEgressClient(time.Second * 90).Do(req)
+	res, err := utils.NewEgressClient(time.Minute * 20).Do(req) // TODO-Change back to reasonable timeout
 	if err != nil {
 		return nil, errors.Wrap(err, "could not download zip")
 	}
@@ -1068,6 +1071,25 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		slog.Error("could not clean up orphan affected components, continuing...", "error", err)
 	} else {
 		slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
+	}
+
+	// since advisory type cves can only be found via their target_cve relations
+	// we can delete every relations where target_cve does not exist
+	start = time.Now()
+	_, err = tx.Exec(ctx, `
+	DELETE FROM 
+		cve_relationships cr 
+	WHERE cr.relationship_type = $1
+	AND NOT EXISTS (
+		SELECT FROM 
+			cves 
+		WHERE 
+			cr.target_cve = cves.cve)
+	;`, dtos.RelationshipTypeAdvisory)
+	if err != nil {
+		slog.Error("could not delete obsolete advisory relationships, continuing...", "error", err)
+	} else {
+		slog.Info("successfully cleaned up obsolete advisory relationships", "took", time.Since(start))
 	}
 
 	return nil

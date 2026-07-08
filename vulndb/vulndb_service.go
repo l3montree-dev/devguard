@@ -1,9 +1,7 @@
 package vulndb
 
 import (
-	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -151,9 +149,14 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
-	osvEntries, survivingCVEs, err := s.osv.fetchAndImportOSV(ctx, tx, start)
+	allOSVVulns, err := s.osv.fetchAndImportOSV(ctx, tx, start)
 	if err != nil {
 		return fmt.Errorf("OSV fetch failed: %w", err)
+	}
+
+	csafAdvisories, err := s.FetchAllCSAFSources(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch CSAF sources: %w", err)
 	}
 
 	// then we can add the additional data sources
@@ -161,6 +164,15 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	euvdRelationships, err := s.euvdService.importEUVDAliases(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
+	}
+
+	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
+		return fmt.Errorf("could not import CSAF advisories: %w", err)
+	}
+
+	osvEntries, survivingCVEs, err := cleanUpAndFilterSurvivors(ctx, tx, allOSVVulns)
+	if err != nil {
+		return fmt.Errorf("could not clean up and filter OSV entries: %w", err)
 	}
 
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
@@ -172,10 +184,17 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	}
 	slog.Info("wrote osv.gob", "entries", len(osvEntries))
 
+	euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
 	if err := writeGobFileItems(euvdRelationships, "euvd_relationships.gob"); err != nil {
 		return fmt.Errorf("could not write EUVD gob: %w", err)
 	}
 	slog.Info("wrote euvd relationships data", "entries", len(euvdRelationships))
+
+	survivingAdvisories := filterSurvivingAdvisories(csafAdvisories, survivingCVEs)
+	if err := writeGobFileItems(survivingAdvisories, "csaf_advisories.gob"); err != nil {
+		return fmt.Errorf("could not write csaf advisories gob: %w", err)
+	}
+	slog.Info("wrote csaf advisories data", "entries", len(survivingAdvisories))
 
 	// Fetch the remaining sources in parallel (network only — no DB writes yet).
 	var (
@@ -338,6 +357,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	archiveFiles := []string{
 		"osv.gob",
 		"euvd_relationships.gob",
+		"csaf_advisories.gob",
 		"epss.gob",
 		"cisakev.gob",
 		"exploits.gob",
@@ -510,6 +530,11 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 		return fmt.Errorf("could not read euvd relationships gob: %w", err)
 	}
 
+	csafAdvisories, err := readAllGobItems[models.CVE](workingDir + "/csaf_advisories.gob")
+	if err != nil {
+		return fmt.Errorf("could not read csaf advisories gob: %w", err)
+	}
+
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
@@ -563,7 +588,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships)
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships, csafAdvisories)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -594,6 +619,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	var (
 		osvEntries        []OSVEntry
 		euvdRelationships []models.CVERelationship
+		csafAdvisories    []models.CVE
 		epssData          map[string]dtos.EPSS
 		kevEntries        []KEVEntry
 		gobExploit        []GobExploit
@@ -617,6 +643,16 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 			return fmt.Errorf("could not read EUVD gob: %w", err)
 		}
 		slog.Info("decoded euvd_relationships.gob", "entries", len(euvdRelationships), "took", time.Since(t))
+		return nil
+	})
+	group.Go(func() error {
+		t := time.Now()
+		var err error
+		csafAdvisories, err = readAllGobItems[models.CVE](workingDir + "/csaf_advisories.gob")
+		if err != nil {
+			return fmt.Errorf("could not read csaf advisory gob: %w", err)
+		}
+		slog.Info("decoded csaf_advisories.gob", "entries", len(csafAdvisories), "took", time.Since(t))
 		return nil
 	})
 	group.Go(func() error {
@@ -654,7 +690,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	malRows := gobOSVToMalTransformer(osvEntries)
 	exploits := gobExploitFilterTransformer(gobExploit)
 
-	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships); err != nil {
+	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships, csafAdvisories); err != nil {
 		return err
 	}
 	return nil
@@ -669,7 +705,13 @@ func heapMB() uint64 {
 	return m.HeapAlloc / 1024 / 1024
 }
 
-func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship) error {
+func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship, csafAdvisories []models.CVE) error {
+	advisoryRelationships := make([]models.CVERelationship, 0, len(csafAdvisories)*8)
+	for i := range csafAdvisories {
+		advisoryRelationships = append(advisoryRelationships, csafAdvisories[i].Relationships...)
+		csafAdvisories[i].Relationships = nil
+	}
+
 	slog.Info("start writing rows to database", "heap_alloc_mb", heapMB())
 	start := time.Now()
 
@@ -686,13 +728,13 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	}
 
 	t := time.Now()
-	if err := InsertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
+	if err := InsertCVEsBulk(ctx, tx, append(rows.CVEs, csafAdvisories...), "cves_stage"); err != nil {
 		return fmt.Errorf("could not copy cves to staging: %w", err)
 	}
 	slog.Info("copied cves to staging", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := InsertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
+	if err := InsertCVERelationshipsBulk(ctx, tx, append(rows.CVERelationships, advisoryRelationships...), "cve_relationships_stage"); err != nil {
 		return fmt.Errorf("could not copy cve relationships to staging: %w", err)
 	}
 	slog.Info("copied cve_relationships to staging", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
@@ -973,7 +1015,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 // streamToDatabase drains all three input channels in a single goroutine, writes all rows
 // into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
 // flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship) error {
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship, advisories []models.CVE) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1079,7 +1121,17 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		}
 	}
 
-	if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+	advisoryRelationships := make([]models.CVERelationship, 0, len(advisories)*8)
+	for i := range advisories {
+		advisoryRelationships = append(advisoryRelationships, advisories[i].Relationships...)
+		advisories[i].Relationships = nil
+	}
+
+	if err := InsertCVEsBulk(ctx, tx, advisories, "cves_stage"); err != nil {
+		return fmt.Errorf("could not insert advisories: %w", err)
+	}
+
+	if err := InsertCVERelationshipsBulk(ctx, tx, append(euvdRelationships, advisoryRelationships...), "cve_relationships_stage"); err != nil {
 		return fmt.Errorf("could not insert euvd cve relationships: %w", err)
 	}
 	relationshipCount += len(euvdRelationships)
@@ -1133,15 +1185,87 @@ func mergeKEVInformation(cisaKEV, euvdKEV []models.CVE) []models.CVE {
 
 var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/"}
 
-func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) error {
+func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.CVE, error) {
+	allCVEs := make([]models.CVE, 0, len(csafSources)*3000)
 	for source, url := range csafSources {
 		slog.Info("start fetching CSAF reports", "source", source)
-		err := service.FetchCSAFData(ctx, url)
+		cves, err := service.FetchCSAFData(ctx, url)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		allCVEs = append(allCVEs, cves...)
+	}
+	return allCVEs, nil
+}
+
+func importCSAFAdvisories(ctx context.Context, tx pgx.Tx, advisories []models.CVE) error {
+	if len(advisories) == 0 {
+		return nil
+	}
+
+	advisoryRelationships := make([]models.CVERelationship, 0, len(advisories)*8)
+	for i := range advisories {
+		advisoryRelationships = append(advisoryRelationships, advisories[i].Relationships...)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE csaf_cves_stage (LIKE cves_stage) ON COMMIT DROP;
+		CREATE TEMP TABLE csaf_cve_relationships_stage (LIKE cve_relationships_stage) ON COMMIT DROP;`); err != nil {
+		return fmt.Errorf("could not create csaf staging tables: %w", err)
+	}
+
+	if err := InsertCVEsBulk(ctx, tx, advisories, "csaf_cves_stage"); err != nil {
+		return fmt.Errorf("could not insert advisory cves into staging: %w", err)
+	}
+	if err := InsertCVERelationshipsBulk(ctx, tx, advisoryRelationships, "csaf_cve_relationships_stage"); err != nil {
+		return fmt.Errorf("could not insert advisory relationships into staging: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add)
+		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add
+		FROM csaf_cves_stage
+		ON CONFLICT (id) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not flush advisory cves: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cve_relationships (target_cve, source_cve, relationship_type)
+		SELECT target_cve, source_cve, relationship_type
+		FROM csaf_cve_relationships_stage
+		ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING`); err != nil {
+		return fmt.Errorf("could not flush advisory relationships: %w", err)
+	}
+
+	return nil
+}
+
+func filterRelationshipsBySurvivingSource(relationships []models.CVERelationship, survivingCVEs map[string]struct{}) []models.CVERelationship {
+	kept := relationships[:0]
+	for _, relationship := range relationships {
+		if _, ok := survivingCVEs[relationship.SourceCVE]; ok {
+			kept = append(kept, relationship)
 		}
 	}
-	return nil
+	return kept
+}
+
+func filterSurvivingAdvisories(advisories []models.CVE, survivingCVEs map[string]struct{}) []models.CVE {
+	kept := advisories[:0]
+	for _, advisory := range advisories {
+		if _, ok := survivingCVEs[advisory.CVE]; !ok {
+			continue
+		}
+		relationships := advisory.Relationships[:0]
+		for _, relationship := range advisory.Relationships {
+			if _, ok := survivingCVEs[relationship.TargetCVE]; ok {
+				relationships = append(relationships, relationship)
+			}
+		}
+		advisory.Relationships = relationships
+		kept = append(kept, advisory)
+	}
+	return kept
 }
 
 const (
@@ -1170,18 +1294,6 @@ func (service VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) 
 	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
 }
 
-func (service VulnDBService) FetchCSAFDataDiff(ctx context.Context, baseURL string, lastImport time.Time) ([]models.CVE, error) {
-	start := time.Now()
-
-	fileNames, err := fetchRecentlyChangedCSAFRecords(ctx, baseURL, lastImport)
-	if err != nil {
-		return nil, err
-	}
-	slog.Info("successfully fetched recently changed filenames", len(fileNames), "time", time.Since(start))
-	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
-
-}
-
 func fetchAllCSAFRecords(ctx context.Context, baseURL string) ([]string, error) {
 	slog.Info("start reading index.txt")
 	buf, err := DoGetRequest(ctx, baseURL+"index.txt", nil)
@@ -1192,44 +1304,6 @@ func fetchAllCSAFRecords(ctx context.Context, baseURL string) ([]string, error) 
 	fileNames := strings.Fields(string(buf))
 	if len(fileNames) == 0 {
 		return nil, fmt.Errorf("no files found in index.txt file")
-	}
-	return fileNames, err
-}
-
-func fetchRecentlyChangedCSAFRecords(ctx context.Context, baseURL string, lastImport time.Time) ([]string, error) {
-	slog.Info("start reading index.txt")
-	buf, err := DoGetRequest(ctx, baseURL+"changes.csv", nil)
-	if err != nil {
-		return nil, err
-	}
-	bufReader := bytes.NewBuffer(buf)
-
-	cvsReader := csv.NewReader(bufReader)
-	if err != nil {
-		return nil, fmt.Errorf("could not read csv file: %w", err)
-	}
-
-	fileNames := make([]string, 0, 1000)
-	for {
-		// iterate entries one by one
-		entry, err := cvsReader.Read()
-		if err != nil {
-			if err == io.EOF { // EOF: we are done
-				break
-			}
-			// else cancel import
-			return nil, fmt.Errorf("could not parse csv row: %w", err)
-		}
-
-		timestamp, err := time.Parse(time.RFC3339Nano, entry[1])
-		if err != nil {
-			return nil, fmt.Errorf("could not parse timestamp from csv row: %w", err)
-		}
-
-		if timestamp.Before(lastImport) {
-			break // sort desc by timestamp -> all remaining files are also before
-		}
-		fileNames = append(fileNames, entry[0])
 	}
 	return fileNames, err
 }
@@ -1252,6 +1326,11 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 		close(fetchingJobs)
 	}()
 
+	go func() {
+		fetchingWorkGroup.Wait()
+		close(advisories)
+	}()
+
 	convertingWaitGroup := &sync.WaitGroup{}
 	cveOutput := make(chan *models.CVE, batchSize)
 	for range csafConverterWorkers {
@@ -1271,7 +1350,7 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 		cves = append(cves, *cve)
 	}
 
-	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(advisories))
+	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(cves))
 	return cves, nil
 }
 
@@ -1335,6 +1414,7 @@ func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *minim
 		if tracking == nil || tracking.ID == nil {
 			slog.Error("encountered error", "err", fmt.Errorf("no id in tracking object can be found"))
 		}
+
 		cve := models.CVE{CVE: string(*tracking.ID)}
 
 		if tracking.InitialReleaseDate != nil {
@@ -1352,14 +1432,17 @@ func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *minim
 		}
 
 		cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
+		cve.ID = cve.CalculateHash()
+		cve.ContentHash = cve.CalculateContentHash()
 
 		for _, vuln := range csafReport.Vulnerabilities {
 			if vuln == nil || vuln.CVE == nil {
 				continue
 			}
+			// the advisory is the source (it carries the fk on cves.cve), the referenced official cve is the target
 			cve.Relationships = append(cve.Relationships, models.CVERelationship{
-				TargetCVE:        string(*vuln.CVE),
 				SourceCVE:        cve.CVE,
+				TargetCVE:        string(*vuln.CVE),
 				RelationshipType: dtos.RelationshipTypeAdvisory,
 			})
 		}
@@ -1379,50 +1462,6 @@ func buildCVEDesciptionFromCSAFNotes(notes []*minimalCSAFNote) string {
 		description += *note.Title + ": " + *note.Text + " | "
 	}
 	return description
-}
-
-func (service VulnDBService) cveDatabaseWriterWorker(ctx context.Context, waitGroup *sync.WaitGroup, tx shared.DB, jobs chan *models.CVE) {
-	defer waitGroup.Done()
-	cves := make([]models.CVE, 0, csafWriterBatchSize)
-	flushCVEs := func() {
-		if err := service.osv.cveRepository.CreateBatch(ctx, tx, cves); err != nil {
-			slog.Error("could not save cves batch", "err", err)
-		}
-		cves = cves[:0]
-	}
-	for cve := range jobs {
-		cves = append(cves, *cve)
-		if len(cves) == csafWriterBatchSize {
-			flushCVEs()
-		}
-	}
-	flushCVEs()
-}
-
-// bufferGauge reports the current occupancy (len/cap) of a pipeline channel.
-type bufferGauge struct {
-	name string
-	len  func() int
-	cap  func() int
-}
-
-// monitorPipeline logs each channel's occupancy every interval until stop is closed.
-// len near cap means the stage reading from that channel is the bottleneck.
-func monitorPipeline(stop <-chan struct{}, interval time.Duration, gauges []bufferGauge) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-stop:
-			return
-		case <-ticker.C:
-			attrs := make([]any, 0, len(gauges))
-			for _, g := range gauges {
-				attrs = append(attrs, g.name, fmt.Sprintf("%d/%d", g.len(), g.cap()))
-			}
-			slog.Info("pipeline buffers", attrs...)
-		}
-	}
 }
 
 // executes a GET request with an empty body to the specified url

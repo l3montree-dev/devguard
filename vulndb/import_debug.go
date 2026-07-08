@@ -130,6 +130,23 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			slog.Error("show-diff: could not insert euvd cve_relationships into staging", "err", err)
 			return
 		}
+		csafAdvisories, err := readAllGobItems[models.CVE](workingDir + "/csaf_advisories.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read csaf_advisories.gob", "err", err)
+			return
+		}
+		if err := InsertCVEsBulk(ctx, tx, csafAdvisories, "cves_stage"); err != nil {
+			slog.Error("show-diff: could not insert advisory cves into staging", "err", err)
+			return
+		}
+		advisoryRelationships := make([]models.CVERelationship, 0, len(csafAdvisories)*8)
+		for i := range csafAdvisories {
+			advisoryRelationships = append(advisoryRelationships, csafAdvisories[i].Relationships...)
+		}
+		if err := InsertCVERelationshipsBulk(ctx, tx, advisoryRelationships, "cve_relationships_stage"); err != nil {
+			slog.Error("show-diff: could not insert advisory relationships into staging", "err", err)
+			return
+		}
 		if err := insertAffectedComponentsBulk(ctx, tx, vulnRows.AffectedComponents, "affected_components_stage"); err != nil {
 			slog.Error("show-diff: could not insert affected_components into staging", "err", err)
 			return
