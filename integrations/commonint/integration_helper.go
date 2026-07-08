@@ -548,6 +548,26 @@ func stateToLabel(state dtos.VulnState) string {
 	return "unknown"
 }
 
+// githubLabelMaxLength is GitHub's hard limit on label name length. Labels
+// exceeding it are rejected with a 422 "Resource:Label Field:name Code:invalid"
+// error (verified empirically: a 50-char label name succeeds, 51 chars fails).
+const githubLabelMaxLength = 50
+
+// truncateLabelMiddle shortens name to at most githubLabelMaxLength by cutting
+// out its middle, keeping the head and tail. Artifact names (OCI purls) often
+// differ near the end (arch, tag) while sharing a long common prefix, so a
+// middle ellipsis keeps them distinguishable where a tail truncation wouldn't.
+func truncateLabelMiddle(name string) string {
+	if len(name) <= githubLabelMaxLength {
+		return name
+	}
+	const ellipsis = "..."
+	budget := githubLabelMaxLength - len(ellipsis)
+	headLen := (budget + 1) / 2
+	tailLen := budget - headLen
+	return name[:headLen] + ellipsis + name[len(name)-tailLen:]
+}
+
 func GetLabels(vuln models.Vuln) []string {
 	labels := []string{
 		"devguard",
@@ -579,7 +599,7 @@ func GetLabels(vuln models.Vuln) []string {
 		}
 		name = strings.TrimPrefix(name, scannerDefault)
 
-		labels = append(labels, name)
+		labels = append(labels, truncateLabelMiddle(name))
 
 	}
 
