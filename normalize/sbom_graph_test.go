@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -2664,6 +2665,82 @@ func TestMergeGraphRemovals(t *testing.T) {
 		assert.NotNil(t, before.Node("pkg:pypi/aiohttp@3.13.4"),
 			"aiohttp 3.13.4 should be reachable after merge")
 	})
+
+	t.Run("merging a flat (binary-mode) scan for the same info source must drop stale transitive deps from that artifact only", func(t *testing.T) {
+		// Reproduces a real-world regression: a container image with a compiled Go
+		// binary was first scanned in a way that produced a nested dependency tree
+		// (component -> component edges), then rescanned by trivy in image/binary
+		// mode, which cannot recover a dependency graph for a statically linked
+		// binary and instead attaches every module directly to the info source
+		// (a flat list). Even though the new scan of this artifact no longer
+		// declares golang.org/x/crypto@v0.50.0 anywhere, it survived because
+		// MergeGraph only clears/replaces edges for parent IDs that are explicitly
+		// present in the incoming graph - and the incoming (flat) graph never
+		// mentions the old intermediate components (e.g. circl) as a parent at all.
+		//
+		// golang.org/x/crypto@v0.50.0 is also a dependency of three other
+		// artifacts in the fixture that are not part of this merge, reached
+		// through the very same shared pkg:golang/github.com/cloudflare/circl@v1.6.3
+		// node (components are deduped globally by name+version, not per
+		// artifact). Per "last one wins" semantics, the rescan's silence about
+		// circl's children is authoritative for that node everywhere it's
+		// referenced, so those other artifacts lose the edge too - a deliberate,
+		// accepted trade-off rather than a bug (see MergeGraph's comment).
+		const rescannedArtifact = "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner&arch=arm64&tag=main-arm64"
+		const untouchedArtifact = "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner&arch=amd64&tag=main-amd64"
+		const vulnerablePURL = "pkg:golang/golang.org/x/crypto@v0.50.0"
+
+		before, err := loadSBOMGraphFromFile(t, "testdata/merge-graph-before.json")
+		assert.NoError(t, err)
+
+		other, err := loadSBOMGraphFromFile(t, "testdata/merge-graph-other.json")
+		assert.NoError(t, err)
+
+		assert.NotNil(t, before.Node(vulnerablePURL),
+			"sanity check: fixture should contain the vulnerable version before merging")
+		assert.Nil(t, other.Node(vulnerablePURL),
+			"sanity check: the new scan should not reference the vulnerable version at all")
+
+		// sanity check: the vulnerable version is reachable from both the artifact
+		// being rescanned and an unrelated artifact before the merge happens.
+		rescannedBefore := before.Clone()
+		assert.NoError(t, rescannedBefore.ScopeToArtifact(rescannedArtifact))
+		assert.True(t, rescannedBefore.IsReachable(vulnerablePURL),
+			"sanity check: vulnerable version should be reachable from the rescanned artifact before merging")
+
+		untouchedBefore := before.Clone()
+		assert.NoError(t, untouchedBefore.ScopeToArtifact(untouchedArtifact))
+		assert.True(t, untouchedBefore.IsReachable(vulnerablePURL),
+			"sanity check: vulnerable version should be reachable from the untouched artifact before merging")
+
+		before.MergeGraph(other)
+
+		rescannedAfter := before.Clone()
+		assert.NoError(t, rescannedAfter.ScopeToArtifact(rescannedArtifact))
+		assert.False(t, rescannedAfter.IsReachable(vulnerablePURL),
+			"golang.org/x/crypto@v0.50.0 should no longer be reachable from the rescanned artifact after merging a scan that dropped it")
+
+		// "Last one wins": since the untouched artifact reaches the vulnerable
+		// version through the very same shared circl@v1.6.3 node, it loses the
+		// edge too, even though its own scan was never part of this merge.
+		untouchedAfter := before.Clone()
+		assert.NoError(t, untouchedAfter.ScopeToArtifact(untouchedArtifact))
+		assert.False(t, untouchedAfter.IsReachable(vulnerablePURL),
+			"golang.org/x/crypto@v0.50.0 should also become unreachable from the untouched artifact, because it shares the same circl@v1.6.3 node whose children were just superseded")
+	})
+}
+
+func loadSBOMGraphFromFile(t *testing.T, path string) (*SBOMGraph, error) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	g := NewSBOMGraph()
+	if err := json.Unmarshal(data, g); err != nil {
+		return nil, err
+	}
+	return g, nil
 }
 
 func TestDependencyGraph(t *testing.T) {

@@ -490,6 +490,46 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 
 	}
 
+	// "Last one wins": components/info sources are identified by name+version,
+	// so the same node can be shared by multiple artifacts. Whichever scan most
+	// recently touched a given node's declared children is authoritative for
+	// that node's entire edge set from here on - even if it declares none. This
+	// deliberately does not scope the change to the artifact being merged: if a
+	// later, lower-fidelity scan (e.g. a flat binary-mode scan that can't
+	// attribute dependencies to a specific parent) re-observes a component
+	// without declaring any children for it, that supersedes whatever an older
+	// scan of the same component version said, everywhere it's referenced.
+	//
+	// Example 1 - stale transitive dep dropped everywhere it's shared:
+	//   Before: circl@v1.6.3 -> x/crypto@v0.50.0   (declared by an older, nested scan)
+	//   Other:  circl@v1.6.3 has no declared children (a flat binary-mode rescan)
+	//   Result: circl@v1.6.3 -> x/crypto@v0.50.0 is dropped, even for artifacts
+	//           other than the one just rescanned, because they reach
+	//           x/crypto@v0.50.0 through this same shared circl@v1.6.3 node.
+	//
+	// Example 2 - untouched components are unaffected:
+	//   Other never re-imports go-git@v5.18.0 at all (not in other.Nodes), so
+	//   the loop below skips it entirely and its existing edges (e.g. to
+	//   x/crypto@v0.50.0) are left exactly as they were.
+	//
+	// Example 3 - redeclared children still win via the loop above, not this one:
+	//   Other:  circl@v1.6.3 -> x/crypto@v0.53.0  (explicitly declared this time)
+	//   Result: g.Edges["circl@v1.6.3"] is reset to {x/crypto@v0.53.0} by the
+	//           "Import all edges" loop above; this loop is skipped for
+	//           circl@v1.6.3 because it IS a key in other.Edges.
+	for parentID, node := range other.Nodes {
+		if parentID == GraphRootNodeID {
+			continue
+		}
+		if node.Type != GraphNodeTypeComponent && node.Type != GraphNodeTypeInfoSource {
+			continue
+		}
+		if _, declared := other.Edges[parentID]; declared {
+			continue // already fully replaced above
+		}
+		g.Edges[parentID] = make(map[string]struct{})
+	}
+
 	// Calculate diff
 	diff := GraphDiff{}
 	afterNodes := g.reachableNodes()

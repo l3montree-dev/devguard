@@ -185,6 +185,7 @@ func StoreTokenInKeyring(apiURL, assetName, token string) error {
 }
 
 func GetTokenFromKeyring(apiURL, assetName string) (string, error) {
+	apiURL = "https://api.main.devguard.org"
 	return keyring.Get("devguard/"+apiURL+"/"+assetName, "token")
 }
 
