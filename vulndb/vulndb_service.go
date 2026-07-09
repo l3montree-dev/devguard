@@ -769,6 +769,12 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	slog.Info("copied malicious_packages to staging", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
+	if err := SyncAllTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not sync staging tables to live: %w", err)
+	}
+	slog.Info("synced staging tables to live", "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
 	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not insert epss: %w", err)
 	}
@@ -779,12 +785,6 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 		return fmt.Errorf("could not insert cisa kev: %w", err)
 	}
 	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t), "heap_alloc_mb", heapMB())
-
-	t = time.Now()
-	if err := SyncAllTables(ctx, tx); err != nil {
-		return fmt.Errorf("could not sync staging tables to live: %w", err)
-	}
-	slog.Info("synced staging tables to live", "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return fmt.Errorf("could not rebuild indexes and constraints: %w", err)
@@ -1247,54 +1247,58 @@ func fetchCSAFFileNamesFromIndex(ctx context.Context, baseURL string) ([]string,
 func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) ([]models.CVE, error) {
 	start := time.Now()
 
-	fetchingWorkGroup, ctx := errgroup.WithContext(ctx)
-	convertingWaitGroup, ctx := errgroup.WithContext(ctx)
-	errorCollectionGroup, ctx := errgroup.WithContext(ctx)
+	group, ctx := errgroup.WithContext(ctx)
 
-	fetchingJobs := make(chan string, len(fileNames))             // files to fetch
-	advisories := make(chan *minimalCSAFAdvisory, len(fileNames)) // CSAF reports to convert
-	cveOutput := make(chan *models.CVE, batchSize)                // final cve objects
+	fetchingJobs := make(chan string, csafFetchWorkers*1)           // files to fetch
+	advisories := make(chan *minimalCSAFAdvisory, csafFetchWorkers) // CSAF reports to convert
+	cveOutput := make(chan *models.CVE, batchSize)                  // final cve objects
 
-	go func() { // push all files and then close the fetching job channel
+	// producer: push all file urls, then close the jobs channel
+	group.Go(func() error {
+		defer close(fetchingJobs)
 		for _, fileName := range fileNames {
-			fetchingJobs <- baseURL + fileName
+			select {
+			case fetchingJobs <- baseURL + fileName:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
-		close(fetchingJobs)
-	}()
+		return nil
+	})
 
-	errorCollectionGroup.Go(func() error { // when all fetching routines are done, no more advisories will be pushed
-		err := fetchingWorkGroup.Wait()
+	// fetch stage: bounded worker pool; closes advisories once every fetcher returned
+	group.Go(func() error {
+		fetchers, fetchCtx := errgroup.WithContext(ctx)
+		for range csafFetchWorkers {
+			fetchers.Go(func() error {
+				return fetchCSAFReportWorker(fetchCtx, fetchingJobs, advisories, csafFetchingClient)
+			})
+		}
+		err := fetchers.Wait()
 		close(advisories)
 		return err
 	})
 
-	errorCollectionGroup.Go(
-		func() error { // when all converting groups are done, no more cves will be pushed
-			err := convertingWaitGroup.Wait()
-			close(cveOutput)
-			return err
-		})
+	// convert stage: worker pool; closes cveOutput once every converter returned
+	group.Go(func() error {
+		converters, convertCtx := errgroup.WithContext(ctx)
+		for range csafConverterWorkers {
+			converters.Go(func() error {
+				return convertCSAFReportToModelsWorker(convertCtx, advisories, cveOutput)
+			})
+		}
+		err := converters.Wait()
+		close(cveOutput)
+		return err
+	})
 
-	for range csafFetchWorkers { // start fetching worker pool
-		fetchingWorkGroup.Go(func() error {
-			return fetchCSAFReportWorker(ctx, fetchingJobs, advisories, csafFetchingClient)
-		})
-	}
-
-	for range csafConverterWorkers { // start conversion worker pool
-		convertingWaitGroup.Go(func() error {
-			return convertCSAFReportToModelsWorker(ctx, advisories, cveOutput)
-		})
-	}
-
-	// collect all the results
+	// collect the results on the main goroutine; the convert stage closes cveOutput
 	cves := make([]models.CVE, 0, len(fileNames))
 	for cve := range cveOutput {
 		cves = append(cves, *cve)
 	}
 
-	err := errorCollectionGroup.Wait()
-	if err != nil {
+	if err := group.Wait(); err != nil {
 		return nil, fmt.Errorf("ran into error while syncing CSAF advisories, source: %s, error: %w", baseURL, err)
 	}
 
@@ -1348,7 +1352,12 @@ func fetchCSAFReportWorker(ctx context.Context, jobs chan string, output chan *m
 			if err != nil {
 				return fmt.Errorf("could not unmarshal json into csaf struct: %w", err)
 			}
-			output <- &csafReport
+
+			select {
+			case output <- &csafReport:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -1408,7 +1417,12 @@ func convertCSAFReportToModelsWorker(ctx context.Context, jobs chan *minimalCSAF
 					RelationshipType: dtos.RelationshipTypeAdvisory, // use custom relationship type to distinguish them easily
 				})
 			}
-			cvesOutput <- &cve
+
+			select {
+			case cvesOutput <- &cve:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
