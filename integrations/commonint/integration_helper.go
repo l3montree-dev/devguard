@@ -603,6 +603,9 @@ func GetLabels(vuln models.Vuln) []string {
 
 	}
 
+	// deduplicate labels - if there is a collision
+	labels = utils.DeduplicateSlice(labels, func(a string) string { return a })
+
 	return labels
 }
 
