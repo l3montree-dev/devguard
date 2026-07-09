@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"runtime"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gocsaf/csaf/v3/csaf"
@@ -21,6 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -80,8 +79,8 @@ func NewVulnDBService(
 
 // ExportRC fetches all vulnerability data sources, writes gob files for each,
 // populates the database, and writes a full integrity_checks.json.
-func (s *VulnDBService) ExportRC(ctx context.Context) error {
-	return s.exportRC(ctx, false)
+func (service *VulnDBService) ExportRC(ctx context.Context) error {
+	return service.exportRC(ctx, false)
 }
 
 // ExportRCWithDiff is like ExportRC but also computes a QuickDiff against the
@@ -89,20 +88,20 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 // on exactly the previous version can skip staging tables and apply the patch directly.
 // It first imports the current artifact to establish a known baseline in the DB, then
 // exports fresh data and computes the diff — making it self-contained in CI.
-func (s *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
+func (service *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
 	slog.Info("quick-diff: importing previous artifact to establish baseline")
-	if err := s.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
+	if err := service.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
 		slog.Info("quick-diff: failed to import previous artifact, proceeding with export without diff", "error", err)
-		return s.exportRC(ctx, false)
+		return service.exportRC(ctx, false)
 	}
-	return s.exportRC(ctx, true)
+	return service.exportRC(ctx, true)
 }
 
-func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
+func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	slog.Info("start vulndb export", "compute_diff", computeDiff)
 	start := time.Now()
 
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := service.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("could not acquire db connection: %w", err)
 	}
@@ -123,7 +122,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	var prevVersion time.Time
 	if computeDiff {
 		var lastImportStr string
-		if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err != nil || lastImportStr == "" {
+		if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err != nil || lastImportStr == "" {
 			slog.Info("quick-diff: no previous import timestamp in config, skipping diff")
 			computeDiff = false
 		} else {
@@ -149,19 +148,19 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
-	allOSVVulns, err := s.osv.fetchAndImportOSV(ctx, tx, start)
+	allOSVVulns, err := service.osv.fetchAndImportOSV(ctx, tx, start)
 	if err != nil {
 		return fmt.Errorf("OSV fetch failed: %w", err)
 	}
 
-	csafAdvisories, err := s.FetchAllCSAFSources(ctx)
+	csafAdvisories, err := service.FetchAllCSAFSources(ctx)
 	if err != nil {
 		return fmt.Errorf("could not fetch CSAF sources: %w", err)
 	}
 
 	// then we can add the additional data sources
 	// load the EUVD aliases into the cve_relationship table
-	euvdRelationships, err := s.euvdService.importEUVDAliases(ctx, tx)
+	euvdRelationships, err := service.euvdService.importEUVDAliases(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
 	}
@@ -206,7 +205,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	group.Go(func() error {
 		slog.Info("start fetching EPSS data")
-		data, err := s.epss.Fetch(groupCtx)
+		data, err := service.epss.Fetch(groupCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EPSS data: %w", err)
 		}
@@ -223,13 +222,13 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		slog.Info("start fetching KEV data")
 		kevFetchCtx, kevCancel := context.WithTimeout(groupCtx, 30*time.Second)
 		defer kevCancel()
-		cisaKEVCVEs, err := s.cisaKEV.Fetch(kevFetchCtx)
+		cisaKEVCVEs, err := service.cisaKEV.Fetch(kevFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch CISA KEV data: %w", err)
 		}
 		slog.Info("successfully fetched CISA KEV data")
 
-		euvdKEVCVEs, err := s.euvdKEV.Fetch(ctx)
+		euvdKEVCVEs, err := service.euvdKEV.Fetch(ctx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EUVD KEV data: %w", err)
 		}
@@ -252,13 +251,13 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		slog.Info("start fetching exploit data")
 		exploitFetchCtx, exploitCancel := context.WithTimeout(groupCtx, 5*time.Minute)
 		defer exploitCancel()
-		edbExploits, err := s.exploitDB.Fetch(exploitFetchCtx)
+		edbExploits, err := service.exploitDB.Fetch(exploitFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch ExploitDB data: %w", err)
 		}
 		ghFetchCtx, ghCancel := context.WithTimeout(groupCtx, 10*time.Minute)
 		defer ghCancel()
-		ghExploits, err := s.githubExploits.Fetch(ghFetchCtx)
+		ghExploits, err := service.githubExploits.Fetch(ghFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch GitHub exploit data: %w", err)
 		}
@@ -399,7 +398,7 @@ func readIntegrityInformation(workingDir string) (IntegrityInformation, error) {
 // all data sources (OSV, CISA KEV, exploits, malicious packages) to the database.
 // If the integrity check fails after an incremental import, it alerts and retries
 // as a full import (ignoring the last-import watermark).
-func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
+func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
 	ctx, span := vulndbTracer.Start(ctx, "VulnDBService.ImportRC")
 
 	defer func() {
@@ -438,7 +437,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	var lastImportTime time.Time
 	var lastImportStr string
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
+	if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 
@@ -456,7 +455,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	}
 
 	// Open a single pgx connection and transaction for all DB writes.
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := service.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("could not acquire db connection: %w", err)
 	}
@@ -467,7 +466,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
-	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
+	failingTables, err := service.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
 	if err == errQuickDiffFailed {
 		// Quickdiff path was tried but failed or didn't pass integrity. Roll back the
 		// current transaction (which may have polluted temp tables) and retry with a
@@ -480,7 +479,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		if err != nil {
 			return fmt.Errorf("could not begin retry transaction: %w", err)
 		}
-		failingTables, err = s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, false)
+		failingTables, err = service.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, false)
 	}
 	if err != nil {
 		if opts.Debug {
@@ -498,10 +497,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)
 
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
+	if err := service.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCIntegrity", integrity); err != nil {
+	if err := service.configService.SetJSONConfig(ctx, "vulndb.lastRCIntegrity", integrity); err != nil {
 		return fmt.Errorf("could not save integrity information: %w", err)
 	}
 
@@ -517,7 +516,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 // staging tables per-batch, then applies an EXCEPT-based sync to update the live tables.
 // All entries are always staged (no lastImportTime filtering) — the EXCEPT sync handles
 // incremental updates, deletes, and inserts correctly regardless of import history.
-func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string) error {
+func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string) error {
 	group, groupCtx := errgroup.WithContext(ctx)
 
 	var (
@@ -613,7 +612,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 // populateDBFromGobsBulk reads all gob files fully into RAM then writes everything to the
 // database via writeToDatabase. Intended for full (initial) imports where truncating live
 // tables and rebuilding indexes afterward is faster than the EXCEPT-based incremental sync.
-func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string) error {
+func (service *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string) error {
 	group, _ := errgroup.WithContext(ctx)
 
 	var (
@@ -818,7 +817,7 @@ func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error
 // tryApplyQuickDiff attempts to apply a pre-computed QuickDiff from the archive.
 // Returns (nil, true, nil) on success, (nil, false, nil) if no quickdiff is present
 // or the version doesn't match, and (nil, false, err) on a hard failure.
-func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation) (bool, error) {
+func (service *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation) (bool, error) {
 	var diff QuickDiff
 	if err := readGobFile(workingDir+"/quickdiff.gob", &diff); err != nil {
 		slog.Info("no quickdiff found in archive, skipping quick diff application")
@@ -827,7 +826,7 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 
 	var lastImportStr string
 	var lastImportTime time.Time
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
+	if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 	if !diff.FromVersion.Equal(lastImportTime) {
@@ -871,9 +870,9 @@ var errQuickDiffFailed = fmt.Errorf("quick-diff failed, needs full sync in a new
 // bulk=false uses streaming with EXCEPT-based sync (correct for incremental updates).
 // When tryQuickDiff=true the quickdiff path is attempted first; on failure it returns
 // errQuickDiffFailed so the caller can rollback and retry with tryQuickDiff=false.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
+func (service *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
 	if tryQuickDiff {
-		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
+		ok, err := service.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
 			slog.Warn("quick-diff apply failed, will retry as full sync", "err", err)
 			monitoring.Alert("vulndb quick-diff apply failed", fmt.Errorf("quick-diff apply failed: %w, will retry as full sync", err))
@@ -902,9 +901,9 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 	slog.Info("populating database from gob files")
 	var err error
 	if bulk {
-		err = s.populateDBFromGobsBulk(ctx, tx, workingDir)
+		err = service.populateDBFromGobsBulk(ctx, tx, workingDir)
 	} else {
-		err = s.populateDBFromGobsStream(ctx, tx, workingDir)
+		err = service.populateDBFromGobsStream(ctx, tx, workingDir)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not populate database from gob files: %w", err)
@@ -1198,6 +1197,243 @@ func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.
 	return allCVEs, nil
 }
 
+// arbitrary values, not yet optimized
+const (
+	csafFetchWorkers     = 50
+	csafConverterWorkers = 2
+	csafWriterBatchSize  = 1000
+)
+
+// http client for rapid fire http requests to the CSAF api
+var csafFetchingClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        csafFetchWorkers,
+		MaxIdleConnsPerHost: csafFetchWorkers,
+		MaxConnsPerHost:     csafFetchWorkers,
+	},
+}
+
+// fetches and transforms CSAF advisories to CVE objects
+func (service *VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) ([]models.CVE, error) {
+	start := time.Now()
+
+	fileNames, err := fetchCSAFFileNamesFromIndex(ctx, baseURL)
+	if err != nil {
+		return nil, err
+	}
+	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
+	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
+}
+
+// fetches all the filenames listed in the index.txt in the CSAF directory
+func fetchCSAFFileNamesFromIndex(ctx context.Context, baseURL string) ([]string, error) {
+	slog.Info("start reading index.txt")
+	// fetch the index.txt from the base url + index path
+	buf, err := utils.DoGetRequestWithContext(ctx, baseURL+"index.txt", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// file names are seperated by new line characters so string fields splits them up correctly
+	fileNames := strings.Fields(string(buf))
+	if len(fileNames) == 0 {
+		return nil, fmt.Errorf("no files found in index.txt file")
+	}
+	return fileNames, err
+}
+
+// uses a worker pool + pipelining approach to fetch and convert CSAF reports concurrently
+func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) ([]models.CVE, error) {
+	start := time.Now()
+
+	fetchingWorkGroup, ctx := errgroup.WithContext(ctx)
+	convertingWaitGroup, ctx := errgroup.WithContext(ctx)
+	errorCollectionGroup, ctx := errgroup.WithContext(ctx)
+
+	fetchingJobs := make(chan string, len(fileNames))             // files to fetch
+	advisories := make(chan *minimalCSAFAdvisory, len(fileNames)) // CSAF reports to convert
+	cveOutput := make(chan *models.CVE, batchSize)                // final cve objects
+
+	go func() { // push all files and then close the fetching job channel
+		for _, fileName := range fileNames {
+			fetchingJobs <- baseURL + fileName
+		}
+		close(fetchingJobs)
+	}()
+
+	errorCollectionGroup.Go(func() error { // when all fetching routines are done, no more advisories will be pushed
+		err := fetchingWorkGroup.Wait()
+		close(advisories)
+		return err
+	})
+
+	errorCollectionGroup.Go(
+		func() error { // when all converting groups are done, no more cves will be pushed
+			err := convertingWaitGroup.Wait()
+			close(cveOutput)
+			return err
+		})
+
+	for range csafFetchWorkers { // start fetching worker pool
+		fetchingWorkGroup.Go(func() error {
+			return fetchCSAFReportWorker(ctx, fetchingJobs, advisories, csafFetchingClient)
+		})
+	}
+
+	for range csafConverterWorkers { // start conversion worker pool
+		convertingWaitGroup.Go(func() error {
+			return convertCSAFReportToModelsWorker(ctx, advisories, cveOutput)
+		})
+	}
+
+	// collect all the results
+	cves := make([]models.CVE, 0, len(fileNames))
+	for cve := range cveOutput {
+		cves = append(cves, *cve)
+	}
+
+	err := errorCollectionGroup.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("ran into error while syncing CSAF advisories, source: %s, error: %w", baseURL, err)
+	}
+
+	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(cves))
+	return cves, nil
+}
+
+// minimal struct to omit unused fields and therefore improve parsing speed and memory consumption
+type minimalCSAFAdvisory struct {
+	Document        *minimalCSAFDocument `json:"document"`
+	Vulnerabilities []*minimalCSAFVuln   `json:"vulnerabilities,omitempty"`
+}
+
+type minimalCSAFDocument struct {
+	Notes    []*minimalCSAFNote   `json:"notes,omitempty"`
+	Tracking *minimalCSAFTracking `json:"tracking"`
+}
+
+type minimalCSAFTracking struct {
+	ID                 *string `json:"id"`
+	CurrentReleaseDate *string `json:"current_release_date"`
+	InitialReleaseDate *string `json:"initial_release_date"`
+}
+
+type minimalCSAFNote struct {
+	Category *string `json:"category"`
+	Text     *string `json:"text"`
+	Title    *string `json:"title,omitempty"`
+}
+
+type minimalCSAFVuln struct {
+	CVE *string `json:"cve,omitempty"`
+}
+
+// fetches the file of the job and parse it into a minimal CSAF struct
+func fetchCSAFReportWorker(ctx context.Context, jobs chan string, output chan *minimalCSAFAdvisory, client *http.Client) error {
+	for {
+		select {
+		case url, ok := <-jobs:
+			if !ok { // channel closed we are done
+				return nil
+			}
+
+			buf, err := utils.DoGetRequestWithContext(ctx, url, client)
+			if err != nil {
+				return fmt.Errorf("could not fetch CSAF file at %s: %w", url, err)
+			}
+
+			var csafReport minimalCSAFAdvisory
+			err = json.Unmarshal(buf, &csafReport)
+			if err != nil {
+				return fmt.Errorf("could not unmarshal json into csaf struct: %w", err)
+			}
+			output <- &csafReport
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// receives fetched CSAF advisories and converts them to cve objects, by extracting the necessary information
+func convertCSAFReportToModelsWorker(ctx context.Context, jobs chan *minimalCSAFAdvisory, cvesOutput chan *models.CVE) error {
+	for {
+		select {
+		case csafReport, ok := <-jobs:
+			if !ok { // channel closed we are done
+				return nil
+			}
+			if csafReport.Document == nil {
+				return fmt.Errorf("invalid csaf document. document property is missing")
+			}
+
+			if len(csafReport.Vulnerabilities) == 0 {
+				continue // no vulnerabilities means no relationships, that means it will never be found
+			}
+
+			tracking := csafReport.Document.Tracking // improve readability
+			if tracking == nil || tracking.ID == nil {
+				return fmt.Errorf("no id in tracking object can be found")
+			}
+
+			cve := models.CVE{CVE: string(*tracking.ID)} // the tracking ID is the CVE-ID in our database
+
+			if tracking.InitialReleaseDate != nil {
+				date, err := time.Parse(time.RFC3339Nano, *tracking.InitialReleaseDate)
+				if err == nil {
+					cve.DatePublished = date
+				}
+			}
+
+			if tracking.CurrentReleaseDate != nil {
+				date, err := time.Parse(time.RFC3339Nano, *tracking.CurrentReleaseDate)
+				if err == nil {
+					cve.DateLastModified = date
+				}
+			}
+
+			cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
+			cve.ID = cve.CalculateHash()
+			cve.ContentHash = cve.CalculateContentHash()
+
+			// each vulnerability associated with this advisory-id is a cve_relationship
+			for _, vuln := range csafReport.Vulnerabilities {
+				if vuln == nil || vuln.CVE == nil {
+					continue
+				}
+				// the advisory is the source_cve (it carries the fk on cves.cve), the referenced official cve is the target_cve
+				cve.Relationships = append(cve.Relationships, models.CVERelationship{
+					SourceCVE:        cve.CVE,
+					TargetCVE:        string(*vuln.CVE),
+					RelationshipType: dtos.RelationshipTypeAdvisory, // use custom relationship type to distinguish them easily
+				})
+			}
+			cvesOutput <- &cve
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// builds a textual description by combining different notes from the document object
+// returns an empty string if no information can be found
+func buildCVEDesciptionFromCSAFNotes(notes []*minimalCSAFNote) string {
+	const seperator = " | "
+	description := strings.Builder{}
+	for _, note := range notes {
+		if note == nil || note.Category == nil || note.Title == nil || note.Text == nil || *note.Category == string(csaf.CSAFNoteCategoryLegalDisclaimer) {
+			continue
+		}
+		// put the strings together low level
+		description.WriteString(*note.Title)
+		description.WriteString(": ")
+		description.WriteString(*note.Text)
+		description.WriteString(seperator)
+	}
+	return strings.TrimSuffix(description.String(), seperator)
+}
+
+// imports csaf advisories into the db using stage + copy approach
 func importCSAFAdvisories(ctx context.Context, tx pgx.Tx, advisories []models.CVE) error {
 	if len(advisories) == 0 {
 		return nil
@@ -1240,6 +1476,7 @@ func importCSAFAdvisories(ctx context.Context, tx pgx.Tx, advisories []models.CV
 	return nil
 }
 
+// helper function to filter cve relations using a cves lookup map
 func filterRelationshipsBySurvivingSource(relationships []models.CVERelationship, survivingCVEs map[string]struct{}) []models.CVERelationship {
 	kept := relationships[:0]
 	for _, relationship := range relationships {
@@ -1250,6 +1487,7 @@ func filterRelationshipsBySurvivingSource(relationships []models.CVERelationship
 	return kept
 }
 
+// helper function to filter cvves aswell as their relationship to only surviving cves
 func filterSurvivingAdvisories(advisories []models.CVE, survivingCVEs map[string]struct{}) []models.CVE {
 	kept := advisories[:0]
 	for _, advisory := range advisories {
@@ -1266,228 +1504,4 @@ func filterSurvivingAdvisories(advisories []models.CVE, survivingCVEs map[string
 		kept = append(kept, advisory)
 	}
 	return kept
-}
-
-const (
-	csafFetchWorkers     = 200
-	csafConverterWorkers = 2
-	csafWriterBatchSize  = 1000
-)
-
-var csafFetchingClient = &http.Client{
-	Timeout: 30 * time.Second,
-	Transport: &http.Transport{
-		MaxIdleConns:        csafFetchWorkers,
-		MaxIdleConnsPerHost: csafFetchWorkers,
-		MaxConnsPerHost:     csafFetchWorkers,
-	},
-}
-
-func (service VulnDBService) FetchCSAFData(ctx context.Context, baseURL string) ([]models.CVE, error) {
-	start := time.Now()
-
-	fileNames, err := fetchAllCSAFRecords(ctx, baseURL)
-	if err != nil {
-		return nil, err
-	}
-	slog.Info("successfully read index.txt file", "entries", len(fileNames), "time", time.Since(start))
-	return service.fetchFilesConcurrently(ctx, baseURL, fileNames)
-}
-
-func fetchAllCSAFRecords(ctx context.Context, baseURL string) ([]string, error) {
-	slog.Info("start reading index.txt")
-	buf, err := DoGetRequest(ctx, baseURL+"index.txt", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	fileNames := strings.Fields(string(buf))
-	if len(fileNames) == 0 {
-		return nil, fmt.Errorf("no files found in index.txt file")
-	}
-	return fileNames, err
-}
-
-func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []string) ([]models.CVE, error) {
-	start := time.Now()
-	fetchingWorkGroup := &sync.WaitGroup{}
-	fetchingJobs := make(chan string, len(fileNames))
-	advisories := make(chan *minimalCSAFAdvisory, len(fileNames))
-
-	for range csafFetchWorkers {
-		fetchingWorkGroup.Add(1)
-		go fetchCSAFReportWorker(ctx, fetchingWorkGroup, fetchingJobs, advisories, csafFetchingClient)
-	}
-
-	go func() {
-		for _, fileName := range fileNames {
-			fetchingJobs <- baseURL + fileName
-		}
-		close(fetchingJobs)
-	}()
-
-	go func() {
-		fetchingWorkGroup.Wait()
-		close(advisories)
-	}()
-
-	convertingWaitGroup := &sync.WaitGroup{}
-	cveOutput := make(chan *models.CVE, batchSize)
-	for range csafConverterWorkers {
-		convertingWaitGroup.Add(1)
-		go convertCSAFReportToModelsWorker(convertingWaitGroup, advisories, cveOutput)
-	}
-
-	go func() {
-		start = time.Now()
-		convertingWaitGroup.Wait()
-		close(cveOutput)
-		slog.Info("finished pushing all cves", "time", time.Since(start))
-	}()
-
-	cves := make([]models.CVE, 0, len(fileNames))
-	for cve := range cveOutput {
-		cves = append(cves, *cve)
-	}
-
-	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(cves))
-	return cves, nil
-}
-
-// minimal struct to omit unused fields and therefore improve parsing speed and memory consumption
-type minimalCSAFAdvisory struct {
-	Document        *minimalCSAFDocument `json:"document"`
-	Vulnerabilities []*minimalCSAFVuln   `json:"vulnerabilities,omitempty"`
-}
-
-type minimalCSAFDocument struct {
-	Notes    []*minimalCSAFNote   `json:"notes,omitempty"`
-	Tracking *minimalCSAFTracking `json:"tracking"`
-}
-
-type minimalCSAFTracking struct {
-	ID                 *string `json:"id"`
-	CurrentReleaseDate *string `json:"current_release_date"`
-	InitialReleaseDate *string `json:"initial_release_date"`
-}
-
-type minimalCSAFNote struct {
-	Category *string `json:"category"`
-	Text     *string `json:"text"`
-	Title    *string `json:"title,omitempty"`
-}
-
-type minimalCSAFVuln struct {
-	CVE *string `json:"cve,omitempty"`
-}
-
-func fetchCSAFReportWorker(ctx context.Context, waitGroup *sync.WaitGroup, jobs chan string, output chan *minimalCSAFAdvisory, client *http.Client) {
-	defer waitGroup.Done()
-	for url := range jobs {
-		buf, err := DoGetRequest(ctx, url, client)
-		if err != nil {
-			slog.Error("ran into error", "err", err)
-		}
-
-		var csafReport minimalCSAFAdvisory
-		err = json.Unmarshal(buf, &csafReport)
-		if err != nil {
-			slog.Error("ran into error", "err", fmt.Errorf("could not unmarshal json into csaf struct: %w", err))
-		}
-		output <- &csafReport
-	}
-}
-
-func convertCSAFReportToModelsWorker(waitGroup *sync.WaitGroup, jobs chan *minimalCSAFAdvisory, cvesOutput chan *models.CVE) {
-	defer waitGroup.Done()
-	for csafReport := range jobs {
-		if csafReport.Document == nil {
-			slog.Error("encountered error", "err", fmt.Errorf("invalid csaf document. document property is missing"))
-			continue
-		}
-
-		if len(csafReport.Vulnerabilities) == 0 {
-			continue // no vulnerabilities means no relationships, that means it will never be found
-		}
-
-		tracking := csafReport.Document.Tracking // improve readability
-		if tracking == nil || tracking.ID == nil {
-			slog.Error("encountered error", "err", fmt.Errorf("no id in tracking object can be found"))
-		}
-
-		cve := models.CVE{CVE: string(*tracking.ID)}
-
-		if tracking.InitialReleaseDate != nil {
-			date, err := time.Parse(time.RFC3339Nano, *tracking.InitialReleaseDate)
-			if err == nil {
-				cve.DatePublished = date
-			}
-		}
-
-		if tracking.CurrentReleaseDate != nil {
-			date, err := time.Parse(time.RFC3339Nano, *tracking.CurrentReleaseDate)
-			if err == nil {
-				cve.DateLastModified = date
-			}
-		}
-
-		cve.Description = buildCVEDesciptionFromCSAFNotes(csafReport.Document.Notes)
-		cve.ID = cve.CalculateHash()
-		cve.ContentHash = cve.CalculateContentHash()
-
-		for _, vuln := range csafReport.Vulnerabilities {
-			if vuln == nil || vuln.CVE == nil {
-				continue
-			}
-			// the advisory is the source (it carries the fk on cves.cve), the referenced official cve is the target
-			cve.Relationships = append(cve.Relationships, models.CVERelationship{
-				SourceCVE:        cve.CVE,
-				TargetCVE:        string(*vuln.CVE),
-				RelationshipType: dtos.RelationshipTypeAdvisory,
-			})
-		}
-		cvesOutput <- &cve
-	}
-}
-
-// builds a textual description by combining different notes from the document object
-// returns an empty string if no information can be found
-func buildCVEDesciptionFromCSAFNotes(notes []*minimalCSAFNote) string {
-	description := ""
-	for _, note := range notes {
-		if note == nil || note.Category == nil || note.Title == nil || note.Text == nil || *note.Category == string(csaf.CSAFNoteCategoryLegalDisclaimer) {
-			continue
-		}
-		// put the strings together low level
-		description += *note.Title + ": " + *note.Text + " | "
-	}
-	return description
-}
-
-// executes a GET request with an empty body to the specified url
-// if no client is passed, the function uses the default http client
-func DoGetRequest(ctx context.Context, url string, client *http.Client) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("could not build http request: %w", err)
-	}
-
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("could not execute http request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request was unsuccessful, status code: %d", resp.StatusCode)
-	}
-
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("could not read from response body: %w", err)
-	}
-	return buf, nil
 }

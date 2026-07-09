@@ -16,8 +16,11 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -224,4 +227,32 @@ func ValidatePurlFields(purl packageurl.PackageURL) error {
 		return fmt.Errorf("invalid purl version: %q", purl.Version)
 	}
 	return nil
+}
+
+// executes a GET request with an empty body to the specified url
+// if no client is passed, the function uses the default http client
+func DoGetRequestWithContext(ctx context.Context, url string, client *http.Client) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not build http request: %w", err)
+	}
+
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute http request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request was unsuccessful, status code: %d", resp.StatusCode)
+	}
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("could not read from response body: %w", err)
+	}
+	return buf, nil
 }
