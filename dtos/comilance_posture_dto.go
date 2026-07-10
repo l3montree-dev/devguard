@@ -47,6 +47,7 @@ type CompliancePostureWithControlDTO struct {
 	ControlID                string         `json:"controlId"`
 	Title                    string         `json:"title"`
 	Description              string         `json:"description"`
+	Importance               string         `json:"importance"`
 	Class                    string         `json:"class"`
 	Additional               datatypes.JSON `json:"additional"`
 	ParentFrameworkControlID *string        `json:"parentFrameworkControlId"`
@@ -58,6 +59,14 @@ type CompliancePostureWithControlDTO struct {
 	AssetVersionName         *string        `json:"assetVersionName"`
 	TicketID                 *string        `json:"ticketId"`
 	TicketURL                *string        `json:"ticketUrl"`
+
+	MappedControls []MappedControlDTO `json:"mappedControls"`
+}
+
+type MappedControlDTO struct {
+	FrameworkControlID string `json:"frameworkControlId"`
+	RelatedFramework   string `json:"relatedFramework"`
+	RelatedControlID   string `json:"relatedControlId"`
 }
 
 type CompliancePostureWithDetailsDTO struct {

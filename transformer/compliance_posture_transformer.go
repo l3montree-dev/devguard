@@ -30,6 +30,15 @@ func mustMarshalJSON(v any) datatypes.JSON {
 
 func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetailsDTO {
 
+	mappedControls := make([]dtos.MappedControlDTO, len(c.FrameworkControl.MappedControls))
+	for i, m := range c.FrameworkControl.MappedControls {
+		mappedControls[i] = dtos.MappedControlDTO{
+			FrameworkControlID: m.FrameworkControlID,
+			RelatedFramework:   m.RelatedFramework,
+			RelatedControlID:   m.RelatedControlID,
+		}
+	}
+
 	p := dtos.CompliancePostureWithControlDTO{
 		FrameworkControlID:       c.FrameworkControlID,
 		CompliancePostureID:      c.ID.String(),
@@ -47,6 +56,7 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 		State:                    c.State,
 		TicketID:                 c.TicketID,
 		TicketURL:                c.TicketURL,
+		MappedControls:           mappedControls,
 	}
 	events := make([]dtos.VulnEventDTO, len(c.Events))
 	for i, e := range c.Events {

@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS public.frameworks_controls (
     title text NOT NULL DEFAULT '',
     description text NOT NULL DEFAULT '',
 
+    importance text DEFAULT '',
+
     class text NOT NULL DEFAULT '',
     additional jsonb,
     parent_framework_control_id text,

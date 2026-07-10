@@ -96,7 +96,18 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, postures)
+	frameworks, err := c.CompliancePostureService.GetAllFrameworkControls(ctx.Request().Context(), nil)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, struct {
+		shared.Paged[dtos.CompliancePostureWithControlDTO]
+		Frameworks []string `json:"frameworks"`
+	}{
+		Paged:      postures,
+		Frameworks: frameworks,
+	})
 }
 
 func (c *CompliancePostureController) Stats(ctx shared.Context) error {
@@ -117,7 +128,9 @@ func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 		}
 	}
 
-	stats, err := c.CompliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID)
+	filter := shared.GetFilterQuery(ctx)
+
+	stats, err := c.CompliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, filter)
 	if err != nil {
 		return err
 	}

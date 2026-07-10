@@ -80,8 +80,8 @@ func (s *compliancePostureService) updateCompliancePostureState(ctx context.Cont
 	return ev, err
 }
 
-func (s *compliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (dtos.CompliancePostureStatsDTO, error) {
-	return s.compliancePostureRepository.GetStatsForAllControls(ctx, tx, assetVersionName, assetID, projectID, orgID)
+func (s *compliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStatsDTO, error) {
+	return s.compliancePostureRepository.GetStatsForAllControls(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
 }
 
 func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
@@ -98,4 +98,8 @@ func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.D
 	}
 
 	return posture, nil
+}
+
+func (s *compliancePostureService) GetAllFrameworkControls(ctx context.Context, tx shared.DB) ([]string, error) {
+	return s.compliancePostureRepository.GetAllFrameworkControls(ctx, tx)
 }
