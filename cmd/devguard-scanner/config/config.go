@@ -48,8 +48,10 @@ type baseConfig struct {
 	AssetName string `json:"assetName" mapstructure:"assetName"`
 	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
 
-	Image      string `json:"image" mapstructure:"image"`
-	Path       string `json:"path" mapstructure:"path"`
+	Image          string `json:"image" mapstructure:"image"`
+	Path           string `json:"path" mapstructure:"path"`
+	SBOMPath       string `json:"sbomPath" mapstructure:"sbomPath"`
+	SBOMOutputPath string `json:"sbomOutputPath" mapstructure:"sbomOutputPath"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
 	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
 	WebUI      string `json:"webUI" mapstructure:"webUI"`

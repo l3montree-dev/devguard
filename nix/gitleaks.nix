@@ -1,10 +1,11 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/gi/gitleaks/package.nix
-{ lib, buildGoModule, fetchFromGitHub, installShellFiles }:
+{ lib, buildGoModule, fetchFromGitHub, installShellFiles, runCommand, jq, trivy }:
 
-buildGoModule rec {
+let
   pname = "gitleaks";
   version = "8.30.1";
+  modulePurl = "pkg:golang/github.com/zricethezav/gitleaks/v8";
 
   src = fetchFromGitHub {
     owner = "gitleaks";
@@ -13,27 +14,48 @@ buildGoModule rec {
     hash = "sha256-PpMquYyXNN6KFwN/efY5+gr+4IhSKPoAy2M/rcqfW5k=";
   };
 
-  vendorHash = "sha256-whJtl34dNltH/dk9qWSThcCYXC0x9PzbAUOO97Int+k=";
+  package = buildGoModule {
+    inherit pname version src;
 
-  ldflags = [
-    "-s"
-    "-w"
-    "-X github.com/gitleaks/gitleaks/v8/cmd.Version=v${version}"
-  ];
+    vendorHash = "sha256-whJtl34dNltH/dk9qWSThcCYXC0x9PzbAUOO97Int+k=";
 
-  nativeBuildInputs = [ installShellFiles ];
+    # Without this, buildGoModule installs every cmd/main package it finds,
+    # which includes cmd/generate/config (an internal dev tool gitleaks uses
+    # to regenerate its own default ruleset) as a second binary confusingly
+    # named "config" - not something devguard-scanner needs shipped at all.
+    subPackages = [ "." ];
 
-  postInstall = "";
-  env = {
-    CGO_ENABLED = 0;
+    ldflags = [
+      "-s"
+      "-w"
+      "-X github.com/gitleaks/gitleaks/v8/cmd.Version=v${version}"
+    ];
+
+    nativeBuildInputs = [ installShellFiles ];
+
+    postInstall = "";
+    env = {
+      CGO_ENABLED = 0;
+    };
+
+    doCheck = false;
+
+    meta = with lib; {
+      description = "Scan git repos (or files) for secrets";
+      homepage = "https://github.com/gitleaks/gitleaks";
+      license = licenses.mit;
+      mainProgram = "gitleaks";
+    };
   };
 
-  doCheck = false;
+  mkToolSBOM = import ./sbom-lib.nix { inherit lib runCommand jq; } { inherit trivy; };
+in
+{
+  inherit package;
 
-  meta = with lib; {
-    description = "Scan git repos (or files) for secrets";
-    homepage = "https://github.com/gitleaks/gitleaks";
-    license = licenses.mit;
-    mainProgram = "gitleaks";
+  sbom = mkToolSBOM {
+    toolName = "gitleaks";
+    inherit src version modulePurl;
+    binaries = [{ name = "gitleaks"; binPath = "${package}/bin/gitleaks"; }];
   };
 }

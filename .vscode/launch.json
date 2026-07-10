@@ -142,17 +142,14 @@
             ]
         },
         {
-            "name": "Scanner attestations",
+            "name": "Merge sboms",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-                "attestations",
-                "registry.opencode.de/l3montree/test-container-gov-attestations:main-amd64",
-                "--policy",
-                "https://gitlab.opencode.de/oci-community/container-gov/-/raw/main/data-generation/container.gov.de.rego"
+              "container-scanning", "result", "--sbomOutputPath=test.json",
             ]
         },
     ]
