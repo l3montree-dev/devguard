@@ -579,7 +579,6 @@ func scanLocalFilePath(ctx context.Context) error {
 	if err := writeSBOMIfRequested(file); err != nil {
 		return err
 	}
-	return nil
 
 	resp, cancel, err := scanner.UploadBOM(bytes.NewBuffer(file))
 	if err != nil {
