@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -39,19 +40,14 @@ func AssetNameMiddleware() shared.MiddlewareFunc {
 			if assetName == "" {
 				return echo.NewHTTPError(400, "no X-Asset-Name header provided")
 			}
-			// split the asset name
-			assetParts := strings.Split(assetName, "/")
-			if len(assetParts) == 5 {
-				// the user probably provided the full url
-				// check if projects and assets is part of the asset parts - if so, remove them
-				// <organization>/projects/<project>/assets/<asset>
-				if assetParts[1] == "projects" && assetParts[3] == "assets" {
-					assetParts = []string{assetParts[0], assetParts[2], assetParts[4]}
-				}
-			}
-			if len(assetParts) != 3 {
+			var err error
+			assetName, err = normalize.AssetName(assetName)
+			if err != nil {
+				slog.Error("invalid asset name", "err", err)
 				return echo.NewHTTPError(400, "invalid asset name")
 			}
+
+			assetParts := strings.Split(assetName, "/")
 			// set the project slug
 			ctx.Set("projectSlug", assetParts[1])
 			ctx.Set("organization", assetParts[0])

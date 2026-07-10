@@ -120,6 +120,7 @@ func NewGithubIntegration(
 		orgRepository:                   orgRepository,
 		licenseRiskRepository:           licenseRiskRepository,
 		statisticsService:               statisticsService,
+		FireAndForgetSynchronizer:       synchronizer,
 
 		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
 			return NewGithubClient(installationIDFromRepositoryID(repoID))

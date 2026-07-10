@@ -35,6 +35,7 @@ import (
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -368,6 +369,7 @@ type InvitationRepository interface {
 	Save(ctx context.Context, tx DB, invitation *models.Invitation) error
 	FindByCode(ctx context.Context, tx DB, code string) (models.Invitation, error)
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	FindByOrgID(ctx context.Context, tx *gorm.DB, orgID string) ([]models.Invitation, error)
 }
 
 type ExternalReferenceRepository interface {

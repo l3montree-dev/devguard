@@ -22,6 +22,7 @@ func main() {
 		commands.ReleaseWebCmd,
 		commands.ReleaseCICmd,
 		commands.ReleaseHelmCmd,
+		commands.ReleaseK8sIntegrationCmd,
 	)
 
 	root.AddCommand(commands.LogsCmd, commands.DocsCmd, release)

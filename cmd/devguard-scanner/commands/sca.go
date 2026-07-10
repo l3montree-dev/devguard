@@ -33,6 +33,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -104,6 +105,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning oci image", "image", image)
 		args := []string{"image", image, "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 
 		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	} else if isDir {
@@ -111,6 +113,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		prepareTrivyCommand(workDir)
 		args := []string{"fs", ".", "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 		// scanning a directory - we need to switch to the directory first because trivy needs to run in the context of the project to be able to find the dependencies
 		trivyCmd = exec.Command("trivy", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 		trivyCmd.Dir = workDir
@@ -118,6 +121,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		slog.Info("scanning single file", "file", maybeFilename)
 		args := []string{"image", "--input", pathOrImage, "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
+		args = append(args, config.RuntimeExtraArgs...)
 
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
@@ -147,6 +151,218 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	return content, nil
 }
 
+// discoverAndMergeSupplementarySBOMs runs discover to find supplementary SBOMs (a
+// directory walk or an image filesystem search, depending on the caller) and, if any
+// are found, merges them into bom's root component. A discovery failure is logged and
+// treated as "none found" rather than failing the scan. After merging, any
+// "application" type component not covered by a supplementary SBOM is logged as a
+// warning.
+func discoverAndMergeSupplementarySBOMs(bom *cyclonedx.BOM, discover func() ([]*cyclonedx.BOM, error)) error {
+	extras, err := discover()
+	if err != nil {
+		slog.Warn("could not scan for supplementary SBOMs", "sbomPath", config.RuntimeBaseConfig.SBOMPath, "err", err)
+		return nil
+	}
+	for _, extra := range extras {
+		if extra.Metadata != nil && extra.Metadata.Component != nil {
+			slog.Info("found supplementary SBOM", "path", extra.Metadata.Component.Name)
+		}
+	}
+	// Must run before merging: components with no PackageURL get silently
+	// dropped by the graph the merge builds (see
+	// normalize.SBOMGraphFromCycloneDXWithRoot), so this is the last point
+	// where the component is still present in bom to warn about.
+	warnAboutUnidentifiableComponents(bom, extras)
+	if len(extras) > 0 {
+		if err := mergeSupplementarySBOMs(bom, extras); err != nil {
+			return errors.Wrap(err, "could not merge supplementary SBOMs")
+		}
+	}
+	reportApplicationComponentResolution(bom, extras)
+	return nil
+}
+
+// warnAboutUnidentifiableComponents logs a warning for each "application" type
+// component with no PackageURL, not covered by a supplementary SBOM, and with
+// no children of its own already. Such a component has no identity the
+// dependency graph can key on, so merging drops it entirely and reparents
+// whatever it declared as a dependency up to its nearest ancestor with a real
+// identity - producing a technically valid but incomplete SBOM unless the
+// caller does something about it. Components trivy already resolved a real
+// tree for (e.g. a lockfile like Cargo.lock, classified as "application" but
+// carrying a real dependsOn to the packages it declares) aren't missing
+// anything and don't need a warning, even though they also lack a purl.
+func warnAboutUnidentifiableComponents(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) {
+	if bom.Components == nil {
+		return
+	}
+
+	suppliedPaths := make(map[string]bool, len(extras))
+	for _, extra := range extras {
+		if extra.Metadata != nil && extra.Metadata.Component != nil {
+			suppliedPaths[extra.Metadata.Component.Name] = true
+		}
+	}
+
+	// A child counts as "real" only if it's a properly versioned purl - a
+	// single unversioned module reference (e.g. devguard-scanner's own main
+	// module, exactly the same "no version" issue gitleaks.nix documents)
+	// isn't a resolved tree, just another unidentifiable node one level down.
+	hasRealChildren := make(map[string]bool)
+	if bom.Dependencies != nil {
+		for _, d := range *bom.Dependencies {
+			if d.Dependencies == nil {
+				continue
+			}
+			for _, child := range *d.Dependencies {
+				if strings.HasPrefix(child, "pkg:") && strings.Contains(child, "@") {
+					hasRealChildren[d.Ref] = true
+					break
+				}
+			}
+		}
+	}
+
+	for _, c := range *bom.Components {
+		if c.Type != cyclonedx.ComponentTypeApplication || c.PackageURL != "" || suppliedPaths[c.Name] || hasRealChildren[c.BOMRef] {
+			continue
+		}
+		slog.Warn("found an application component with no package identity (purl); it and everything it depends on will be dropped from the dependency graph and reparented to the nearest ancestor with a valid identity, producing an incomplete SBOM - provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to fix this", "path", c.Name)
+		printSupplementarySBOMExample(c.Name)
+	}
+}
+
+// printSupplementarySBOMExample prints a ready-to-use, copy-pasteable
+// supplementary SBOM for the given in-image/in-project path, to stderr so it
+// doesn't get mixed into piped SBOM/log output. The root component's
+// bom-ref/name must exactly match path - that's what devguard-scanner's
+// --sbomPath discovery matches on. "components"/"dependencies" are optional;
+// this example includes one library child to show the shape.
+func printSupplementarySBOMExample(path string) {
+	example := struct {
+		BOMFormat    string                 `json:"bomFormat"`
+		SpecVersion  string                 `json:"specVersion"`
+		Metadata     cyclonedx.Metadata     `json:"metadata"`
+		Components   []cyclonedx.Component  `json:"components"`
+		Dependencies []cyclonedx.Dependency `json:"dependencies"`
+	}{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: "1.7",
+		Metadata: cyclonedx.Metadata{
+			Component: &cyclonedx.Component{
+				Type:   cyclonedx.ComponentTypeApplication,
+				BOMRef: path,
+				Name:   path,
+			},
+		},
+		Components: []cyclonedx.Component{
+			{
+				Type:       cyclonedx.ComponentTypeLibrary,
+				BOMRef:     "pkg:golang/example.org/some/module@v1.2.3",
+				PackageURL: "pkg:golang/example.org/some/module@v1.2.3",
+				Name:       "example.org/some/module",
+				Version:    "v1.2.3",
+			},
+		},
+		Dependencies: []cyclonedx.Dependency{
+			{Ref: path, Dependencies: &[]string{"pkg:golang/example.org/some/module@v1.2.3"}},
+		},
+	}
+	out, err := json.MarshalIndent(example, "", "  ")
+	if err != nil {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "save this as a .json file under --sbomPath (default /sboms) to describe %q:\n%s\n", path, out)
+}
+
+// mergeSupplementarySBOMs enriches bom's dependency graph with each extra,
+// via normalize.SBOMGraph.EnrichSBOM (see there for exact replace-vs-attach
+// semantics). bom.Metadata.Component itself is left untouched; only
+// Components/Dependencies are replaced with the enriched graph's exported
+// view (via ToCycloneDX, reusing bom's own root identity through RootName) -
+// the root's own entry in Dependencies (its declared children) is kept, but
+// the root component itself is dropped from the returned Components slice,
+// since it's already represented by Metadata.Component.
+func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
+	rootRef := bom.Metadata.Component.BOMRef
+
+	g, err := normalize.SBOMGraphFromCycloneDXWithRoot(bom)
+	if err != nil {
+		return errors.Wrap(err, "could not build SBOM graph")
+	}
+
+	for _, extra := range extras {
+		isNew, err := g.EnrichSBOM(extra, rootRef)
+		if err != nil {
+			return err
+		}
+		if isNew {
+			slog.Info("enrichment attached a new node under the scan root", "path", extra.Metadata.Component.Name)
+		} else {
+			slog.Info("enrichment replaced an existing component's subtree", "path", extra.Metadata.Component.Name)
+		}
+	}
+
+	exported := g.ToCycloneDX(normalize.BOMMetadata{RootName: rootRef})
+	filtered := make([]cyclonedx.Component, 0, len(*exported.Components))
+	for _, c := range *exported.Components {
+		if c.BOMRef == rootRef {
+			continue
+		}
+		filtered = append(filtered, c)
+	}
+
+	bom.Components = &filtered
+	bom.Dependencies = exported.Dependencies
+	return nil
+}
+
+// reportApplicationComponentResolution logs how many "application" type components
+// (e.g. statically linked binaries trivy couldn't inspect further) were enriched by a
+// supplementary SBOM, and warns about each one that wasn't.
+func reportApplicationComponentResolution(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) {
+	if bom.Components == nil {
+		return
+	}
+
+	suppliedPaths := make(map[string]bool, len(extras))
+	for _, extra := range extras {
+		if extra.Metadata != nil && extra.Metadata.Component != nil {
+			suppliedPaths[extra.Metadata.Component.Name] = true
+		}
+	}
+
+	var enriched, unresolved int
+	for _, c := range *bom.Components {
+		if c.Type != cyclonedx.ComponentTypeApplication {
+			continue
+		}
+		if suppliedPaths[c.Name] {
+			enriched++
+			continue
+		}
+		unresolved++
+		slog.Warn("found an application component that could not be resolved further; provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to silence this warning", "path", c.Name)
+	}
+
+	if enriched > 0 || unresolved > 0 {
+		slog.Info("application component resolution", "enrichedBySupplementarySBOM", enriched, "unresolved", unresolved)
+	}
+}
+
+// writeSBOMIfRequested saves the final SBOM to config.RuntimeBaseConfig.SBOMOutputPath,
+// if set. It is a no-op otherwise.
+func writeSBOMIfRequested(bom []byte) error {
+	if config.RuntimeBaseConfig.SBOMOutputPath == "" {
+		return nil
+	}
+	if err := os.WriteFile(config.RuntimeBaseConfig.SBOMOutputPath, bom, 0644); err != nil {
+		return errors.Wrap(err, "could not write SBOM output file")
+	}
+	slog.Info("wrote SBOM to file", "path", config.RuntimeBaseConfig.SBOMOutputPath)
+	return nil
+}
+
 func scanExternalImage(ctx context.Context) error {
 	var err error
 	var attestations = []map[string]any{}
@@ -167,6 +383,16 @@ func scanExternalImage(ctx context.Context) error {
 	// load sbom that was generated in the line above
 	bom, err := scanner.BomFromBytes(file)
 	if err != nil {
+		return err
+	}
+
+	if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
+		img, err := scanner.LoadRemoteImage(ctx, config.RuntimeBaseConfig.Image)
+		if err != nil {
+			return nil, err
+		}
+		return scanner.DiscoverSupplementarySBOMsInImage(img, config.RuntimeBaseConfig.SBOMPath)
+	}); err != nil {
 		return err
 	}
 
@@ -244,6 +470,10 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
+	if err := writeSBOMIfRequested(buff.Bytes()); err != nil {
+		return err
+	}
+
 	// upload the bom to the scan endpoint
 	resp, cancel, err := scanner.UploadBOM(buff)
 
@@ -290,11 +520,30 @@ func scanExternalImage(ctx context.Context) error {
 	return handleScanResponse(resp.Body)
 }
 
+// discoverSupplementarySBOMsForPath finds supplementary SBOMs for a local
+// scan target: a directory (walked under sbomPath), or a single non-JSON
+// file, which is assumed to be an OCI image tarball (its filesystem is
+// searched for sbomPath).
+func discoverSupplementarySBOMsForPath(pathOrTar, sbomPath string) ([]*cyclonedx.BOM, error) {
+	_, isDir := maybeGetFileName(pathOrTar)
+	if isDir {
+		return scanner.DiscoverSupplementarySBOMsInDir(filepath.Join(pathOrTar, sbomPath))
+	}
+
+	img, cleanup, err := scanner.LoadImageFromTarball(pathOrTar)
+	defer cleanup()
+	if err != nil {
+		return nil, err
+	}
+	return scanner.DiscoverSupplementarySBOMsInImage(img, sbomPath)
+}
+
 func scanLocalFilePath(ctx context.Context) error {
 	// check if sbom file or need to generate sbom
 	var file []byte
 	var err error
-	if strings.HasSuffix(config.RuntimeBaseConfig.Path, ".json") {
+	isJSON := strings.HasSuffix(config.RuntimeBaseConfig.Path, ".json")
+	if isJSON {
 		// read the sbom file and post it to the scan endpoint
 		file, err = os.ReadFile(config.RuntimeBaseConfig.Path)
 		if err != nil {
@@ -307,6 +556,30 @@ func scanLocalFilePath(ctx context.Context) error {
 			return errors.Wrap(err, "could not open file")
 		}
 	}
+
+	if !isJSON {
+		bom, err := scanner.BomFromBytes(file)
+		if err != nil {
+			return err
+		}
+
+		if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
+			return discoverSupplementarySBOMsForPath(config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.SBOMPath)
+		}); err != nil {
+			return err
+		}
+
+		buff := &bytes.Buffer{}
+		if err := cyclonedx.NewBOMEncoder(buff, cyclonedx.BOMFileFormatJSON).SetEscapeHTML(false).Encode(bom); err != nil {
+			return err
+		}
+		file = buff.Bytes()
+	}
+
+	if err := writeSBOMIfRequested(file); err != nil {
+		return err
+	}
+	return nil
 
 	resp, cancel, err := scanner.UploadBOM(bytes.NewBuffer(file))
 	if err != nil {
@@ -350,9 +623,10 @@ func handleScanResponse(body io.Reader) error {
 
 func scaCommand(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
 		config.RuntimeBaseConfig.Image = args[0]
-	} else if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ".tar") {
+	} else if len(args) > 0 && args[0] != "" {
 		config.RuntimeBaseConfig.Path = args[0]
 	}
 
@@ -373,7 +647,9 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	} else if config.RuntimeBaseConfig.Path != "" {
 		return scanLocalFilePath(ctx)
 	}
-	return fmt.Errorf("either --image or --path must be specified, or passed as an argument")
+	// default to scan current directory
+	config.RuntimeBaseConfig.Path = "."
+	return scanLocalFilePath(ctx)
 }
 
 func NewSCACommand() *cobra.Command {
@@ -386,7 +662,10 @@ func NewSCACommand() *cobra.Command {
 This command can accept either an OCI image reference (e.g. ghcr.io/org/image:tag) via
 --image or as the first positional argument, or a local path/tar file via --path or as
 the first positional argument. The command will generate or accept an SBOM, upload it to
-DevGuard and return vulnerability results.`,
+DevGuard and return vulnerability results.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying trivy invocation.
+See the trivy CLI reference for available flags: https://trivy.dev/docs/latest/guide/references/configuration/cli/trivy/`,
 		Example: `  # Scan a container image
   devguard-scanner sca ghcr.io/org/image:tag
 
@@ -397,11 +676,15 @@ DevGuard and return vulnerability results.`,
   devguard-scanner sca --image ghcr.io/org/image:tag --assetName my-app --token YOUR_TOKEN
 
   # Scan and fail on high risk vulnerabilities
-  devguard-scanner sca ./project --failOnRisk high`,
+  devguard-scanner sca ./project --failOnRisk high
+
+  # Forward extra flags to trivy
+  devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m`,
 		RunE: scaCommand,
 	}
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)
 	scaCommand.Flags().String("path", "", "Path to the project directory or tar file to scan. If empty, the first argument must be provided.")
+	scanner.AddSupplementarySBOMFlags(scaCommand)
 	return scaCommand
 }

@@ -42,7 +42,7 @@ services:
       - devguard-local
 
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.7.0
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.8.0
     shm_size: 1g
     security_opt:
       - no-new-privileges:true
@@ -51,7 +51,7 @@ services:
         condition: service_completed_successfully
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD — set a strong random password
+      POSTGRES_PASSWORD: change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD — set a strong random password  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       POSTGRES_DB: devguard
     #ports:
     #  - "5432:5432"
@@ -70,7 +70,7 @@ services:
       - devguard-local
 
   kratos-migrate:
-    image: oryd/kratos:v25.4.0-distroless@sha256:368667ee3713797f86ddec669c36751f6484c7d675c78fd27c795b2e79271c31
+    image: oryd/kratos:v26.2.0-distroless@sha256:481bfc3022e5427ffb94570eef84480b99c9f8158388378c57df8c1a4a104b3d
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -94,7 +94,7 @@ services:
       - devguard-local
 
   kratos:
-    image: oryd/kratos:v25.4.0-distroless@sha256:368667ee3713797f86ddec669c36751f6484c7d675c78fd27c795b2e79271c31
+    image: oryd/kratos:v26.2.0-distroless@sha256:481bfc3022e5427ffb94570eef84480b99c9f8158388378c57df8c1a4a104b3d
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -123,7 +123,7 @@ services:
       - devguard-local
 
   devguard-migrate:
-    image: ghcr.io/l3montree-dev/devguard:v1.7.0
+    image: ghcr.io/l3montree-dev/devguard:v1.8.0
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -139,7 +139,7 @@ services:
       - encryption-key:/keys:ro
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
@@ -150,7 +150,7 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:v1.7.0
+    image: ghcr.io/l3montree-dev/devguard:v1.8.0
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -174,7 +174,7 @@ services:
       - encryption-key:/keys:ro
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD
+      - POSTGRES_PASSWORD=change-me-definitely-when-not-testing  # [PRODUCTION] DEVGUARD_DB_PASSWORD  # checkov:skip=CKV_SECRET_6:placeholder password for try-it deployment
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
@@ -188,7 +188,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.7.0
+    image: ghcr.io/l3montree-dev/devguard-web:v1.8.0
     read_only: true
     tmpfs:
       - /tmp:size=100M

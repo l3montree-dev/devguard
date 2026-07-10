@@ -1,18 +1,35 @@
 ## discover-baseimage-attestations
 
-Discover base image attestations from container files
+Download attestations (SBOM, VEX, …) for the base image used in a Dockerfile
 
 ### Synopsis
 
-Scan a directory for Dockerfile/Containerfile, extract the base image FROM line and
-attempt to discover any attestation documents for the base image. It will save the attestations to the output path as separate files.
+Read a Dockerfile or Containerfile, extract the FROM line (the base image), and download any
+attestations attached to that base image.
 
-Example:
-  devguard-scanner discover-baseimage-attestations ./path/to/project/Containerfile
+This is the same operation as 'devguard-scanner attestations <image>' but instead of providing
+the image reference manually, the command reads it from the FROM line of your Containerfile.
 
+Use this when you want to inherit upstream security metadata from your base image as part of
+your own build pipeline. For example, if your base image ships a VEX document that suppresses
+a CVE, you can re-use it via 'devguard-scanner attest' instead of triaging the vulnerability
+yourself. Each discovered attestation is saved as a separate JSON file in the output directory.
 
 ```shell
 devguard-scanner discover-baseimage-attestations <path to containerfile> [flags]
+```
+
+### Examples
+
+```shell
+  # Download attestations for the base image of a Containerfile
+  devguard-scanner discover-baseimage-attestations ./Containerfile
+
+  # Filter to a specific predicate type (e.g. only VEX documents)
+  devguard-scanner discover-baseimage-attestations ./Containerfile --predicateType https://cyclonedx.org/vex
+
+  # Save to a custom output directory
+  devguard-scanner discover-baseimage-attestations ./Containerfile --output ./attestations/
 ```
 
 ### Options

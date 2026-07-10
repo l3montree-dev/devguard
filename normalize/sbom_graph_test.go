@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -2664,6 +2665,82 @@ func TestMergeGraphRemovals(t *testing.T) {
 		assert.NotNil(t, before.Node("pkg:pypi/aiohttp@3.13.4"),
 			"aiohttp 3.13.4 should be reachable after merge")
 	})
+
+	t.Run("merging a flat (binary-mode) scan for the same info source must drop stale transitive deps from that artifact only", func(t *testing.T) {
+		// Reproduces a real-world regression: a container image with a compiled Go
+		// binary was first scanned in a way that produced a nested dependency tree
+		// (component -> component edges), then rescanned by trivy in image/binary
+		// mode, which cannot recover a dependency graph for a statically linked
+		// binary and instead attaches every module directly to the info source
+		// (a flat list). Even though the new scan of this artifact no longer
+		// declares golang.org/x/crypto@v0.50.0 anywhere, it survived because
+		// MergeGraph only clears/replaces edges for parent IDs that are explicitly
+		// present in the incoming graph - and the incoming (flat) graph never
+		// mentions the old intermediate components (e.g. circl) as a parent at all.
+		//
+		// golang.org/x/crypto@v0.50.0 is also a dependency of three other
+		// artifacts in the fixture that are not part of this merge, reached
+		// through the very same shared pkg:golang/github.com/cloudflare/circl@v1.6.3
+		// node (components are deduped globally by name+version, not per
+		// artifact). Per "last one wins" semantics, the rescan's silence about
+		// circl's children is authoritative for that node everywhere it's
+		// referenced, so those other artifacts lose the edge too - a deliberate,
+		// accepted trade-off rather than a bug (see MergeGraph's comment).
+		const rescannedArtifact = "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner&arch=arm64&tag=main-arm64"
+		const untouchedArtifact = "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner&arch=amd64&tag=main-amd64"
+		const vulnerablePURL = "pkg:golang/golang.org/x/crypto@v0.50.0"
+
+		before, err := loadSBOMGraphFromFile(t, "testdata/merge-graph-before.json")
+		assert.NoError(t, err)
+
+		other, err := loadSBOMGraphFromFile(t, "testdata/merge-graph-other.json")
+		assert.NoError(t, err)
+
+		assert.NotNil(t, before.Node(vulnerablePURL),
+			"sanity check: fixture should contain the vulnerable version before merging")
+		assert.Nil(t, other.Node(vulnerablePURL),
+			"sanity check: the new scan should not reference the vulnerable version at all")
+
+		// sanity check: the vulnerable version is reachable from both the artifact
+		// being rescanned and an unrelated artifact before the merge happens.
+		rescannedBefore := before.Clone()
+		assert.NoError(t, rescannedBefore.ScopeToArtifact(rescannedArtifact))
+		assert.True(t, rescannedBefore.IsReachable(vulnerablePURL),
+			"sanity check: vulnerable version should be reachable from the rescanned artifact before merging")
+
+		untouchedBefore := before.Clone()
+		assert.NoError(t, untouchedBefore.ScopeToArtifact(untouchedArtifact))
+		assert.True(t, untouchedBefore.IsReachable(vulnerablePURL),
+			"sanity check: vulnerable version should be reachable from the untouched artifact before merging")
+
+		before.MergeGraph(other)
+
+		rescannedAfter := before.Clone()
+		assert.NoError(t, rescannedAfter.ScopeToArtifact(rescannedArtifact))
+		assert.False(t, rescannedAfter.IsReachable(vulnerablePURL),
+			"golang.org/x/crypto@v0.50.0 should no longer be reachable from the rescanned artifact after merging a scan that dropped it")
+
+		// "Last one wins": since the untouched artifact reaches the vulnerable
+		// version through the very same shared circl@v1.6.3 node, it loses the
+		// edge too, even though its own scan was never part of this merge.
+		untouchedAfter := before.Clone()
+		assert.NoError(t, untouchedAfter.ScopeToArtifact(untouchedArtifact))
+		assert.False(t, untouchedAfter.IsReachable(vulnerablePURL),
+			"golang.org/x/crypto@v0.50.0 should also become unreachable from the untouched artifact, because it shares the same circl@v1.6.3 node whose children were just superseded")
+	})
+}
+
+func loadSBOMGraphFromFile(t *testing.T, path string) (*SBOMGraph, error) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	g := NewSBOMGraph()
+	if err := json.Unmarshal(data, g); err != nil {
+		return nil, err
+	}
+	return g, nil
 }
 
 func TestDependencyGraph(t *testing.T) {
@@ -2698,3 +2775,142 @@ func TestDependencyGraph(t *testing.T) {
 		assert.Contains(t, rootEdges, "pkg:npm/express@4.22.1")
 	})
 }
+
+func newExtraBOM(rootRef, rootName string) *cdx.BOM {
+	bom := cdx.NewBOM()
+	bom.Metadata = &cdx.Metadata{
+		Component: &cdx.Component{
+			Type:   cdx.ComponentTypeApplication,
+			BOMRef: rootRef,
+			Name:   rootName,
+		},
+	}
+	bom.Components = &[]cdx.Component{}
+	bom.Dependencies = &[]cdx.Dependency{}
+	return bom
+}
+
+func TestEnrichSBOM(t *testing.T) {
+	t.Run("adds a new component as a child of parentRef when nothing matches by name", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artID := g.AddArtifact("app")
+		srcID := g.AddInfoSource(artID, "s1", InfoSourceSBOM)
+		g.AddComponent(cdx.Component{BOMRef: "pkg:npm/existing@1.0.0", PackageURL: "pkg:npm/existing@1.0.0", Name: "existing"})
+		g.AddEdge(srcID, "pkg:npm/existing@1.0.0")
+
+		extra := newExtraBOM("nix/store/xyz-gitleaks/bin/gitleaks", "nix/store/xyz-gitleaks/bin/gitleaks")
+		*extra.Components = append(*extra.Components, cdx.Component{
+			BOMRef: "pkg:golang/gitleaks@8.30.1", PackageURL: "pkg:golang/gitleaks@8.30.1", Name: "gitleaks-module", Type: cdx.ComponentTypeLibrary,
+		})
+		*extra.Dependencies = append(*extra.Dependencies,
+			cdx.Dependency{Ref: "nix/store/xyz-gitleaks/bin/gitleaks", Dependencies: &[]string{"pkg:golang/gitleaks@8.30.1"}},
+		)
+
+		isNew, err := g.EnrichSBOM(extra, srcID)
+		assert.NoError(t, err)
+		assert.True(t, isNew)
+
+		assert.NotNil(t, g.Node("nix/store/xyz-gitleaks/bin/gitleaks"))
+		assert.NotNil(t, g.Node("pkg:golang/gitleaks@8.30.1"))
+		assert.Contains(t, g.Edges[srcID], "nix/store/xyz-gitleaks/bin/gitleaks")
+		// existing child of srcID must survive - additive, not replacing
+		assert.Contains(t, g.Edges[srcID], "pkg:npm/existing@1.0.0")
+		assert.Contains(t, g.Edges["nix/store/xyz-gitleaks/bin/gitleaks"], "pkg:golang/gitleaks@8.30.1")
+	})
+
+	t.Run("replaces the whole subtree of an existing component matched by name, keeping its BOMRef", func(t *testing.T) {
+		g := NewSBOMGraph()
+		artID := g.AddArtifact("app")
+		srcID := g.AddInfoSource(artID, "s1", InfoSourceSBOM)
+		// trivy's own scan found the binary under a random BOMRef, with a stale child.
+		g.AddComponent(cdx.Component{BOMRef: "uuid-1234", Name: "nix/store/xyz-gitleaks/bin/gitleaks", Type: cdx.ComponentTypeApplication})
+		g.AddComponent(cdx.Component{BOMRef: "pkg:golang/gitleaks", PackageURL: "pkg:golang/gitleaks", Name: "gitleaks-module-stale"})
+		g.AddEdge(srcID, "uuid-1234")
+		g.AddEdge("uuid-1234", "pkg:golang/gitleaks")
+
+		extra := newExtraBOM("nix/store/xyz-gitleaks/bin/gitleaks", "nix/store/xyz-gitleaks/bin/gitleaks")
+		*extra.Components = append(*extra.Components, cdx.Component{
+			BOMRef: "pkg:golang/gitleaks@8.30.1", PackageURL: "pkg:golang/gitleaks@8.30.1", Name: "gitleaks-module", Type: cdx.ComponentTypeLibrary,
+		})
+		*extra.Dependencies = append(*extra.Dependencies,
+			cdx.Dependency{Ref: "nix/store/xyz-gitleaks/bin/gitleaks", Dependencies: &[]string{"pkg:golang/gitleaks@8.30.1"}},
+		)
+
+		isNew, err := g.EnrichSBOM(extra, srcID)
+		assert.NoError(t, err)
+		assert.False(t, isNew)
+
+		// identity (BOMRef) of the existing stub is kept
+		assert.NotNil(t, g.Node("uuid-1234"))
+		assert.Nil(t, g.Node("nix/store/xyz-gitleaks/bin/gitleaks"), "the extra's own declared ref must not become a separate node")
+
+		// subtree replaced wholesale: old stale child gone, new real child present
+		assert.Contains(t, g.Edges["uuid-1234"], "pkg:golang/gitleaks@8.30.1")
+		assert.NotContains(t, g.Edges["uuid-1234"], "pkg:golang/gitleaks")
+
+		// the stale module component itself is unreachable now and gets pruned
+		assert.Nil(t, g.Node("pkg:golang/gitleaks"))
+
+		// srcID -> uuid-1234 edge (pre-existing) must still be there, not duplicated
+		assert.Contains(t, g.Edges[srcID], "uuid-1234")
+	})
+
+	t.Run("errors when extra has no root component", func(t *testing.T) {
+		g := NewSBOMGraph()
+		_, err := g.EnrichSBOM(cdx.NewBOM(), GraphRootNodeID)
+		assert.Error(t, err)
+	})
+
+	t.Run("demotes stale flat root edges once a new node's bundled real subtree nests them elsewhere", func(t *testing.T) {
+		// Reproduces trivy's flat Python site-packages scan: every package
+		// (including transitive ones) is directly attached to root, since pip
+		// installs carry no relationship metadata. In production, a single
+		// new node (e.g. "devguard-scanner-tools", which doesn't exist in the
+		// flat scan at all) bundles the entire real closure inline
+		// (Components + Dependencies) in one merge - pruning only runs on
+		// that isNew path, so this is the shape that actually demotes
+		// anything: two separate isNew=false merges (matching existing
+		// components) would never trigger it.
+		g := NewSBOMGraph()
+		artID := g.AddArtifact("app")
+		srcID := g.AddInfoSource(artID, "s1", InfoSourceSBOM)
+		g.AddComponent(cdx.Component{BOMRef: "pkg:pypi/checkov@3.3.5", PackageURL: "pkg:pypi/checkov@3.3.5", Name: "checkov"})
+		g.AddComponent(cdx.Component{BOMRef: "pkg:pypi/semgrep@1.168.0", PackageURL: "pkg:pypi/semgrep@1.168.0", Name: "semgrep"})
+		g.AddComponent(cdx.Component{BOMRef: "pkg:pypi/semgrepdep@1.0.0", PackageURL: "pkg:pypi/semgrepdep@1.0.0", Name: "semgrepdep"})
+		g.AddEdge(srcID, "pkg:pypi/checkov@3.3.5")
+		g.AddEdge(srcID, "pkg:pypi/semgrep@1.168.0")
+		g.AddEdge(srcID, "pkg:pypi/semgrepdep@1.0.0")
+
+		toolsExtra := newExtraBOM("pkg:pypi/devguard-scanner-tools@0.1.0", "devguard-scanner-tools")
+		*toolsExtra.Components = append(*toolsExtra.Components,
+			cdx.Component{BOMRef: "pkg:pypi/checkov@3.3.5", PackageURL: "pkg:pypi/checkov@3.3.5", Name: "checkov"},
+			cdx.Component{BOMRef: "pkg:pypi/semgrep@1.168.0", PackageURL: "pkg:pypi/semgrep@1.168.0", Name: "semgrep"},
+			cdx.Component{BOMRef: "pkg:pypi/semgrepdep@1.0.0", PackageURL: "pkg:pypi/semgrepdep@1.0.0", Name: "semgrepdep"},
+		)
+		*toolsExtra.Dependencies = append(*toolsExtra.Dependencies,
+			cdx.Dependency{Ref: "pkg:pypi/devguard-scanner-tools@0.1.0", Dependencies: &[]string{"pkg:pypi/checkov@3.3.5", "pkg:pypi/semgrep@1.168.0"}},
+			cdx.Dependency{Ref: "pkg:pypi/checkov@3.3.5", Dependencies: &[]string{}},
+			cdx.Dependency{Ref: "pkg:pypi/semgrep@1.168.0", Dependencies: &[]string{"pkg:pypi/semgrepdep@1.0.0"}},
+			cdx.Dependency{Ref: "pkg:pypi/semgrepdep@1.0.0", Dependencies: &[]string{}},
+		)
+
+		isNew, err := g.EnrichSBOM(toolsExtra, srcID)
+		assert.NoError(t, err)
+		assert.True(t, isNew)
+
+		// devguard-scanner-tools is the true new entry point - keeps its direct edge
+		assert.Contains(t, g.Edges[srcID], "pkg:pypi/devguard-scanner-tools@0.1.0")
+		// checkov, semgrep and semgrepdep are all now properly nested elsewhere -
+		// their stale flat direct edges must be gone, even though only
+		// checkov/semgrep are devguard-scanner-tools's own immediate children
+		assert.NotContains(t, g.Edges[srcID], "pkg:pypi/checkov@3.3.5")
+		assert.NotContains(t, g.Edges[srcID], "pkg:pypi/semgrep@1.168.0")
+		assert.NotContains(t, g.Edges[srcID], "pkg:pypi/semgrepdep@1.0.0")
+
+		// the real tree itself is intact
+		assert.Contains(t, g.Edges["pkg:pypi/devguard-scanner-tools@0.1.0"], "pkg:pypi/checkov@3.3.5")
+		assert.Contains(t, g.Edges["pkg:pypi/devguard-scanner-tools@0.1.0"], "pkg:pypi/semgrep@1.168.0")
+		assert.Contains(t, g.Edges["pkg:pypi/semgrep@1.168.0"], "pkg:pypi/semgrepdep@1.0.0")
+	})
+}
+

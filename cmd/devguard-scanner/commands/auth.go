@@ -37,19 +37,36 @@ DEVGUARD_TOKEN environment variable instead so the token is not written to disk.
 
 Once stored, all devguard-scanner commands will automatically pick up the token from the keyring.`,
 		Example: `  # One-time setup on a developer machine
-  devguard-scanner auth --token <hex-token> --assetName org/project/asset --apiUrl https://api.devguard.org`,
+  devguard-scanner auth --token <hex-token> --assetName org/project/asset --apiUrl https://api.devguard.org
+
+  # Print a previously stored token, e.g. to forward it into a Docker container
+  docker run --rm -e DEVGUARD_TOKEN="$(devguard-scanner auth --print-token --assetName org/project/asset --apiUrl https://api.devguard.org)" your-image scan`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token := config.RuntimeBaseConfig.Token
 			assetName := config.RuntimeBaseConfig.AssetName
 			apiURL := config.RuntimeBaseConfig.APIURL
-			if token == "" {
-				return fmt.Errorf("--token is required")
-			}
 			if assetName == "" {
 				return fmt.Errorf("--assetName is required")
 			}
 			if apiURL == "" {
 				return fmt.Errorf("--apiUrl is required")
+			}
+
+			printToken, err := cmd.Flags().GetBool("print-token")
+			if err != nil {
+				return err
+			}
+			if printToken {
+				token, err := config.GetTokenFromKeyring(apiURL, assetName)
+				if err != nil {
+					return fmt.Errorf("could not read token from keyring: %w", err)
+				}
+				fmt.Print(token)
+				return nil
+			}
+
+			token := config.RuntimeBaseConfig.Token
+			if token == "" {
+				return fmt.Errorf("--token is required")
 			}
 
 			client, err := devguard.NewHTTPClient(token, apiURL)
@@ -73,10 +90,10 @@ Once stored, all devguard-scanner commands will automatically pick up the token 
 		},
 	}
 
-	cmd.Flags().String("token", "", "The personal access token to authenticate the request (required)")
+	cmd.Flags().String("token", "", "The personal access token to authenticate the request (required unless --print-token is set)")
 	cmd.Flags().String("assetName", "", "The id of the asset which is scanned (required)")
 	cmd.Flags().String("apiUrl", "https://api.devguard.org", "The url of the API to send the scan request to")
-	cmd.MarkFlagRequired("token")     // nolint:errcheck
+	cmd.Flags().Bool("print-token", false, "Print a previously stored token from the keyring instead of storing a new one")
 	cmd.MarkFlagRequired("assetName") // nolint:errcheck
 
 	return cmd

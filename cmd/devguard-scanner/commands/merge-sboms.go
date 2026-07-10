@@ -103,10 +103,7 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 	result.Components = &[]cyclonedx.Component{}
 	result.Dependencies = &[]cyclonedx.Dependency{}
 
-	rootDependencies := cyclonedx.Dependency{
-		Ref:          purl,
-		Dependencies: &[]string{},
-	}
+	extras := make([]*cyclonedx.BOM, 0, len(sboms))
 	for _, sbom := range sboms {
 		slog.Info("Reading SBOM", "path", sbom)
 		c, err := os.Open(sbom)
@@ -124,33 +121,13 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 			continue
 		}
 
-		if bom.Components != nil {
-			merged := append(*result.Components, *bom.Components...)
-			result.Components = &merged
-		}
-		// add a dependency from the main purl to the sbom purl, if the BOMRef is non-empty
-		if bom.Metadata.Component.BOMRef != "" {
-			*rootDependencies.Dependencies = append(*rootDependencies.Dependencies, bom.Metadata.Component.BOMRef)
-		}
-
-		if bom.Dependencies != nil {
-			*result.Dependencies = append(*result.Dependencies, *bom.Dependencies...)
-		}
-
-		// make sure to add the metadata.component (the root component) to the components list, if it's not already there
-		found := false
-		for _, c := range *result.Components {
-			if c.BOMRef == bom.Metadata.Component.BOMRef {
-				found = true
-				break
-			}
-		}
-		if !found {
-			*result.Components = append(*result.Components, *bom.Metadata.Component)
-		}
+		extras = append(extras, &bom)
 	}
 
-	*result.Dependencies = append(*result.Dependencies, rootDependencies)
+	if err := mergeSupplementarySBOMs(result, extras); err != nil {
+		return err
+	}
+
 	// validate against sbom_graph.go
 	if _, err := normalize.SBOMGraphFromCycloneDX(result, "", "", false); err != nil {
 		return err

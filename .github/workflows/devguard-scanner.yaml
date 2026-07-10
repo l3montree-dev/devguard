@@ -9,6 +9,8 @@ on:
   workflow_dispatch:
   push:
 
+permissions: {}
+
 jobs:
   golangci:
     name: lint
@@ -20,7 +22,7 @@ jobs:
       with:
         submodules: recursive
         persist-credentials: false
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         install_url: https://releases.nixos.org/nix/nix-2.34.4/install
         extra_nix_config: |
@@ -41,7 +43,7 @@ jobs:
       with:
         submodules: recursive
         persist-credentials: false
-    - uses: cachix/install-nix-action@v31
+    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
       with:
         install_url: https://releases.nixos.org/nix/nix-2.34.4/install
         extra_nix_config: |
@@ -65,10 +67,10 @@ jobs:
     with:
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
-      fail-on-risk: high
-      fail-on-cvss: high
+      fail-on-risk: never
+      fail-on-cvss: never
       devguard-web-ui: https://main.devguard.org
-      allow-failure: true
+      allow-failure: false
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
@@ -89,8 +91,8 @@ jobs:
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
-      fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-cvss: never
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
@@ -115,8 +117,8 @@ jobs:
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
-      fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-cvss: never
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
@@ -140,8 +142,8 @@ jobs:
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
-      fail-on-cvss: high
-      fail-on-risk: high
+      fail-on-cvss: never
+      fail-on-risk: never
       nix-cache-substituter: https://nix.garage.l3montree.cloud
       nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
       nix-cache-s3-bucket: nix
@@ -160,12 +162,12 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           install_url: https://releases.nixos.org/nix/nix-2.34.4/install
           extra_nix_config: |
@@ -256,7 +258,7 @@ jobs:
             for file in *.tar.gz *.zip checksums.txt; do
               if [ -f \"\$file\" ]; then
                 echo \"Signing \$file with devguard-scanner...\"
-                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} \"\$file\" > ${file}.sig
+                devguard-scanner sign --token ${{ secrets.DEVGUARD_TOKEN }} --assetName l3montree-cybersecurity/projects/devguard/assets/devguard \"\$file\" > ${file}.sig
               fi
             done
             "

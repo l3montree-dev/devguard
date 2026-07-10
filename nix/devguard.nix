@@ -1,4 +1,10 @@
-{ buildGoModule, lib, self, system }: rec {
+{
+  buildGoModule, lib, self, system,
+  # optional: only needed to build devguardScannerSBOM (passed explicitly
+  # from oci.nix). The plain "binaries" call site in flake.nix never
+  # references that attribute, so it's fine for these to stay null there.
+  runCommand ? null, jq ? null, trivy ? null,
+}: rec {
   common = import ./common.nix { inherit self; };
   ldflags = [
     "-s"
@@ -34,8 +40,8 @@
     inherit src;
     # vendorHash differs per OS because `go mod vendor` applies build constraints.
     vendorHash = if lib.hasSuffix "-darwin" system
-      then "sha256-5Wvv5HL25ZJB1lP1kZGBnZMzsSxwE0pNZvxuHwPbZS8="
-      else "sha256-7K87BGP+x2mH2DvlNzQ/Eno1JHR3PRFQkFz3DVWk2Y0=";
+      then "sha256-2cJvRo6sFUDI+MBDIBTyIcHmg8XN4e6jL7JqkYcWMu8="
+      else "sha256-7B3fHKAqeIAulMiJWzD62gTNu6O7+5BdyHc+aYOsgPY=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
@@ -62,4 +68,44 @@
     version = common.version;
     subPackages = [ "cmd/devguard-cli" ];
   });
+
+  # devguard-scanner ends up scanning devguard's own images, and trivy
+  # detects each of these compiled binaries the same way it detects
+  # gitleaks/trivy/crane's - an unresolved "application" stub plus a
+  # versionless main-module reference (same root cause as gitleaks.nix
+  # documents: no VCS stamping for a locally-built binary). One supplementary
+  # SBOM per binary fixes both, the same way.
+  #
+  # Two separate derivations, not one bundling all three: devguardScanner
+  # ships alone in the scanner image, devguard+devguardCLI ship together in
+  # the api-server image - the two images don't share binaries, so bundling
+  # all three together would ship each image SBOM data describing a binary
+  # that isn't even present in it.
+  mkToolSBOM = import ./sbom-lib.nix { inherit lib runCommand jq; } { inherit trivy; };
+
+  devguardScannerSBOM = mkToolSBOM {
+    toolName = "devguard-scanner";
+    inherit src;
+    version = common.version;
+    modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    binaries = [{ name = "devguard-scanner"; binPath = "${devguardScanner}/bin/devguard-scanner"; }];
+  };
+
+  devguardSBOM = mkToolSBOM {
+    toolName = "devguard-api";
+    inherit src;
+    version = common.version;
+    modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    binaries = [
+      { name = "devguard"; binPath = "${devguard}/bin/devguard"; }
+    ];
+  };
+
+  devguardCLISBOM = mkToolSBOM {
+    toolName = "devguard-cli";
+    inherit src;
+    version = common.version;
+    modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    binaries = [{ name = "devguard-cli"; binPath = "${devguardCLI}/bin/devguard-cli"; }];
+  };
 }

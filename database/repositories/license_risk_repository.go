@@ -151,7 +151,8 @@ func (repository *LicenseRiskRepository) applyAndSave(ctx context.Context, tx *g
 
 func (repository *LicenseRiskRepository) Read(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID) (models.LicenseRisk, error) {
 	var licenseRisk models.LicenseRisk
-	err := repository.GetDB(ctx, tx).Where("id = ?", vulnID).Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
+	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", vulnID), licenseRisk)
+	err := db.Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Component").First(&licenseRisk).Error
 	if err != nil {

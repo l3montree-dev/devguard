@@ -77,7 +77,7 @@ func NewInTotoVerifyCommand() *cobra.Command {
 		Long: `Calls the DevGuard supply chain verification endpoint and exits 0 if the supply chain is valid,
 non-zero otherwise.
 
-This command is NOT intended to be called by human users. It exists so that automated deployment
+This command is CURRENTLY (https://github.com/l3montree-dev/devguard/issues/2202) NOT intended to be called by human users. It exists so that automated deployment
 gates — such as an OPA policy, an admission webhook, or a CI/CD quality gate — can query DevGuard
 for the verification status of a specific image digest before allowing a deployment to proceed.
 
