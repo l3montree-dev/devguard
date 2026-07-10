@@ -297,3 +297,62 @@ COPY --from=builder /app /app`,
 		})
 	}
 }
+
+func TestAttestationOutput(t *testing.T) {
+	tests := []struct {
+		name             string
+		attestation      map[string]any
+		index            int
+		expectedFilename string
+		expectedContent  map[string]any
+	}{
+		{
+			name: "intoto attestation: filename from predicateType, only predicate as content",
+			attestation: map[string]any{
+				"_type":         "https://in-toto.io/Statement/v1",
+				"predicateType": "https://cyclonedx.org/bom",
+				"predicate":     map[string]any{"bomFormat": "CycloneDX"},
+			},
+			index:            0,
+			expectedFilename: "attestation-bom.json",
+			expectedContent:  map[string]any{"bomFormat": "CycloneDX"},
+		},
+		{
+			name: "predicate is a string falls back to the whole attestation",
+			attestation: map[string]any{
+				"_type":         "https://in-toto.io/Statement/v0.1",
+				"predicateType": "https://spdx.dev/Document",
+				"predicate":     `{"spdxVersion":"SPDX-2.3"}`,
+			},
+			index:            0,
+			expectedFilename: "attestation-Document.json",
+			expectedContent: map[string]any{
+				"_type":         "https://in-toto.io/Statement/v0.1",
+				"predicateType": "https://spdx.dev/Document",
+				"predicate":     `{"spdxVersion":"SPDX-2.3"}`,
+			},
+		},
+		{
+			name:             "no predicateType falls back to index-based filename and full content",
+			attestation:      map[string]any{"someField": "value"},
+			index:            2,
+			expectedFilename: "attestation-3.json",
+			expectedContent:  map[string]any{"someField": "value"},
+		},
+		{
+			name:             "predicateType present but predicate missing keeps the whole attestation",
+			attestation:      map[string]any{"predicateType": "https://example.com/foo.json"},
+			index:            0,
+			expectedFilename: "attestation-foo.json",
+			expectedContent:  map[string]any{"predicateType": "https://example.com/foo.json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filename, content := attestationOutput(tt.attestation, tt.index)
+			assert.Equal(t, tt.expectedFilename, filename)
+			assert.Equal(t, tt.expectedContent, content)
+		})
+	}
+}
