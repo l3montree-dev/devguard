@@ -115,7 +115,7 @@
             "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
             "args": [
                 "vulndb",
-                "import",
+                "import"
             ]
         },
         {
@@ -128,7 +128,7 @@
             "args": [
                 "vulndb",
                 "import",
-                "--localArchive",
+                "--localArchive"
             ]
         },
                 {

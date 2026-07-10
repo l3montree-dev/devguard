@@ -13,12 +13,13 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 const (
-	euvdIDMappingURL = "https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping" // URL to fetch the alias mapping from EUVD-IDs to CVE-IDs
-	csvEUVDColumnID  = "euvd_id"                                                        // name of the csv columns, should be stable over all versions;if it changes it should break
-	csvCVEColumnID   = "cve_id"
+	euvdIDAliasURL  = "https://euvdservices.enisa.europa.eu/api/dump/cve-euvd-mapping" // URL to fetch the alias mapping from EUVD-IDs to CVE-IDs
+	csvEUVDColumnID = "euvd_id"                                                        // name of the csv columns, should be stable over all versions;if it changes it should break
+	csvCVEColumnID  = "cve_id"
 )
 
 type euvdService struct {
@@ -99,18 +100,13 @@ func (service euvdService) ResolveAndInsertEUVDRelationships(ctx context.Context
 }
 
 func (service euvdService) fetchEUVDAliases() ([][]string, error) {
-	req, err := http.NewRequest("GET", euvdIDMappingURL, nil)
+	body, err := utils.DoGetRequestWithContext(context.Background(), euvdIDAliasURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not build request to fetch csv file: %w", err)
+		return nil, fmt.Errorf("could not fetch euvd aliases: %w", err)
 	}
+	defer body.Close()
 
-	resp, err := service.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("could not get csv file from EUVD api: %w", err)
-	}
-	defer resp.Body.Close()
-
-	csvReader := csv.NewReader(resp.Body)
+	csvReader := csv.NewReader(body)
 	return csvReader.ReadAll()
 }
 

@@ -1041,10 +1041,9 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		cr.source_cve IS NULL 
 	);`)
 	if err != nil {
-		slog.Error("could not clean up orphan cves, continuing...", "error", err)
-	} else {
-		slog.Info("successfully cleaned up orphan cves", "took", time.Since(start))
+		return fmt.Errorf("could not clean up orphan cves: %w", err)
 	}
+	slog.Info("successfully cleaned up orphan cves", "took", time.Since(start))
 
 	// after deleting orphan cves make sure to drop any orphaned relationships as well so the fk on source_cve holds
 	start = time.Now()
@@ -1052,10 +1051,9 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 	DELETE FROM cve_relationships cr
 	WHERE NOT EXISTS (SELECT 1 FROM cves c WHERE c.cve = cr.source_cve);`)
 	if err != nil {
-		slog.Error("could not clean up dangling cve_relationships, continuing...", "error", err)
-	} else {
-		slog.Info("successfully cleaned up dangling cve_relationships", "took", time.Since(start))
+		return fmt.Errorf("could not clean up dangling cve_relationships: %w", err)
 	}
+	slog.Info("successfully cleaned up dangling cve_relationships", "took", time.Since(start))
 
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
@@ -1068,10 +1066,9 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 		)
 	;`)
 	if err != nil {
-		slog.Error("could not clean up orphan affected components, continuing...", "error", err)
-	} else {
-		slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
+		return fmt.Errorf("could not clean up orphan affected components: %w", err)
 	}
+	slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
 
 	// since advisory type cves can only be found via their target_cve relations
 	// we can delete every relations where target_cve does not exist
@@ -1087,10 +1084,9 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 			cr.target_cve = cves.cve)
 	;`, dtos.RelationshipTypeAdvisory)
 	if err != nil {
-		slog.Error("could not delete obsolete advisory relationships, continuing...", "error", err)
-	} else {
-		slog.Info("successfully cleaned up obsolete advisory relationships", "took", time.Since(start))
+		return fmt.Errorf("could not delete obsolete advisory relationships: %w", err)
 	}
+	slog.Info("successfully cleaned up obsolete advisory relationships", "took", time.Since(start))
 
 	return nil
 }

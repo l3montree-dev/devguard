@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -228,7 +229,7 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 		}
 		slog.Info("successfully fetched CISA KEV data")
 
-		euvdKEVCVEs, err := service.euvdKEV.Fetch(ctx)
+		euvdKEVCVEs, err := service.euvdKEV.Fetch(kevFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EUVD KEV data: %w", err)
 		}
@@ -1201,7 +1202,6 @@ func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.
 const (
 	csafFetchWorkers     = 50
 	csafConverterWorkers = 2
-	csafWriterBatchSize  = 1000
 )
 
 // http client for rapid fire http requests to the CSAF api
@@ -1230,9 +1230,15 @@ func (service *VulnDBService) FetchCSAFData(ctx context.Context, baseURL string)
 func fetchCSAFFileNamesFromIndex(ctx context.Context, baseURL string) ([]string, error) {
 	slog.Info("start reading index.txt")
 	// fetch the index.txt from the base url + index path
-	buf, err := utils.DoGetRequestWithContext(ctx, baseURL+"index.txt", nil)
+	body, err := utils.DoGetRequestWithContext(ctx, baseURL+"index.txt", nil)
 	if err != nil {
 		return nil, err
+	}
+	defer body.Close()
+
+	buf, err := io.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("could not read response body: %w", err)
 	}
 
 	// file names are seperated by new line characters so string fields splits them up correctly
@@ -1253,7 +1259,7 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 	advisories := make(chan *minimalCSAFAdvisory, csafFetchWorkers) // CSAF reports to convert
 	cveOutput := make(chan *models.CVE, batchSize)                  // final cve objects
 
-	// producer: push all file urls, then close the jobs channel
+	// push all file urls, then close the jobs channel
 	group.Go(func() error {
 		defer close(fetchingJobs)
 		for _, fileName := range fileNames {
@@ -1266,7 +1272,6 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 		return nil
 	})
 
-	// fetch stage: bounded worker pool; closes advisories once every fetcher returned
 	group.Go(func() error {
 		fetchers, fetchCtx := errgroup.WithContext(ctx)
 		for range csafFetchWorkers {
@@ -1279,7 +1284,6 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 		return err
 	})
 
-	// convert stage: worker pool; closes cveOutput once every converter returned
 	group.Go(func() error {
 		converters, convertCtx := errgroup.WithContext(ctx)
 		for range csafConverterWorkers {
@@ -1342,13 +1346,14 @@ func fetchCSAFReportWorker(ctx context.Context, jobs chan string, output chan *m
 				return nil
 			}
 
-			buf, err := utils.DoGetRequestWithContext(ctx, url, client)
+			body, err := utils.DoGetRequestWithContext(ctx, url, client)
 			if err != nil {
 				return fmt.Errorf("could not fetch CSAF file at %s: %w", url, err)
 			}
 
 			var csafReport minimalCSAFAdvisory
-			err = json.Unmarshal(buf, &csafReport)
+			err = json.NewDecoder(body).Decode(&csafReport)
+			body.Close()
 			if err != nil {
 				return fmt.Errorf("could not unmarshal json into csaf struct: %w", err)
 			}

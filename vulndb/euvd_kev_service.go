@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,24 +38,14 @@ type euvdKEVEntry struct {
 }
 
 func (service euvdKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, euvdKEVURL, nil)
+	body, err := utils.DoGetRequestWithContext(ctx, euvdKEVURL, &utils.EgressClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not fetch euvd KEV information: %w", err)
 	}
-
-	res, err := utils.EgressClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("could not read response body: %w", err)
-	}
+	defer body.Close()
 
 	var euvdKEV []euvdKEVEntry
-	if err := json.Unmarshal(body, &euvdKEV); err != nil {
+	if err := json.NewDecoder(body).Decode(&euvdKEV); err != nil {
 		return nil, fmt.Errorf("could not parse JSON: %w", err)
 	}
 
