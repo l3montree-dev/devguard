@@ -161,6 +161,61 @@ func TestGenerateTag(t *testing.T) {
 	}
 }
 
+// TestGenerateTagMultipleImagesFromOneBuild demonstrates how to produce multiple
+// container images from a single build run (e.g. java-base:21 and java-debian:21)
+// by invoking generate-tag once per image with a different --imageSuffix.
+func TestGenerateTagMultipleImagesFromOneBuild(t *testing.T) {
+	tests := []struct {
+		imageSuffix          string
+		expectedImageTagName string
+	}{
+		{
+			imageSuffix:          "java-base",
+			expectedImageTagName: "registry.example.com/org/java-base:21-amd64",
+		},
+		{
+			imageSuffix:          "java-debian",
+			expectedImageTagName: "registry.example.com/org/java-debian:21-amd64",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.imageSuffix, func(t *testing.T) {
+			_, output, err := generateTag("21", "amd64", "registry.example.com/org", "", "", tt.imageSuffix)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedImageTagName, output.ImageTag)
+		})
+	}
+}
+
+func TestGenerateTagJavaVariantsWithoutArchSuffix(t *testing.T) {
+	tests := []struct {
+		imageSuffix          string
+		expectedImageTagName string
+	}{
+		{
+			imageSuffix:          "java-base",
+			expectedImageTagName: "registry.example.com/org/java-base:21",
+		},
+		{
+			imageSuffix:          "java-debian",
+			expectedImageTagName: "registry.example.com/org/java-debian:21",
+		},
+		{
+			imageSuffix:          "",
+			expectedImageTagName: "registry.example.com/org:21",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.imageSuffix, func(t *testing.T) {
+			_, output, err := generateTag("21", "", "registry.example.com/org", "", "", tt.imageSuffix)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedImageTagName, output.ImageTag)
+		})
+	}
+}
+
 func TestGenerateArtifactName(t *testing.T) {
 	tests := []struct {
 		name                   string

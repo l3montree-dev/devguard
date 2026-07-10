@@ -426,6 +426,38 @@ func TestGetLabels(t *testing.T) {
 		assert.Equal(t, expectedLabels, GetLabels(vuln))
 	})
 
+	t.Run("should truncate artifact names exceeding GitHub's 50 char label limit", func(t *testing.T) {
+		// GitHub rejects label names over 50 characters with a 422
+		// "Resource:Label Field:name Code:invalid" error (verified against the
+		// live API: 50 chars succeeds, 51 fails). OCI purl artifact names
+		// routinely exceed this, so GetLabels must shorten them.
+		longArtifactName := "pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner&arch=arm64&tag=main-arm64"
+		assert.Greater(t, len(longArtifactName), 50)
+
+		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: dtos.VulnStateOpen,
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: longArtifactName},
+			},
+			RawRiskAssessment: new(0.2),
+		}
+
+		labels := GetLabels(vuln)
+		for _, label := range labels {
+			assert.LessOrEqual(t, len(label), 50, "label %q exceeds GitHub's 50 char limit", label)
+		}
+
+		expectedLabels := []string{
+			"devguard",
+			"state:open",
+			"risk:low",
+			"pkg:oci/scanner?reposito...ch=arm64&tag=main-arm64",
+		}
+		assert.Equal(t, expectedLabels, labels)
+	})
+
 }
 
 func TestBuildGitlabCiTemplate(t *testing.T) {

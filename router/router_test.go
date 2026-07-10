@@ -243,6 +243,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.WebhookController),
 		projectRepo,
 		new(controllers.ComponentController),
+		nil,
 	)
 
 	assetRouter := NewAssetRouter(
@@ -282,7 +283,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
 	NewVEXRuleRouter(assetVersionRouter, new(controllers.VEXRuleController))
-	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
+	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
 	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo)
 
 	return e

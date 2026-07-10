@@ -39,15 +39,15 @@
         ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
 
         amd64Dependencies = [
-          ociImagesAmd64.craneFromSource
-          ociImagesAmd64.gitleaksFromSource
-          ociImagesAmd64.trivyFromSource
+          ociImagesAmd64.craneFromSource.package
+          ociImagesAmd64.gitleaksFromSource.package
+          ociImagesAmd64.trivyFromSource.package
         ];
 
         arm64Dependencies = [
-          ociImagesArm64.craneFromSource
-          ociImagesArm64.gitleaksFromSource
-          ociImagesArm64.trivyFromSource
+          ociImagesArm64.craneFromSource.package
+          ociImagesArm64.gitleaksFromSource.package
+          ociImagesArm64.trivyFromSource.package
         ];
 
         commonBuildOutputs = {

@@ -44,6 +44,7 @@ configured token before upload.`,
 	containerScanningCommand.Flags().String("image", "", "OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path or the first argument may be used to provide a tar or local files.")
 	containerScanningCommand.Flags().String("path", "", "Path to a tar file or directory containing the container image to scan. If empty, --image must be provided or an argument.")
 	containerScanningCommand.Flags().Bool("ignoreUpstreamAttestations", false, "Ignores attestations from the scanned container image - if they exists")
+	scanner.AddSupplementarySBOMFlags(containerScanningCommand)
 
 	return containerScanningCommand
 }

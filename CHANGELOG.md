@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.8.0] - 2026-07-01
+
+### Added
+
+- **Automatic ownership scoping** — GORM repositories now enforce ownership/tenant scoping automatically at the query layer, closing off a class of cross-tenant data leakage (BOLA) that previously relied on each repository remembering to filter manually; covered by a new `semgrep` rule set and repository-level tests
+- **Dynamic external project handling** — new endpoints and routing to create, list, and delete projects/assets backed by external providers, including a project tree transformer, release population on project creation, and e2e coverage
+- **`devguard-maint release k8s-integration`** — new subcommand to tag and push the `devguard-k8s-image-inventory` repo, following the same changelog-verification and signed-tag flow as the other release commands
+
+### Changed
+
+- **Instance settings cache** — settings updates now synchronize the in-memory cache immediately (with proper mutex protection), avoiding a window where stale settings could be served after an update
+
+### Fixed
+
+- **In-toto path traversal / zip-slip** — the in-toto controller and service now validate link file paths, preventing path traversal and zip-slip when processing in-toto attestations
+- **CI/IaC hardening** — CI pipeline no longer swallows code-scanning failures, Checkov IaC findings addressed, and a previously dropped Semgrep severity rule was restored
+
 ## [v1.7.3] - 2026-06-23
 
 ### Added

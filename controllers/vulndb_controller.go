@@ -167,7 +167,7 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	var componentDTO *dtos.ComponentDTO
 	comp := models.Component{ID: purlString}
-	if err := c.componentRepository.GetDB(ctx.Request().Context(), nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil {
+	if err := c.componentRepository.GetDB(ctx.Request().Context(), nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil { // nosemgrep: bola-gorm-first-by-id-only -- component ID is a PURL (public package identifier), not a tenant-scoped UUID; the component table has no tenant column
 		// Component not in DB yet — fetch license and project info on-demand and create it
 		comp, _ = c.componentService.GetLicense(ctx.Request().Context(), comp)
 		comp, _ = c.componentService.FetchComponentProject(ctx.Request().Context(), comp)

@@ -194,6 +194,15 @@ func (repository *assetRepository) GetByProjectIDs(ctx context.Context, tx *gorm
 	return apps, nil
 }
 
+func (repository *assetRepository) GetByProjectIDsWithProviderID(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error) {
+	var apps []models.Asset
+	err := repository.GetDB(ctx, tx).Where("project_id IN ? AND external_entity_provider_id = ?", projectIDs, providerID).Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}
+
 func (repository *assetRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
 	err := repository.GetDB(ctx, tx).Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error
@@ -241,7 +250,8 @@ func (repository *assetRepository) Delete(ctx context.Context, tx *gorm.DB, id u
 
 func (repository *assetRepository) ReadWithAssetVersions(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := repository.GetDB(ctx, tx).Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error
+	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", assetID), asset)
+	err := db.Preload("AssetVersions").First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}
@@ -284,4 +294,37 @@ func (repository *assetRepository) GetAssetsWithVulnSharingEnabled(ctx context.C
 		"EXISTS (SELECT 1 from projects where projects.id = assets.project_id AND projects.organization_id = ?)", orgID,
 	).Preload("Project").Find(&assets).Error
 	return assets, err
+}
+
+func (repository *assetRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error) {
+	var existingAssets []models.Asset
+	err := repository.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(assets, func(a *models.Asset) *string { return a.ExternalEntityID }), externalProviderID).Find(&existingAssets).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	existingMap := make(map[string]bool)
+	for _, a := range existingAssets {
+		existingMap[*a.ExternalEntityID] = true
+	}
+
+	err = repository.Upsert(ctx, tx, &assets, []clause.Column{
+		{Name: "external_entity_provider_id"},
+		{Name: "external_entity_id"},
+	}, []string{"name", "description", "project_id", "avatar"})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newAssets := make([]*models.Asset, 0)
+	updatedAssets := make([]*models.Asset, 0)
+	for _, a := range assets {
+		if !existingMap[*a.ExternalEntityID] {
+			newAssets = append(newAssets, a)
+		} else {
+			updatedAssets = append(updatedAssets, a)
+		}
+	}
+
+	return newAssets, updatedAssets, nil
 }

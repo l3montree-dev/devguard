@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -153,6 +154,11 @@ func (a *InToToController) Create(ctx shared.Context) error {
 		return err
 	}
 
+	filename := filepath.Base(req.Filename)
+	if filename == "" || filename == "." {
+		return echo.NewHTTPError(400, "invalid filename")
+	}
+
 	link := models.InTotoLink{
 		AssetVersionName: assetVersion.Name,
 		AssetID:          asset.ID,
@@ -160,7 +166,7 @@ func (a *InToToController) Create(ctx shared.Context) error {
 		Step:             strings.TrimSpace(req.Step),
 		Payload:          req.Payload,
 		PatID:            pat.ID,
-		Filename:         req.Filename,
+		Filename:         filename,
 	}
 
 	valid = a.linkRepository.Save(ctx.Request().Context(), nil, &link)
@@ -338,7 +344,7 @@ func (a *InToToController) Read(ctx shared.Context) error {
 
 	for _, link := range links {
 		header := &zip.FileHeader{
-			Name:     link.Filename,
+			Name:     link.SafeFilePath(),
 			Method:   zip.Deflate, // deflate also works, but at a cost
 			Modified: time.Now(),
 		}

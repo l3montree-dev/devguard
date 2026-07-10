@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -35,56 +36,69 @@ func (r *releaseRepository) GetByProjectID(ctx context.Context, tx *gorm.DB, pro
 // ReadWithItems reads a release and preloads its direct items and related artifact/child pointers.
 func (r *releaseRepository) ReadWithItems(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Release, error) {
 	var rel models.Release
-	err := r.GetDB(ctx, tx).Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel, "id = ?", id).Error
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rel)
+	err := db.Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel).Error
 	return rel, err
 }
 
 // ReadRecursive loads the given release and all nested child releases using a recursive CTE on the DB
 // and assembles the tree in memory.
 func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Release, error) {
-	// Collect all release ids in the tree using a recursive CTE
-	rows, err := r.GetDB(ctx, tx).Raw(`WITH RECURSIVE tree AS (
-		SELECT id FROM releases WHERE id = ?
-		UNION ALL
-		SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
-	) SELECT id FROM tree`, id).Rows()
+	// Scope the CTE anchor to the caller's project when tenant IDs are present,
+	// preventing cross-project traversal (BOLA via child-release UUID pivot).
+	var cteRows *sql.Rows
+	var err error
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		cteRows, err = r.GetDB(ctx, tx).Raw(`WITH RECURSIVE tree AS (
+			SELECT id FROM releases WHERE id = ? AND project_id = ?
+			UNION ALL
+			SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
+		) SELECT id FROM tree`, id, ids.ProjectID).Rows()
+	} else {
+		cteRows, err = r.GetDB(ctx, tx).Raw(`WITH RECURSIVE tree AS (
+			SELECT id FROM releases WHERE id = ?
+			UNION ALL
+			SELECT ri.child_release_id FROM release_items ri JOIN tree t ON ri.release_id = t.id WHERE ri.child_release_id IS NOT NULL
+		) SELECT id FROM tree`, id).Rows()
+	}
 	if err != nil {
 		return models.Release{}, err
 	}
-	defer rows.Close()
+	defer cteRows.Close()
 
-	var ids []uuid.UUID
-	for rows.Next() {
+	var releaseIDs []uuid.UUID
+	for cteRows.Next() {
 		var rid uuid.UUID
-		if err := rows.Scan(&rid); err != nil {
+		if err := cteRows.Scan(&rid); err != nil {
 			return models.Release{}, err
 		}
-		ids = append(ids, rid)
+		releaseIDs = append(releaseIDs, rid)
 	}
 
-	if len(ids) == 0 {
-		return models.Release{}, r.GetDB(ctx, tx).First(&models.Release{}, "id = ?", id).Error
+	if len(releaseIDs) == 0 {
+		var rel models.Release
+		db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rel)
+		return rel, db.First(&rel).Error
 	}
 
 	// fetch all releases (preload Project so Project.Avatar is available)
 	var releases []models.Release
-	if err := r.GetDB(ctx, tx).Where("id IN ?", ids).Find(&releases).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("id IN ?", releaseIDs).Find(&releases).Error; err != nil {
 		return models.Release{}, err
 	}
 
 	// fetch all items belonging to these releases
 	var items []models.ReleaseItem
-	if err := r.GetDB(ctx, tx).Where("release_id IN ?", ids).Find(&items).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("release_id IN ?", releaseIDs).Find(&items).Error; err != nil {
 		return models.Release{}, err
 	}
 
 	// assemble releases by id
 	relMap := map[uuid.UUID]*models.Release{}
 	for i := range releases {
-		r := releases[i]
-		// ensure empty Items slice
-		r.Items = []models.ReleaseItem{}
-		relMap[r.ID] = &r
+		rel := releases[i]
+		rel.Items = []models.ReleaseItem{}
+		relMap[rel.ID] = &rel
 	}
 
 	// attach items to their parent release and resolve child pointers from relMap
@@ -93,7 +107,6 @@ func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id u
 		if !ok {
 			continue
 		}
-		// copy item to avoid referencing loop variable
 		item := it
 		if item.ChildReleaseID != nil {
 			if child, ok := relMap[*item.ChildReleaseID]; ok {
@@ -105,7 +118,9 @@ func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id u
 
 	root, ok := relMap[id]
 	if !ok {
-		return models.Release{}, r.GetDB(ctx, tx).First(&models.Release{}, "id = ?", id).Error
+		var rel models.Release
+		db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rel)
+		return rel, db.First(&rel).Error
 	}
 
 	return *root, nil
@@ -266,4 +281,23 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 	}
 
 	return artifacts, rels, nil
+}
+
+func (r *releaseRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, name string) (models.Release, error) {
+	var rel models.Release
+	err := r.GetDB(ctx, tx).Where("project_id = ? AND name = ?", projectID, name).First(&rel).Error
+	if err == nil {
+		return rel, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return models.Release{}, err
+	}
+
+	rel = models.Release{
+		Name:      name,
+		ProjectID: projectID,
+	}
+
+	err = r.GetDB(ctx, tx).Create(&rel).Error
+	return rel, err
 }

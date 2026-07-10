@@ -20,11 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/in-toto/go-witness/log"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -178,8 +181,55 @@ func (g *GormRepository[ID, T]) CreateBatch(ctx context.Context, tx *gorm.DB, ts
 
 func (g *GormRepository[ID, T]) Read(ctx context.Context, tx *gorm.DB, id ID) (T, error) {
 	var t T
-	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error
+	db := g.GetDB(ctx, tx).Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(t, ids))
+	}
+	err := db.First(&t).Error
 	return t, err
+}
+
+// withOwnershipScope applies autoOwnershipScope to db when tenant IDs are present in
+// ctx. Use this in custom Read() overrides that need Preload chains but must
+// still enforce the tenant boundary.
+func withOwnershipScope(ctx context.Context, db *gorm.DB, model any) *gorm.DB {
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		return db.Scopes(autoOwnershipScope(model, ids))
+	}
+	return db
+}
+
+// autoOwnershipScope inspects the GORM struct tags and field names of model
+// (including embedded structs) to detect a tenant column (asset_id,
+// project_id, organization_id) and returns a scope that filters by the
+// corresponding ID from ids. Models without any tenant column (e.g.
+// Component, CVE) are returned unscoped.
+//
+// Column detection uses two strategies:
+//  1. Explicit gorm:"column:asset_id" tag
+//  2. Go field name AssetID / ProjectID / OrganizationID (GORM default naming)
+//
+// reflect.VisibleFields is used so embedded struct fields are included.
+func autoOwnershipScope(model any, ids models.OwnershipScope) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		t := reflect.TypeOf(model)
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+		for _, f := range reflect.VisibleFields(t) {
+			tag := f.Tag.Get("gorm")
+			name := f.Name
+			switch {
+			case strings.Contains(tag, "column:asset_id") || name == "AssetID":
+				return db.Where("asset_id = ?", ids.AssetID)
+			case strings.Contains(tag, "column:project_id") || name == "ProjectID":
+				return db.Where("project_id = ?", ids.ProjectID)
+			case strings.Contains(tag, "column:organization_id") || name == "OrganizationID":
+				return db.Where("organization_id = ?", ids.OrgID)
+			}
+		}
+		return db
+	}
 }
 
 func (g *GormRepository[ID, T]) Delete(ctx context.Context, tx *gorm.DB, id ID) error {

@@ -43,6 +43,7 @@ func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	}
 	args := []string{"-s", "-d", p, "--output", "sarif", "--output-file-path", outputDir}
 	args = append(args, configFileArgs...)
+	args = append(args, config.RuntimeExtraArgs...)
 
 	scannerCmd = exec.Command("checkov", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
 	stderr := &bytes.Buffer{}
@@ -91,7 +92,10 @@ func NewIaCCommand() *cobra.Command {
 		Long: `Run an Infrastructure-as-Code scan (e.g. checkov) against a repository or path and upload SARIF results to DevGuard.
 
 This command scans Terraform, CloudFormation, Kubernetes manifests, and other IaC
-files for security issues and misconfigurations.`,
+files for security issues and misconfigurations.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying checkov invocation.
+See the checkov CLI reference for available flags: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html`,
 		Example: `  # Scan Terraform directory
   devguard-scanner iac ./terraform
 
@@ -99,8 +103,12 @@ files for security issues and misconfigurations.`,
   devguard-scanner iac --path ./terraform
 
   # Scan and save results locally
-  devguard-scanner iac ./terraform --outputPath iac-results.sarif.json`,
+  devguard-scanner iac ./terraform --outputPath iac-results.sarif.json
+
+  # Forward extra flags to checkov
+  devguard-scanner iac ./terraform -- --skip-check CKV_AWS_20`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 			return sarifCommandFactory("iac")(cmd, args)
 		},
 	}
