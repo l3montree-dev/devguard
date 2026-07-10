@@ -1183,7 +1183,7 @@ func mergeKEVInformation(cisaKEV, euvdKEV []models.CVE) []models.CVE {
 	return unionSlice
 }
 
-var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/"}
+var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/", "NCSC": "https://advisories.ncsc.nl/csaf/v2/"}
 
 func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.CVE, error) {
 	allCVEs := make([]models.CVE, 0, len(csafSources)*3000)
