@@ -178,20 +178,12 @@ func discoverAndMergeSupplementarySBOMs(bom *cyclonedx.BOM, discover func() ([]*
 			return errors.Wrap(err, "could not merge supplementary SBOMs")
 		}
 	}
-	reportApplicationComponentResolution(bom, extras)
 	return nil
 }
 
-// warnAboutUnidentifiableComponents logs a warning for each "application" type
-// component with no PackageURL, not covered by a supplementary SBOM, and with
-// no children of its own already. Such a component has no identity the
-// dependency graph can key on, so merging drops it entirely and reparents
-// whatever it declared as a dependency up to its nearest ancestor with a real
-// identity - producing a technically valid but incomplete SBOM unless the
-// caller does something about it. Components trivy already resolved a real
-// tree for (e.g. a lockfile like Cargo.lock, classified as "application" but
-// carrying a real dependsOn to the packages it declares) aren't missing
-// anything and don't need a warning, even though they also lack a purl.
+// warnAboutUnidentifiableComponents warns about "application" components with
+// no purl, no supplementary SBOM, and no resolved dependency tree - these get
+// dropped and reparented during merging, producing an incomplete SBOM.
 func warnAboutUnidentifiableComponents(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) {
 	if bom.Components == nil {
 		return
@@ -204,32 +196,74 @@ func warnAboutUnidentifiableComponents(bom *cyclonedx.BOM, extras []*cyclonedx.B
 		}
 	}
 
-	// A child counts as "real" only if it's a properly versioned purl - a
-	// single unversioned module reference (e.g. devguard-scanner's own main
-	// module, exactly the same "no version" issue gitleaks.nix documents)
-	// isn't a resolved tree, just another unidentifiable node one level down.
-	hasRealChildren := make(map[string]bool)
-	if bom.Dependencies != nil {
-		for _, d := range *bom.Dependencies {
-			if d.Dependencies == nil {
-				continue
-			}
-			for _, child := range *d.Dependencies {
-				if strings.HasPrefix(child, "pkg:") && strings.Contains(child, "@") {
-					hasRealChildren[d.Ref] = true
-					break
-				}
-			}
-		}
-	}
+	childrenByRef := dependencyChildrenByRef(bom.Dependencies)
+	realDescendantCache := make(map[string]bool)
 
+	var enriched, unresolved int
 	for _, c := range *bom.Components {
-		if c.Type != cyclonedx.ComponentTypeApplication || c.PackageURL != "" || suppliedPaths[c.Name] || hasRealChildren[c.BOMRef] {
+		if c.Type != cyclonedx.ComponentTypeApplication {
 			continue
 		}
+		if c.PackageURL != "" || hasVersionedDescendant(c.BOMRef, childrenByRef, realDescendantCache) {
+			continue // trivy already resolved this one, no action needed
+		}
+		if suppliedPaths[c.Name] {
+			enriched++
+			continue
+		}
+		unresolved++
 		slog.Warn("found an application component with no package identity (purl); it and everything it depends on will be dropped from the dependency graph and reparented to the nearest ancestor with a valid identity, producing an incomplete SBOM - provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to fix this", "path", c.Name)
 		printSupplementarySBOMExample(c.Name)
 	}
+
+	if enriched > 0 || unresolved > 0 {
+		slog.Info("application component resolution", "enrichedBySupplementarySBOM", enriched, "unresolved", unresolved)
+	}
+}
+
+// dependencyChildrenByRef indexes a dependency list by ref.
+func dependencyChildrenByRef(deps *[]cyclonedx.Dependency) map[string][]string {
+	childrenByRef := make(map[string][]string)
+	if deps == nil {
+		return childrenByRef
+	}
+	for _, d := range *deps {
+		if d.Dependencies != nil {
+			childrenByRef[d.Ref] = *d.Dependencies
+		}
+	}
+	return childrenByRef
+}
+
+// hasVersionedDescendant reports whether ref has a versioned purl (pkg:...@version)
+// anywhere in its dependency subtree, not just among its direct children - trivy
+// often nests real deps under an intermediate unversioned node (e.g. go.mod ->
+// unversioned main module -> real go.sum deps).
+func hasVersionedDescendant(ref string, childrenByRef map[string][]string, cache map[string]bool) bool {
+	return hasVersionedDescendantVisiting(ref, childrenByRef, cache, map[string]bool{ref: true})
+}
+
+func hasVersionedDescendantVisiting(ref string, childrenByRef map[string][]string, cache map[string]bool, visited map[string]bool) bool {
+	if v, ok := cache[ref]; ok {
+		return v
+	}
+	result := false
+	for _, child := range childrenByRef[ref] {
+		if visited[child] {
+			continue
+		}
+		visited[child] = true
+		if strings.HasPrefix(child, "pkg:") && strings.Contains(child, "@") {
+			result = true
+			break
+		}
+		if hasVersionedDescendantVisiting(child, childrenByRef, cache, visited) {
+			result = true
+			break
+		}
+	}
+	cache[ref] = result
+	return result
 }
 
 // printSupplementarySBOMExample prints a ready-to-use, copy-pasteable
@@ -315,39 +349,6 @@ func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 	bom.Components = &filtered
 	bom.Dependencies = exported.Dependencies
 	return nil
-}
-
-// reportApplicationComponentResolution logs how many "application" type components
-// (e.g. statically linked binaries trivy couldn't inspect further) were enriched by a
-// supplementary SBOM, and warns about each one that wasn't.
-func reportApplicationComponentResolution(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) {
-	if bom.Components == nil {
-		return
-	}
-
-	suppliedPaths := make(map[string]bool, len(extras))
-	for _, extra := range extras {
-		if extra.Metadata != nil && extra.Metadata.Component != nil {
-			suppliedPaths[extra.Metadata.Component.Name] = true
-		}
-	}
-
-	var enriched, unresolved int
-	for _, c := range *bom.Components {
-		if c.Type != cyclonedx.ComponentTypeApplication {
-			continue
-		}
-		if suppliedPaths[c.Name] {
-			enriched++
-			continue
-		}
-		unresolved++
-		slog.Warn("found an application component that could not be resolved further; provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to silence this warning", "path", c.Name)
-	}
-
-	if enriched > 0 || unresolved > 0 {
-		slog.Info("application component resolution", "enrichedBySupplementarySBOM", enriched, "unresolved", unresolved)
-	}
 }
 
 // writeSBOMIfRequested saves the final SBOM to config.RuntimeBaseConfig.SBOMOutputPath,
