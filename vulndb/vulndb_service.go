@@ -1200,7 +1200,7 @@ func (service VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.
 
 // arbitrary values, not yet optimized
 const (
-	csafFetchWorkers     = 50
+	csafFetchWorkers     = 200
 	csafConverterWorkers = 2
 )
 
@@ -1296,6 +1296,7 @@ func (service VulnDBService) fetchFilesConcurrently(ctx context.Context, baseURL
 		return err
 	})
 
+	slog.Info("start fetching csaf files...")
 	// collect the results on the main goroutine; the convert stage closes cveOutput
 	cves := make([]models.CVE, 0, len(fileNames))
 	for cve := range cveOutput {
