@@ -1660,7 +1660,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 			}
 
 			// Add component (type sanitization already happens in AddComponent)
-			if comp.PackageURL != "" {
+			if looksLikePackagePURL(comp.PackageURL) {
 				g.AddComponent(comp)
 			}
 		}
@@ -1680,7 +1680,7 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if comp.PackageURL == "" {
+				if !looksLikePackagePURL(comp.PackageURL) {
 					continue // Skip root project components
 				}
 				// Check if this component is a child of any other
@@ -1998,6 +1998,10 @@ func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
 		}
 	}
 	return g
+}
+
+func looksLikePackagePURL(id string) bool {
+	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
 }
 
 // =============================================================================
