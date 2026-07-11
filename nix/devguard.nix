@@ -38,10 +38,14 @@
   # Shared build arguments for all three binaries.
   commonArgs = {
     inherit src;
-    # vendorHash differs per OS because `go mod vendor` applies build constraints.
-    vendorHash = if lib.hasSuffix "-darwin" system
-      then "sha256-2cJvRo6sFUDI+MBDIBTyIcHmg8XN4e6jL7JqkYcWMu8="
-      else "sha256-7B3fHKAqeIAulMiJWzD62gTNu6O7+5BdyHc+aYOsgPY=";
+    # Fetch modules via the Go module proxy instead of vendoring: a plain
+    # `go mod vendor` tree only records resolved versions (vendor/modules.txt),
+    # not which module requires which, so it can't give the supplementary
+    # SBOMs below (see sbom-lib.nix) a real transitive dependency tree -
+    # a `go mod download`-style module cache has each dependency's own
+    # go.mod, which is what's actually needed.
+    proxyVendor = true;
+    vendorHash = "sha256-a2ie3EjjlV9B1elAbgCqoJOScQk/UDpCWfLUJsl5TB0=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
@@ -88,7 +92,14 @@
     inherit src;
     version = common.version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    goModules = devguardScanner.goModules;
     binaries = [{ name = "devguard-scanner"; binPath = "${devguardScanner}/bin/devguard-scanner"; }];
+    externalReferences = [
+      {
+        type = "exploitability-statement";
+        url = "http://localhost:8080/api/v1/public/59b5f919-448b-4638-ab78-507686a1f286/refs/main/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/"; # "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/";
+      }
+    ];
   };
 
   devguardSBOM = mkToolSBOM {
@@ -96,6 +107,7 @@
     inherit src;
     version = common.version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    goModules = devguard.goModules;
     binaries = [
       { name = "devguard"; binPath = "${devguard}/bin/devguard"; }
     ];
@@ -106,6 +118,7 @@
     inherit src;
     version = common.version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
+    goModules = devguardCLI.goModules;
     binaries = [{ name = "devguard-cli"; binPath = "${devguardCLI}/bin/devguard-cli"; }];
   };
 }

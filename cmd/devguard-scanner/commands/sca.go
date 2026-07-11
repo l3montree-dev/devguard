@@ -317,6 +317,12 @@ func printSupplementarySBOMExample(path string) {
 // the root's own entry in Dependencies (its declared children) is kept, but
 // the root component itself is dropped from the returned Components slice,
 // since it's already represented by Metadata.Component.
+//
+// Each extra can carry its own top-level ExternalReferences (e.g. a link to
+// that specific binary's VEX document) - those are merged into bom's own
+// top-level ExternalReferences, since that's the only place the backend
+// looks for VEX URLs to auto-fetch (see controllers/scan_controller.go's
+// bom.ExternalReferences scan).
 func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
 	rootRef := bom.Metadata.Component.BOMRef
 
@@ -335,6 +341,9 @@ func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 		} else {
 			slog.Info("enrichment replaced an existing component's subtree", "path", extra.Metadata.Component.Name)
 		}
+		if extra.ExternalReferences != nil {
+			mergeExternalReferences(bom, *extra.ExternalReferences)
+		}
 	}
 
 	exported := g.ToCycloneDX(normalize.BOMMetadata{RootName: rootRef})
@@ -349,6 +358,27 @@ func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 	bom.Components = &filtered
 	bom.Dependencies = exported.Dependencies
 	return nil
+}
+
+// mergeExternalReferences appends refs to bom's top-level ExternalReferences,
+// skipping any (type, URL) pair already present.
+func mergeExternalReferences(bom *cyclonedx.BOM, refs []cyclonedx.ExternalReference) {
+	existing := map[cyclonedx.ExternalReference]bool{}
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			existing[cyclonedx.ExternalReference{Type: ref.Type, URL: ref.URL}] = true
+		}
+	} else {
+		bom.ExternalReferences = &[]cyclonedx.ExternalReference{}
+	}
+	for _, ref := range refs {
+		key := cyclonedx.ExternalReference{Type: ref.Type, URL: ref.URL}
+		if existing[key] {
+			continue
+		}
+		existing[key] = true
+		*bom.ExternalReferences = append(*bom.ExternalReferences, ref)
+	}
 }
 
 // writeSBOMIfRequested saves the final SBOM to config.RuntimeBaseConfig.SBOMOutputPath,

@@ -226,6 +226,49 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	return ctx.JSON(200, nil)
 }
 
+// ingestVexFromExternalReferences looks for exploitability-statement (VEX) references in the
+// SBOM's ExternalReferences, fetches the referenced VEX documents and ingests them as VEX rules.
+func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cdx.BOM, asset models.Asset, assetVersion models.AssetVersion) error {
+	externalURLs := []string{}
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			if ref.Type == cdx.ERTypeExploitabilityStatement {
+				externalURLs = append(externalURLs, ref.URL)
+			}
+		}
+	}
+
+	if len(externalURLs) == 0 {
+		return nil
+	}
+
+	refs := []models.ExternalReference{}
+	for _, url := range externalURLs {
+		ref := models.ExternalReference{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			URL:              url,
+			Type:             models.ExternalReferenceTypeCycloneDxVEX,
+		}
+		refs = append(refs, ref)
+	}
+
+	if err := s.externalReferenceRepository.CreateBatch(ctx, tx, refs); err != nil {
+		slog.Error("could not store vex external reference", "err", err)
+	}
+
+	fetchedVexReports, _, invalid := s.FetchVexFromUpstream(ctx, refs)
+	if len(invalid) > 0 {
+		slog.Warn("some VEX external references are invalid", "invalid", invalid)
+	}
+
+	if len(fetchedVexReports) == 0 {
+		return nil
+	}
+
+	return s.vexRuleService.IngestVexes(ctx, tx, asset, assetVersion, fetchedVexReports)
+}
+
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {
 	scanCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.DependencyVulnScan")
 	defer span.End()
@@ -344,6 +387,15 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, nil, nil, empty, err
+	}
+
+	if !noWrite {
+		if err := s.ingestVexFromExternalReferences(scanCtx, tx, bom, asset, assetVersion); err != nil {
+			slog.Error("could not ingest vex from external references", "err", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, nil, nil, empty, err
+		}
 	}
 
 	if noWrite {
