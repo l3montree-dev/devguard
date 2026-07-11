@@ -25,6 +25,8 @@
   gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
 
   common = import ./common.nix { inherit self; };
+  # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
+  dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
     postgresql_16 = pkgs.postgresql_16;
     fetchurl = pkgs.fetchurl;
@@ -84,7 +86,7 @@ EOF
 
   devguardOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
     name = "devguard";
-    tag = common.version;
+    tag = dockerTag;
 
     contents = [
       pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
@@ -105,7 +107,7 @@ EOF
 
   devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
     name = "devguard-scanner";
-    tag = common.version;
+    tag = dockerTag;
     contents =  [
       pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
       devguardBinaries.devguardScanner

@@ -66,6 +66,7 @@ jobs:
       security-events: write
     with:
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      devguard-artifact-name: "pkg:golang/github.com/l3montree-dev/devguard"
       devguard-api-url: https://api.main.devguard.org
       fail-on-risk: never
       fail-on-cvss: never
@@ -87,6 +88,7 @@ jobs:
       nix-target-amd64: devguard-amd64
       nix-target-arm64: devguard-arm64
       nix-version: '2.34.4'
+      nix-impure: "true"
       image-name: ghcr.io/${{ github.repository }}
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
@@ -112,6 +114,7 @@ jobs:
       nix-target-amd64: devguard-scanner-amd64
       nix-target-arm64: devguard-scanner-arm64
       nix-version: '2.34.4'
+      nix-impure: "true"
       image-name: ghcr.io/${{ github.repository }}/scanner
       artifact-name-suffix: scanner
       devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
