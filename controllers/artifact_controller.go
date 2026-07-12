@@ -42,13 +42,14 @@ type ArtifactController struct {
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
 	vexRuleService           shared.VEXRuleService
+	csafService              shared.CSAFService
 	thirdPartyIntegration    shared.IntegrationAggregate
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, csafService shared.CSAFService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -61,6 +62,7 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 		vexRuleService:            vexRuleService,
+		csafService:               csafService,
 		thirdPartyIntegration:     thirdPartyIntegration,
 	}
 }
@@ -513,8 +515,8 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 // @Produce application/xml
 // @Success 200 {string} string "CycloneDX VEX in XML format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.xml/ [get]
-func (c *ArtifactController) VEXXML(ctx shared.Context) error {
-	sbom, err := c.buildVeX(ctx)
+func (c *ArtifactController) CycloneDXVexXML(ctx shared.Context) error {
+	sbom, err := c.buildCycloneDXVex(ctx)
 	if err != nil {
 		return err
 	}
@@ -522,7 +524,7 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(sbom)
 }
 
 // @Summary Get VEX in JSON format
@@ -538,8 +540,8 @@ func (c *ArtifactController) VEXXML(ctx shared.Context) error {
 // @Produce application/json
 // @Success 200 {object} object "CycloneDX VEX in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/ [get]
-func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
-	sbom, err := c.buildVeX(ctx)
+func (c *ArtifactController) CycloneDXVexJSON(ctx shared.Context) error {
+	sbom, err := c.buildCycloneDXVex(ctx)
 	if err != nil {
 		return err
 	}
@@ -547,7 +549,7 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(sbom)
 }
 
 // @Summary Get VEX in OpenVEX JSON format
@@ -563,8 +565,8 @@ func (c *ArtifactController) VEXJSON(ctx shared.Context) error {
 // @Produce application/json
 // @Success 200 {object} object "OpenVEX document in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/ [get]
-func (c *ArtifactController) OpenVEXJSON(ctx shared.Context) error {
-	vex, err := c.buildOpenVeX(ctx)
+func (c *ArtifactController) OpenCycloneDXVexJSON(ctx shared.Context) error {
+	vex, err := c.buildOpenVex(ctx)
 	if err != nil {
 		return err
 	}
@@ -572,7 +574,7 @@ func (c *ArtifactController) OpenVEXJSON(ctx shared.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (c *ArtifactController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
+func (c *ArtifactController) buildOpenVex(ctx shared.Context) (vex.VEX, error) {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -586,15 +588,35 @@ func (c *ArtifactController) buildOpenVeX(ctx shared.Context) (vex.VEX, error) {
 	return c.assetVersionService.BuildOpenVeX(ctx.Request().Context(), nil, asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph, error) {
-	project := shared.GetProject(ctx)
-	asset := shared.GetAsset(ctx)
+// @Summary Get an aggregated CSAF VEX for all of the artifact's vulnerabilities
+// @Tags Artifacts
+// @Produce application/json
+// @Success 200 {object} object "CSAF advisory in JSON format"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json/ [get]
+func (c *ArtifactController) CSAFJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
+	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	if err != nil {
+		return err
+	}
+
+	title := fmt.Sprintf("Security advisory for %s", normalize.Purlify(artifact.ArtifactName, assetVersion.Name))
+	advisory, err := c.csafService.GenerateCSAFReportForVulns(ctx.Request().Context(), org.Name, &title, dependencyVulns)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build csaf").WithInternal(err)
+	}
+	return ctx.JSON(200, advisory)
+}
+
+func (c *ArtifactController) buildCycloneDXVex(ctx shared.Context) (*cdx.BOM, error) {
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+	artifact := shared.GetArtifact(ctx)
+
+	if os.Getenv("FRONTEND_URL") == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
@@ -603,7 +625,7 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 		return nil, err
 	}
 
-	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns), nil
+	return c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, ctxToBOMMetadata(ctx), asset, assetVersion, dependencyVulns), nil
 }
 
 // @Summary Get vulnerability report as PDF
@@ -621,8 +643,6 @@ func (c *ArtifactController) buildVeX(ctx shared.Context) (*normalize.SBOMGraph,
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vulnerability-report.pdf/ [get]
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
 	artifact := shared.GetArtifact(ctx).ArtifactName
 
@@ -655,12 +675,11 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			if err != nil {
 				return nil, err
 			}
-			frontendURL := os.Getenv("FRONTEND_URL")
-			if frontendURL == "" {
+			if os.Getenv("FRONTEND_URL") == "" {
 				return nil, fmt.Errorf("FRONTEND_URL is not set")
 			}
 
-			vex := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
+			vexBOM := c.assetVersionService.BuildVeX(ctx.Request().Context(), nil, ctxToBOMMetadata(ctx), asset, assetVersion, dependencyVulns)
 
 			// convert to vulnerability
 			result := make([]dtos.VulnerabilityInReport, 0, len(dependencyVulns))
@@ -671,7 +690,11 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 				m[dv.CVEID] = dv
 			}
 
-			for v := range vex.VulnerabilitiesIter() {
+			vexVulns := []cdx.Vulnerability{}
+			if vexBOM.Vulnerabilities != nil {
+				vexVulns = *vexBOM.Vulnerabilities
+			}
+			for _, v := range vexVulns {
 				dv, ok := m[v.ID]
 				if !ok {
 					continue

@@ -390,7 +390,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 		})
 		creationTime := time.Now()
@@ -401,7 +401,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -467,7 +467,7 @@ func TestBuildVEX(t *testing.T) {
 				panic(err)
 			}
 
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -516,7 +516,7 @@ func TestBuildVEX(t *testing.T) {
 			if err := f.DB.Save(&vuln1).Error; err != nil {
 				panic(err)
 			}
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing

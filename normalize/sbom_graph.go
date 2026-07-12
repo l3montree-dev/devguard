@@ -108,37 +108,9 @@ type SBOMGraph struct {
 	Nodes map[string]*GraphNode          // id -> node
 	Edges map[string]map[string]struct{} // parent id -> set of child ids
 
-	Vulnerabilities map[string]*cdx.Vulnerability // vuln ID -> vulnerability
-
 	RootID string // ID of the root node (constant: "ROOT")
 
 	ScopeID string // The id of the current scope node
-}
-
-type VexReport struct {
-	Report *cdx.BOM
-	Source string
-}
-
-func validateVexReport(report *cdx.BOM) error {
-	if report.Metadata == nil || report.Metadata.Component == nil {
-		return fmt.Errorf("invalid VEX report: missing metadata.component")
-	}
-	if report.Metadata.Component.PackageURL == "" {
-		return fmt.Errorf("invalid VEX report: root component must have a PackageURL")
-	}
-	return nil
-}
-
-func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
-	if err := validateVexReport(report); err != nil {
-		return nil, err
-	}
-
-	return &VexReport{
-		Report: report,
-		Source: source,
-	}, nil
 }
 
 func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
@@ -160,11 +132,10 @@ const GraphRootNodeID = "ROOT"
 // NewSBOMGraph creates an empty graph with a root node.
 func NewSBOMGraph() *SBOMGraph {
 	g := &SBOMGraph{
-		Nodes:           make(map[string]*GraphNode),
-		Edges:           make(map[string]map[string]struct{}),
-		Vulnerabilities: make(map[string]*cdx.Vulnerability),
-		RootID:          GraphRootNodeID,
-		ScopeID:         GraphRootNodeID,
+		Nodes:   make(map[string]*GraphNode),
+		Edges:   make(map[string]map[string]struct{}),
+		RootID:  GraphRootNodeID,
+		ScopeID: GraphRootNodeID,
 	}
 	// Always create root node
 	g.Nodes[GraphRootNodeID] = &GraphNode{BOMRef: GraphRootNodeID, Type: GraphNodeTypeRoot, Component: &cdx.Component{
@@ -286,56 +257,6 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 	g.Edges[parentID][childID] = struct{}{}
 }
 
-// statePriority returns a priority value for vulnerability states.
-// Higher value = higher priority. exploitable > in_triage > false_positive
-func statePriority(state cdx.ImpactAnalysisState) int {
-	switch state {
-	case cdx.IASExploitable:
-		return 3
-	case cdx.IASInTriage:
-		return 2
-	case cdx.IASFalsePositive:
-		return 1
-	default:
-		return 0
-	}
-}
-
-// AddVulnerability adds a vulnerability with deduplication.
-// When the same CVE+Affects combination exists, state priority determines which one to keep:
-// exploitable > in_triage > false_positive
-func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
-	var affectsStr strings.Builder
-	if vuln.Affects != nil {
-		for _, aff := range *vuln.Affects {
-			affectsStr.WriteString(aff.Ref + ";")
-		}
-	}
-
-	key := vuln.ID + "@" + affectsStr.String()
-
-	existing, exists := g.Vulnerabilities[key]
-	if !exists {
-		g.Vulnerabilities[key] = &vuln
-		return
-	}
-
-	// Compare state priorities - higher priority wins
-	existingState := cdx.ImpactAnalysisState("")
-	if existing.Analysis != nil {
-		existingState = existing.Analysis.State
-	}
-
-	newState := cdx.ImpactAnalysisState("")
-	if vuln.Analysis != nil {
-		newState = vuln.Analysis.State
-	}
-
-	if statePriority(newState) > statePriority(existingState) {
-		g.Vulnerabilities[key] = &vuln
-	}
-}
-
 func (g *SBOMGraph) ClearScope() {
 	g.ScopeID = g.RootID
 }
@@ -372,11 +293,10 @@ func (g *SBOMGraph) IsScoped() bool {
 // Clone creates a deep copy of the graph.
 func (g *SBOMGraph) Clone() *SBOMGraph {
 	clone := &SBOMGraph{
-		Nodes:           make(map[string]*GraphNode, len(g.Nodes)),
-		Edges:           make(map[string]map[string]struct{}, len(g.Edges)),
-		Vulnerabilities: make(map[string]*cdx.Vulnerability, len(g.Vulnerabilities)),
-		RootID:          g.RootID,
-		ScopeID:         g.ScopeID,
+		Nodes:   make(map[string]*GraphNode, len(g.Nodes)),
+		Edges:   make(map[string]map[string]struct{}, len(g.Edges)),
+		RootID:  g.RootID,
+		ScopeID: g.ScopeID,
 	}
 
 	// Deep copy nodes
@@ -396,10 +316,6 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 			clone.Edges[parentID][childID] = struct{}{}
 		}
 	}
-
-	// Deep copy vulnerabilities
-	// Note: Vuln is shared, make deep copy if needed
-	maps.Copy(clone.Vulnerabilities, g.Vulnerabilities)
 
 	return clone
 }
@@ -558,8 +474,6 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 			diff.RemovedEdges = append(diff.RemovedEdges, edge)
 		}
 	}
-	// add vulnerabilities
-	maps.Copy(g.Vulnerabilities, other.Vulnerabilities)
 	g.pruneUnreachable()
 	return diff
 }
@@ -927,18 +841,6 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 				if !yield(parent, child) {
 					return
 				}
-			}
-		}
-	}
-}
-
-// VulnerabilitiesIter returns all vulnerabilities.
-// Deduplication with state priority is handled in AddVulnerability.
-func (g *SBOMGraph) VulnerabilitiesIter() iter.Seq[*cdx.Vulnerability] {
-	return func(yield func(*cdx.Vulnerability) bool) {
-		for _, v := range g.Vulnerabilities {
-			if !yield(v) {
-				return
 			}
 		}
 	}
@@ -1460,11 +1362,6 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		})
 	}
 
-	vulns := []cdx.Vulnerability{}
-	for v := range g.VulnerabilitiesIter() {
-		vulns = append(vulns, *v)
-	}
-
 	return &cdx.BOM{
 		SpecVersion: cdx.SpecVersion1_6,
 		BOMFormat:   "CycloneDX",
@@ -1479,7 +1376,6 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		},
 		Components:         &components,
 		Dependencies:       &dependencies,
-		Vulnerabilities:    &vulns,
 		ExternalReferences: externalRefs,
 	}
 }
@@ -1703,27 +1599,8 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		g.AddEdge(infoID, rootRef)
 	}
 
-	// Add vulnerabilities (ignore invalid severity values)
-	if bom.Vulnerabilities != nil {
-		for _, vuln := range *bom.Vulnerabilities {
-			// Sanitize invalid severity values in ratings
-			if vuln.Ratings != nil {
-				validRatings := []cdx.VulnerabilityRating{}
-				for _, rating := range *vuln.Ratings {
-					if isValidSeverity(rating.Severity) {
-						validRatings = append(validRatings, rating)
-					}
-					// Invalid ratings are silently dropped
-				}
-				if len(validRatings) > 0 {
-					vuln.Ratings = &validRatings
-				} else {
-					vuln.Ratings = nil
-				}
-			}
-			g.AddVulnerability(vuln)
-		}
-	}
+	// Vulnerabilities carried on an ingested BOM are not part of the component graph; VEX
+	// ingestion handles them separately (see the transformer package).
 
 	return g, nil
 }
@@ -1959,45 +1836,6 @@ func getChildrenOfParentWithVisited(depMap map[string][]string, nodes map[string
 		}
 	}
 	return realChildren
-}
-
-func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
-	g := NewSBOMGraph()
-
-	// Create artifact and info source to connect components to the graph
-	artifactID := g.AddArtifact("vex")
-	infoSourceID := g.AddInfoSource(artifactID, "vex", InfoSourceSBOM)
-
-	for _, vuln := range vulns {
-		g.AddVulnerability(vuln)
-
-		// Extract affected components and add them to the graph
-		if vuln.Affects != nil {
-			for _, aff := range *vuln.Affects {
-				purlStr := aff.Ref
-				if purlStr == "" {
-					continue
-				}
-
-				// Parse the PURL to extract name and version
-				purl, err := packageurl.FromString(purlStr)
-				if err != nil {
-					continue
-				}
-
-				comp := cdx.Component{
-					BOMRef:     purlStr,
-					Name:       purl.Name,
-					Version:    purl.Version,
-					PackageURL: purlStr,
-					Type:       cdx.ComponentTypeLibrary,
-				}
-				compID := g.AddComponent(comp)
-				g.AddEdge(infoSourceID, compID)
-			}
-		}
-	}
-	return g
 }
 
 func looksLikePackagePURL(id string) bool {

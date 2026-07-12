@@ -457,7 +457,7 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	})
 }
 
-func TestSBOMGraphFromVulnerabilities(t *testing.T) {
+func TestCycloneDXVEXFromVulnerabilities(t *testing.T) {
 	t.Run("VEX should include affected components", func(t *testing.T) {
 		// When creating a VEX from vulnerabilities, the components referenced
 		// in the Affects field should be included in the output BOM.
@@ -491,8 +491,7 @@ func TestSBOMGraphFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		g := SBOMGraphFromVulnerabilities(vulns)
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -526,8 +525,7 @@ func TestSBOMGraphFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		g := SBOMGraphFromVulnerabilities(vulns)
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})

@@ -82,8 +82,11 @@ type PersonalAccessTokenService interface {
 }
 
 type CSAFService interface {
-	GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
+	GetVexFromCsafProvider(ctx context.Context, url string) ([]csaf.Advisory, error)
+	GetVexFromCsafAdvisoryURL(ctx context.Context, url string) (csaf.Advisory, error)
+
 	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
+	GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error)
 	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
@@ -373,8 +376,11 @@ type InvitationRepository interface {
 }
 
 type ExternalReferenceRepository interface {
-	utils.Repository[uuid.UUID, models.ExternalReference, DB]
+	Create(ctx context.Context, tx DB, t *models.ExternalReference) error
+	SaveBatch(ctx context.Context, tx DB, ts []models.ExternalReference) error
 	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
+	DeleteByURL(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, url string) error
+	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
 }
 
 type ExternalEntityProviderService interface {
@@ -436,7 +442,7 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
+	BuildVeX(ctx context.Context, tx DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
@@ -475,12 +481,13 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
+	VexRulesFromDocument([]byte, uuid.UUID, string, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
-	FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)
-	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
+	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
+	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
 }
@@ -502,8 +509,7 @@ type VEXRuleService interface {
 	ApplyRulesToExistingVulnsForce(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	ApplyRulesToExistingForce(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error
-	IngestVexes(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error
+	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error
 	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)

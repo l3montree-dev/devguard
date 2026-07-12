@@ -17,19 +17,12 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"slices"
-	"strings"
-
-	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/package-url/packageurl-go"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -310,221 +303,39 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	return false
 }
 
-func (s *VEXRuleService) IngestVexes(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error {
-	// Collect all rules from all VEX reports to batch process them
-	allAddedRules := make([]models.VEXRule, 0)
-
-	// Rules are enabled if ParanoidMode is disabled
-	enabled := !asset.ParanoidMode
-
-	for _, vexReport := range vexReports {
-		rules, err := s.parseVEXRulesInBOM(ctx, asset.ID, assetVersion.Name, vexReport)
-		if err != nil {
-			return fmt.Errorf("failed to parse VEX rules from SBOM (source %s): %w", vexReport.Source, err)
-		}
-		// Set Enabled on all rules based on ParanoidMode
-		for i := range rules {
-			rules[i].Enabled = enabled
-		}
-		addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, vexReport.Source, rules)
-		if err != nil {
-			return fmt.Errorf("failed to sync VEX rules from source %s: %w", vexReport.Source, err)
-		}
-		allAddedRules = append(allAddedRules, addedRules...)
+// IngestVEXRules syncs the given rules for a single source and applies them to existing
+// vulns. This is the format-agnostic ingestion entry point: callers run the appropriate
+// transformer (CycloneDX/CSAF/OpenVEX) to produce the rules, then hand them here.
+func (s *VEXRuleService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error {
+	addedRules, err := s.syncRulesForSource(ctx, tx, asset, rules)
+	if err != nil {
+		return fmt.Errorf("failed to sync VEX rules: %w", err)
 	}
-
-	// Apply all enabled rules to existing vulns in a single batch
-	_, err := s.ApplyRulesToExistingVulns(ctx, tx, allAddedRules)
+	_, err = s.ApplyRulesToExistingVulns(ctx, tx, addedRules)
 	return err
 }
 
-func (s *VEXRuleService) IngestVEX(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error {
-	rules, err := s.parseVEXRulesInBOM(ctx, asset.ID, assetVersion.Name, vexReport)
-	if err != nil {
-		return fmt.Errorf("failed to parse VEX rules from SBOM: %w", err)
-	}
-
+// syncRulesForSource sets the Enabled flag based on ParanoidMode and syncs the rules for the
+// given source, returning the rules that were newly added.
+func (s *VEXRuleService) syncRulesForSource(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) ([]models.VEXRule, error) {
 	// Rules are enabled if ParanoidMode is disabled
 	enabled := !asset.ParanoidMode
 	for i := range rules {
 		rules[i].Enabled = enabled
 	}
-
-	addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, vexReport.Source, rules)
-	if err != nil {
-		return fmt.Errorf("failed to sync VEX rules from source: %w", err)
-	}
-
-	// Apply all enabled rules to existing vulns in a single batch
-	_, err = s.ApplyRulesToExistingVulns(ctx, tx, addedRules)
-	return err
-}
-
-func (s *VEXRuleService) parseVEXRulesInBOM(ctx context.Context, assetID uuid.UUID, assetVersionName string, report *normalize.VexReport) ([]models.VEXRule, error) {
-	// we are only interested in the vulnerabilities
-	bom := report.Report
-	// for creating vex rules we need to find the starting path to the components
-	// we ONLY USE METADATA COMPONENT FOR THAT
-	if bom.Metadata == nil || bom.Metadata.Component == nil {
-		slog.Info("no metadata component found in SBOM, skipping VEX rule creation")
-		return nil, fmt.Errorf("no metadata component found in SBOM")
-	}
-
-	// try to parse the root component purl if it exists
-	var componentPurl packageurl.PackageURL
-	if bom.Metadata.Component.PackageURL == "" {
-		return nil, fmt.Errorf("no package URL found in metadata component")
-	}
-
-	var err error
-	componentPurl, err = packageurl.FromString(bom.Metadata.Component.PackageURL)
-	if err != nil {
-		slog.Info("failed to parse metadata component PURL, continuing anyway", "purl", bom.Metadata.Component.PackageURL, "error", err)
-	}
-
-	refToPurl := make(map[string]packageurl.PackageURL)
-
-	if bom.Components == nil || len(*bom.Components) == 0 {
-		return nil, fmt.Errorf("no components inside sbom")
-	}
-	// Build ref-to-purl mapping from components if they exist
-	for _, comp := range *bom.Components {
-		if comp.PackageURL == "" {
-			continue
-		}
-		purl, err := packageurl.FromString(comp.PackageURL)
-		if err != nil {
-			slog.Info("failed to parse component PURL, skipping component for VEX rule creation", "purl", comp.PackageURL, "error", err)
-			continue
-		}
-		refToPurl[comp.BOMRef] = purl
-	}
-
-	if bom.Vulnerabilities == nil {
-		return nil, fmt.Errorf("no vulns inside sbom")
-	}
-
-	rules := make([]models.VEXRule, 0, len(*bom.Vulnerabilities))
-	for _, vuln := range *bom.Vulnerabilities {
-		cveID := extractCVE(vuln.ID)
-		if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
-			cveID = extractCVE(vuln.Source.URL)
-		}
-		if cveID == "" {
-			continue
-		}
-
-		eventType, err := mapCDXToEventType(vuln.Analysis)
-		if err != nil {
-			slog.Info("unable to map CycloneDX vulnerability analysis to event type, skipping VEX rule creation for this vuln", "cveID", cveID, "error", err)
-			continue
-		}
-
-		justification := ""
-		if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
-			justification = vuln.Analysis.Detail
-		}
-
-		if vuln.Affects == nil || len(*vuln.Affects) == 0 || (*vuln.Affects)[0].Ref == "" {
-			continue
-		}
-		ref := (*vuln.Affects)[0].Ref
-
-		// try to get the purl from the mapping first
-		purl := refToPurl[ref]
-
-		// if not found in mapping, try to parse the ref directly as a PURL
-		if purl.String() == "" {
-			parsedPurl, err := packageurl.FromString(ref)
-			if err != nil {
-				slog.Info("no component PURL found for vuln affect Ref and unable to parse as PURL, skipping VEX rule creation for this vuln", "ref", ref, "cveID", cveID, "error", err)
-				continue
-			}
-			purl = parsedPurl
-		}
-
-		// now create the path pattern
-		var pathPattern []dtos.PathPattern
-		// first check if we have a concrete properties object with the path pattern (created by devguard itself, see AssetVersionService.BuildVeX)
-		if vuln.Properties != nil {
-			patterns := utils.Filter(*vuln.Properties, func(p cdx.Property) bool {
-				return p.Name == "devguard:pathPattern"
-			})
-			if len(patterns) > 0 {
-				for _, p := range patterns {
-					var pp dtos.PathPattern
-					err := json.Unmarshal([]byte(p.Value), &pp)
-					if err != nil {
-						slog.Info("failed to unmarshal path pattern from vuln properties, skipping this property", "value", p.Value, "error", err)
-						continue
-					}
-					pathPattern = append(pathPattern, pp)
-				}
-			}
-		}
-
-		// if we already found a path pattern in the properties, we can use it directly. If not, we need to create it based on the purl and component purl
-		if len(pathPattern) > 0 {
-			// we already have a path pattern, so we can skip creating it from the purl
-			// but we still want to create a VEX rule for each path pattern found in the properties
-			for _, pp := range pathPattern {
-				rule := models.VEXRule{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					CVEID:            cveID,
-					VexSource:        report.Source,
-					Justification:    justification,
-					EventType:        eventType,
-					PathPattern:      pp,
-					CreatedByID:      "system", // system user
-				}
-				rule.SetPathPattern(rule.PathPattern)
-				rules = append(rules, rule)
-			}
-			continue
-		}
-
-		purlString, err := normalize.PURLToString(purl)
-		if err != nil {
-			slog.Info("failed to unescape purl for path pattern, continuing anyway", "purl", purl.String(), "error", err)
-			purlString = purl.String()
-		}
-
-		var pattern dtos.PathPattern
-
-		if componentPurl.String() != "" {
-			componentPurlStr, err := normalize.PURLToString(componentPurl)
-			if err != nil {
-				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
-				componentPurlStr = componentPurl.String()
-			}
-			pattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
-		} else {
-			// If no metadata component PURL, use the affected package directly
-			pattern = dtos.PathPattern{purlString}
-		}
-
-		rule := models.VEXRule{
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			CVEID:            cveID,
-			VexSource:        report.Source,
-			Justification:    justification,
-			EventType:        eventType,
-			PathPattern:      pattern,
-			CreatedByID:      "system", // system user
-		}
-		rule.SetPathPattern(rule.PathPattern) // compute the hash
-		rules = append(rules, rule)
-	}
-
-	return rules, nil
+	addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, rules)
+	return addedRules, err
 }
 
 // SyncVEXRulesFromSource syncs VEX rules from a specific source.
 // It fetches existing rules for the given asset and vexSource, compares them with
 // the new rules, adds new ones and removes ones that no longer exist.
-func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.DB, assetID uuid.UUID, vexSource string, newRules []models.VEXRule) ([]models.VEXRule, []models.VEXRule, error) {
+func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.DB, assetID uuid.UUID, newRules []models.VEXRule) ([]models.VEXRule, []models.VEXRule, error) {
+	// read the source from the first rule to ensure consistency
+	if len(newRules) == 0 {
+		return nil, nil, nil
+	}
+	vexSource := newRules[0].VexSource
 	// Fetch existing rules for this asset and vexSource
 	existingRules, err := s.vexRuleRepository.FindByAssetAndVexSource(ctx, tx, assetID, vexSource)
 	if err != nil {
@@ -561,54 +372,6 @@ func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.D
 	}
 
 	return rulesToAdd, rulesToRemove, nil
-}
-
-func mapCDXToEventType(a *cdx.VulnerabilityAnalysis) (dtos.VulnEventType, error) {
-	if a == nil {
-		return "", fmt.Errorf("vulnerability analysis is nil")
-	}
-	switch a.State {
-	case cdx.IASFalsePositive:
-		return dtos.EventTypeFalsePositive, nil
-	case cdx.IASExploitable:
-		// check if wont fix
-		if a.Response != nil {
-			if slices.Contains(*a.Response, cdx.IARWillNotFix) {
-				return dtos.EventTypeAccepted, nil
-			} else if slices.Contains(*a.Response, cdx.IARUpdate) {
-				return dtos.EventTypeComment, nil
-			}
-		}
-		return "", fmt.Errorf("vulnerability analysis state is exploitable, no event type mapping")
-	case cdx.IASNotAffected:
-		return dtos.EventTypeFalsePositive, nil
-
-	default:
-		// fallback to response mapping if state is empty
-		if a.Response != nil && len(*a.Response) > 0 {
-			// take first response
-			switch (*a.Response)[0] {
-			case cdx.IARWillNotFix:
-				return dtos.EventTypeAccepted, nil
-			default:
-				return "", fmt.Errorf("unknown vulnerability analysis response: %s", (*a.Response)[0])
-			}
-		}
-		return "", fmt.Errorf("unknown vulnerability analysis state: %s", a.State)
-	}
-}
-
-// helper to extract cve id from CycloneDX vulnerability id or source url
-func extractCVE(s string) string {
-	if s == "" {
-		return ""
-	}
-	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "http") {
-		parts := strings.Split(s, "/")
-		return parts[len(parts)-1]
-	}
-	return s
 }
 
 func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) map[uuid.UUID][]models.VEXRule {

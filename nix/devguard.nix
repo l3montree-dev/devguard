@@ -97,7 +97,7 @@
     externalReferences = [
       {
         type = "exploitability-statement";
-        url = "http://localhost:8080/api/v1/public/59b5f919-448b-4638-ab78-507686a1f286/refs/main/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/"; # "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/";
+        url = "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/";
       }
     ];
   };

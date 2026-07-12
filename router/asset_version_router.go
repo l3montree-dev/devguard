@@ -47,7 +47,7 @@ func NewAssetVersionRouter(
 	assetVersionRouter := assetGroup.Group.Group("/refs/:assetVersionSlug", middlewares.AssetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
-	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	assetVersionRouter.GET("/vex.json/", assetVersionController.CycloneDXVexJSON)
 	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)

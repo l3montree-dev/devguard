@@ -112,7 +112,11 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 	}
 
 	// Generate DOT format
-	dotContent, err := generateDOT(graph, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
+	var vulns []cdx.Vulnerability
+	if bom.Vulnerabilities != nil {
+		vulns = *bom.Vulnerabilities
+	}
+	dotContent, err := generateDOT(graph, vulns, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
 	if err != nil {
 		return err
 	}
@@ -163,7 +167,7 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 	return nil
 }
 
-func generateDOT(graph *normalize.SBOMGraph, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) (string, error) {
+func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) (string, error) {
 	var sb strings.Builder
 
 	sb.WriteString("digraph SBOM {\n")
@@ -429,7 +433,7 @@ func generateDOT(graph *normalize.SBOMGraph, layout, fromBOMRef string, maxDepth
 	// Optionally add vulnerability information
 	if showVulns {
 		sb.WriteString("\n  // Vulnerabilities\n")
-		for vuln := range graph.VulnerabilitiesIter() {
+		for _, vuln := range vulns {
 			if vuln.ID == "" {
 				continue
 			}

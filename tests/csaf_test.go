@@ -11,10 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -77,11 +76,7 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			csafURL := testserver.URL + "/provider-metadata.json"
 
 			// we create a fake bom for the same artifact which has the same purl
-			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
-				URL:              csafURL,
-				Type:             models.ExternalReferenceTypeCSAF,
-				CSAFPackageScope: normalize.Purlify(artifact.ArtifactName, assetVersion.Name),
-			}})
+			_, _, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), asset.ID, assetVersion.Name, []string{csafURL})
 			assert.Equal(t, 1, len(invalidURLs))
 		})
 
@@ -164,33 +159,25 @@ func TestUpstreamCSAFReportIntegration(t *testing.T) {
 			os.Setenv("CSAF_OPENPGP_PASSPHRASE", "Ag%cdaA&EhoM#qCHLRXqoRH%oWAg%cdaA&EhoM#qCHLRXqoRH%oW")
 			os.Setenv("CSAF_OPENPGP_FINGERPRINT", "A8725AE729DAFAF6B95761207D9096D47B06F5F4")
 
-			// we need to add the purl to the url
-			purl := normalize.Purlify(artifact.ArtifactName, assetVersion.Name)
-
-			// we create a fake VEX report for the same artifact which has the same purl
-			vexReports, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), []models.ExternalReference{{
-				URL:              testserver.URL + "/provider-metadata.json",
-				Type:             models.ExternalReferenceTypeCSAF,
-				CSAFPackageScope: purl,
-			}})
+			// fetch VEX from the CSAF provider - it is parsed directly into VEX rules
+			rules, validURLs, invalidURLs := f.App.ScanService.FetchVexFromUpstream(context.Background(), asset.ID, assetVersion.Name, []string{testserver.URL + "/provider-metadata.json"})
 			assert.Equal(t, 0, len(invalidURLs))
 			assert.Equal(t, 1, len(validURLs))
-			assert.Equal(t, 1, len(vexReports), "should return vex reports from CSAF provider")
 
-			// iterate over the vulns in the VEX report
-			// expect CVE-2024-0001 and CVE-2024-0002 to be present,
-			// CVE-2024-0001 should be open, CVE-2024-0002 should be marked as false positive
-			vexBom := vexReports[0].Report
-			if vexBom.Vulnerabilities != nil {
-				for _, vuln := range *vexBom.Vulnerabilities {
-					switch vuln.ID {
-					case "CVE-2024-0001":
-						assert.Equal(t, cyclonedx.IASInTriage, vuln.Analysis.State)
-					case "CVE-2024-0002":
-						assert.Equal(t, cyclonedx.IASNotAffected, vuln.Analysis.State)
-					}
+			// DevGuard's own CSAF is consumed path-specifically: only the false-positive
+			// CVE-2024-0002 yields a VEX rule, carrying the exact path so ingestion closes only
+			// the matching path. CVE-2024-0001 is open, so it produces no rule.
+			foundFalsePositive := false
+			for _, rule := range rules {
+				assert.NotEqual(t, "CVE-2024-0001", rule.CVEID, "the open CVE must not yield a VEX rule")
+				if rule.CVEID != "CVE-2024-0002" {
+					continue
 				}
+				foundFalsePositive = true
+				assert.Equal(t, dtos.EventTypeFalsePositive, rule.EventType)
+				assert.Contains(t, strings.Join(rule.PathPattern, ","), "pkg:npm/axios@1.7.7", "the upstream CSAF must preserve the exact path")
 			}
+			assert.True(t, foundFalsePositive, "expected the false-positive CVE to yield a VEX rule")
 		})
 	})
 }

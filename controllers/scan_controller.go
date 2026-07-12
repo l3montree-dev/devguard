@@ -16,14 +16,16 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -83,20 +85,18 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Param X-Origin header string false "Origin"
 // @Success 200
 // @Router /vex [post]
+// vexFormat identifies the serialization of an uploaded VEX document.
 func (s ScanController) UploadVEX(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.UploadVEX")
 	defer span.End()
 
-	var bom cdx.BOM
-	dec := cdx.NewBOMDecoder(ctx.Request().Body, cdx.BOMFileFormatJSON)
-	if err := dec.Decode(&bom); err != nil {
-		slog.Error("could not decode cyclonedx vex bom", "err", err)
+	body, err := io.ReadAll(ctx.Request().Body)
+	ctx.Request().Body.Close()
+	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
+		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
-
-	ctx.Request().Body.Close()
 
 	asset := shared.GetAsset(ctx)
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
@@ -149,64 +149,46 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
 	}
 
-	externalURLs := []string{}
-	// check if vex url is present in the bom metadata
-	if bom.ExternalReferences != nil {
-		for _, ref := range *bom.ExternalReferences {
-			if ref.Type == cdx.ERTypeExploitabilityStatement {
-				externalURLs = append(externalURLs, ref.URL)
-			}
-		}
-	}
-
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()
 	defer tx.Rollback()
 
-	refs := []models.ExternalReference{}
-	// store the external references from VEX upload
-	for _, url := range externalURLs {
-		// can only be cyclonedx since we are parsing them from the cyclonedx bom
-		ref := models.ExternalReference{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersionName,
-			URL:              url,
-			Type:             "cyclonedx",
-		}
-		if err := s.externalReferenceRepository.Create(reqCtx, tx, &ref); err != nil {
-			slog.Error("could not store vex external reference", "err", err, "url", url)
-		}
-		refs = append(refs, ref)
-	}
+	rules, format, err := s.ScanService.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
 
-	vexReport, err := normalize.NewVexReport(&bom, origin)
-	if err != nil {
-		slog.Error("could not create vex report from bom", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return echo.NewHTTPError(400, fmt.Sprintf("Invalid VEX BOM format: %s", err)).WithInternal(err)
-	}
-
-	vexReports := []*normalize.VexReport{}
-	// check if there are components or vulnerabilities in the bom
-	vexReports = append(vexReports, vexReport)
-
-	for _, url := range externalURLs {
-		slog.Info("found VEX external reference", "url", url)
-		fetchedVexReports, _, invalid := s.FetchVexFromUpstream(reqCtx, refs)
-		if len(invalid) > 0 {
-			slog.Warn("some VEX external references are invalid", "invalid", invalid)
+	switch format {
+	case dtos.ExternalReferenceTypeCycloneDX:
+		var bom cdx.BOM
+		if err := cdx.NewBOMDecoder(bytes.NewReader(body), cdx.BOMFileFormatJSON).Decode(&bom); err != nil {
+			slog.Error("could not decode cyclonedx vex bom", "err", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
 		}
 
-		if len(fetchedVexReports) > 0 {
-			vexReports = append(vexReports, fetchedVexReports...)
-		}
-	}
-
-	if len(vexReports) > 0 {
-		// process the vex
-		if err := s.vexRuleService.IngestVexes(reqCtx, tx, asset, assetVersion, vexReports); err != nil {
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
 			tx.Rollback()
-			slog.Error("could not ingest vex reports", "err", err)
+			slog.Error("could not ingest uploaded vex", "err", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
+		}
+
+		// also ingest any VEX documents referenced by the uploaded BOM
+
+		if err := s.ingestVexFromExternalReferences(reqCtx, tx, &bom, asset, assetVersion); err != nil {
+			// swallow the error and log it, since the user has already uploaded a valid VEX document and we don't want to fail the request just because an external reference couldn't be fetched
+			slog.Error("could not ingest vex from external references", "err", err)
+		}
+	case dtos.ExternalReferenceTypeOpenVEX, dtos.ExternalReferenceTypeCSAF:
+		// CSAF and OpenVEX both ingest through the same rule pipeline; they only differ in
+		// how the document is decoded into VEX rules.
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return echo.NewHTTPError(400, err.Error()).WithInternal(err)
+		}
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
+			tx.Rollback()
+			slog.Error("could not ingest vex rules", "err", err, "format", format)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			return err
@@ -242,31 +224,17 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	refs := []models.ExternalReference{}
-	for _, url := range externalURLs {
-		ref := models.ExternalReference{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			URL:              url,
-			Type:             models.ExternalReferenceTypeCycloneDxVEX,
-		}
-		refs = append(refs, ref)
-	}
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name, externalURLs)
 
-	if err := s.externalReferenceRepository.CreateBatch(ctx, tx, refs); err != nil {
+	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
 		slog.Error("could not store vex external reference", "err", err)
 	}
 
-	fetchedVexReports, _, invalid := s.FetchVexFromUpstream(ctx, refs)
-	if len(invalid) > 0 {
-		slog.Warn("some VEX external references are invalid", "invalid", invalid)
-	}
-
-	if len(fetchedVexReports) == 0 {
+	if len(rules) == 0 {
 		return nil
 	}
 
-	return s.vexRuleService.IngestVexes(ctx, tx, asset, assetVersion, fetchedVexReports)
+	return s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, rules)
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {
@@ -882,13 +850,8 @@ func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 	}
 
 	asset := shared.GetAsset(c)
-	org := shared.GetOrg(c)
-	project := shared.GetProject(c)
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-
-	vexGraph := s.assetVersionService.BuildVeX(c.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, vulns)
-	vexBOM := vexGraph.ToCycloneDX(normalize.BOMMetadata{})
+	vexBOM := s.assetVersionService.BuildVeX(c.Request().Context(), nil, normalize.BOMMetadata{}, asset, assetVersion, vulns)
 
 	c.Response().Header().Set("Content-Type", "application/json")
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).SetEscapeHTML(false).Encode(vexBOM)
