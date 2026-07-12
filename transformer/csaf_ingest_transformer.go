@@ -152,10 +152,7 @@ func csafProductToPathPattern(productID string, relByProductID map[string]*gocsa
 	var reversed []string
 	cur := productID
 	seen := map[string]bool{}
-	for {
-		if seen[cur] {
-			break // cycle guard
-		}
+	for !seen[cur] {
 		seen[cur] = true
 		rel, ok := relByProductID[cur]
 		if !ok {

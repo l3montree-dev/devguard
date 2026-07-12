@@ -29,7 +29,6 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -513,11 +512,6 @@ func TestGenerateSummaryForEvent(t *testing.T) {
 		result := generateSummaryForEvent(dtos.VulnEventType("unknown"), 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
 		assert.Equal(t, "", result)
 	})
-}
-
-// helper to unwrap packageurl.FromString in test data setup
-func must(p packageurl.PackageURL, _ error) packageurl.PackageURL {
-	return p
 }
 
 func TestGetOldestVulnPerUniqueCVE(t *testing.T) {

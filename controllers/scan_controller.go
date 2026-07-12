@@ -152,7 +152,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()
 	defer tx.Rollback()
 
-	rules, format, err := s.ScanService.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
+	rules, format, err := s.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
 
 	switch format {
 	case dtos.ExternalReferenceTypeCycloneDX:

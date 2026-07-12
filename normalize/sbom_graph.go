@@ -1711,20 +1711,6 @@ func isValidExternalReferenceType(t cdx.ExternalReferenceType) bool {
 	return validTypes[t]
 }
 
-// isValidSeverity checks if severity is valid
-func isValidSeverity(severity cdx.Severity) bool {
-	validSeverities := map[cdx.Severity]bool{
-		cdx.SeverityUnknown:  true,
-		cdx.SeverityLow:      true,
-		cdx.SeverityMedium:   true,
-		cdx.SeverityHigh:     true,
-		cdx.SeverityCritical: true,
-		cdx.SeverityInfo:     true,
-		cdx.SeverityNone:     true,
-	}
-	return validSeverities[severity]
-}
-
 func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {
 	return getChildrenOfParentWithVisited(depMap, nodes, parent, map[string]bool{})
 }
