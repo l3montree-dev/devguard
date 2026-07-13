@@ -101,10 +101,11 @@ func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx sha
 	}
 
 	// Filter rules to only those matching the vulnerability path pattern
+	artifactIdentities := vuln.ArtifactPurls()
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
 		pattern := dtos.PathPattern(rule.PathPattern)
-		if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+		if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, artifactIdentities) {
 			matchingRules = append(matchingRules, rule)
 		}
 	}
@@ -390,7 +391,7 @@ func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) ma
 		vulnsForCVE := m[rule.CVEID]
 		for _, vuln := range vulnsForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[vuln.ID] = append(result[vuln.ID], rule)
 			}
 		}
@@ -414,7 +415,7 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 		rulesForCVE := m[vuln.CVEID]
 		for _, rule := range rulesForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffix(vuln.VulnerabilityPath) {
+			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}

@@ -42,7 +42,7 @@ func IsWildcard(elem string) bool {
 	return elem == PathPatternWildcard
 }
 
-// MatchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
+// matchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
 // The pattern is matched against suffixes of the path.
 // A wildcard in the pattern matches zero or more path elements.
 //
@@ -50,7 +50,10 @@ func IsWildcard(elem string) bool {
 //   - Pattern ["pkg:golang/lib"] matches path ["pkg:golang/lib"] or ["a", "b", "pkg:golang/lib"]
 //   - Pattern ["*", "lib"] matches ["lib"] or ["a", "lib"] or ["a", "b", "lib"]
 //   - Pattern ["a", "*", "b"] matches ["a", "b"] or ["a", "x", "b"] or ["a", "x", "y", "z", "b"]
-func (p PathPattern) MatchesSuffix(path []string) bool {
+//
+// Unexported: callers should use MatchesSuffixForArtifacts, which also
+// strips a leading artifact-identity path segment before delegating here.
+func (p PathPattern) matchesSuffix(path []string) bool {
 
 	if len(p) == 0 {
 		return true
@@ -161,6 +164,29 @@ func matchPatternExact(pattern, path []string) bool {
 // ContainsWildcard returns true if the pattern contains a wildcard (*).
 func (p PathPattern) ContainsWildcard() bool {
 	return slices.ContainsFunc(p, IsWildcard)
+}
+
+// MatchesSuffixForArtifacts is like matchesSuffix, but first strips a leading
+// pattern element that identifies one of the vulnerability's own artifacts.
+//
+// VulnerabilityPath is always component-only and never includes the
+// artifact's own identity, but devguard's own exports (CSAF, CycloneDX VEX)
+// always include the artifact as the path's root. A pattern reconstructed
+// from such an export - e.g. a downloaded VEX document being re-uploaded -
+// would otherwise carry that artifact element as its first path segment and
+// never match any real vulnerability path.
+//
+// Once stripped, the remainder is matched exactly from the start of path
+// (like the ROOT stop-marker case in matchesSuffix), not as a generic
+// suffix: the artifact anchors the pattern to the absolute root of the
+// dependency graph, so a shorter pattern must not match as a mere suffix of
+// a longer, distinct path through a shared component - that per-path
+// distinction is exactly what CSAF's product tree encodes.
+func (p PathPattern) MatchesSuffixForArtifacts(path []string, artifactIdentities []string) bool {
+	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
+		return matchPatternExact(p[1:], path)
+	}
+	return p.matchesSuffix(path)
 }
 
 type VEXRuleDTO struct {
