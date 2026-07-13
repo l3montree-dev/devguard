@@ -97,7 +97,7 @@
     externalReferences = [
       {
         type = "exploitability-statement";
-        url = "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/vex.json/";
+        url = "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/csaf.json/";
       }
     ];
   };
