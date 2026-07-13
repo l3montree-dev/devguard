@@ -687,12 +687,14 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 }
 
 func TruncateCVERelatedTables(ctx context.Context, tx pgx.Tx) error {
-	// Drop the FK from exploits before truncating so that CASCADE does not silently
-	// wipe exploit rows — exploits may not be part of the current import batch.
-	// AddIndexesAndConstraints re-adds the constraint after CVE rows are flushed.
+	// Drop the FK from exploits first, then truncate exploits alongside the CVE tables.
+	// The export re-fetches exploits in full, and any rows left over from a baseline
+	// import (diff mode) reference CVEs the fresh OSV fetch may no longer contain — which
+	// makes AddIndexesAndConstraints fail to re-add fk_cves_exploits before the new
+	// exploits are loaded. AddIndexesAndConstraints re-adds the constraint afterwards.
 	if _, err := tx.Exec(ctx, `
 		ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
-		TRUNCATE cves, affected_components, cve_relationships, cve_affected_component CASCADE;
+		TRUNCATE cves, affected_components, cve_relationships, cve_affected_component, exploits CASCADE;
 	`); err != nil {
 		return fmt.Errorf("could not truncate cve-related tables: %w", err)
 	}
