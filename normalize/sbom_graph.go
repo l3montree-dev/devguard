@@ -296,6 +296,13 @@ func (g *SBOMGraph) pruneUnidentifiablePackages() {
 	}
 }
 
+// MakeValid prunes unidentifiable components (see pruneUnidentifiablePackages).
+// Call this once after building a graph via InvalidSBOMGraphFromCycloneDX and
+// doing any enrichment (EnrichSBOM) on it.
+func (g *SBOMGraph) MakeValid() {
+	g.pruneUnidentifiablePackages()
+}
+
 func (g *SBOMGraph) ClearScope() {
 	g.ScopeID = g.RootID
 }
@@ -1475,6 +1482,19 @@ func getDashboardURL(metadata BOMMetadata, escapedArtifactName string) string {
 // be identified as a real package, so its direct dependencies are reparented
 // to the info source node instead.
 func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*SBOMGraph, error) {
+	g, err := InvalidSBOMGraphFromCycloneDX(bom, artifactName, infoSourceID)
+	if err != nil {
+		return nil, err
+	}
+	g.MakeValid()
+	return g, nil
+}
+
+// InvalidSBOMGraphFromCycloneDX is like SBOMGraphFromCycloneDX but skips
+// pruning unidentifiable components (e.g. a purl-less root). Call MakeValid
+// once done enriching, or use SBOMGraphFromCycloneDX directly if you don't
+// need to enrich the graph via EnrichSBOM first.
+func InvalidSBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*SBOMGraph, error) {
 	// Validate required fields
 	if bom == nil {
 		return nil, fmt.Errorf("BOM cannot be nil")
@@ -1637,12 +1657,8 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*S
 	}
 
 	// Components (including the root) that don't have an identifiable
-	// package PackageURL are pruned, with their dependencies reparented to
-	// their own parent(s), so unidentifiable nodes never end up wired into
-	// the graph or reachable from it - this is what makes re-uploading a
-	// previously downloaded SBOM idempotent regardless of whether its root
-	// component happens to be identifiable.
-	g.pruneUnidentifiablePackages()
+	// package PackageURL are pruned once MakeValid is called, with their
+	// dependencies reparented to their own parent(s) - see MakeValid.
 
 	// Vulnerabilities carried on an ingested BOM are not part of the component graph; VEX
 	// ingestion handles them separately (see the transformer package).

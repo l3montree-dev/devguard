@@ -326,7 +326,7 @@ func printSupplementarySBOMExample(path string) {
 func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
 	rootRef := bom.Metadata.Component.BOMRef
 
-	g, err := normalize.SBOMGraphFromCycloneDX(bom, "cli-scan", "cli-scan")
+	g, err := normalize.InvalidSBOMGraphFromCycloneDX(bom, "cli-scan", "cli-scan")
 	if err != nil {
 		return errors.Wrap(err, "could not build SBOM graph")
 	}
@@ -345,6 +345,11 @@ func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 			mergeExternalReferences(bom, *extra.ExternalReferences)
 		}
 	}
+
+	// Deferred from InvalidSBOMGraphFromCycloneDX: pruning the root component
+	// (routinely purl-less for a container/image scan) any earlier would have
+	// deleted the attach point EnrichSBOM just used, above.
+	g.MakeValid()
 
 	exported := g.ToCycloneDX(normalize.BOMMetadata{RootName: rootRef})
 	filtered := make([]cyclonedx.Component, 0, len(*exported.Components))
