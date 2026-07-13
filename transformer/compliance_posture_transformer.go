@@ -73,7 +73,7 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 }
 
 func handleFrameworkControlID(frameworkControlID string) string {
-	frameworkControlID = strings.Replace(frameworkControlID, ":", "-", -1)
+	frameworkControlID = strings.ReplaceAll(frameworkControlID, ":", "-")
 
 	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(frameworkControlID)).String()
 }
