@@ -96,7 +96,7 @@ func ValidateDependencyProxyConfigsJSON(content string) error {
 		MinReleaseAge int `json:"minReleaseAge"`
 	}
 	if err := json.Unmarshal([]byte(content), &raw); err != nil {
-		return fmt.Errorf("invalid dependency proxy config: %w", err)
+		return fmt.Errorf("malformed JSON: %w", err)
 	}
 	if raw.MinReleaseAge < 0 {
 		return fmt.Errorf("minReleaseAge must not be negative (got %d)", raw.MinReleaseAge)

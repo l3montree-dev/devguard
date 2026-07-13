@@ -444,7 +444,7 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 
 	if configID == dependencyfirewall.DependencyProxyConfigsConfigFileID && configContent != "" {
 		if err := dependencyfirewall.ValidateDependencyProxyConfigsJSON(configContent); err != nil {
-			return echo.NewHTTPError(400, err.Error())
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
 		}
 	}
 
