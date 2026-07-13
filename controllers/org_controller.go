@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -440,6 +441,12 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
 	configContent := string(body)
+
+	if configID == dependencyfirewall.DependencyProxyConfigsConfigFileID && configContent != "" {
+		if err := dependencyfirewall.ValidateDependencyProxyConfigsJSON(configContent); err != nil {
+			return echo.NewHTTPError(400, err.Error())
+		}
+	}
 
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)
