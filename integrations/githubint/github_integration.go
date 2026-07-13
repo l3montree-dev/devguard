@@ -227,7 +227,7 @@ func (githubIntegration *GithubIntegration) getExcessIIDs(ctx context.Context, a
 }
 
 func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
-	client, projectID, excessIIDs, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	client, owner, repo, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
 		if errors.Is(err, ErrNotConnected) {
 			return nil
@@ -235,27 +235,25 @@ func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferen
 		slog.Error("failed to get github client based on asset", "err", err, "asset", asset)
 		return err
 	}
-
-	updateOptions := github.UpdateIssueOptions{
-		StateEvent:  new("close"),
-		Description: new("Closed by DevGuard: this issue has the 'devguard' label but is not referenced by any vulnerability tracked in DevGuard for this asset."),
+	issueRequest := github.IssueRequest{
+		State: new("closed"),
 	}
 	amountClosed := 0
-	closedURLs := make([]string, 0, len(excessIIDs))
-	for _, iid := range excessIIDs {
-		updated, _, err := client.EditIssue(ctx, projectID, iid, &updateOptions)
+	closedURLs := make([]string, 0, len(excessNumbers))
+	for _, number := range excessNumbers {
+		updated, _, err := client.EditIssue(ctx, owner, repo, number, &issueRequest)
 		if err != nil {
-			slog.Error("could not close excess github issue", "iid", iid, "assetID", asset.ID)
+			slog.Error("could not close excess github issue", "number", number, "assetID", asset.ID)
 			continue
 		}
 		amountClosed++
 		if updated != nil {
-			closedURLs = append(closedURLs, updated.WebURL)
+			closedURLs = append(closedURLs, updated.GetHTMLURL())
 		}
 	}
 
 	if amountClosed > 0 {
-		slog.Info("closed excess gitlab tickets", "assetID", asset.ID, "count", amountClosed, "tickets", closedURLs)
+		slog.Info("closed excess github tickets", "assetID", asset.ID, "count", amountClosed, "tickets", closedURLs)
 	}
 	return nil
 }
