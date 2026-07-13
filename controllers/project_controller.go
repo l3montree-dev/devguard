@@ -698,7 +698,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
 	}
 
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator", asset.KeepOriginalSbomRootComponent)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator")
 	if err != nil {
 		slog.Error("trivy operator: failed to normalize BOM", "err", err)
 		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})

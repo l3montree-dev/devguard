@@ -64,8 +64,6 @@ type AssetDTO struct {
 	PipelineLastRun                 time.Time `json:"pipelineLastRun"`
 	PipelineError                   *string   `json:"pipelineError,omitempty"`
 
-	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent"`
-
 	State string `json:"state"`
 }
 
@@ -133,6 +131,4 @@ type AssetPatchRequest struct {
 	ParanoidMode       *bool   `json:"paranoidMode"`
 
 	SharesInformation *bool `json:"sharesInformation"`
-
-	KeepOriginalSbomRootComponent *bool `json:"keepOriginalSbomRootComponent"`
 }

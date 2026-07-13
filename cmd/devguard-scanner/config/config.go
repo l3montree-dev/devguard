@@ -79,12 +79,11 @@ type baseConfig struct {
 	NoWrite bool   `json:"noWrite" mapstructure:"noWrite"`
 	Output  string `json:"output" mapstructure:"output"`
 
-	ImagePath                     string `json:"imagePath" mapstructure:"imagePath"`
-	ImagePathSuffix               string `json:"imageSuffix" mapstructure:"imageSuffix"`
-	UpstreamVersion               string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
-	Architecture                  string `json:"architecture" mapstructure:"architecture"`
-	ImageVariant                  string `json:"imageVariant" mapstructure:"imageVariant"`
-	KeepOriginalSbomRootComponent *bool  `json:"keepOriginalSbomRootNodes" mapstructure:"keepOriginalSbomRootComponent"`
+	ImagePath       string `json:"imagePath" mapstructure:"imagePath"`
+	ImagePathSuffix string `json:"imageSuffix" mapstructure:"imageSuffix"`
+	UpstreamVersion string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
+	Architecture    string `json:"architecture" mapstructure:"architecture"`
+	ImageVariant    string `json:"imageVariant" mapstructure:"imageVariant"`
 }
 
 type InTotoConfig struct {

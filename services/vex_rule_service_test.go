@@ -4,82 +4,13 @@ import (
 	"context"
 	"testing"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-func TestMapCDXToEventType(t *testing.T) {
-	cases := []struct {
-		name      string
-		analysis  *cdx.VulnerabilityAnalysis
-		want      dtos.VulnEventType
-		wantError bool
-	}{
-		{
-			name:      "nil analysis",
-			analysis:  nil,
-			wantError: true,
-		},
-		{
-			name:      "resolved state",
-			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASResolved},
-			wantError: true,
-		},
-		{
-			name:     "false positive state",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASFalsePositive},
-			want:     dtos.EventTypeFalsePositive,
-		},
-		{
-			name:     "not affected state",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASNotAffected},
-			want:     dtos.EventTypeFalsePositive,
-		},
-		{
-			name:      "exploitable without response",
-			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable},
-			wantError: true,
-		},
-		{
-			name:     "exploitable with will not fix",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable, Response: &[]cdx.ImpactAnalysisResponse{cdx.IARWillNotFix}},
-			want:     dtos.EventTypeAccepted,
-		},
-		{
-			name:     "exploitable with update",
-			analysis: &cdx.VulnerabilityAnalysis{State: cdx.IASExploitable, Response: &[]cdx.ImpactAnalysisResponse{cdx.IARUpdate}},
-			want:     dtos.EventTypeComment,
-		},
-		{
-			name:      "in triage",
-			analysis:  &cdx.VulnerabilityAnalysis{State: cdx.IASInTriage},
-			wantError: true,
-		},
-		{
-			name:     "will not fix response fallback",
-			analysis: &cdx.VulnerabilityAnalysis{State: "", Response: &[]cdx.ImpactAnalysisResponse{cdx.IARWillNotFix}},
-			want:     dtos.EventTypeAccepted,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := mapCDXToEventType(tc.analysis)
-			if tc.wantError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.want, got)
-			}
-		})
-	}
-}
 
 func TestCreateVulnEventFromVEXRule(t *testing.T) {
 	// This tests the internal function createVulnEventFromVEXRule
@@ -482,10 +413,14 @@ func TestVEXRuleEnabledBasedOnParanoidMode(t *testing.T) {
 
 			service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 
-			// Create a minimal VEX report with one vulnerability
-			vexReport := createTestVexReport()
-
-			err := service.IngestVEX(context.Background(), nil, asset, assetVersion, vexReport)
+			newRule := models.VEXRule{
+				AssetID:          assetID,
+				AssetVersionName: assetVersion.Name,
+				CVEID:            "CVE-2024-0001",
+				VexSource:        "test",
+				PathPattern:      dtos.PathPattern{"pkg:npm/lib@1.0.0"},
+			}
+			err := service.IngestVEXRules(context.Background(), nil, asset, assetVersion, []models.VEXRule{newRule})
 			assert.NoError(t, err)
 
 			// Verify that all captured rules have the expected Enabled value
@@ -555,37 +490,6 @@ func TestMatchRulesToVulnsOnlyMatchesEnabledRules(t *testing.T) {
 
 	assert.Equal(t, 1, enabledMatches, "enabled rule should match one vulnerability")
 	assert.Equal(t, 0, disabledMatches, "disabled rule should not match any vulnerabilities")
-}
-
-// createTestVexReport creates a minimal VEX report for testing
-func createTestVexReport() *normalize.VexReport {
-	return &normalize.VexReport{
-		Source: "test-source",
-		Report: &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					PackageURL: "pkg:golang/test-app@v1.0",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "comp-1",
-					PackageURL: "pkg:golang/vulnerable-lib@v1.0",
-				},
-			},
-			Vulnerabilities: &[]cdx.Vulnerability{
-				{
-					ID: "CVE-2024-1234",
-					Analysis: &cdx.VulnerabilityAnalysis{
-						State: cdx.IASFalsePositive,
-					},
-					Affects: &[]cdx.Affects{
-						{Ref: "comp-1"},
-					},
-				},
-			},
-		},
-	}
 }
 
 // TestApplyRulesToExistingVulnsOnlyAppliesEnabledRules tests that ApplyRulesToExistingVulns only applies enabled rules
@@ -752,97 +656,6 @@ func TestEnablingRuleAppliesItToVulns(t *testing.T) {
 
 	depVulnRepo.AssertExpectations(t)
 	vulnEventRepo.AssertExpectations(t)
-}
-
-// TestParseVEXRulesInBOM_ComponentPurlWithEncodedAtSign tests that component PURLs
-// containing %40 (encoded @) are properly unescaped in the generated path pattern.
-// This was a critical bug: componentPurl.String() kept the %40 encoding, causing
-// path patterns to never match vulnerability paths that use the unescaped @ form.
-func TestParseVEXRulesInBOM_ComponentPurlWithEncodedAtSign(t *testing.T) {
-	assetID := uuid.New()
-	asset := models.Asset{
-		Model:        models.Model{ID: assetID},
-		ParanoidMode: false,
-	}
-	assetVersion := models.AssetVersion{
-		Name:    "v1.0",
-		AssetID: assetID,
-	}
-
-	// Use a scoped npm package where the namespace contains @, which gets
-	// percent-encoded to %40 by the packageurl library's ToString().
-	vexReport := &normalize.VexReport{
-		Source: "test-source",
-		Report: &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					PackageURL: "pkg:npm/%40myorg/myapp@1.0.0",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "vuln-comp-1",
-					PackageURL: "pkg:npm/%40myorg/vulnerable-lib@2.0.0",
-				},
-			},
-			Vulnerabilities: &[]cdx.Vulnerability{
-				{
-					ID: "CVE-2024-9999",
-					Analysis: &cdx.VulnerabilityAnalysis{
-						State: cdx.IASFalsePositive,
-					},
-					Affects: &[]cdx.Affects{
-						{Ref: "vuln-comp-1"},
-					},
-				},
-			},
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-
-	vexRuleRepo.On("FindByAssetAndVexSource", mock.Anything, mock.Anything, assetID, mock.Anything).Return([]models.VEXRule{}, nil)
-
-	var capturedRules []models.VEXRule
-	vexRuleRepo.On("UpsertBatch", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		capturedRules = args.Get(2).([]models.VEXRule)
-	}).Return(nil)
-
-	depVulnRepo.On("GetAllOpenVulnsByAssetVersionNameAndAssetID", mock.Anything, mock.Anything, mock.Anything, "v1.0", assetID).Return([]models.DependencyVuln{}, nil)
-
-	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
-	err := service.IngestVEX(context.Background(), nil, asset, assetVersion, vexReport)
-	assert.NoError(t, err)
-
-	assert.NotEmpty(t, capturedRules, "expected at least one rule to be created")
-
-	rule := capturedRules[0]
-	// The path pattern should have 3 elements: [componentPurl, *, vulnPurl]
-	assert.Len(t, rule.PathPattern, 3, "path pattern should have componentPurl, wildcard, and vulnPurl")
-
-	componentPurlInPattern := rule.PathPattern[0]
-	vulnPurlInPattern := rule.PathPattern[2]
-
-	// The critical assertion: @ must NOT be encoded as %40 in the path pattern.
-	// Before the fix, componentPurl.String() was used directly, producing
-	// "pkg:npm/%40myorg/myapp@1.0.0" instead of "pkg:npm/@myorg/myapp@1.0.0".
-	assert.NotContains(t, componentPurlInPattern, "%40",
-		"component PURL in path pattern must not contain %%40 — @ should be unescaped")
-	assert.Contains(t, componentPurlInPattern, "@myorg/myapp@",
-		"component PURL should contain the properly unescaped @")
-
-	assert.NotContains(t, vulnPurlInPattern, "%40",
-		"vuln PURL in path pattern must not contain %%40 — @ should be unescaped")
-	assert.Contains(t, vulnPurlInPattern, "@myorg/vulnerable-lib@",
-		"vuln PURL should contain the properly unescaped @")
-
-	// Verify the wildcard is in the middle
-	assert.Equal(t, dtos.PathPatternWildcard, rule.PathPattern[1],
-		"middle element should be the wildcard")
-
-	vexRuleRepo.AssertExpectations(t)
 }
 
 // TestMatchRulesToVulns_ComponentPurlWithAtSign verifies that rules with properly
@@ -1033,164 +846,6 @@ func TestMatchVulnsToRules(t *testing.T) {
 		result := matchVulnsToRules(vulns, nil)
 		assert.Empty(t, result)
 	})
-}
-
-// TestParseVEXRulesInBOM_PathPatternFromProperties tests that when a VEX BOM contains
-// pathPattern properties (created by devguard's BuildVeX), they are parsed directly
-// instead of being reconstructed from PURLs.
-func TestParseVEXRulesInBOM_PathPatternFromProperties(t *testing.T) {
-	assetID := uuid.New()
-	asset := models.Asset{
-		Model:        models.Model{ID: assetID},
-		ParanoidMode: false,
-	}
-	assetVersion := models.AssetVersion{
-		Name:    "v1.0",
-		AssetID: assetID,
-	}
-
-	// Simulate a VEX report that was produced by devguard itself (BuildVeX),
-	// which embeds pathPattern as a JSON property on each vulnerability.
-	vexReport := &normalize.VexReport{
-		Source: "test-source",
-		Report: &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					PackageURL: "pkg:golang/myapp@v1.0",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "comp-1",
-					PackageURL: "pkg:golang/vulnerable-lib@v2.0",
-				},
-			},
-			Vulnerabilities: &[]cdx.Vulnerability{
-				{
-					ID: "CVE-2024-1234",
-					Analysis: &cdx.VulnerabilityAnalysis{
-						State: cdx.IASFalsePositive,
-					},
-					Affects: &[]cdx.Affects{
-						{Ref: "comp-1"},
-					},
-					Properties: &[]cdx.Property{
-						{
-							Name:  "devguard:pathPattern",
-							Value: `["pkg:golang/root@v1.0","*","pkg:golang/vulnerable-lib@v2.0"]`,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-
-	vexRuleRepo.On("FindByAssetAndVexSource", mock.Anything, mock.Anything, assetID, mock.Anything).Return([]models.VEXRule{}, nil)
-
-	var capturedRules []models.VEXRule
-	vexRuleRepo.On("UpsertBatch", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		capturedRules = args.Get(2).([]models.VEXRule)
-	}).Return(nil)
-
-	depVulnRepo.On("GetAllOpenVulnsByAssetVersionNameAndAssetID", mock.Anything, mock.Anything, mock.Anything, "v1.0", assetID).Return([]models.DependencyVuln{}, nil)
-
-	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
-	err := service.IngestVEX(context.Background(), nil, asset, assetVersion, vexReport)
-	assert.NoError(t, err)
-
-	assert.NotEmpty(t, capturedRules, "expected at least one rule to be created")
-
-	rule := capturedRules[0]
-	// The path pattern should come directly from the property, not reconstructed from PURLs
-	assert.Equal(t, dtos.PathPattern{"pkg:golang/root@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"}, dtos.PathPattern(rule.PathPattern),
-		"path pattern should be parsed from the property value, not reconstructed from PURLs")
-
-	vexRuleRepo.AssertExpectations(t)
-}
-
-// TestParseVEXRulesInBOM_MultiplePathPatternProperties tests that multiple pathPattern
-// properties on a single vulnerability each produce a separate VEX rule.
-func TestParseVEXRulesInBOM_MultiplePathPatternProperties(t *testing.T) {
-	assetID := uuid.New()
-	asset := models.Asset{
-		Model:        models.Model{ID: assetID},
-		ParanoidMode: false,
-	}
-	assetVersion := models.AssetVersion{
-		Name:    "v1.0",
-		AssetID: assetID,
-	}
-
-	vexReport := &normalize.VexReport{
-		Source: "test-source",
-		Report: &cdx.BOM{
-			Metadata: &cdx.Metadata{
-				Component: &cdx.Component{
-					PackageURL: "pkg:golang/myapp@v1.0",
-				},
-			},
-			Components: &[]cdx.Component{
-				{
-					BOMRef:     "comp-1",
-					PackageURL: "pkg:golang/vulnerable-lib@v2.0",
-				},
-			},
-			Vulnerabilities: &[]cdx.Vulnerability{
-				{
-					ID: "CVE-2024-1234",
-					Analysis: &cdx.VulnerabilityAnalysis{
-						State: cdx.IASFalsePositive,
-					},
-					Affects: &[]cdx.Affects{
-						{Ref: "comp-1"},
-					},
-					Properties: &[]cdx.Property{
-						{
-							Name:  "devguard:pathPattern",
-							Value: `["pkg:golang/root-a@v1.0","*","pkg:golang/vulnerable-lib@v2.0"]`,
-						},
-						{
-							Name:  "devguard:pathPattern",
-							Value: `["pkg:golang/root-b@v1.0","*","pkg:golang/vulnerable-lib@v2.0"]`,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-
-	vexRuleRepo.On("FindByAssetAndVexSource", mock.Anything, mock.Anything, assetID, mock.Anything).Return([]models.VEXRule{}, nil)
-
-	var capturedRules []models.VEXRule
-	vexRuleRepo.On("UpsertBatch", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		capturedRules = args.Get(2).([]models.VEXRule)
-	}).Return(nil)
-
-	depVulnRepo.On("GetAllOpenVulnsByAssetVersionNameAndAssetID", mock.Anything, mock.Anything, mock.Anything, "v1.0", assetID).Return([]models.DependencyVuln{}, nil)
-
-	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
-	err := service.IngestVEX(context.Background(), nil, asset, assetVersion, vexReport)
-	assert.NoError(t, err)
-
-	assert.Len(t, capturedRules, 2, "each pathPattern property should produce a separate VEX rule")
-
-	patterns := []dtos.PathPattern{
-		dtos.PathPattern(capturedRules[0].PathPattern),
-		dtos.PathPattern(capturedRules[1].PathPattern),
-	}
-
-	assert.Contains(t, patterns, dtos.PathPattern{"pkg:golang/root-a@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"})
-	assert.Contains(t, patterns, dtos.PathPattern{"pkg:golang/root-b@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"})
-
-	vexRuleRepo.AssertExpectations(t)
 }
 
 // TestVEXRuleServiceCreate tests rule creation

@@ -287,6 +287,7 @@ func TestBOLAReleaseReadCrossProjectBlocked(t *testing.T) {
 			f.App.AssetVersionRepository,
 			f.App.DependencyVulnRepository,
 			f.App.AssetRepository,
+			f.App.CSAFService,
 		)
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

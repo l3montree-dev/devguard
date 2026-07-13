@@ -119,13 +119,22 @@ func (s *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx conte
 		return nil, err
 	}
 
-	var defaultVulns []models.DependencyVuln
+	// if an artifact name is given, filter the dependency vulns to only include those for that artifact,
+	// regardless of whether this is the default branch or not
+	if artifactName != nil {
+		for i := range dependencyVulns {
+			dependencyVulns[i].Artifacts = utils.Filter(dependencyVulns[i].Artifacts, func(a models.Artifact) bool {
+				return a.ArtifactName == *artifactName
+			})
+		}
+	}
+
 	if assetVersion.DefaultBranch {
 		return dependencyVulns, nil
 	}
 
 	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
+	defaultVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}

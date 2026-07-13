@@ -303,7 +303,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 			},
 		}
 
-		graph, err := SBOMGraphFromCycloneDX(inputBOM, "test", "test", false)
+		graph, err := SBOMGraphFromCycloneDX(inputBOM, "test", "test")
 		assert.NoError(t, err, "Graph construction should succeed")
 		exportedBOM := graph.ToCycloneDX(BOMMetadata{
 			RootName:     "test",
@@ -357,7 +357,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should handle this gracefully by using bomRef as the name if name is missing
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err)
 
 		component := slices.Collect(graph.Components())[0]
@@ -390,7 +390,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should return error for invalid scope
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NotNil(t, err, "Should return error for invalid scope value")
 		assert.Nil(t, graph, "Graph should be nil when error occurs")
 	})
@@ -421,7 +421,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Graph should handle this gracefully by removing invalid hashes
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph even with invalid hashes")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 		// Verify the invalid hash was removed during construction
@@ -461,7 +461,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Graph should handle this gracefully by removing invalid external references
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph even with invalid external references")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 	})
@@ -495,7 +495,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should handle this gracefully by eliminating undefined references
-		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Graph should be created and undefined dependency references should be dropped")
 	})
 
@@ -511,7 +511,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should handle this gracefully by creating a default root
-		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.Error(t, err, "Graph should not be created if root component is missing")
 
 	})
@@ -531,7 +531,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should handle this gracefully - it doesn't validate BOM format itself
-		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.Error(t, err, "Graph should not be created with invalid BOM format")
 	})
 
@@ -549,7 +549,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX should handle this gracefully
-		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		_, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.Error(t, err, "Graph should not be created with negative BOM version")
 	})
 
@@ -587,7 +587,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// SBOMGraphFromCycloneDX ignores compositions - they're not used in graph building
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph (compositions are not processed)")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 		assert.NotNil(t, graph, "Graph should be created successfully")
@@ -620,7 +620,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Duplicate BOMRefs should be skipped with a warning, not cause an error
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.Nil(t, err, "Should not return error for duplicate BOMRef")
 		assert.NotNil(t, graph, "Graph should be constructed successfully")
 	})
@@ -647,7 +647,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Try to construct graph with missing BOMRef - should return error
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NotNil(t, err, "Should return error for missing component BOMRef")
 		assert.Nil(t, graph, "Graph should be nil when error occurs")
 	})
@@ -675,7 +675,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Graph should handle this gracefully by ignoring invalid license identifiers
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph even with invalid license identifiers")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 	})
@@ -696,7 +696,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Try to construct graph with invalid PackageURL - should return error
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NotNil(t, err, "Should return error for invalid PackageURL format")
 		assert.Nil(t, graph, "Graph should be nil when error occurs")
 	})
@@ -718,7 +718,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Graph should handle this gracefully by ignoring invalid CPE format
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph even with invalid CPE format")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 	})
@@ -739,7 +739,7 @@ func TestSchemaBreakers(t *testing.T) {
 		}
 
 		// Graph should handle this gracefully by ignoring invalid timestamp
-		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source", false)
+		graph, err := SBOMGraphFromCycloneDX(bom, "test-artifact", "test-source")
 		assert.NoError(t, err, "Should successfully construct graph even with invalid timestamp format")
 		assert.NotNil(t, graph, "Graph should be created successfully")
 	})

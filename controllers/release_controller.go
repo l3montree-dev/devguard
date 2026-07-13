@@ -7,6 +7,7 @@ import (
 	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -15,6 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
 type ReleaseController struct {
@@ -23,10 +25,11 @@ type ReleaseController struct {
 	assetVersionRepository shared.AssetVersionRepository
 	dependencyVulnRepo     shared.DependencyVulnRepository
 	assetRepository        shared.AssetRepository
+	csafService            shared.CSAFService
 }
 
-func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository) *ReleaseController {
-	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository}
+func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository, csafService shared.CSAFService) *ReleaseController {
+	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository, csafService: csafService}
 }
 
 // @Summary List releases
@@ -146,30 +149,15 @@ func (h *ReleaseController) SBOMXML(c shared.Context) error {
 // @Param releaseID path string true "Release ID"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.json [get]
-func (h *ReleaseController) VEXJSON(c shared.Context) error {
-	idParam := shared.GetParam(c, "releaseID")
-	id, err := uuid.Parse(idParam)
+func (h *ReleaseController) CycloneDXVexJSON(c shared.Context) error {
+	rel, err := h.readRelease(c)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid release id")
+		return err
 	}
-
-	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
-	if err != nil {
-		return echo.NewHTTPError(404, "release not found").WithInternal(err)
-	}
-
-	org := shared.GetOrg(c)
-	project := shared.GetProject(c)
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
-	}
-
-	bom, err := h.buildMergedVEX(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
+	bom, err := h.buildMergedVEX(c, rel)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
-
 	c.Response().Header().Set(echo.HeaderContentType, "application/json")
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false).Encode(bom)
 }
@@ -184,32 +172,60 @@ func (h *ReleaseController) VEXJSON(c shared.Context) error {
 // @Param releaseID path string true "Release ID"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/vex.xml [get]
-func (h *ReleaseController) VEXXML(c shared.Context) error {
-	idParam := shared.GetParam(c, "releaseID")
-	id, err := uuid.Parse(idParam)
+func (h *ReleaseController) CycloneDXVexXML(c shared.Context) error {
+	rel, err := h.readRelease(c)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid release id")
+		return err
 	}
-
-	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
-	if err != nil {
-		return echo.NewHTTPError(404, "release not found").WithInternal(err)
-	}
-
-	project := shared.GetProject(c)
-	org := shared.GetOrg(c)
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return echo.NewHTTPError(http.StatusInternalServerError, "FRONTEND_URL is not configured")
-	}
-
-	bom, err := h.buildMergedVEX(c, rel, org.Name, org.Slug, project.Slug, frontendURL)
+	bom, err := h.buildMergedVEX(c, rel)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build vex").WithInternal(err)
 	}
-
 	c.Response().Header().Set(echo.HeaderContentType, "application/xml")
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatXML).Encode(bom)
+}
+
+// @Summary Get release VEX as CSAF
+// @Tags Releases
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json [get]
+func (h *ReleaseController) CSAFJSON(c shared.Context) error {
+	rel, err := h.readRelease(c)
+	if err != nil {
+		return err
+	}
+	advisory, err := h.buildMergedCSAF(c, rel, shared.GetOrg(c).Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build csaf").WithInternal(err)
+	}
+	return c.JSON(http.StatusOK, advisory)
+}
+
+// @Summary Get release VEX as OpenVEX
+// @Tags Releases
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/openvex.json [get]
+func (h *ReleaseController) OpenCycloneDXVexJSON(c shared.Context) error {
+	rel, err := h.readRelease(c)
+	if err != nil {
+		return err
+	}
+	doc, err := h.buildMergedOpenVeX(c, rel, shared.GetOrg(c).Slug)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not build openvex").WithInternal(err)
+	}
+	return c.JSON(http.StatusOK, doc)
+}
+
+// readRelease parses the releaseID path param and loads the release recursively.
+func (h *ReleaseController) readRelease(c shared.Context) (models.Release, error) {
+	id, err := uuid.Parse(shared.GetParam(c, "releaseID"))
+	if err != nil {
+		return models.Release{}, echo.NewHTTPError(400, "invalid release id")
+	}
+	rel, err := h.service.ReadRecursive(c.Request().Context(), id)
+	if err != nil {
+		return models.Release{}, echo.NewHTTPError(404, "release not found").WithInternal(err)
+	}
+	return rel, nil
 }
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
@@ -224,16 +240,56 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 	}), nil
 }
 
-// buildMergedVEX builds per-artifact VeX (CycloneDX with vulnerabilities) and merges them.
-func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseVEX(c.Request().Context(), release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
+// buildMergedVEX builds per-item CycloneDX VeX and merges them into one release BOM.
+func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Release) (*cdx.BOM, error) {
+	items, err := h.gatherReleaseVulns(c.Request().Context(), release, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
+	var boms []*cdx.BOM
+	for _, item := range items {
+		if bom := h.assetVersionService.BuildVeX(c.Request().Context(), nil, normalize.BOMMetadata{}, item.asset, item.assetVersion, item.vulns); bom != nil {
+			boms = append(boms, bom)
+		}
+	}
+	return normalize.MergeCycloneDXVEX(boms, release.Name), nil
+}
 
-	return merged.ToCycloneDX(normalize.BOMMetadata{
-		RootName: release.Name,
-	}), nil
+// buildMergedOpenVeX builds per-item OpenVEX and merges their statements into one document.
+func (h *ReleaseController) buildMergedOpenVeX(c shared.Context, release models.Release, orgSlug string) (vex.VEX, error) {
+	items, err := h.gatherReleaseVulns(c.Request().Context(), release, map[uuid.UUID]struct{}{})
+	if err != nil {
+		return vex.VEX{}, err
+	}
+	doc := vex.New()
+	doc.Author = orgSlug
+	for _, item := range items {
+		sub := h.assetVersionService.BuildOpenVeX(c.Request().Context(), nil, item.asset, item.assetVersion, orgSlug, item.vulns)
+		doc.Statements = append(doc.Statements, sub.Statements...)
+	}
+	doc.GenerateCanonicalID() // nolint:errcheck
+	return doc, nil
+}
+
+// buildMergedCSAF builds a single CSAF advisory covering all of the release's vulnerabilities.
+func (h *ReleaseController) buildMergedCSAF(c shared.Context, release models.Release, orgName string) (gocsaf.Advisory, error) {
+	items, err := h.gatherReleaseVulns(c.Request().Context(), release, map[uuid.UUID]struct{}{})
+	if err != nil {
+		return gocsaf.Advisory{}, err
+	}
+	var vulns []models.DependencyVuln
+	for _, item := range items {
+		vulns = append(vulns, item.vulns...)
+	}
+	title := fmt.Sprintf("Security advisory for release %s", release.Name)
+	return h.csafService.GenerateCSAFReportForVulns(c.Request().Context(), orgName, &title, vulns)
+}
+
+// releaseItemVulns pairs a resolved release item (asset + version) with its vulnerabilities.
+type releaseItemVulns struct {
+	asset        models.Asset
+	assetVersion models.AssetVersion
+	vulns        []models.DependencyVuln
 }
 
 // mergeReleaseSBOM loops over release items, resolving each item either as an artifact
@@ -296,14 +352,17 @@ func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models
 	return result, nil
 }
 
-func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
+// gatherReleaseVulns resolves every release item (recursing into child releases) into its
+// asset, asset version and dependency vulnerabilities. It is the shared basis for all three
+// release VEX formats.
+func (h *ReleaseController) gatherReleaseVulns(ctx context.Context, release models.Release, visiting map[uuid.UUID]struct{}) ([]releaseItemVulns, error) {
 	if _, ok := visiting[release.ID]; ok {
 		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
 	visiting[release.ID] = struct{}{}
 	defer delete(visiting, release.ID)
 
-	var boms []*normalize.SBOMGraph
+	var items []releaseItemVulns
 
 	for _, item := range release.Items {
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
@@ -318,13 +377,11 @@ func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.
 			if child == nil {
 				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseVEX(ctx, *child, orgName, orgSlug, projectSlug, frontendURL, visiting)
+			childItems, err := h.gatherReleaseVulns(ctx, *child, visiting)
 			if err != nil {
 				return nil, err
 			}
-			if childBom != nil {
-				boms = append(boms, childBom)
-			}
+			items = append(items, childItems...)
 			continue
 		}
 
@@ -346,17 +403,10 @@ func (h *ReleaseController) mergeReleaseVEX(ctx context.Context, release models.
 			return nil, err
 		}
 
-		bom := h.assetVersionService.BuildVeX(ctx, nil, frontendURL, orgName, orgSlug, projectSlug, asset, av, depVulns)
-		if bom != nil {
-			boms = append(boms, bom)
-		}
-	}
-	result := normalize.NewSBOMGraph()
-	for _, b := range boms {
-		result.MergeGraph(b)
+		items = append(items, releaseItemVulns{asset: asset, assetVersion: av, vulns: depVulns})
 	}
 
-	return result, nil
+	return items, nil
 }
 
 // @Summary Get release details

@@ -54,6 +54,17 @@
           devguardScanner = binaries.devguardScanner;
           devguard = binaries.devguard;
           devguardCLI = binaries.devguardCLI;
+
+          # supplementary SBOMs, exposed directly so they can be inspected
+          # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
+          # without rebuilding and untarring a whole OCI image just to check
+          # one file.
+          devguard-scanner-sbom = ociImagesAmd64.devguardBinaries.devguardScannerSBOM;
+          devguard-sbom = ociImagesAmd64.devguardBinaries.devguardSBOM;
+          devguard-cli-sbom = ociImagesAmd64.devguardBinaries.devguardCLISBOM;
+          crane-sbom = ociImagesAmd64.craneFromSource.sbom;
+          gitleaks-sbom = ociImagesAmd64.gitleaksFromSource.sbom;
+          trivy-sbom = ociImagesAmd64.trivyFromSource.sbom;
         };
 
         arm64Packages = {
