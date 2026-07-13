@@ -587,7 +587,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -650,7 +650,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url, keepOriginalSbomRootComponent)
+			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
@@ -838,7 +838,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs, asset.KeepOriginalSbomRootComponent)
+	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name,
 		utils.Map(vexRefs, func(ref models.ExternalReference) string { return ref.URL }))
 	// Merge all BOMs into a single graph
@@ -939,7 +939,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 }
 
 func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT", false)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT")
 	if err != nil {
 		return dtos.ScanResponse{}, fmt.Errorf("invalid SBOM: %w", err)
 	}

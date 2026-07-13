@@ -33,15 +33,14 @@ import (
 
 func newRenderCommand() *cobra.Command {
 	var (
-		inputFile                     string
-		outputFile                    string
-		format                        string
-		layout                        string
-		fromBOMRef                    string
-		maxDepth                      int
-		showVulns                     bool
-		includeFiles                  bool
-		keepOriginalSbomRootComponent bool
+		inputFile    string
+		outputFile   string
+		format       string
+		layout       string
+		fromBOMRef   string
+		maxDepth     int
+		showVulns    bool
+		includeFiles bool
 	)
 
 	renderCmd := &cobra.Command{
@@ -71,7 +70,7 @@ Examples:
   # Render only the subgraph rooted at a specific component
   devguard-cli sbom render -i sbom.json --from '/nix/store/h19kjqi10ynjk0i6scllhv82gx45p58w-go-1.25.5.drv' -o go.svg`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return renderSBOM(inputFile, outputFile, format, layout, fromBOMRef, maxDepth, showVulns, includeFiles, keepOriginalSbomRootComponent)
+			return renderSBOM(inputFile, outputFile, format, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
 		},
 	}
 
@@ -83,7 +82,6 @@ Examples:
 	renderCmd.Flags().IntVarP(&maxDepth, "maxDepth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
 	renderCmd.Flags().BoolVarP(&showVulns, "showVulns", "v", false, "Show vulnerabilities in the graph")
 	renderCmd.Flags().BoolVar(&includeFiles, "includeFiles", false, "Include 'file' type components (source tarballs, scripts — skipped by default as they cannot match CVEs)")
-	renderCmd.Flags().BoolVarP(&keepOriginalSbomRootComponent, "keepRootComponent", "", false, "Keep the original SBOM root component instead of replacing it with an info source node")
 
 	if err := renderCmd.MarkFlagRequired("input"); err != nil {
 		slog.Error("Failed to mark input flag as required", "err", err)
@@ -92,7 +90,7 @@ Examples:
 	return renderCmd
 }
 
-func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles, keepOriginalSbomRootComponent bool) error {
+func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) error {
 	// Read the SBOM file
 	data, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -106,7 +104,7 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 	}
 
 	// Convert to SBOMGraph
-	graph, err := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render", keepOriginalSbomRootComponent)
+	graph, err := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render")
 	if err != nil {
 		return fmt.Errorf("failed to convert SBOM to graph: %w", err)
 	}

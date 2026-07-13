@@ -111,14 +111,6 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 		req.Header.Set("X-No-Write", "1")
 	}
 
-	if config.RuntimeBaseConfig.KeepOriginalSbomRootComponent != nil {
-		// convert bool to number
-		if *config.RuntimeBaseConfig.KeepOriginalSbomRootComponent {
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1")
-		} else {
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "0")
-		}
-	}
 	if config.RuntimeBaseConfig.Token != "" {
 		config.SetXAssetHeaders(req)
 	}

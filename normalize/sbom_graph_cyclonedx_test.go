@@ -18,7 +18,7 @@ func TestStackOverflowSBOMGraphToCycloneDX(t *testing.T) {
 	assert.NoError(t, err, "Should unmarshal the test SBOM without error")
 
 	// Create a graph from the BOM and then export it back to CycloneDX
-	_, err = SBOMGraphFromCycloneDX(&bom, "", "", false)
+	_, err = SBOMGraphFromCycloneDX(&bom, "", "")
 	assert.NoError(t, err, "Should create graph from CycloneDX BOM without error")
 }
 
@@ -59,7 +59,7 @@ func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	g, err := SBOMGraphFromCycloneDX(bom, "", "")
 	assert.NoError(t, err)
 
 	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
@@ -124,7 +124,7 @@ func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	g, err := SBOMGraphFromCycloneDX(bom, "", "")
 	assert.NoError(t, err)
 
 	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})

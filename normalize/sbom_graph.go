@@ -257,6 +257,45 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 	g.Edges[parentID][childID] = struct{}{}
 }
 
+// pruneUnidentifiablePackages removes every component-type node that isn't a
+// real, identifiable package (no package-shaped PackageURL) and reparents
+// its children to its own parent(s), so dependency information carried by an
+// unidentifiable node isn't lost - its children simply move up a level.
+//
+// Parents and children are re-derived from the current graph state each time
+// a node is processed (rather than from a snapshot taken up front), so
+// chains of unidentifiable nodes (A -> B -> C, where A and B are both
+// unidentifiable) flatten correctly down to a single edge regardless of the
+// (unordered) iteration order over g.Nodes.
+func (g *SBOMGraph) pruneUnidentifiablePackages() {
+	for id, node := range g.Nodes {
+		if node.Type != GraphNodeTypeComponent || looksLikePackagePURL(node.Component.PackageURL) {
+			continue
+		}
+
+		parents := []string{}
+		for parentID, children := range g.Edges {
+			if _, ok := children[id]; ok {
+				parents = append(parents, parentID)
+			}
+		}
+
+		for childID := range g.Edges[id] {
+			for _, parentID := range parents {
+				if parentID != childID {
+					g.AddEdge(parentID, childID)
+				}
+			}
+		}
+
+		for _, parentID := range parents {
+			delete(g.Edges[parentID], id)
+		}
+		delete(g.Edges, id)
+		delete(g.Nodes, id)
+	}
+}
+
 func (g *SBOMGraph) ClearScope() {
 	g.ScopeID = g.RootID
 }
@@ -1430,7 +1469,12 @@ func getDashboardURL(metadata BOMMetadata, escapedArtifactName string) string {
 // =============================================================================
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
-func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) (*SBOMGraph, error) {
+// The original root component is always kept as a node in the graph when it
+// has a valid PackageURL, so that re-uploading a downloaded SBOM is
+// idempotent. When the root component has no (valid) PackageURL, it cannot
+// be identified as a real package, so its direct dependencies are reparented
+// to the info source node instead.
+func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*SBOMGraph, error) {
 	// Validate required fields
 	if bom == nil {
 		return nil, fmt.Errorf("BOM cannot be nil")
@@ -1452,16 +1496,6 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	}
 	if rootComponent.Name == "" {
 		return nil, fmt.Errorf("root component name is required")
-	}
-
-	// if we want to keep the original root component, we need to validate that it has a valid purl, otherwise we will not be able to add it to the graph
-	if keepOriginalSbomRootComponent {
-		if rootComponent.PackageURL == "" {
-			return nil, fmt.Errorf("root component PackageURL is required when keepOriginalSbomRootComponent is true")
-		}
-		if _, err := packageurl.FromString(rootComponent.PackageURL); err != nil {
-			return nil, fmt.Errorf("root component has invalid PackageURL: %w", err)
-		}
 	}
 
 	// Validate BOM format
@@ -1555,10 +1589,12 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 				}
 			}
 
-			// Add component (type sanitization already happens in AddComponent)
-			if looksLikePackagePURL(comp.PackageURL) {
-				g.AddComponent(comp)
-			}
+			// Add the component (type sanitization already happens in
+			// AddComponent). Components without an identifiable package
+			// PackageURL are added too, but get pruned - with their
+			// dependencies reparented to their own parent - by
+			// pruneUnidentifiablePackages below.
+			g.AddComponent(comp)
 		}
 	}
 
@@ -1569,16 +1605,13 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	// represent synthetic grouping nodes in CycloneDX dependency graphs.
 	depMap := buildFilteredDependencyMap(bom.Dependencies, g.Nodes, rootRef)
 	if bom.Dependencies != nil {
-		addEdgesFromDependencyMap(g, depMap, rootRef, infoID, keepOriginalSbomRootComponent)
+		addEdgesFromDependencyMap(g, depMap, rootRef)
 	}
 
 	// If no explicit root dependencies, all components are roots
 	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if !looksLikePackagePURL(comp.PackageURL) {
-					continue // Skip root project components
-				}
 				// Check if this component is a child of any other
 				isChild := false
 				for _, children := range depMap {
@@ -1594,58 +1627,27 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		}
 	}
 
-	// If keepOriginalSbomRootComponent is true, add edge from infosource to original root ref
-	if keepOriginalSbomRootComponent && rootRef != "" {
+	// Link the info source to the original root component so it appears in
+	// the graph, unless the root component's own identity already IS the
+	// artifact (e.g. a downloaded devguard SBOM being re-uploaded) - in that
+	// case the artifact node already represents it, and adding this edge
+	// would make the artifact self-referential.
+	if rootRef != "" && !isArtifactRootComponent(rootComponent, artifactName) {
 		g.AddEdge(infoID, rootRef)
 	}
+
+	// Components (including the root) that don't have an identifiable
+	// package PackageURL are pruned, with their dependencies reparented to
+	// their own parent(s), so unidentifiable nodes never end up wired into
+	// the graph or reachable from it - this is what makes re-uploading a
+	// previously downloaded SBOM idempotent regardless of whether its root
+	// component happens to be identifiable.
+	g.pruneUnidentifiablePackages()
 
 	// Vulnerabilities carried on an ingested BOM are not part of the component graph; VEX
 	// ingestion handles them separately (see the transformer package).
 
 	return g, nil
-}
-
-// cliScanArtifactName/cliScanInfoSourceID are placeholder artifact/info
-// source identifiers for SBOMGraphFromCycloneDXWithRoot's one-off, local CLI
-// use (no real ingestion pipeline concept of "artifact" applies there).
-const cliScanArtifactName = "cli-scan"
-const cliScanInfoSourceID = "cli-scan"
-
-// SBOMGraphFromCycloneDXWithRoot builds a graph from bom the same way
-// SBOMGraphFromCycloneDX(bom, ..., keepOriginalSbomRootComponent: true) does,
-// which is needed so the root's own direct dependencies land as its own
-// graph edges rather than being silently reparented under the info source
-// node - but tolerates bom's root component having no PackageURL, which
-// SBOMGraphFromCycloneDX would otherwise reject. Plain directory/fs scans
-// commonly have no root PackageURL at all.
-//
-// bom itself is never mutated: if its root lacks a PackageURL, a throwaway
-// one is used only on a shallow copy passed to SBOMGraphFromCycloneDX - it
-// never appears in the returned graph's exported output, since callers like
-// the CLI keep reusing their own original bom.Metadata.Component verbatim.
-//
-// Ordinary (non-root) components with no PackageURL are deliberately left
-// to SBOMGraphFromCycloneDX's own handling: they're dropped from the graph,
-// and anything they declared as a dependency gets reparented up to their
-// nearest ancestor with a real identity. Callers that want to warn about
-// this (e.g. the CLI, since dropping an unresolved "application" stub like a
-// binary trivy couldn't inspect is a silent, surprising loss of data) should
-// detect that themselves before merging, while the component is still
-// present in the original bom.
-func SBOMGraphFromCycloneDXWithRoot(bom *cdx.BOM) (*SBOMGraph, error) {
-	if bom == nil {
-		return nil, fmt.Errorf("BOM cannot be nil")
-	}
-	if bom.Metadata == nil || bom.Metadata.Component == nil {
-		return nil, fmt.Errorf("BOM metadata component is required")
-	}
-	root := *bom.Metadata.Component
-	if root.PackageURL == "" {
-		root.PackageURL = "pkg:generic/" + url.PathEscape(root.BOMRef)
-	}
-	clone := *bom
-	clone.Metadata = &cdx.Metadata{Component: &root}
-	return SBOMGraphFromCycloneDX(&clone, cliScanArtifactName, cliScanInfoSourceID, true)
 }
 
 // validateAndAddComponent validates a component before adding it
@@ -1765,7 +1767,7 @@ func buildFilteredDependencyMap(dependencies *[]cdx.Dependency, nodes map[string
 	return depMap
 }
 
-func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef, infoID string, keepOriginalSbomRootComponent bool) {
+func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef string) {
 	for parent := range depMap {
 		parentNode := g.Nodes[parent]
 		// Skip if parent is not represented in the graph.
@@ -1780,12 +1782,8 @@ func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef
 
 		// Resolve synthetic intermediary nodes recursively.
 		children := getChildrenOfParent(depMap, g.Nodes, parent)
-		edgeSource := parent
-		if parent == rootRef && !keepOriginalSbomRootComponent {
-			edgeSource = infoID
-		}
 		for _, child := range children {
-			g.AddEdge(edgeSource, child)
+			g.AddEdge(parent, child)
 		}
 	}
 }
@@ -1826,6 +1824,34 @@ func getChildrenOfParentWithVisited(depMap map[string][]string, nodes map[string
 
 func looksLikePackagePURL(id string) bool {
 	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
+}
+
+// isArtifactRootComponent reports whether rootComponent's identity matches
+// what ToCycloneDX itself would derive as the root component for
+// artifactName - i.e. this SBOM was previously exported by devguard for this
+// exact artifact and is now being re-uploaded. In that case the artifact
+// node already represents this component, so linking to it separately would
+// make the artifact self-referential.
+//
+// This only compares PURLs. artifactName is frequently a plain human-chosen
+// name (e.g. a Trivy scan's root component is routinely named after the
+// artifact it scanned without that being a re-upload of devguard's own
+// output), so matching on Name alone would misfire on ordinary scans.
+func isArtifactRootComponent(rootComponent *cdx.Component, artifactName string) bool {
+	if rootComponent.PackageURL == "" {
+		return false
+	}
+	rootPurl, err := packageurl.FromString(rootComponent.PackageURL)
+	if err != nil {
+		return false
+	}
+	artifactPurl, err := packageurl.FromString(artifactName)
+	if err != nil {
+		return false
+	}
+	return rootPurl.Type == artifactPurl.Type &&
+		rootPurl.Namespace == artifactPurl.Namespace &&
+		rootPurl.Name == artifactPurl.Name
 }
 
 // =============================================================================

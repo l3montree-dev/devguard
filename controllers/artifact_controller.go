@@ -134,7 +134,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString), asset.KeepOriginalSbomRootComponent)
+	boms, _, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	if len(invalid) > 0 {
 		tx.Rollback()
 		return ctx.JSON(400, invalid)
@@ -350,7 +350,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	})
 
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls, asset.KeepOriginalSbomRootComponent)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()

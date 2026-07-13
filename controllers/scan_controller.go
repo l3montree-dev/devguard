@@ -274,19 +274,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		attribute.String("artifact.name", artifactName),
 	)
 
-	// check if we should keep the original root component
-	keepOriginalSbomRootComponent := asset.KeepOriginalSbomRootComponent
-	if c.Request().Header.Get("X-Keep-Original-SBOM-Root-Component") == "1" {
-		keepOriginalSbomRootComponent = true
-	} else if c.Request().Header.Get("X-Keep-Original-SBOM-Root-Component") == "0" {
-		keepOriginalSbomRootComponent = false
-	}
-	// keepOriginalSbomRootComponent DOES NOT MAKE SENSE IF THE root component has no valid purl!
-	if keepOriginalSbomRootComponent && (bom.Metadata == nil || bom.Metadata.Component == nil || bom.Metadata.Component.PackageURL == "") {
-		return nil, nil, nil, empty, echo.NewHTTPError(400, "supplied application as sbom source type is set, but the SBOM does not include a valid metadata.component.purl (root component PURL); keeping the original root requires a root component PURL")
-	}
-
-	normalized, normErr := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"), keepOriginalSbomRootComponent)
+	normalized, normErr := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
 	if normErr != nil {
 		span.RecordError(normErr)
 		span.SetStatus(codes.Error, normErr.Error())

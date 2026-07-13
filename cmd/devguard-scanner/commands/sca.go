@@ -170,8 +170,8 @@ func discoverAndMergeSupplementarySBOMs(bom *cyclonedx.BOM, discover func() ([]*
 	}
 	// Must run before merging: components with no PackageURL get silently
 	// dropped by the graph the merge builds (see
-	// normalize.SBOMGraphFromCycloneDXWithRoot), so this is the last point
-	// where the component is still present in bom to warn about.
+	// normalize.SBOMGraphFromCycloneDX), so this is the last point where the
+	// component is still present in bom to warn about.
 	warnAboutUnidentifiableComponents(bom, extras)
 	if len(extras) > 0 {
 		if err := mergeSupplementarySBOMs(bom, extras); err != nil {
@@ -326,7 +326,7 @@ func printSupplementarySBOMExample(path string) {
 func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
 	rootRef := bom.Metadata.Component.BOMRef
 
-	g, err := normalize.SBOMGraphFromCycloneDXWithRoot(bom)
+	g, err := normalize.SBOMGraphFromCycloneDX(bom, "cli-scan", "cli-scan")
 	if err != nil {
 		return errors.Wrap(err, "could not build SBOM graph")
 	}

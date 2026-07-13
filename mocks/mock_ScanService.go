@@ -45,8 +45,8 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError) {
-	ret := _mock.Called(ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
+func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError) {
+	ret := _mock.Called(ctx, artifactName, ref, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchSbomsFromUpstream")
@@ -55,25 +55,25 @@ func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactNa
 	var r0 []*normalize.SBOMGraph
 	var r1 []string
 	var r2 []dtos.ExternalReferenceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string, bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)); ok {
-		return returnFunc(ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)); ok {
+		return returnFunc(ctx, artifactName, ref, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string, bool) []*normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) []*normalize.SBOMGraph); ok {
+		r0 = returnFunc(ctx, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, []string, bool) []string); ok {
-		r1 = returnFunc(ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, []string) []string); ok {
+		r1 = returnFunc(ctx, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, []string, bool) []dtos.ExternalReferenceError); ok {
-		r2 = returnFunc(ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, []string) []dtos.ExternalReferenceError); ok {
+		r2 = returnFunc(ctx, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]dtos.ExternalReferenceError)
@@ -92,12 +92,11 @@ type ScanService_FetchSbomsFromUpstream_Call struct {
 //   - artifactName string
 //   - ref string
 //   - upstreamURLs []string
-//   - keepOriginalSbomRootComponent bool
-func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx interface{}, artifactName interface{}, ref interface{}, upstreamURLs interface{}, keepOriginalSbomRootComponent interface{}) *ScanService_FetchSbomsFromUpstream_Call {
-	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", ctx, artifactName, ref, upstreamURLs, keepOriginalSbomRootComponent)}
+func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx interface{}, artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
+	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", ctx, artifactName, ref, upstreamURLs)}
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -115,16 +114,11 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Cont
 		if args[3] != nil {
 			arg3 = args[3].([]string)
 		}
-		var arg4 bool
-		if args[4] != nil {
-			arg4 = args[4].(bool)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -135,7 +129,7 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normaliz
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }

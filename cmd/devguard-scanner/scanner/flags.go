@@ -69,7 +69,7 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("origin", "DEFAULT", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
 	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 	cmd.Flags().Bool("ignoreExternalReferences", false, "If an attestation does contain a external reference to an sbom or vex, this will be ignored. Useful when scanning your own image from the registry where your own attestations are attached.")
-	cmd.Flags().Bool("keepOriginalSbomRootComponent", false, "Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies")
+	cmd.Flags().Bool("keepOriginalSbomRootComponent", false, "Deprecated, does nothing: the original SBOM root component is now always kept when it has a valid PackageURL.")
 	cmd.Flags().Bool("noWrite", false, "Run the scan and display results (including VEX/false-positive assessments) without persisting anything to DevGuard.")
 	cmd.Flags().String("output", "table", "Output format for scan results. Options: 'table' (default), 'cyclonedx' (CycloneDX VEX JSON).")
 }
