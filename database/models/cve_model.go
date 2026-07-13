@@ -51,6 +51,11 @@ type CVE struct {
 	EUVDExploitAdd        *datatypes.Date     `json:"euvdExploitAdd" gorm:"type:date"`
 }
 
+type CVEWithAdvisories struct {
+	CVE
+	Advisories []CVE
+}
+
 type Weakness struct {
 	Source string `json:"source" gorm:"type:text;"`
 	Type   string `json:"type" gorm:"type:text;"`

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -257,4 +258,20 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 	WHERE cves.cve = new.cve;`
 	// avoid slow sql log
 	return g.GetDB(ctx, tx).Exec(sql, ids, epss, percentiles).Error
+}
+
+func (g *cveRepository) FindAdvisoriesForCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.CVE, error) {
+	var advisories []models.CVE
+	err := g.GetDB(ctx, tx).Raw(`
+	SELECT 
+		cves.* 
+	FROM 
+		cve_relationships cr 
+	JOIN cves 
+		ON cr.source_cve = cves.cve 
+	WHERE 
+		cr.target_cve = ? 
+	AND 
+		relationship_type = ?;`, cveID, dtos.RelationshipTypeAdvisory).Find(&advisories).Error
+	return advisories, err
 }
