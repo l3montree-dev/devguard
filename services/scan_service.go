@@ -670,6 +670,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 }
 
 // sniffVexFormat detects the VEX document format from top-level JSON keys.
+// nosemgrep: service-method-missing-ctx
 func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(body, &probe); err != nil {
@@ -691,6 +692,7 @@ func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 }
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
+// nosemgrep: service-method-missing-ctx
 func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
 	format := s.sniffVexFormat(body)
 

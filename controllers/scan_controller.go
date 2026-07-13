@@ -184,7 +184,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			return echo.NewHTTPError(400, err.Error()).WithInternal(err)
+			return echo.NewHTTPError(400, fmt.Sprintf("could not parse vex document: %v", err.Error())).WithInternal(err)
 		}
 		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
 			tx.Rollback()
