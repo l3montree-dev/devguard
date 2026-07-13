@@ -55,6 +55,7 @@ func NewProjectRouter(
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 	projectRouter.GET("/compliance-postures/", compliancePostureController.ListPaged)
+	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
 	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
 	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)

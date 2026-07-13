@@ -17,7 +17,11 @@ package transformer
 
 import (
 	"encoding/json"
+	"strings"
+	"time"
 
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"gorm.io/datatypes"
@@ -66,4 +70,118 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 		CompliancePostureWithControlDTO: p,
 		Events:                          events,
 	}
+}
+
+func handleFrameworkControlID(frameworkControlID string) string {
+	frameworkControlID = strings.Replace(frameworkControlID, ":", "-", -1)
+
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(frameworkControlID)).String()
+}
+
+func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dtos.CompliancePostureWithDetailsDTO, frameworkControls []models.FrameworkControl) (oscalTypes.OscalCompleteSchema, error) {
+
+	//OscalCompleteSchema
+	var schema oscalTypes.OscalCompleteSchema
+	systemSecurityPlan := oscalTypes.SystemSecurityPlan{}
+
+	metadata := oscalTypes.Metadata{
+		Title:        "DevGuard System Security Plan",
+		Version:      "0.0.1",
+		OscalVersion: "1.1.3",
+		LastModified: time.Now(),
+	}
+	systemSecurityPlan.Metadata = metadata
+	systemSecurityPlan.UUID = uuid.New().String()
+
+	systemSecurityPlan.SystemCharacteristics = oscalTypes.SystemCharacteristics{
+		SystemName:  "DevGuard System Security Plan",
+		Description: "DevGuard System Security Plan",
+		AuthorizationBoundary: oscalTypes.AuthorizationBoundary{
+			Description: "DevGuard System Security Plan",
+		},
+		Status: oscalTypes.Status{
+			State: "operational",
+		},
+		SystemIds: []oscalTypes.SystemId{
+			{
+				ID: uuid.New().String(),
+			},
+		},
+
+		SystemInformation: oscalTypes.SystemInformation{
+			InformationTypes: []oscalTypes.InformationType{
+				{
+					UUID:        uuid.New().String(),
+					Title:       "DevGuard Compliance Data",
+					Description: "Compliance posture data managed by DevGuard.",
+				},
+			},
+		},
+	}
+
+	systemImplementation := oscalTypes.SystemImplementation{
+		Users: []oscalTypes.SystemUser{
+			{
+				UUID:  uuid.New().String(),
+				Title: "DevGuard User",
+			},
+		},
+	}
+	systemComponents := []oscalTypes.SystemComponent{}
+
+	for _, frameworkControl := range frameworkControls {
+		systemComponent := oscalTypes.SystemComponent{
+			UUID:        handleFrameworkControlID(frameworkControl.FrameworkControlID),
+			Title:       frameworkControl.Title,
+			Description: frameworkControl.Description,
+			Status: oscalTypes.SystemComponentStatus{
+				State: "operational",
+			},
+			Type: "software",
+		}
+		systemComponents = append(systemComponents, systemComponent)
+	}
+
+	systemImplementation.Components = systemComponents
+	systemSecurityPlan.SystemImplementation = systemImplementation
+
+	controlImplementation := oscalTypes.ControlImplementation{}
+	implementedRequirements := []oscalTypes.ImplementedRequirement{}
+
+	for _, compliancePosture := range compliancePostures {
+		implementedRequirement := oscalTypes.ImplementedRequirement{
+			ControlId: strings.ReplaceAll(strings.ReplaceAll(compliancePosture.FrameworkControlID, "++", ""), ":", "_"),
+
+			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+		}
+
+		description := ""
+		state := string(compliancePosture.State)
+		if state == "open" {
+			state = "planned"
+		}
+		if len(compliancePosture.Events) > 0 && compliancePosture.Events[len(compliancePosture.Events)-1].Justification != nil {
+			description = *compliancePosture.Events[len(compliancePosture.Events)-1].Justification
+		}
+		byComponents := []oscalTypes.ByComponent{}
+		byComponent := oscalTypes.ByComponent{
+			ComponentUuid: handleFrameworkControlID(compliancePosture.FrameworkControlID),
+			Description:   description,
+			ImplementationStatus: &oscalTypes.ImplementationStatus{
+				State: state,
+			},
+			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+		}
+		byComponents = append(byComponents, byComponent)
+		implementedRequirement.ByComponents = &byComponents
+
+		implementedRequirements = append(implementedRequirements, implementedRequirement)
+	}
+
+	controlImplementation.ImplementedRequirements = implementedRequirements
+	systemSecurityPlan.ControlImplementation = controlImplementation
+
+	schema.SystemSecurityPlan = &systemSecurityPlan
+
+	return schema, nil
 }

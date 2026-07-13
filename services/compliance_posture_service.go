@@ -50,6 +50,17 @@ func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, t
 	return postgres, err
 }
 
+func (s *compliancePostureService) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error) {
+	postures, err := s.compliancePostureRepository.GetAllControls(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
+	//mapping the state to string for the DTO
+	for i, posture := range postures {
+		if posture.State == "" {
+			postures[i].State = dtos.VulnStateOpen
+		}
+	}
+	return postures, err
+}
+
 func (s *compliancePostureService) UpdateCompliancePostureState(ctx context.Context, tx shared.DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
@@ -98,8 +109,4 @@ func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.D
 	}
 
 	return posture, nil
-}
-
-func (s *compliancePostureService) GetAllFrameworkControls(ctx context.Context, tx shared.DB) ([]string, error) {
-	return s.compliancePostureRepository.GetAllFrameworkControls(ctx, tx)
 }

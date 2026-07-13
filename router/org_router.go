@@ -77,6 +77,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/compliance-postures/", compliancePostureController.ListPaged)
+	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
 	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
 	organizationRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
 	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)

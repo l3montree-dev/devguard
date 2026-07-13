@@ -83,20 +83,25 @@ func (m CompliancePosture) TableName() string {
 }
 
 func (m CompliancePosture) CalculateHash() uuid.UUID {
-	s := fmt.Sprintf("%s:%s", m.FrameworkControlID, m.OrgID.String())
-	if m.ProjectID != nil {
-		s = fmt.Sprintf("%s:%s", s, m.ProjectID.String())
-	}
-	if m.AssetID != nil {
-		s = fmt.Sprintf("%s:%s", s, m.AssetID.String())
-	}
-	if m.AssetVersionName != nil {
-		s = fmt.Sprintf("%s:%s", s, *m.AssetVersionName)
-	}
-	return utils.HashToUUID(s)
+	return CalculateCompliancePostureHash(m.FrameworkControlID, m.OrgID, m.ProjectID, m.AssetID, m.AssetVersionName)
 }
 
 func (m CompliancePosture) BeforeSave(tx *gorm.DB) error {
 	m.ID = m.CalculateHash()
 	return nil
+}
+
+func CalculateCompliancePostureHash(frameworkControlID string, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName *string) uuid.UUID {
+	s := fmt.Sprintf("%s:%s", frameworkControlID, orgID.String())
+	if projectID != nil {
+		s = fmt.Sprintf("%s:%s", s, projectID.String())
+	}
+	if assetID != nil {
+		s = fmt.Sprintf("%s:%s", s, assetID.String())
+	}
+	if assetVersionName != nil {
+		s = fmt.Sprintf("%s:%s", s, *assetVersionName)
+	}
+
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(s))
 }

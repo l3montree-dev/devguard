@@ -22,18 +22,21 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
+	vulndb "github.com/l3montree-dev/devguard/vulndb/compliance"
 	"github.com/labstack/echo/v4"
 )
 
 type CompliancePostureController struct {
 	CompliancePostureRepository shared.CompliancePostureRepository
 	CompliancePostureService    shared.CompliancePostureService
+	FrameworkControlRepository  shared.FrameworkControlRepository
 }
 
-func NewCompliancePostureController(compliancePostureRepository shared.CompliancePostureRepository, compliancePostureService shared.CompliancePostureService) *CompliancePostureController {
+func NewCompliancePostureController(compliancePostureRepository shared.CompliancePostureRepository, compliancePostureService shared.CompliancePostureService, frameworkControlRepository shared.FrameworkControlRepository) *CompliancePostureController {
 	return &CompliancePostureController{
 		CompliancePostureRepository: compliancePostureRepository,
 		CompliancePostureService:    compliancePostureService,
+		FrameworkControlRepository:  frameworkControlRepository,
 	}
 }
 
@@ -96,7 +99,7 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 		return err
 	}
 
-	frameworks, err := c.CompliancePostureService.GetAllFrameworkControls(ctx.Request().Context(), nil)
+	frameworks, err := c.FrameworkControlRepository.ListFrameworkControls(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}
@@ -206,4 +209,66 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, transformer.CompliancePostureToDTO(*compliancePostureNew))
+}
+
+func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
+	var assetVersionName *string
+	var assetID *uuid.UUID
+	var projectID *uuid.UUID
+	orgID := shared.GetOrg(ctx).ID
+	project, err := shared.MaybeGetProject(ctx)
+	if err == nil {
+		projectID = &project.ID
+		asset, err := shared.MaybeGetAsset(ctx)
+		if err == nil {
+			assetID = &asset.ID
+			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
+			if err == nil {
+				assetVersionName = &assetVersion.Name
+			}
+		}
+	}
+
+	var framework *string
+	var filter []shared.FilterQuery
+	frameworkParam := ctx.QueryParam("framework")
+	if frameworkParam != "" {
+		framework = &frameworkParam
+		filter = append(filter, shared.FilterQuery{
+			Field:      "framework",
+			Operator:   "is",
+			FieldValue: frameworkParam,
+		})
+
+	}
+
+	compliancePostures, err := c.CompliancePostureService.GetAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, "", filter, nil)
+	if err != nil {
+		return err
+	}
+
+	//calculate the hash for each compliance posture
+	for i := range compliancePostures {
+		postureOrgID := orgID
+		if compliancePostures[i].OrgID != nil {
+			postureOrgID = *compliancePostures[i].OrgID
+		}
+		compliancePostures[i].CompliancePostureID = models.CalculateCompliancePostureHash(compliancePostures[i].FrameworkControlID, postureOrgID, compliancePostures[i].ProjectID, compliancePostures[i].AssetID, compliancePostures[i].AssetVersionName).String()
+	}
+
+	frameworkControls, err := c.FrameworkControlRepository.GetAll(ctx.Request().Context(), nil, framework)
+	if err != nil {
+		return err
+	}
+
+	oscal, err := transformer.ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures, frameworkControls)
+	if err != nil {
+		return err
+	}
+
+	if err := vulndb.ValidateOSCAL(oscal); err != nil {
+		return echo.NewHTTPError(500, "OSCAL validation failed").WithInternal(err)
+	}
+
+	return ctx.JSON(200, oscal)
 }

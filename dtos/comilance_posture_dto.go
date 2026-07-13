@@ -51,7 +51,7 @@ type CompliancePostureWithControlDTO struct {
 	Class                    string         `json:"class"`
 	Additional               datatypes.JSON `json:"additional"`
 	ParentFrameworkControlID *string        `json:"parentFrameworkControlId"`
-	CompliancePostureID      string         `json:"compliancePostureId" gorm:"column:id"`
+	CompliancePostureID      string         `json:"compliancePostureId"`
 	State                    VulnState      `json:"state"`
 	OrgID                    *uuid.UUID     `json:"orgId"`
 	ProjectID                *uuid.UUID     `json:"projectId"`

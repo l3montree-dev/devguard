@@ -34,6 +34,7 @@ func NewCompliancePostureRouter(
 	compliancePostureRouter.GET("/stats/", compliancePostureController.Stats)
 	compliancePostureRouter.GET("/:frameworkControlID/", compliancePostureController.Read)
 	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.GET("/oscal/", compliancePostureController.GetOSCAL)
 
 	return CompliancePostureRouter{Group: compliancePostureRouter}
 }

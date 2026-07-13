@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -36,12 +37,20 @@ type CompliancePostureRepository struct {
 
 type frameworkControlPostureRow struct {
 	models.FrameworkControl
-	CompliancePostureID string         `gorm:"column:id"`
-	State               dtos.VulnState `gorm:"column:state"`
-	OrgID               *uuid.UUID     `gorm:"column:org_id"`
-	ProjectID           *uuid.UUID     `gorm:"column:project_id"`
-	AssetID             *uuid.UUID     `gorm:"column:asset_id"`
-	AssetVersionName    *string        `gorm:"column:asset_version_name"`
+	CompliancePostureID *uuid.UUID         `gorm:"column:id"`
+	State               dtos.VulnState     `gorm:"column:state"`
+	OrgID               *uuid.UUID         `gorm:"column:org_id"`
+	ProjectID           *uuid.UUID         `gorm:"column:project_id"`
+	AssetID             *uuid.UUID         `gorm:"column:asset_id"`
+	AssetVersionName    *string            `gorm:"column:asset_version_name"`
+	Events              []models.VulnEvent `gorm:"foreignKey:CompliancePostureID;references:CompliancePostureID"`
+}
+
+func (row frameworkControlPostureRow) compliancePostureIDString() string {
+	if row.CompliancePostureID == nil {
+		return ""
+	}
+	return row.CompliancePostureID.String()
 }
 
 func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlDTO {
@@ -64,7 +73,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 		Class:                    row.Class,
 		Additional:               row.Additional,
 		ParentFrameworkControlID: row.ParentFrameworkControlID,
-		CompliancePostureID:      row.CompliancePostureID,
+		CompliancePostureID:      row.compliancePostureIDString(),
 		State:                    row.State,
 		OrgID:                    row.OrgID,
 		ProjectID:                row.ProjectID,
@@ -72,6 +81,16 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 		AssetVersionName:         row.AssetVersionName,
 		MappedControls:           mappedControls,
 	}
+}
+
+func (row frameworkControlPostureRow) toDetailsDTO() dtos.CompliancePostureWithDetailsDTO {
+	dto := dtos.CompliancePostureWithDetailsDTO{
+		CompliancePostureWithControlDTO: row.toDTO(),
+	}
+	for _, ev := range row.Events {
+		dto.Events = append(dto.Events, transformer.ConvertVulnEventToDto(ev))
+	}
+	return dto
 }
 
 func NewCompliancePostureRepository(db *gorm.DB) *CompliancePostureRepository {
@@ -216,6 +235,88 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 	return shared.NewPaged(pageInfo, count, postures), nil
 }
 
+func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error) {
+	var postures []dtos.CompliancePostureWithDetailsDTO
+
+	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).
+		Select(`frameworks_controls.framework_control_id,
+			frameworks_controls.title,
+			frameworks_controls.description,
+			frameworks_controls.importance,
+			frameworks_controls.class,
+			frameworks_controls.additional,
+			frameworks_controls.parent_framework_control_id,
+			frameworks_controls.framework,
+			frameworks_controls.control_id,
+			COALESCE(cp_asset.id, cp_project.id, cp_org.id) AS id,
+			COALESCE(cp_asset.state, cp_project.state, cp_org.state) AS state,
+			COALESCE(cp_asset.org_id, cp_project.org_id, cp_org.org_id) AS org_id,
+			COALESCE(cp_asset.project_id, cp_project.project_id, cp_org.project_id) AS project_id,
+			COALESCE(cp_asset.asset_id, cp_project.asset_id, cp_org.asset_id) AS asset_id,
+			COALESCE(cp_asset.asset_version_name, cp_project.asset_version_name, cp_org.asset_version_name) AS asset_version_name`).
+		Joins(`LEFT JOIN compliance_postures cp_asset
+			ON frameworks_controls.framework_control_id = cp_asset.framework_control_id
+			AND cp_asset.org_id = ?
+			AND cp_asset.project_id IS NOT DISTINCT FROM ?
+			AND cp_asset.asset_id IS NOT DISTINCT FROM ?
+			AND cp_asset.asset_version_name IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionName).
+		Joins(`LEFT JOIN compliance_postures cp_project
+			ON frameworks_controls.framework_control_id = cp_project.framework_control_id
+			AND cp_project.org_id = ?
+			AND cp_project.project_id IS NOT DISTINCT FROM ?
+			AND cp_project.asset_id IS NULL
+			AND cp_project.asset_version_name IS NULL`, orgID, projectID).
+		Joins(`LEFT JOIN compliance_postures cp_org
+			ON frameworks_controls.framework_control_id = cp_org.framework_control_id
+			AND cp_org.org_id = ?
+			AND cp_org.project_id IS NULL
+			AND cp_org.asset_id IS NULL
+			AND cp_org.asset_version_name IS NULL`, orgID)
+
+	if search != "" {
+		query = query.Where("(frameworks_controls.title ILIKE ? OR frameworks_controls.control_id ILIKE ? OR frameworks_controls.framework ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	subquery := r.GetDB(ctx, tx).Table("(?) AS sub", query)
+
+	for _, f := range filter {
+		group := r.GetDB(ctx, tx)
+		switch {
+		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is":
+			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).Or("state IS NULL"))
+		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
+			subquery = subquery.Where(f.SQL(), f.Value()).Where("state IS NOT NULL")
+		case f.Field == "framework" && f.Operator == "is":
+			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.Value()))
+		case f.Field == "framework" && f.Operator == "in":
+			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+		default:
+			subquery = subquery.Where(f.SQL(), f.Value())
+		}
+	}
+
+	for _, s := range sort {
+		subquery = subquery.Order(s.SQL())
+	}
+
+	var rows []frameworkControlPostureRow
+	if err := subquery.Model(&frameworkControlPostureRow{}).
+		Preload("MappedControls").
+		Preload("Events").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	postures = make([]dtos.CompliancePostureWithDetailsDTO, len(rows))
+	for i, row := range rows {
+		postures[i] = row.toDetailsDTO()
+	}
+
+	return postures, nil
+}
+
 func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStatsDTO, error) {
 	type row struct {
 		State *string `gorm:"column:state"`
@@ -334,19 +435,4 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 		return nil, err
 	}
 	return &posture, nil
-}
-
-// GetAllFrameworkControls returns the unique set of framework names present in
-func (r *CompliancePostureRepository) GetAllFrameworkControls(ctx context.Context, tx *gorm.DB) ([]string, error) {
-	var frameworks []string
-	query := r.GetDB(ctx, tx).Raw(`
-		SELECT DISTINCT framework FROM frameworks_controls
-		UNION
-		SELECT DISTINCT related_framework FROM mapped_controls
-		ORDER BY framework
-	`)
-	if err := query.Scan(&frameworks).Error; err != nil {
-		return nil, err
-	}
-	return frameworks, nil
 }

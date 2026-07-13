@@ -771,18 +771,25 @@ type CompliancePostureRepository interface {
 	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
 
 	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
 	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
 
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
-	GetAllFrameworkControls(ctx context.Context, tx DB) ([]string, error)
 }
+
+type FrameworkControlRepository interface {
+	utils.Repository[uuid.UUID, models.FrameworkControl, DB]
+	GetAll(ctx context.Context, tx DB, framework *string) ([]models.FrameworkControl, error)
+	ListFrameworkControls(ctx context.Context, tx DB) ([]string, error)
+}
+
 type CompliancePostureService interface {
 	UpdateCompliancePostureState(ctx context.Context, tx DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 
 	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
 	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
-	GetAllFrameworkControls(ctx context.Context, tx DB) ([]string, error)
 }
 
 type RBACProvider interface {

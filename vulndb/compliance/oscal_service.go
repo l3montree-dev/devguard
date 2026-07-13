@@ -21,6 +21,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/defenseunicorns/go-oscal/src/pkg/validation"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/l3montree-dev/devguard/database/models"
 	"gorm.io/datatypes"
@@ -212,4 +213,13 @@ func derefProps(p *[]oscalTypes.Property) []oscalTypes.Property {
 		return nil
 	}
 	return *p
+}
+
+// schema matching its detected model type and version.
+func ValidateOSCAL(oscalDoc any) error {
+	validator, err := validation.NewValidator(oscalDoc)
+	if err != nil {
+		return err
+	}
+	return validator.Validate()
 }
