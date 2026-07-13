@@ -140,6 +140,10 @@ func (client githubClient) EditIssueLabel(ctx context.Context, owner string, rep
 	return client.Issues.EditLabel(ctx, owner, repo, name, label)
 }
 
+func (client githubClient) ListIssues(ctx context.Context, owner string, repo string, opt *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+	return client.Issues.ListByRepo(ctx, owner, repo, opt)
+}
+
 func NewGithubClient(installationID int) (githubClient, error) {
 	appID := os.Getenv("GITHUB_APP_ID")
 	if appID == "" {
