@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -21,6 +22,13 @@ type FirstPartyVulnController struct {
 }
 
 type FirstPartyVulnStatus struct {
+	StatusType              string                           `json:"status"`
+	Justification           string                           `json:"justification"`
+	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
+}
+
+type BatchFirstPartyVulnStatus struct {
+	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
 	StatusType              string                           `json:"status"`
 	Justification           string                           `json:"justification"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
@@ -383,3 +391,42 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 		}),
 	}
 }
+
+func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
+
+	var status BatchFirstPartyVulnStatus
+	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if len(status.VulnIDs) == 0 {
+		return echo.NewHTTPError(400, "vulnIds must not be empty")
+	}
+	if err := models.CheckStatusType(status.StatusType); err != nil {
+		return echo.NewHTTPError(400, "invalid status type")
+	}
+
+	userAgent := ctx.Request().UserAgent()
+	updated := make([]dtos.DetailedFirstPartyVulnDTO, 0, len(status.VulnIDs))
+	for _, vulnID := range status.VulnIDs {
+		fpv, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
+		if err != nil {
+			slog.Error("could not find firstPartyVuln", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(
+			ctx.Request().Context(), nil, userID, &fpv,
+			status.StatusType, status.Justification, status.MechanicalJustification, &userAgent)
+		if err != nil {
+			slog.Error("could not update firstPartyVuln state", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		_ = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{Ctx: ctx, Event: ev}, &userAgent)
+		updated = append(updated, convertFirstPartyVulnToDetailedDTO(fpv))
+	}
+	return ctx.JSON(200, updated)
+}
+

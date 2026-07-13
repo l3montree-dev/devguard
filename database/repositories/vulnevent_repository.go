@@ -36,7 +36,8 @@ func (r *eventRepository) readFirstPartyVulnAssetEvents(ctx context.Context, tx 
 
 	//get the first party vuln to get the asset id and rule info
 	var t models.FirstPartyVuln
-	err := r.GetDB(ctx, tx).First(&t, "id = ?", vulnID).Error
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", vulnID), t)
+	err := db.First(&t).Error
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,8 @@ func (r *eventRepository) readDependencyVulnAssetEvents(ctx context.Context, tx 
 
 	//get the dependency vuln to get the asset id and cve id
 	var t models.DependencyVuln
-	err := r.GetDB(ctx, tx).Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", vulnID).Error
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", vulnID), t)
+	err := db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t).Error
 	if err != nil {
 		return nil, err
 	}

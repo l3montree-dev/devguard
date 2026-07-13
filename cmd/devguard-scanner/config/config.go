@@ -48,8 +48,10 @@ type baseConfig struct {
 	AssetName string `json:"assetName" mapstructure:"assetName"`
 	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
 
-	Image      string `json:"image" mapstructure:"image"`
-	Path       string `json:"path" mapstructure:"path"`
+	Image          string `json:"image" mapstructure:"image"`
+	Path           string `json:"path" mapstructure:"path"`
+	SBOMPath       string `json:"sbomPath" mapstructure:"sbomPath"`
+	SBOMOutputPath string `json:"sbomOutputPath" mapstructure:"sbomOutputPath"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
 	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
 	WebUI      string `json:"webUI" mapstructure:"webUI"`
@@ -110,6 +112,10 @@ var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
 var RuntimeAttestationConfig AttestationConfig
 
+// RuntimeExtraArgs holds args passed after a "--" separator on the command line, to be
+// forwarded verbatim to the underlying scanner binary (trivy, semgrep, checkov, gitleaks).
+var RuntimeExtraArgs []string
+
 func ParseBaseConfig(runningCMD string) {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
@@ -153,8 +159,16 @@ func ParseBaseConfig(runningCMD string) {
 		}
 	}
 
+	if RuntimeBaseConfig.AssetName != "" {
+		// normalize the asset name. We allow two different formats.
+		RuntimeBaseConfig.AssetName, err = normalize.AssetName(RuntimeBaseConfig.AssetName)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	if RuntimeBaseConfig.Token == "" && !utils.RunsInCI() {
-		if token, err := getTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
+		if token, err := GetTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
 			RuntimeBaseConfig.Token = token
 		}
 	}
@@ -172,7 +186,7 @@ func StoreTokenInKeyring(apiURL, assetName, token string) error {
 	return keyring.Set("devguard/"+apiURL+"/"+assetName, "token", token)
 }
 
-func getTokenFromKeyring(apiURL, assetName string) (string, error) {
+func GetTokenFromKeyring(apiURL, assetName string) (string, error) {
 	return keyring.Get("devguard/"+apiURL+"/"+assetName, "token")
 }
 

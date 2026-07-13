@@ -102,6 +102,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/members/:userID/", orgController.RemoveMember)
+	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 

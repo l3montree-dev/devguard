@@ -26,7 +26,10 @@ This command runs the configured secret-scanning tool (gitleaks) and uploads the
 SARIF results to DevGuard for analysis and issue creation. The command signs the
 request using the configured token before uploading the SARIF results.
 
-You may pass the target as the first positional argument instead of using --path.`,
+You may pass the target as the first positional argument instead of using --path.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying gitleaks invocation.
+See the gitleaks CLI reference for available flags: https://github.com/gitleaks/gitleaks#usage`,
 		Example: `  # Scan current repository for secrets
   devguard-scanner secret-scanning ./my-repo
 
@@ -34,8 +37,14 @@ You may pass the target as the first positional argument instead of using --path
   devguard-scanner secret-scanning --path ./my-repo
 
   # Scan and save output locally
-  devguard-scanner secret-scanning ./my-repo --outputPath secrets.sarif.json`,
-		RunE: sarifCommandFactory("secret-scanning"),
+  devguard-scanner secret-scanning ./my-repo --outputPath secrets.sarif.json
+
+  # Forward extra flags to gitleaks
+  devguard-scanner secret-scanning ./my-repo -- --max-target-megabytes 50`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
+			return sarifCommandFactory("secret-scanning")(cmd, args)
+		},
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)
@@ -78,6 +87,7 @@ func secretScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 	args = append(args, "-v", p, "--report-path", sarifFilePath, "--report-format", "sarif", "--exit-code", "0")
 	args = append(args, configFileArgs...)
+	args = append(args, config.RuntimeExtraArgs...)
 
 	scannerCmd = exec.Command("gitleaks", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 

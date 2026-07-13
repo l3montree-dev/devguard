@@ -88,6 +88,7 @@ func (f *TestFixture) CreateOrg(name string) models.Org {
 
 	org := models.Org{
 		Name:        name,
+		Slug:        name,
 		Description: "Test Organization",
 	}
 	err := f.DB.Create(&org).Error
@@ -101,6 +102,7 @@ func (f *TestFixture) CreateProject(orgID uuid.UUID, name string) models.Project
 
 	project := models.Project{
 		Name:           name,
+		Slug:           name,
 		OrganizationID: orgID,
 	}
 	err := f.DB.Create(&project).Error
@@ -114,6 +116,7 @@ func (f *TestFixture) CreateAsset(projectID uuid.UUID, name string) models.Asset
 
 	asset := models.Asset{
 		Name:      name,
+		Slug:      name,
 		ProjectID: projectID,
 	}
 	err := f.DB.Create(&asset).Error

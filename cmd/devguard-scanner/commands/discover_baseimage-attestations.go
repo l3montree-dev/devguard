@@ -33,6 +33,21 @@ func getImageFromContainerFile(containerFile []byte) (string, error) {
 	return imagePath, nil
 }
 
+func attestationOutput(attestation map[string]any, index int) (string, map[string]any) {
+	filename := fmt.Sprintf("attestation-%d.json", index+1)
+	content := attestation
+
+	if predicate, ok := attestation["predicateType"].(string); ok {
+		predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
+		predicate = strings.TrimSuffix(predicate, ".json")
+		filename = fmt.Sprintf("attestation-%s.json", predicate)
+		if pred, ok := attestation["predicate"].(map[string]any); ok {
+			content = pred
+		}
+	}
+	return filename, content
+}
+
 func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	path := args[0]
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -61,21 +76,8 @@ func runDiscoverBaseImageAttestations(cmd *cobra.Command, args []string) error {
 	}
 
 	for i, attestation := range attestations {
-		// try to read the predicate type from the attestation
-		attestationFileName := filepath.Join(output, fmt.Sprintf("attestation-%d.json", i+1))
-
-		attContent := attestation
-
-		if predicate, ok := attestation["predicateType"].(string); ok {
-			// get everything after the last / in the predicate type
-			predicate = strings.Split(predicate, "/")[len(strings.Split(predicate, "/"))-1]
-			// remove .json suffix if it exists
-			predicate = strings.TrimSuffix(predicate, ".json")
-			// DevGuard merges attestations with the same predicate type, so we don't need to include the index in the filename if we have a predicate type
-			attestationFileName = filepath.Join(output, fmt.Sprintf("attestation-%s.json", predicate))
-			// intoto attestation, we can change the content to only include the predicate, since that's the important part
-			attContent = attestation["predicate"].(map[string]any)
-		}
+		filename, attContent := attestationOutput(attestation, i)
+		attestationFileName := filepath.Join(output, filename)
 
 		attestationFile, err := os.Create(attestationFileName)
 		if err != nil {

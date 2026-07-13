@@ -30,6 +30,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
@@ -79,7 +80,12 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 		return errors.Wrap(err, "failed to marshal body")
 	}
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
+	assetSlugPath, err := normalize.AssetSlugPath(config.RuntimeBaseConfig.AssetName)
+	if err != nil {
+		return errors.Wrap(err, "failed to normalize asset name")
+	}
+
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/", config.RuntimeBaseConfig.APIURL, assetSlugPath), bytes.NewBuffer(bodyjson))
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}

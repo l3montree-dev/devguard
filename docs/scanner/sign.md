@@ -8,7 +8,7 @@ Sign a file or OCI image using cosign.
 
 When not run with --offline the command will upload the public key to DevGuard
 before creating the signature. The public key upload is signed using the
-configured token. The actual signing is performed by the cosign CLI.
+configured token.
 
 ```shell
 devguard-scanner sign <file | image> [flags]
