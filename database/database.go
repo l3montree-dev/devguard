@@ -114,7 +114,6 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 	}), &gorm.Config{
 
 		Logger: &sentryLogger{
-			//		defaultLogger: logger.Default.LogMode(logger.Info),
 			defaultLogger: logger.Discard,
 		},
 	})
