@@ -78,7 +78,7 @@ func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		r.Header.Set("User-Agent", config.UserAgent)
 	}
 
-	host := r.URL.Hostname()
+	host := strings.ToLower(strings.TrimSuffix(r.URL.Hostname(), "."))
 	if isBlockedHost(host) {
 		return nil, fmt.Errorf("egress to host %q is blocked", host)
 	}
