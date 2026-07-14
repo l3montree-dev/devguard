@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"gorm.io/gorm"
 )
 
 type ReleaseController struct {
@@ -450,6 +452,10 @@ func (h *ReleaseController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
+	if err := h.validateReleaseItemRefs(c.Request().Context(), req.Items); err != nil {
+		return err
+	}
+
 	project := shared.GetProject(c)
 	model := transformer.ReleaseCreateRequestToModel(req, project.GetID())
 
@@ -488,6 +494,10 @@ func (h *ReleaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
+	if err := h.validateReleaseItemRefs(c.Request().Context(), req.Items); err != nil {
+		return err
+	}
+
 	transformer.ApplyReleasePatchRequestToModel(req, &rel)
 
 	if err := h.service.Update(c.Request().Context(), &rel); err != nil {
@@ -515,6 +525,9 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 	}
 
 	if err := h.service.Delete(c.Request().Context(), id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "release not found")
+		}
 		return echo.NewHTTPError(500, "could not delete release").WithInternal(err)
 	}
 
@@ -544,6 +557,15 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
+	// verify the target release belongs to the caller's tenant before attaching anything to it
+	if _, err := h.service.Read(c.Request().Context(), relID); err != nil {
+		return echo.NewHTTPError(404, "release not found").WithInternal(err)
+	}
+
+	if err := h.validateReleaseItemRefs(c.Request().Context(), []dtos.ReleaseItemDTO{dto}); err != nil {
+		return err
+	}
+
 	item := models.ReleaseItem{
 		ID:               dto.ID,
 		ReleaseID:        relID,
@@ -558,6 +580,26 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, transformer.ReleaseItemToDTO(item))
+}
+
+// validateReleaseItemRefs verifies that every foreign reference embedded in the given release
+// items (a child release, or an asset) belongs to the caller's tenant before it is persisted.
+// Without this check a user could embed a release or asset belonging to a different
+// organization/project into their own release merely by knowing its UUID.
+func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, items []dtos.ReleaseItemDTO) error {
+	for _, it := range items {
+		if it.ChildReleaseID != nil {
+			if _, err := h.service.Read(ctx, *it.ChildReleaseID); err != nil {
+				return echo.NewHTTPError(400, "invalid child release id").WithInternal(err)
+			}
+		}
+		if it.AssetID != nil {
+			if _, err := h.assetRepository.Read(ctx, nil, *it.AssetID); err != nil {
+				return echo.NewHTTPError(400, "invalid asset id").WithInternal(err)
+			}
+		}
+	}
+	return nil
 }
 
 // @Summary Remove item from release
@@ -579,6 +621,9 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 	}
 
 	if err := h.service.RemoveItem(c.Request().Context(), itemID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "release item not found")
+		}
 		return echo.NewHTTPError(500, "could not remove release item").WithInternal(err)
 	}
 

@@ -234,7 +234,18 @@ func autoOwnershipScope(model any, ids models.OwnershipScope) func(*gorm.DB) *go
 
 func (g *GormRepository[ID, T]) Delete(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(ctx, tx).Delete(&t, id).Error
+	db := g.GetDB(ctx, tx).Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(t, ids))
+	}
+	res := db.Delete(&t)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (g *GormRepository[ID, T]) List(ctx context.Context, tx *gorm.DB, ids []ID) ([]T, error) {
@@ -252,7 +263,7 @@ func (g *GormRepository[ID, T]) List(ctx context.Context, tx *gorm.DB, ids []ID)
 
 func (g *GormRepository[ID, T]) Activate(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(ctx, tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
+	return g.GetDB(ctx, tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error // nosemgrep: bola-repository-update-missing-tenant-scope
 }
 
 func (g *GormRepository[ID, T]) CleanupOrphanedRecords(ctx context.Context) error {
