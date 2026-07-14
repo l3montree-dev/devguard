@@ -108,33 +108,3 @@ func TestCheckNotAllowedPackage(t *testing.T) {
 		})
 	}
 }
-
-func TestValidateDependencyProxyConfigsJSON(t *testing.T) {
-	testCases := []struct {
-		name      string
-		content   string
-		expectErr bool
-	}{
-		{name: "valid positive", content: `{"rules":"","minReleaseAge":72}`, expectErr: false},
-		{name: "zero is allowed (disabled)", content: `{"rules":"","minReleaseAge":0}`, expectErr: false},
-		{name: "missing field defaults to disabled", content: `{"rules":"pkg:npm/foo"}`, expectErr: false},
-		{name: "at upper bound", content: `{"minReleaseAge":87600}`, expectErr: false},
-		{name: "negative rejected", content: `{"minReleaseAge":-1}`, expectErr: true},
-		{name: "large negative rejected", content: `{"minReleaseAge":-9999}`, expectErr: true},
-		{name: "above upper bound rejected", content: `{"minReleaseAge":87601}`, expectErr: true},
-		{name: "overflow-scale value rejected", content: `{"minReleaseAge":9223372036854775807}`, expectErr: true},
-		{name: "malformed json rejected", content: `{not json`, expectErr: true},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateDependencyProxyConfigsJSON(tc.content)
-			if tc.expectErr && err == nil {
-				t.Fatalf("expected error for %q, got nil", tc.content)
-			}
-			if !tc.expectErr && err != nil {
-				t.Fatalf("expected no error for %q, got %v", tc.content, err)
-			}
-		})
-	}
-}

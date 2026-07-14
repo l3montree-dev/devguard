@@ -80,33 +80,6 @@ type DependencyProxyConfigs struct {
 	MinReleaseAge int      `json:"minReleaseAge"` // in hours
 }
 
-const (
-	// DependencyProxyConfigsConfigFileID is the key under which dependency-proxy
-	// settings are stored in an org/project/asset ConfigFiles map.
-	DependencyProxyConfigsConfigFileID = "dependency-proxy-configs"
-
-	// MaxMinReleaseAgeHours caps the cooldown period.
-	MaxMinReleaseAgeHours = 24 * 365 * 10
-)
-
-// ValidateDependencyProxyConfigsJSON validates the JSON body submitted for the
-// dependency-proxy config file. MinReleaseAge is range-checked.
-func ValidateDependencyProxyConfigsJSON(content string) error {
-	var raw struct {
-		MinReleaseAge int `json:"minReleaseAge"`
-	}
-	if err := json.Unmarshal([]byte(content), &raw); err != nil {
-		return fmt.Errorf("malformed JSON: %w", err)
-	}
-	if raw.MinReleaseAge < 0 {
-		return fmt.Errorf("minReleaseAge must not be negative (got %d)", raw.MinReleaseAge)
-	}
-	if raw.MinReleaseAge > MaxMinReleaseAgeHours {
-		return fmt.Errorf("minReleaseAge must not exceed %d hours (got %d)", MaxMinReleaseAgeHours, raw.MinReleaseAge)
-	}
-	return nil
-}
-
 type DependencyProxyController struct {
 	assetRepository        shared.AssetRepository
 	projectRepository      shared.ProjectRepository
@@ -344,13 +317,6 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
 		}
 		configs.MinReleaseAge = raw.MinReleaseAge
-		if configs.MinReleaseAge < 0 {
-			slog.Warn("stored dependency proxy minReleaseAge is negative; treating cooldown as disabled", "value", configs.MinReleaseAge)
-			configs.MinReleaseAge = 0
-		} else if configs.MinReleaseAge > MaxMinReleaseAgeHours {
-			slog.Warn("stored dependency proxy minReleaseAge exceeds maximum; clamping", "value", configs.MinReleaseAge, "max", MaxMinReleaseAgeHours)
-			configs.MinReleaseAge = MaxMinReleaseAgeHours
-		}
 		for line := range strings.SplitSeq(raw.Rules, "\n") {
 			line = strings.TrimSpace(line)
 			if line != "" && !strings.HasPrefix(line, "#") {

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -442,10 +441,8 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
-	if configID == dependencyfirewall.DependencyProxyConfigsConfigFileID && configContent != "" {
-		if err := dependencyfirewall.ValidateDependencyProxyConfigsJSON(configContent); err != nil {
-			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
-		}
+	if err := validateConfigFile(configID, body); err != nil {
+		return err
 	}
 
 	if organization.ConfigFiles == nil {

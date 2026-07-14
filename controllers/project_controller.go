@@ -23,7 +23,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -573,10 +572,8 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	configContent := string(body)
 
-	if configID == dependencyfirewall.DependencyProxyConfigsConfigFileID && configContent != "" {
-		if err := dependencyfirewall.ValidateDependencyProxyConfigsJSON(configContent); err != nil {
-			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
-		}
+	if err := validateConfigFile(configID, body); err != nil {
+		return err
 	}
 
 	if project.ConfigFiles == nil {
