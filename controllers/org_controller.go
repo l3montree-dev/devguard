@@ -74,7 +74,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -207,7 +207,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -275,7 +275,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -325,7 +325,7 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -441,8 +441,10 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
-	if err := validateConfigFile(configID, body); err != nil {
-		return err
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
 	}
 
 	if organization.ConfigFiles == nil {

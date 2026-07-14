@@ -47,7 +47,7 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(newLicenseRisk); err != nil {
+	if err := dtos.V.Struct(newLicenseRisk); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	if newLicenseRisk.FinalLicenseDecision == "" {

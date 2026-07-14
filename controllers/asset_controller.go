@@ -201,7 +201,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -452,8 +452,10 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
-	if err := validateConfigFile(configID, body); err != nil {
-		return err
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
 	}
 
 	if asset.ConfigFiles == nil {
@@ -541,7 +543,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -614,7 +616,7 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 

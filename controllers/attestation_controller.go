@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -97,7 +98,7 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	err = shared.V.Struct(attestation)
+	err = dtos.V.Struct(attestation)
 	if err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
