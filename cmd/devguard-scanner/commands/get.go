@@ -54,6 +54,7 @@ provided token or the DEVGUARD_TOKEN environment variable.`,
 				return err
 			}
 
+			// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				return err

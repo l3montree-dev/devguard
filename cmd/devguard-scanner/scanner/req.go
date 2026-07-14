@@ -55,6 +55,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 
 	config.SetXAssetHeaders(req)
 
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	return http.DefaultClient.Do(req)
 }
 
@@ -114,7 +115,7 @@ func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	if config.RuntimeBaseConfig.Token != "" {
 		config.SetXAssetHeaders(req)
 	}
-
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil {
@@ -202,7 +203,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
-
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// check for timeout

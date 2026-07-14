@@ -27,7 +27,7 @@ var oryTransport http.RoundTripper = otelhttp.NewTransport(oryRoundTripper{
 	R: http.DefaultTransport,
 })
 
-var oryHttpClient = http.Client{
+var oryHTTPClient = http.Client{
 	Timeout:   30 * time.Second,
 	Transport: oryTransport,
 }
@@ -49,7 +49,7 @@ func GetOryAPIClient(url string) *client.APIClient {
 	cfg.Servers = client.ServerConfigurations{
 		{URL: url},
 	}
-	cfg.HTTPClient = &oryHttpClient
+	cfg.HTTPClient = &oryHTTPClient
 
 	ory := client.NewAPIClient(cfg)
 	return ory

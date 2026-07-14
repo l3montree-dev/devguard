@@ -185,6 +185,7 @@ rules:
           - pattern: "&http.Client{}"
           - pattern: "http.Client{Timeout: $T}"
           - pattern: "&http.Client{Timeout: $T}"
+          - pattern: "http.DefaultClient"
 
   - id: http-client-egress-transport-missing-timeout
     message: |

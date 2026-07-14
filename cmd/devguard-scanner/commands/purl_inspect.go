@@ -86,6 +86,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create request")
 	}
 
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "could not perform request")
