@@ -259,7 +259,18 @@ func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferen
 }
 
 func (githubIntegration *GithubIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
-	return nil, nil
+	_, _, _, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, ErrNotConnected) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ids := make([]string, len(excessNumbers))
+	for i, number := range excessNumbers {
+		ids[i] = strconv.Itoa(number)
+	}
+	return ids, nil
 }
 
 func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {

@@ -99,7 +99,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 
 			result, err := fetchAllRepos(ctx, client)
 			if err != nil {
-				return nil, err
+				return nil, nil
 			}
 
 			// filter the result set based on the search query
