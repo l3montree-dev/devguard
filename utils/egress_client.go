@@ -16,11 +16,16 @@
 package utils
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/config"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/time/rate"
 )
 
 // EgressTransport is the shared RoundTripper for all outgoing HTTP calls.
@@ -38,9 +43,49 @@ type EgressRoundTripper struct {
 	R http.RoundTripper
 }
 
+var perHostLimiters sync.Map // map[string]*rate.Limiter
+
+const (
+	hostRateLimit = 10 // requests per second per host
+	hostBurst     = 20
+)
+
+func limiterForHost(host string) *rate.Limiter {
+	if v, ok := perHostLimiters.Load(host); ok {
+		return v.(*rate.Limiter)
+	}
+
+	limiter := rate.NewLimiter(rate.Limit(hostRateLimit), hostBurst)
+	actual, _ := perHostLimiters.LoadOrStore(host, limiter)
+	return actual.(*rate.Limiter)
+}
+
+func isBlockedHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		// this is a cloud-metadata IP address, block it
+		return ip.IsLoopback() || ip.String() == "169.254.169.254"
+	}
+
+	return false
+}
+
 func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.UserAgent() == "" {
 		r.Header.Set("User-Agent", config.UserAgent)
+	}
+
+	host := r.URL.Hostname()
+	if isBlockedHost(host) {
+		return nil, fmt.Errorf("egress to host %q is blocked", host)
+	}
+
+	limiter := limiterForHost(host)
+	if err := limiter.Wait(r.Context()); err != nil {
+		return nil, err
 	}
 
 	return mrt.R.RoundTrip(r)
