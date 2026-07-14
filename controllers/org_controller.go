@@ -332,6 +332,15 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	// get the rbac from the context
 	rbac := shared.GetRBAC(ctx)
 
+	members, err := rbac.GetAllMembersOfOrganization()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	if !utils.Contains(members, userID) {
+		return echo.NewHTTPError(400, "user is not a member of the organization")
+	}
+
 	//
 	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
 	rbac.RevokeRole(reqCtx, userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
