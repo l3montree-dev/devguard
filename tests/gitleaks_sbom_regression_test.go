@@ -32,7 +32,7 @@ func loadGitleaksReproBOM(t *testing.T, relPath string) *cdx.BOM {
 	return &bom
 }
 
-func createCVE_XCrypto(db shared.DB) {
+func createCveXCrypto(db shared.DB) {
 	cve := models.CVE{
 		CVE:  "CVE-2099-00001",
 		CVSS: 10.0,
@@ -62,7 +62,7 @@ func createCVE_XCrypto(db shared.DB) {
 // end-to-end version of https://github.com/l3montree-dev/devguard/issues/2463.
 func TestGitleaksVulnPathThroughRealBackend(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		createCVE_XCrypto(f.DB)
+		createCveXCrypto(f.DB)
 
 		bom := loadGitleaksReproBOM(t, "main.json")
 		extraNames := []string{
