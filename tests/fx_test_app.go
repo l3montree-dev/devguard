@@ -78,6 +78,7 @@ type TestApp struct {
 	VEXRuleController           *controllers.VEXRuleController
 	ExternalReferenceController *controllers.ExternalReferenceController
 	StatisticsController        *controllers.StatisticsController
+	VulnDBController            *controllers.VulnDBController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
