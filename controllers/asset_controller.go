@@ -452,6 +452,10 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
+	if err := validateConfigFile(configID, body); err != nil {
+		return err
+	}
+
 	if asset.ConfigFiles == nil {
 		asset.ConfigFiles = make(map[string]any)
 	}

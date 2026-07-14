@@ -572,6 +572,10 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	configContent := string(body)
 
+	if err := validateConfigFile(configID, body); err != nil {
+		return err
+	}
+
 	if project.ConfigFiles == nil {
 		project.ConfigFiles = make(map[string]any)
 	}

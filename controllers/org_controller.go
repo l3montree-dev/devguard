@@ -441,6 +441,10 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
+	if err := validateConfigFile(configID, body); err != nil {
+		return err
+	}
+
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)
 	}
