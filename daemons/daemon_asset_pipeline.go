@@ -28,6 +28,9 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
+	"github.com/l3montree-dev/devguard/integrations/githubint"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
@@ -412,6 +415,13 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 				// No transaction needed: SyncAllIssues delegates to thirdPartyIntegration.CreateIssue/UpdateIssue,
 				// which in dry-run mode are intercepted by dryRunIntegration and never reach the DB write inside the real integration.
 				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion, nil)
+				if errors.Is(err, gitlabint.ErrNotConnected) ||
+					errors.Is(err, githubint.ErrNotConnected) ||
+					errors.Is(err, jiraint.ErrNotConnected) {
+					// swallow if error
+					continue
+				}
+
 				if err != nil {
 					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
 					errs = append(errs, err)

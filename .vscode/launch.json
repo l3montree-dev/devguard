@@ -28,9 +28,10 @@
             "args": [
                 "daemon",
                 "runPipeline",
-                "18ea081d-592b-47b1-8e88-92185516d112",
+                "264d682d-a9ba-4680-a9bf-018f35e561f2",
                 "--stage",
-                "SyncTickets"
+                "SyncTickets",
+                "--dryRun=false"
             ],
         },
         {
