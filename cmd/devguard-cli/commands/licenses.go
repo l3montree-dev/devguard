@@ -23,7 +23,7 @@ import (
 	xz "github.com/ulikunitz/xz"
 )
 
-const baseFolder string = "internal/core/component/"
+const baseFolder string = "licenses/"
 
 var (
 	alpineReleaseVersions []string
@@ -92,7 +92,7 @@ func updateApprovedLicenses(ctx context.Context) error {
 		return fmt.Errorf("http request to %s was unsuccessful (code: %d)", apiURL, resp.StatusCode)
 	}
 
-	path := "internal/core/component/approved-licenses.json"
+	path := "licenses/approved-licenses.json"
 	fileDescriptor, err := os.Create(path)
 	if err != nil {
 		return err
