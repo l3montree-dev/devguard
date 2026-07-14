@@ -123,3 +123,16 @@ type DetailedDependencyVulnDTO struct {
 	DependencyVulnDTO
 	Events []VulnEventDTO `json:"events"`
 }
+
+type DependencyVulnStatus struct {
+	StatusType              string                      `json:"status"`
+	Justification           string                      `json:"justification" validate:"max=4000"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+}
+
+type BatchDependencyVulnStatus struct {
+	VulnIDs                 []uuid.UUID                 `json:"vulnIds"`
+	StatusType              string                      `json:"status"`
+	Justification           string                      `json:"justification" validate:"max=4000"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+}
