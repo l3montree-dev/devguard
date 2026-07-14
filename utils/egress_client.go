@@ -20,9 +20,9 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/config"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/time/rate"
@@ -43,21 +43,29 @@ type EgressRoundTripper struct {
 	R http.RoundTripper
 }
 
-var perHostLimiters sync.Map // map[string]*rate.Limiter
+// perHostLimiters is bounded (LRU-evicted) and TTL-expired so a process that sees many distinct
+// (or attacker-controlled, e.g. webhook) hosts over its lifetime can't grow this map unbounded.
+var perHostLimiters = expirable.NewLRU[string, *rate.Limiter](maxTrackedHosts, nil, hostLimiterTTL)
 
 const (
-	hostRateLimit = 10 // requests per second per host
-	hostBurst     = 20
+	hostRateLimit   = 10 // requests per second per host
+	hostBurst       = 20
+	maxTrackedHosts = 4096
+	hostLimiterTTL  = 10 * time.Minute
 )
 
+func isBlockedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.String() == "169.254.169.254"
+}
+
 func limiterForHost(host string) *rate.Limiter {
-	if v, ok := perHostLimiters.Load(host); ok {
-		return v.(*rate.Limiter)
+	if v, ok := perHostLimiters.Get(host); ok {
+		return v
 	}
 
 	limiter := rate.NewLimiter(rate.Limit(hostRateLimit), hostBurst)
-	actual, _ := perHostLimiters.LoadOrStore(host, limiter)
-	return actual.(*rate.Limiter)
+	perHostLimiters.Add(host, limiter)
+	return limiter
 }
 
 func isBlockedHost(host string) bool {
@@ -67,7 +75,19 @@ func isBlockedHost(host string) bool {
 
 	if ip := net.ParseIP(host); ip != nil {
 		// this is a cloud-metadata IP address, block it
-		return ip.IsLoopback() || ip.String() == "169.254.169.254"
+		return isBlockedIP(ip)
+	}
+
+	// resolve the hostname to an IP address and check if it's blocked
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		// if we can't resolve the hostname, we can't determine if it's blocked or not
+		// so we will allow it to go through
+		return false
+	}
+
+	for _, ip := range ips {
+		return isBlockedIP(ip)
 	}
 
 	return false
