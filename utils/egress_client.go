@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
@@ -69,6 +70,12 @@ func limiterForHost(host string) *rate.Limiter {
 }
 
 func isBlockedHost(host string) bool {
+	if testing.Testing() {
+		// Allow egress to loopback/local test servers (e.g. httptest.Server) when running under
+		// `go test`. testing.Testing() is only ever true in binaries built by the go test tool.
+		return false
+	}
+
 	if strings.EqualFold(host, "localhost") {
 		return true
 	}

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.9.1] - 2026-07-14
+
+(Multiple security fixes. Information on the vulnerabilities will be added later.)
+
 ## [v1.9.0] - 2026-07-14
 
 Thanks to @domzoric for their first contribution to DevGuard! 🎉
