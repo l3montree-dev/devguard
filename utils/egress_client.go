@@ -16,11 +16,16 @@
 package utils
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/config"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/time/rate"
 )
 
 // EgressTransport is the shared RoundTripper for all outgoing HTTP calls.
@@ -38,9 +43,69 @@ type EgressRoundTripper struct {
 	R http.RoundTripper
 }
 
+// perHostLimiters is bounded (LRU-evicted) and TTL-expired so a process that sees many distinct
+// (or attacker-controlled, e.g. webhook) hosts over its lifetime can't grow this map unbounded.
+var perHostLimiters = expirable.NewLRU[string, *rate.Limiter](maxTrackedHosts, nil, hostLimiterTTL)
+
+const (
+	hostRateLimit   = 10 // requests per second per host
+	hostBurst       = 20
+	maxTrackedHosts = 4096
+	hostLimiterTTL  = 10 * time.Minute
+)
+
+func isBlockedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.String() == "169.254.169.254"
+}
+
+func limiterForHost(host string) *rate.Limiter {
+	if v, ok := perHostLimiters.Get(host); ok {
+		return v
+	}
+
+	limiter := rate.NewLimiter(rate.Limit(hostRateLimit), hostBurst)
+	perHostLimiters.Add(host, limiter)
+	return limiter
+}
+
+func isBlockedHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		// this is a cloud-metadata IP address, block it
+		return isBlockedIP(ip)
+	}
+
+	// resolve the hostname to an IP address and check if it's blocked
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		// if we can't resolve the hostname, we can't determine if it's blocked or not
+		// so we will allow it to go through
+		return false
+	}
+
+	for _, ip := range ips {
+		return isBlockedIP(ip)
+	}
+
+	return false
+}
+
 func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.UserAgent() == "" {
 		r.Header.Set("User-Agent", config.UserAgent)
+	}
+
+	host := strings.ToLower(strings.TrimSuffix(r.URL.Hostname(), "."))
+	if isBlockedHost(host) {
+		return nil, fmt.Errorf("egress to host %q is blocked", host)
+	}
+
+	limiter := limiterForHost(host)
+	if err := limiter.Wait(r.Context()); err != nil {
+		return nil, err
 	}
 
 	return mrt.R.RoundTrip(r)
