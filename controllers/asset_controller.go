@@ -264,6 +264,10 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		return fmt.Errorf("error decoding request: %v", err)
 	}
 
+	if err := dtos.V.Struct(patchRequest); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
 	var justification = ""
 	if patchRequest.ConfidentialityRequirement != nil && *patchRequest.ConfidentialityRequirement != asset.ConfidentialityRequirement {
 		justification += "Confidentiality Requirement updated: " + string(asset.ConfidentialityRequirement) + " -> " + string(*patchRequest.ConfidentialityRequirement)
