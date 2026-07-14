@@ -174,7 +174,7 @@ func discoverAndMergeSupplementarySBOMs(bom *cyclonedx.BOM, discover func() ([]*
 	// component is still present in bom to warn about.
 	warnAboutUnidentifiableComponents(bom, extras)
 	if len(extras) > 0 {
-		if err := mergeSupplementarySBOMs(bom, extras); err != nil {
+		if err := MergeSupplementarySBOMs(bom, extras); err != nil {
 			return errors.Wrap(err, "could not merge supplementary SBOMs")
 		}
 	}
@@ -323,7 +323,7 @@ func printSupplementarySBOMExample(path string) {
 // top-level ExternalReferences, since that's the only place the backend
 // looks for VEX URLs to auto-fetch (see controllers/scan_controller.go's
 // bom.ExternalReferences scan).
-func mergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
+func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
 	rootRef := bom.Metadata.Component.BOMRef
 
 	g, err := normalize.InvalidSBOMGraphFromCycloneDX(bom, "cli-scan", "cli-scan")

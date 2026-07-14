@@ -1,0 +1,5454 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:d9ee7d8a-1962-45e6-886a-39c69d57d6ce",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-09T08:39:29+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "manufacturer": {
+            "name": "Aqua Security Software Ltd."
+          },
+          "group": "aquasecurity",
+          "name": "trivy",
+          "version": "0.72.0"
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "nix/store/q4km6n6l28blix1q90a09z8p1ckrrxlf-crane-0.21.5/bin/crane",
+      "name": "nix/store/q4km6n6l28blix1q90a09z8p1ckrrxlf-crane-0.21.5/bin/crane"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "038b3d68-3765-484a-b7b1-9445a9852c21",
+      "type": "library",
+      "name": "github.com/josharian/intern",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/github.com/josharian/intern@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/josharian/intern@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "059c0981-26aa-4a07-aeff-612220906a8b",
+      "type": "library",
+      "name": "go.yaml.in/yaml/v2",
+      "version": "v2.4.3",
+      "purl": "pkg:golang/go.yaml.in/yaml/v2@v2.4.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.yaml.in/yaml/v2@v2.4.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "06e416aa-97ad-4b07-93cd-7cca4a41bdf6",
+      "type": "library",
+      "name": "k8s.io/kube-openapi",
+      "version": "v0.0.0-20250910181357-589584f1c912",
+      "purl": "pkg:golang/k8s.io/kube-openapi@v0.0.0-20250910181357-589584f1c912",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/kube-openapi@v0.0.0-20250910181357-589584f1c912"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "0735476f-bcfb-4464-a8c2-93f19587cc43",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/config",
+      "version": "v1.32.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/config@v1.32.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "090c8299-e03f-496e-b818-a804e4a135a9",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/azure/auth",
+      "version": "v0.5.13",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/azure/auth@v0.5.13",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/azure/auth@v0.5.13"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "098cc96b-d9e7-42fc-9f93-c45f674b125d",
+      "type": "library",
+      "name": "github.com/klauspost/compress",
+      "version": "v1.18.5",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        },
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/klauspost/compress@v1.18.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/klauspost/compress@v1.18.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "0fa21edd-f0ac-4ff5-9aaa-d4c7d2e30191",
+      "type": "library",
+      "name": "gopkg.in/yaml.v3",
+      "version": "v3.0.1",
+      "purl": "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/yaml.v3@v3.0.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "0fe49175-2a58-484d-85a7-b59d49842610",
+      "type": "library",
+      "name": "github.com/go-openapi/jsonpointer",
+      "version": "v0.21.1",
+      "purl": "pkg:golang/github.com/go-openapi/jsonpointer@v0.21.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/jsonpointer@v0.21.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "115ac635-4782-447f-af1f-172b535d3535",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest",
+      "version": "v14.2.0+incompatible",
+      "purl": "pkg:golang/github.com/azure/go-autorest@v14.2.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest@v14.2.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1203ed5d-6429-4f5f-87c7-127bde80ebde",
+      "type": "library",
+      "name": "github.com/spf13/pflag",
+      "version": "v1.0.10",
+      "purl": "pkg:golang/github.com/spf13/pflag@v1.0.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/spf13/pflag@v1.0.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1209a795-ff47-4155-8be8-8e514d7c422a",
+      "type": "library",
+      "name": "github.com/opencontainers/go-digest",
+      "version": "v1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/opencontainers/go-digest@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/go-digest@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1292e82b-3b88-41c7-9241-bb907ae5ced7",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/feature/ec2/imds",
+      "version": "v1.18.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "13828902-4be0-42e8-8ee2-e89d02ffe2aa",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/tracing",
+      "version": "v0.6.1",
+      "purl": "pkg:golang/github.com/azure/go-autorest/tracing@v0.6.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/tracing@v0.6.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "181d79ac-8202-462d-ac46-f5b3270f7276",
+      "type": "library",
+      "name": "cloud.google.com/go/compute/metadata",
+      "version": "v0.7.0",
+      "purl": "pkg:golang/cloud.google.com/go/compute/metadata@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "cloud.google.com/go/compute/metadata@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1bb9f4b4-00a5-41a3-9d75-6eee6adc9422",
+      "type": "library",
+      "name": "gotest.tools/v3",
+      "version": "v3.1.0",
+      "purl": "pkg:golang/gotest.tools/v3@v3.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gotest.tools/v3@v3.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1e8c1880-348f-48ea-84f5-2ff2a7f1c78e",
+      "type": "library",
+      "name": "golang.org/x/sys",
+      "version": "v0.43.0",
+      "purl": "pkg:golang/golang.org/x/sys@v0.43.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sys@v0.43.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "1f5fec87-f904-45de-b20a-4466e2326f68",
+      "type": "library",
+      "name": "github.com/spf13/cobra",
+      "version": "v1.10.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/spf13/cobra@v1.10.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/spf13/cobra@v1.10.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "205ed7c4-af9d-4e91-9488-5380c8a2069c",
+      "type": "library",
+      "name": "sigs.k8s.io/yaml",
+      "version": "v1.6.0",
+      "purl": "pkg:golang/sigs.k8s.io/yaml@v1.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/yaml@v1.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "215a28fb-190d-427c-84b6-2ba1a35dc241",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/ini",
+      "version": "v1.8.4",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "23079af2-0477-4afc-b8ff-267f5ff782ea",
+      "type": "library",
+      "name": "golang.org/x/crypto",
+      "version": "v0.45.0",
+      "purl": "pkg:golang/golang.org/x/crypto@v0.45.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/crypto@v0.45.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "251ce868-2ac9-4121-8f72-5fe599057589",
+      "type": "library",
+      "name": "github.com/inconshreveable/mousetrap",
+      "version": "v1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/inconshreveable/mousetrap@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/inconshreveable/mousetrap@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "262407f2-3c0c-44ba-a121-23647f11d56b",
+      "type": "library",
+      "name": "golang.org/x/term",
+      "version": "v0.37.0",
+      "purl": "pkg:golang/golang.org/x/term@v0.37.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/term@v0.37.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "262862d7-eb4e-4794-9248-63fd38718eb8",
+      "type": "library",
+      "name": "golang.org/x/term",
+      "version": "v0.37.0",
+      "purl": "pkg:golang/golang.org/x/term@v0.37.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/term@v0.37.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2a08d02f-ae17-41a0-959b-714d7fd4203c",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2",
+      "version": "v1.41.2",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2@v1.41.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2b7b13c9-7b7b-4c37-be54-fa2c13d79a81",
+      "type": "library",
+      "name": "github.com/mailru/easyjson",
+      "version": "v0.9.0",
+      "purl": "pkg:golang/github.com/mailru/easyjson@v0.9.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mailru/easyjson@v0.9.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2bdaaf65-0cd0-42c0-b074-f6806c769d5a",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ssooidc",
+      "version": "v1.35.15",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.15",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.15"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2cd9e216-b3e6-4046-9c66-29098d36c7ca",
+      "type": "library",
+      "name": "github.com/modern-go/reflect2",
+      "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+      "purl": "pkg:golang/github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "2cdad8da-b935-446b-b83e-47871b55706e",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/configsources",
+      "version": "v1.4.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "303d5373-1675-4e52-a7f1-7b48ef9a914a",
+      "type": "library",
+      "name": "github.com/inconshreveable/mousetrap",
+      "version": "v1.1.0",
+      "purl": "pkg:golang/github.com/inconshreveable/mousetrap@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/inconshreveable/mousetrap@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "326df05f-5236-4f3b-8f17-d152ba1247a8",
+      "type": "library",
+      "name": "github.com/google/gnostic-models",
+      "version": "v0.7.0",
+      "purl": "pkg:golang/github.com/google/gnostic-models@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/gnostic-models@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "33fc4916-4cd2-4f41-9334-f999088e32e9",
+      "type": "library",
+      "name": "github.com/vbatts/tar-split",
+      "version": "v0.12.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/vbatts/tar-split@v0.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/vbatts/tar-split@v0.12.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "341faf2e-3e99-4e0f-9450-cca7f69bc39c",
+      "type": "library",
+      "name": "github.com/opencontainers/go-digest",
+      "version": "v1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/opencontainers/go-digest@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/go-digest@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "35477d7a-1b74-4d0f-ad18-2c78b76de535",
+      "type": "library",
+      "name": "github.com/dimchansky/utfbom",
+      "version": "v1.1.1",
+      "purl": "pkg:golang/github.com/dimchansky/utfbom@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/dimchansky/utfbom@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "354d7e35-6c33-42f9-a143-b2829ae9cc6b",
+      "type": "library",
+      "name": "k8s.io/client-go",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/client-go@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/client-go@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3695d2d7-2765-49e1-8ebd-ccd0c6579905",
+      "type": "library",
+      "name": "sigs.k8s.io/json",
+      "version": "v0.0.0-20250730193827-2d320260d730",
+      "purl": "pkg:golang/sigs.k8s.io/json@v0.0.0-20250730193827-2d320260d730",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/json@v0.0.0-20250730193827-2d320260d730"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3781a627-86ec-4aa4-8d91-ef7433e6dd3b",
+      "type": "library",
+      "name": "sigs.k8s.io/json",
+      "version": "v0.0.0-20250730193827-2d320260d730",
+      "purl": "pkg:golang/sigs.k8s.io/json@v0.0.0-20250730193827-2d320260d730",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/json@v0.0.0-20250730193827-2d320260d730"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "393ab6d2-a868-4e74-a12d-f744f311358a",
+      "type": "library",
+      "name": "github.com/google/uuid",
+      "version": "v1.6.0",
+      "purl": "pkg:golang/github.com/google/uuid@v1.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/uuid@v1.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3a0d1a23-b6d3-47cd-8f50-3fcd010ddaac",
+      "type": "library",
+      "name": "github.com/docker/cli",
+      "version": "v29.4.0+incompatible",
+      "purl": "pkg:golang/github.com/docker/cli@v29.4.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/cli@v29.4.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3a7b2d2e-163b-447d-994f-c73b8ae8a0e4",
+      "type": "library",
+      "name": "github.com/docker/cli",
+      "version": "v29.4.0+incompatible",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/cli@v29.4.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/cli@v29.4.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3ab91014-80ae-454d-a355-752ce4698327",
+      "type": "library",
+      "name": "github.com/emicklei/go-restful/v3",
+      "version": "v3.12.2",
+      "purl": "pkg:golang/github.com/emicklei/go-restful/v3@v3.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/emicklei/go-restful/v3@v3.12.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3c158940-4d98-473d-9fba-ad5ac335e580",
+      "type": "library",
+      "name": "github.com/google/uuid",
+      "version": "v1.6.0",
+      "purl": "pkg:golang/github.com/google/uuid@v1.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/uuid@v1.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3da5a05f-125a-4510-a7e1-b5c1056c49f2",
+      "type": "library",
+      "name": "go.yaml.in/yaml/v3",
+      "version": "v3.0.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.yaml.in/yaml/v3@v3.0.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.yaml.in/yaml/v3@v3.0.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "3f3c1b48-cd7f-4552-aac5-6c22ab444669",
+      "type": "library",
+      "name": "golang.org/x/sys",
+      "version": "v0.43.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/sys@v0.43.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sys@v0.43.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "40ecf96a-bf4f-4fee-befc-18d2c026c0d7",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/sts",
+      "version": "v1.41.7",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/sts@v1.41.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "40fc2dfe-4f3a-4025-bff4-07d7c1629c0b",
+      "type": "library",
+      "name": "k8s.io/api",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/api@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/api@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "42bc5bc9-628d-4dd4-b5bd-43cf49f16007",
+      "type": "library",
+      "name": "golang.org/x/text",
+      "version": "v0.31.0",
+      "purl": "pkg:golang/golang.org/x/text@v0.31.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/text@v0.31.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4360dd54-067a-4ece-bc24-c066042238e0",
+      "type": "library",
+      "name": "github.com/x448/float16",
+      "version": "v0.8.4",
+      "purl": "pkg:golang/github.com/x448/float16@v0.8.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/x448/float16@v0.8.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "43631bc9-89ed-470e-bef8-dee3c873b7f9",
+      "type": "library",
+      "name": "github.com/fxamacker/cbor/v2",
+      "version": "v2.9.0",
+      "purl": "pkg:golang/github.com/fxamacker/cbor/v2@v2.9.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/fxamacker/cbor/v2@v2.9.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "467a5ae5-0018-4f2c-b419-ef2c4ef21077",
+      "type": "library",
+      "name": "k8s.io/client-go",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/client-go@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/client-go@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "46d355db-155a-4e04-9fd1-bdb72379c49d",
+      "type": "library",
+      "name": "github.com/mitchellh/go-homedir",
+      "version": "v1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/mitchellh/go-homedir@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mitchellh/go-homedir@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "485c4ccd-b4c8-4c2a-b07e-176931ddcd52",
+      "type": "library",
+      "name": "github.com/opencontainers/go-digest",
+      "version": "v1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/opencontainers/go-digest@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/go-digest@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "48e3bd3d-a87d-4554-85d7-b9b63b0c09ea",
+      "type": "library",
+      "name": "golang.org/x/oauth2",
+      "version": "v0.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/oauth2@v0.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/oauth2@v0.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4907b0ba-8a84-4ddc-bd2a-b4111305d4f8",
+      "type": "library",
+      "name": "github.com/go-openapi/swag",
+      "version": "v0.23.1",
+      "purl": "pkg:golang/github.com/go-openapi/swag@v0.23.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/swag@v0.23.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4a591354-e8f1-407c-b724-430d8cc2ceb4",
+      "type": "library",
+      "name": "github.com/josharian/intern",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/github.com/josharian/intern@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/josharian/intern@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4bab2dac-b6b4-4014-b8fa-8b168af3eb2b",
+      "type": "library",
+      "name": "github.com/Azure/azure-sdk-for-go",
+      "version": "v68.0.0+incompatible",
+      "purl": "pkg:golang/github.com/azure/azure-sdk-for-go@v68.0.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/azure-sdk-for-go@v68.0.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "4d892f2d-72a7-4e3a-8bd4-cab5ee5f2e68",
+      "type": "library",
+      "name": "github.com/docker/docker-credential-helpers",
+      "version": "v0.9.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/docker-credential-helpers@v0.9.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/docker-credential-helpers@v0.9.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5002241e-478b-4e9a-a8d3-c84601e9d216",
+      "type": "library",
+      "name": "golang.org/x/sys",
+      "version": "v0.43.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/sys@v0.43.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sys@v0.43.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "517b30a1-d092-4224-86fe-fc1f121c6033",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2",
+      "version": "v2.7.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "51d5f453-fcd9-405f-8d3f-48a708988241",
+      "type": "library",
+      "name": "github.com/emicklei/go-restful/v3",
+      "version": "v3.12.2",
+      "purl": "pkg:golang/github.com/emicklei/go-restful/v3@v3.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/emicklei/go-restful/v3@v3.12.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "53b3aa46-3f13-4e8f-a4d9-44190ba030a9",
+      "type": "library",
+      "name": "github.com/docker/cli",
+      "version": "v29.4.0+incompatible",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/cli@v29.4.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/cli@v29.4.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "54084be6-dbe0-4572-b1cf-d74349bf71da",
+      "type": "library",
+      "name": "github.com/chrismellard/docker-credential-acr-env",
+      "version": "v0.0.0-20230304212654-82a0ddb27589",
+      "purl": "pkg:golang/github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "576385a5-7fcb-4ccb-ba7d-08ecfd24a044",
+      "type": "application",
+      "name": "vendor/go.opentelemetry.io/otel/requirements.txt",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "pip"
+        }
+      ]
+    },
+    {
+      "bom-ref": "589a1f4d-64d7-4733-9c0a-3cb9045e99d6",
+      "type": "library",
+      "name": "github.com/opencontainers/image-spec",
+      "version": "v1.1.1",
+      "purl": "pkg:golang/github.com/opencontainers/image-spec@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/image-spec@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5a3a39ff-d041-4c33-8b12-dd5e790e14d6",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ecr",
+      "version": "v1.55.3",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ecr@v1.55.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ecr@v1.55.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5a7601a2-8259-4d80-bd1e-ca379549ba66",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ecr",
+      "version": "v1.55.3",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ecr@v1.55.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ecr@v1.55.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5e692353-888a-41f1-8059-a8bed24b6619",
+      "type": "library",
+      "name": "github.com/google/gnostic-models",
+      "version": "v0.7.0",
+      "purl": "pkg:golang/github.com/google/gnostic-models@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/gnostic-models@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5f144c43-bb3a-4002-a1e1-218d3445e158",
+      "type": "library",
+      "name": "github.com/spf13/pflag",
+      "version": "v1.0.10",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/spf13/pflag@v1.0.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/spf13/pflag@v1.0.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "5fd4d656-d8de-4d40-8df2-b372ffdbe866",
+      "type": "library",
+      "name": "gopkg.in/inf.v0",
+      "version": "v0.9.1",
+      "purl": "pkg:golang/gopkg.in/inf.v0@v0.9.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/inf.v0@v0.9.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6172c334-4be2-4be2-af03-ef4a64cb22a6",
+      "type": "library",
+      "name": "sigs.k8s.io/structured-merge-diff/v6",
+      "version": "v6.3.0",
+      "purl": "pkg:golang/sigs.k8s.io/structured-merge-diff/v6@v6.3.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/structured-merge-diff/v6@v6.3.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "61b95f69-c051-4987-84bf-d1e747a811da",
+      "type": "library",
+      "name": "k8s.io/apimachinery",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/apimachinery@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/apimachinery@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "61dd5de9-77f8-4aa2-abe0-4c90078658e4",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ssooidc",
+      "version": "v1.35.15",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.15",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.15"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "621df82a-be82-4cb0-a696-8a7336590915",
+      "type": "application",
+      "name": "cmd/krane/go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "65acc47d-22db-4f73-911a-fc7f21e509cb",
+      "type": "library",
+      "name": "github.com/mitchellh/go-homedir",
+      "version": "v1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/mitchellh/go-homedir@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mitchellh/go-homedir@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "65d9469b-d1da-4b3a-afc7-08aea44257a0",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
+      "version": "v1.13.5",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "66fc4937-3b05-4d7e-97ba-23bd7f344162",
+      "type": "library",
+      "name": "github.com/x448/float16",
+      "version": "v0.8.4",
+      "purl": "pkg:golang/github.com/x448/float16@v0.8.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/x448/float16@v0.8.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "68b0abd3-cc31-48c3-b09a-ae43c33e567e",
+      "type": "library",
+      "name": "google.golang.org/protobuf",
+      "version": "v1.36.8",
+      "purl": "pkg:golang/google.golang.org/protobuf@v1.36.8",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "google.golang.org/protobuf@v1.36.8"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "69a6bdf8-3355-422b-9f7c-de0382547f13",
+      "type": "library",
+      "name": "github.com/modern-go/reflect2",
+      "version": "v1.0.3-0.20250322232337-35a7c28c31ee",
+      "purl": "pkg:golang/github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6b1415c6-d2a1-4361-b373-de91e9fc2eab",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/adal",
+      "version": "v0.9.24",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/adal@v0.9.24",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/adal@v0.9.24"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6b1609eb-54c6-4eb6-8241-d3308e8e0559",
+      "type": "library",
+      "name": "github.com/sirupsen/logrus",
+      "version": "v1.9.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/sirupsen/logrus@v1.9.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/sirupsen/logrus@v1.9.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6b245499-2a70-43f3-afb1-6b5bc2f19efa",
+      "type": "library",
+      "name": "golang.org/x/oauth2",
+      "version": "v0.36.0",
+      "purl": "pkg:golang/golang.org/x/oauth2@v0.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/oauth2@v0.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6d726488-3c2a-4619-b64b-a65281a1af87",
+      "type": "library",
+      "name": "go.yaml.in/yaml/v3",
+      "version": "v3.0.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.yaml.in/yaml/v3@v3.0.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.yaml.in/yaml/v3@v3.0.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6dbf59fd-4296-40f4-82c1-6fa9dacce27c",
+      "type": "library",
+      "name": "github.com/go-openapi/jsonpointer",
+      "version": "v0.21.1",
+      "purl": "pkg:golang/github.com/go-openapi/jsonpointer@v0.21.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/jsonpointer@v0.21.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "6e61d344-2e0e-4abf-8766-554d365ce352",
+      "type": "library",
+      "name": "gopkg.in/inf.v0",
+      "version": "v0.9.1",
+      "purl": "pkg:golang/gopkg.in/inf.v0@v0.9.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/inf.v0@v0.9.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "70ceeb8a-e0df-4720-a745-f8500db2b804",
+      "type": "library",
+      "name": "github.com/containerd/stargz-snapshotter/estargz",
+      "version": "v0.18.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/containerd/stargz-snapshotter/estargz@v0.18.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/containerd/stargz-snapshotter/estargz@v0.18.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "71001b35-e2c8-4587-a8b0-a2a6904186d4",
+      "type": "library",
+      "name": "gotest.tools/v3",
+      "version": "v3.1.0",
+      "purl": "pkg:golang/gotest.tools/v3@v3.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gotest.tools/v3@v3.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "72338c37-522c-45de-8bca-2a6b4290e706",
+      "type": "library",
+      "name": "k8s.io/kube-openapi",
+      "version": "v0.0.0-20250910181357-589584f1c912",
+      "purl": "pkg:golang/k8s.io/kube-openapi@v0.0.0-20250910181357-589584f1c912",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/kube-openapi@v0.0.0-20250910181357-589584f1c912"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7238d71b-e365-4102-8bf0-86be6bd2033f",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/signin",
+      "version": "v1.0.6",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/signin@v1.0.6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "74a34690-ab40-41c4-829c-cfd50188da0e",
+      "type": "library",
+      "name": "github.com/opencontainers/image-spec",
+      "version": "v1.1.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/opencontainers/image-spec@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/image-spec@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "759d0793-5b10-404a-b3de-2853b41df89e",
+      "type": "library",
+      "name": "github.com/go-openapi/swag",
+      "version": "v0.23.1",
+      "purl": "pkg:golang/github.com/go-openapi/swag@v0.23.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/swag@v0.23.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "762475df-514d-4770-b5cb-d978e15029d8",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/sso",
+      "version": "v1.30.11",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.11",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/sso@v1.30.11"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "767a3fbb-5f76-4991-a80f-c283dcede861",
+      "type": "library",
+      "name": "cloud.google.com/go/compute/metadata",
+      "version": "v0.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/cloud.google.com/go/compute/metadata@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "cloud.google.com/go/compute/metadata@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "77e64335-bd77-4e79-b887-1cc451e84a5f",
+      "type": "library",
+      "name": "github.com/fxamacker/cbor/v2",
+      "version": "v2.9.0",
+      "purl": "pkg:golang/github.com/fxamacker/cbor/v2@v2.9.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/fxamacker/cbor/v2@v2.9.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "78d7e01f-cec5-4ab6-93f1-5e659faed2e5",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/date",
+      "version": "v0.3.1",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/date@v0.3.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/date@v0.3.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "79b44356-3f59-4e44-abf9-04c57278f060",
+      "type": "library",
+      "name": "github.com/chrismellard/docker-credential-acr-env",
+      "version": "v0.0.0-20230304212654-82a0ddb27589",
+      "purl": "pkg:golang/github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/chrismellard/docker-credential-acr-env@v0.0.0-20230304212654-82a0ddb27589"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7c26fe5c-0e60-4dae-8956-0c0fddf7da96",
+      "type": "library",
+      "name": "golang.org/x/oauth2",
+      "version": "v0.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/oauth2@v0.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/oauth2@v0.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7cd5cef6-0ec0-490d-8f5c-8c95d51838c8",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/date",
+      "version": "v0.3.1",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/date@v0.3.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/date@v0.3.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7cf6823d-1fac-42cc-bc86-2cb201205517",
+      "type": "library",
+      "name": "github.com/docker/docker-credential-helpers",
+      "version": "v0.9.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/docker-credential-helpers@v0.9.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/docker-credential-helpers@v0.9.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7e33c22f-abb3-426d-a4e8-c6989485e771",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/adal",
+      "version": "v0.9.24",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/adal@v0.9.24",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/adal@v0.9.24"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7ef5e44d-3794-4162-86c6-730b480bcaef",
+      "type": "library",
+      "name": "github.com/containerd/stargz-snapshotter/estargz",
+      "version": "v0.18.2",
+      "purl": "pkg:golang/github.com/containerd/stargz-snapshotter/estargz@v0.18.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/containerd/stargz-snapshotter/estargz@v0.18.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "7f35227c-f091-46a2-9eea-acfca34f3d42",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/configsources",
+      "version": "v1.4.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "803c902b-b302-4261-a443-1256de9acccc",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest",
+      "version": "v0.11.30",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest@v0.11.30",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest@v0.11.30"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "83be446d-67b3-43c8-b0ef-16c5611d65af",
+      "type": "library",
+      "name": "github.com/go-openapi/jsonreference",
+      "version": "v0.21.0",
+      "purl": "pkg:golang/github.com/go-openapi/jsonreference@v0.21.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/jsonreference@v0.21.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "868b0e60-06bf-4dc1-94d2-9d28723f64d3",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/logger",
+      "version": "v0.2.2",
+      "purl": "pkg:golang/github.com/azure/go-autorest/logger@v0.2.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/logger@v0.2.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8736cccd-e638-430c-8e20-34234337efc7",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/signin",
+      "version": "v1.0.6",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.6",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/signin@v1.0.6"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "87a5361a-bad8-4312-9ab1-0029d0546336",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest",
+      "version": "v14.2.0+incompatible",
+      "purl": "pkg:golang/github.com/azure/go-autorest@v14.2.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest@v14.2.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "88a0f07e-70bd-4b38-b9a5-9e952f21b4af",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/sso",
+      "version": "v1.30.11",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.11",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/sso@v1.30.11"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "890f5bc4-e2ec-4216-bf16-cca9e551e757",
+      "type": "library",
+      "name": "github.com/aws/smithy-go",
+      "version": "v1.24.1",
+      "purl": "pkg:golang/github.com/aws/smithy-go@v1.24.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/smithy-go@v1.24.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8b455189-a327-4e95-a856-6b20b25db102",
+      "type": "library",
+      "name": "golang.org/x/text",
+      "version": "v0.31.0",
+      "purl": "pkg:golang/golang.org/x/text@v0.31.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/text@v0.31.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "8f15415d-2a4a-450d-9a7b-c05cf9b6075b",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest",
+      "version": "v0.11.30",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest@v0.11.30",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest@v0.11.30"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "91530699-69b9-40fe-82f8-77e62044030d",
+      "type": "library",
+      "name": "gopkg.in/yaml.v3",
+      "version": "v3.0.1",
+      "purl": "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/yaml.v3@v3.0.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "91d51a4f-faef-4a67-ba2a-763b1cef3f0f",
+      "type": "library",
+      "name": "github.com/google/go-cmp",
+      "version": "v0.7.0",
+      "purl": "pkg:golang/github.com/google/go-cmp@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-cmp@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "927abd63-17c1-4a7a-902f-6c6c3096aa2f",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/azure/cli",
+      "version": "v0.4.7",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/azure/cli@v0.4.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/azure/cli@v0.4.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "940894cb-a573-4bb5-a24b-3f19c6a71273",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ecrpublic",
+      "version": "v1.38.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ecrpublic@v1.38.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ecrpublic@v1.38.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "975d3585-2808-47aa-ae24-e66be8ce9def",
+      "type": "library",
+      "name": "github.com/Azure/azure-sdk-for-go",
+      "version": "v68.0.0+incompatible",
+      "purl": "pkg:golang/github.com/azure/azure-sdk-for-go@v68.0.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/azure-sdk-for-go@v68.0.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "98164d14-fd25-4867-9187-c2194aa6ced6",
+      "type": "library",
+      "name": "github.com/go-openapi/jsonreference",
+      "version": "v0.21.0",
+      "purl": "pkg:golang/github.com/go-openapi/jsonreference@v0.21.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-openapi/jsonreference@v0.21.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9b1bf172-a16a-44aa-899a-541d2a5f6769",
+      "type": "library",
+      "name": "github.com/awslabs/amazon-ecr-credential-helper/ecr-login",
+      "version": "v0.12.0",
+      "purl": "pkg:golang/github.com/awslabs/amazon-ecr-credential-helper/ecr-login@v0.12.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/awslabs/amazon-ecr-credential-helper/ecr-login@v0.12.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9b875f9d-e214-401a-8c18-b62be50ee1bd",
+      "type": "library",
+      "name": "github.com/docker/docker-credential-helpers",
+      "version": "v0.9.5",
+      "purl": "pkg:golang/github.com/docker/docker-credential-helpers@v0.9.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/docker-credential-helpers@v0.9.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9c82fd6b-df77-4369-8787-9adbe27a0606",
+      "type": "library",
+      "name": "gopkg.in/evanphx/json-patch.v4",
+      "version": "v4.13.0",
+      "purl": "pkg:golang/gopkg.in/evanphx/json-patch.v4@v4.13.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/evanphx/json-patch.v4@v4.13.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9cfbaf1a-d8a1-4443-b62f-10904466dd66",
+      "type": "library",
+      "name": "github.com/aws/smithy-go",
+      "version": "v1.24.1",
+      "purl": "pkg:golang/github.com/aws/smithy-go@v1.24.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/smithy-go@v1.24.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "9dc537d3-2df3-425f-885b-7731d7d49c4f",
+      "type": "library",
+      "name": "sigs.k8s.io/randfill",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/sigs.k8s.io/randfill@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/randfill@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a0aff549-52a0-4984-b586-bf647e721a9c",
+      "type": "library",
+      "name": "sigs.k8s.io/yaml",
+      "version": "v1.6.0",
+      "purl": "pkg:golang/sigs.k8s.io/yaml@v1.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/yaml@v1.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a261f136-df37-44c5-9d51-8a87fa11d4ea",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/credentials",
+      "version": "v1.19.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/credentials@v1.19.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a351b040-7f45-4858-a2c3-aafa0978aa6c",
+      "type": "library",
+      "name": "golang.org/x/sync",
+      "version": "v0.20.0",
+      "purl": "pkg:golang/golang.org/x/sync@v0.20.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sync@v0.20.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a49d7a72-71f5-45f6-9c10-ad1b4228c2fc",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
+      "version": "v1.13.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a4d12904-2d62-4720-b964-688d66f00be9",
+      "type": "library",
+      "name": "github.com/spf13/cobra",
+      "version": "v1.10.2",
+      "purl": "pkg:golang/github.com/spf13/cobra@v1.10.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/spf13/cobra@v1.10.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a70a724b-8790-4297-a190-70314570cf21",
+      "type": "library",
+      "name": "github.com/opencontainers/go-digest",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/github.com/opencontainers/go-digest@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/go-digest@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a7498ef5-f718-41b0-a10b-e12746cafbfc",
+      "type": "library",
+      "name": "github.com/google/go-cmp",
+      "version": "v0.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/google/go-cmp@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-cmp@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "a89e1192-be18-4616-898a-af3aecabb290",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/feature/ec2/imds",
+      "version": "v1.18.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ab129779-7e16-4761-bba1-1165537be126",
+      "type": "library",
+      "name": "golang.org/x/sync",
+      "version": "v0.20.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/sync@v0.20.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sync@v0.20.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ae23577e-ec49-45e4-a286-ff9fae532685",
+      "type": "library",
+      "name": "golang.org/x/oauth2",
+      "version": "v0.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/oauth2@v0.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/oauth2@v0.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "af38c0bb-0913-46bb-be1e-79f5169cbbc3",
+      "type": "library",
+      "name": "github.com/vbatts/tar-split",
+      "version": "v0.12.2",
+      "purl": "pkg:golang/github.com/vbatts/tar-split@v0.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/vbatts/tar-split@v0.12.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b0b003a7-0f08-45ff-b4a3-0a78f895e5ad",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/config",
+      "version": "v1.32.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/config@v1.32.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b0e65b48-68b0-4ecd-b586-e62df698667d",
+      "type": "library",
+      "name": "go.yaml.in/yaml/v3",
+      "version": "v3.0.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.yaml.in/yaml/v3@v3.0.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.yaml.in/yaml/v3@v3.0.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b1be8e7b-d62d-4deb-9016-42fdb57bb521",
+      "type": "library",
+      "name": "sigs.k8s.io/structured-merge-diff/v6",
+      "version": "v6.3.0",
+      "purl": "pkg:golang/sigs.k8s.io/structured-merge-diff/v6@v6.3.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/structured-merge-diff/v6@v6.3.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b339b5d6-b0c3-458b-8e82-a65685a3cf8f",
+      "type": "library",
+      "name": "github.com/awslabs/amazon-ecr-credential-helper/ecr-login",
+      "version": "v0.12.0",
+      "purl": "pkg:golang/github.com/awslabs/amazon-ecr-credential-helper/ecr-login@v0.12.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/awslabs/amazon-ecr-credential-helper/ecr-login@v0.12.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b3bb9f44-7965-4eed-9d9b-df843a9b1c9c",
+      "type": "library",
+      "name": "github.com/sirupsen/logrus",
+      "version": "v1.9.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/sirupsen/logrus@v1.9.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/sirupsen/logrus@v1.9.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b7940a39-95d5-4132-af05-4591c01a30fc",
+      "type": "library",
+      "name": "k8s.io/klog/v2",
+      "version": "v2.130.1",
+      "purl": "pkg:golang/k8s.io/klog/v2@v2.130.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/klog/v2@v2.130.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b841f57d-9a01-488d-976e-460bc2c236a6",
+      "type": "library",
+      "name": "github.com/docker/docker-credential-helpers",
+      "version": "v0.9.5",
+      "purl": "pkg:golang/github.com/docker/docker-credential-helpers@v0.9.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/docker-credential-helpers@v0.9.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b9238bef-c2a9-4da8-84fe-d50308f25251",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2",
+      "version": "v2.7.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ba213264-b40e-40c8-9241-4cf2ecd66c83",
+      "type": "library",
+      "name": "github.com/golang-jwt/jwt/v4",
+      "version": "v4.5.2",
+      "purl": "pkg:golang/github.com/golang-jwt/jwt/v4@v4.5.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/golang-jwt/jwt/v4@v4.5.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ba74ef1a-4009-44d4-9128-49c28aadf1a8",
+      "type": "library",
+      "name": "github.com/docker/cli",
+      "version": "v29.4.0+incompatible",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/cli@v29.4.0%2Bincompatible",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/cli@v29.4.0+incompatible"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "baf03181-9f55-4c53-b90c-f3755f59fcd6",
+      "type": "library",
+      "name": "go.yaml.in/yaml/v2",
+      "version": "v2.4.3",
+      "purl": "pkg:golang/go.yaml.in/yaml/v2@v2.4.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.yaml.in/yaml/v2@v2.4.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bf36fea6-750b-46e3-8e9d-4133211c5021",
+      "type": "library",
+      "name": "github.com/munnerz/goautoneg",
+      "version": "v0.0.0-20191010083416-a7dc8b61c822",
+      "purl": "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "bf92a5a4-658f-435d-9b8f-e22ea7bfe72f",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/logger",
+      "version": "v0.2.2",
+      "purl": "pkg:golang/github.com/azure/go-autorest/logger@v0.2.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/logger@v0.2.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c2d49370-94f4-4dda-b8b3-3fa6a9598873",
+      "type": "library",
+      "name": "github.com/klauspost/compress",
+      "version": "v1.18.5",
+      "purl": "pkg:golang/github.com/klauspost/compress@v1.18.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/klauspost/compress@v1.18.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c4987d3b-547f-4259-84bf-95ed0f5cbb2f",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/tracing",
+      "version": "v0.6.1",
+      "purl": "pkg:golang/github.com/azure/go-autorest/tracing@v0.6.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/tracing@v0.6.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c6633e17-d1eb-4abe-a08c-ffaa73218fa0",
+      "type": "application",
+      "name": "pkg/authn/kubernetes/go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c7c641f2-4277-4737-a1f8-5a74f8d3c2c0",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/azure/auth",
+      "version": "v0.5.13",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/azure/auth@v0.5.13",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/azure/auth@v0.5.13"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c7cc8c1a-38b1-4ab5-9000-281a5698ddba",
+      "type": "library",
+      "name": "k8s.io/utils",
+      "version": "v0.0.0-20251002143259-bc988d571ff4",
+      "purl": "pkg:golang/k8s.io/utils@v0.0.0-20251002143259-bc988d571ff4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/utils@v0.0.0-20251002143259-bc988d571ff4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c974d0e2-3499-46ce-a9ee-3902b2034282",
+      "type": "application",
+      "name": "pkg/authn/k8schain/go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "c9d6f0aa-67f8-4d81-8b6b-0f2963e295e4",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/sts",
+      "version": "v1.41.7",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/sts@v1.41.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ca88867a-850b-4a5e-bea5-b1c81d8fdc0e",
+      "type": "library",
+      "name": "k8s.io/utils",
+      "version": "v0.0.0-20251002143259-bc988d571ff4",
+      "purl": "pkg:golang/k8s.io/utils@v0.0.0-20251002143259-bc988d571ff4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/utils@v0.0.0-20251002143259-bc988d571ff4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ca8dbe40-038c-45c8-b18c-395392275252",
+      "type": "library",
+      "name": "github.com/mailru/easyjson",
+      "version": "v0.9.0",
+      "purl": "pkg:golang/github.com/mailru/easyjson@v0.9.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mailru/easyjson@v0.9.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "cd8f4b4b-affe-4587-8a33-fe3313982914",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
+      "version": "v1.13.18",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.18",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.18"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "cdaaece5-c0cd-4f54-91aa-d6fda87d640f",
+      "type": "library",
+      "name": "gopkg.in/evanphx/json-patch.v4",
+      "version": "v4.13.0",
+      "purl": "pkg:golang/gopkg.in/evanphx/json-patch.v4@v4.13.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "gopkg.in/evanphx/json-patch.v4@v4.13.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ce462bca-04bb-4618-ab6a-a50fcb0b2af9",
+      "type": "library",
+      "name": "github.com/Azure/go-autorest/autorest/azure/cli",
+      "version": "v0.4.7",
+      "purl": "pkg:golang/github.com/azure/go-autorest/autorest/azure/cli@v0.4.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Azure/go-autorest/autorest/azure/cli@v0.4.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "cf7448b7-bb5c-497a-b42b-e99d50966b18",
+      "type": "application",
+      "name": "go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d05f53e4-e6b0-49c8-b1e7-0c0106ba61e6",
+      "type": "library",
+      "name": "github.com/mitchellh/go-homedir",
+      "version": "v1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/mitchellh/go-homedir@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mitchellh/go-homedir@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d1c03dbc-6924-437c-93b0-2736ff9df281",
+      "type": "library",
+      "name": "github.com/sirupsen/logrus",
+      "version": "v1.9.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/sirupsen/logrus@v1.9.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/sirupsen/logrus@v1.9.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d4131deb-9be5-4644-bb53-80e3681b5759",
+      "type": "library",
+      "name": "github.com/sirupsen/logrus",
+      "version": "v1.9.4",
+      "purl": "pkg:golang/github.com/sirupsen/logrus@v1.9.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/sirupsen/logrus@v1.9.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d4bb4034-3b68-4dbd-b1ed-40dcfeeab1ae",
+      "type": "library",
+      "name": "github.com/json-iterator/go",
+      "version": "v1.1.12",
+      "purl": "pkg:golang/github.com/json-iterator/go@v1.1.12",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/json-iterator/go@v1.1.12"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d5e771e2-ead4-48d0-b4a5-76dc12df0759",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
+      "version": "v1.13.5",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d7f6b2f6-6939-47ca-849e-23954983ef4a",
+      "type": "library",
+      "name": "github.com/go-logr/logr",
+      "version": "v1.4.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/go-logr/logr@v1.4.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-logr/logr@v1.4.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d8d61a8f-d6cb-482a-beb5-6e87ad1d69ba",
+      "type": "library",
+      "name": "golang.org/x/time",
+      "version": "v0.11.0",
+      "purl": "pkg:golang/golang.org/x/time@v0.11.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/time@v0.11.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "d963fe57-90a5-4234-8f27-2cb1dc2f6f95",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/service/ecrpublic",
+      "version": "v1.38.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ecrpublic@v1.38.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/service/ecrpublic@v1.38.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "db9e5d96-50bb-4288-8310-caabf5429816",
+      "type": "library",
+      "name": "github.com/modern-go/concurrent",
+      "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+      "purl": "pkg:golang/github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "dbd26e68-67fa-4068-b797-38ac38bb1420",
+      "type": "library",
+      "name": "github.com/go-logr/logr",
+      "version": "v1.4.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/go-logr/logr@v1.4.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-logr/logr@v1.4.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "dbfcf880-5294-456c-b895-a162efdec910",
+      "type": "library",
+      "name": "golang.org/x/net",
+      "version": "v0.47.0",
+      "purl": "pkg:golang/golang.org/x/net@v0.47.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/net@v0.47.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "dd851c1b-1e12-4ebf-8f8b-69b096dedf93",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/credentials",
+      "version": "v1.19.10",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.10",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/credentials@v1.19.10"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "de60506d-1105-4998-b830-e1e3235df482",
+      "type": "library",
+      "name": "github.com/google/go-cmp",
+      "version": "v0.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/google/go-cmp@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-cmp@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e24503cd-37e2-443c-bf75-cc854188da88",
+      "type": "library",
+      "name": "k8s.io/api",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/api@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/api@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e2fb802e-91df-44d7-b929-4f121b8fb49d",
+      "type": "library",
+      "name": "github.com/golang-jwt/jwt/v4",
+      "version": "v4.5.2",
+      "purl": "pkg:golang/github.com/golang-jwt/jwt/v4@v4.5.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/golang-jwt/jwt/v4@v4.5.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e364b539-4456-475e-b82d-af2b3f5789cc",
+      "type": "library",
+      "name": "k8s.io/klog/v2",
+      "version": "v2.130.1",
+      "purl": "pkg:golang/k8s.io/klog/v2@v2.130.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/klog/v2@v2.130.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e7019d73-e90a-4bfd-9fd4-d90586dd872f",
+      "type": "library",
+      "name": "github.com/opencontainers/image-spec",
+      "version": "v1.1.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/opencontainers/image-spec@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/opencontainers/image-spec@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e8e4547c-1e4e-4edd-83b9-a6e4f6ccc803",
+      "type": "library",
+      "name": "golang.org/x/crypto",
+      "version": "v0.45.0",
+      "purl": "pkg:golang/golang.org/x/crypto@v0.45.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/crypto@v0.45.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e90ff08d-ce7b-40a5-a55e-fb7bfc876ede",
+      "type": "library",
+      "name": "github.com/modern-go/concurrent",
+      "version": "v0.0.0-20180306012644-bacd9c7ef1dd",
+      "purl": "pkg:golang/github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e92cbaac-c40e-4466-bc7e-abf78f495111",
+      "type": "library",
+      "name": "github.com/vbatts/tar-split",
+      "version": "v0.12.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/vbatts/tar-split@v0.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/vbatts/tar-split@v0.12.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ea087e03-7aff-4865-86b6-e9ceafd66ec8",
+      "type": "library",
+      "name": "golang.org/x/net",
+      "version": "v0.47.0",
+      "purl": "pkg:golang/golang.org/x/net@v0.47.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/net@v0.47.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "eb329c36-9ec1-456c-b289-c904e7a7846a",
+      "type": "library",
+      "name": "google.golang.org/protobuf",
+      "version": "v1.36.8",
+      "purl": "pkg:golang/google.golang.org/protobuf@v1.36.8",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "google.golang.org/protobuf@v1.36.8"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ec4b5b27-7e19-4763-a881-2faa0a75db89",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2",
+      "version": "v1.41.2",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2@v1.41.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "eee00c2f-25b2-4f00-b3e8-48687b503b5f",
+      "type": "library",
+      "name": "github.com/json-iterator/go",
+      "version": "v1.1.12",
+      "purl": "pkg:golang/github.com/json-iterator/go@v1.1.12",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/json-iterator/go@v1.1.12"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "efd89f4c-d569-456a-ba4d-a5f939aacfd5",
+      "type": "library",
+      "name": "golang.org/x/sync",
+      "version": "v0.20.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/sync@v0.20.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sync@v0.20.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f09e8d3a-4098-45bf-8846-09c4fd530bfb",
+      "type": "library",
+      "name": "github.com/mitchellh/go-homedir",
+      "version": "v1.1.0",
+      "purl": "pkg:golang/github.com/mitchellh/go-homedir@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/mitchellh/go-homedir@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f3781dfa-e203-4c8e-9fa0-6b61e687bb87",
+      "type": "library",
+      "name": "github.com/dimchansky/utfbom",
+      "version": "v1.1.1",
+      "purl": "pkg:golang/github.com/dimchansky/utfbom@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/dimchansky/utfbom@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f4d6b740-c926-48c1-a5da-626df2850fb8",
+      "type": "library",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/ini",
+      "version": "v1.8.4",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f5f6f173-d312-4ab9-aa86-c914c34b99b3",
+      "type": "library",
+      "name": "cloud.google.com/go/compute/metadata",
+      "version": "v0.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/cloud.google.com/go/compute/metadata@v0.7.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "cloud.google.com/go/compute/metadata@v0.7.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f6d75d8e-b566-42e6-95dc-34f1222d1c19",
+      "type": "library",
+      "name": "sigs.k8s.io/randfill",
+      "version": "v1.0.0",
+      "purl": "pkg:golang/sigs.k8s.io/randfill@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "sigs.k8s.io/randfill@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f81cf343-f79c-4887-8790-a239c904c782",
+      "type": "library",
+      "name": "golang.org/x/sys",
+      "version": "v0.43.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/sys@v0.43.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/sys@v0.43.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f90e1ec8-0dbf-4ea4-bc33-99e58e162f5a",
+      "type": "library",
+      "name": "github.com/klauspost/compress",
+      "version": "v1.18.5",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        },
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/klauspost/compress@v1.18.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/klauspost/compress@v1.18.5"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "f96d56c6-d9d5-4a4b-a020-40398117cb85",
+      "type": "library",
+      "name": "github.com/munnerz/goautoneg",
+      "version": "v0.0.0-20191010083416-a7dc8b61c822",
+      "purl": "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "fb94abe3-b06a-4cc2-b3aa-6589a1042b32",
+      "type": "library",
+      "name": "k8s.io/apimachinery",
+      "version": "v0.35.3",
+      "purl": "pkg:golang/k8s.io/apimachinery@v0.35.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "k8s.io/apimachinery@v0.35.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "fbd940c5-fb9a-48bc-b947-3a43ad86c334",
+      "type": "library",
+      "name": "github.com/go-logr/logr",
+      "version": "v1.4.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/go-logr/logr@v1.4.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-logr/logr@v1.4.3"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "fe3888a7-b46a-4d92-89e4-57ba9f14a2a0",
+      "type": "library",
+      "name": "github.com/containerd/stargz-snapshotter/estargz",
+      "version": "v0.18.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/containerd/stargz-snapshotter/estargz@v0.18.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/containerd/stargz-snapshotter/estargz@v0.18.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "ff62165a-d041-4505-ad24-2a5dc29724be",
+      "type": "library",
+      "name": "golang.org/x/time",
+      "version": "v0.11.0",
+      "purl": "pkg:golang/golang.org/x/time@v0.11.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/time@v0.11.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/containerd/errdefs/pkg@v0.3.0",
+      "type": "library",
+      "name": "github.com/containerd/errdefs/pkg",
+      "version": "v0.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/containerd/errdefs/pkg@v0.3.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/containerd/errdefs/pkg@v0.3.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/containerd/errdefs@v1.0.0",
+      "type": "library",
+      "name": "github.com/containerd/errdefs",
+      "version": "v1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/containerd/errdefs@v1.0.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/containerd/errdefs@v1.0.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/cpuguy83/go-md2man/v2@v2.0.7",
+      "type": "library",
+      "name": "github.com/cpuguy83/go-md2man/v2",
+      "version": "v2.0.7",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/cpuguy83/go-md2man/v2@v2.0.7",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/cpuguy83/go-md2man/v2@v2.0.7"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+      "type": "library",
+      "name": "github.com/davecgh/go-spew",
+      "version": "v1.1.1",
+      "purl": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/davecgh/go-spew@v1.1.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc",
+      "type": "library",
+      "name": "github.com/davecgh/go-spew",
+      "version": "v1.1.2-0.20180830191138-d8f796af33cc",
+      "purl": "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/distribution/reference@v0.6.0",
+      "type": "library",
+      "name": "github.com/distribution/reference",
+      "version": "v0.6.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/distribution/reference@v0.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/distribution/reference@v0.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/docker/go-connections@v0.6.0",
+      "type": "library",
+      "name": "github.com/docker/go-connections",
+      "version": "v0.6.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/go-connections@v0.6.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/go-connections@v0.6.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/docker/go-units@v0.5.0",
+      "type": "library",
+      "name": "github.com/docker/go-units",
+      "version": "v0.5.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/docker/go-units@v0.5.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/docker/go-units@v0.5.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
+      "type": "library",
+      "name": "github.com/felixge/httpsnoop",
+      "version": "v1.0.4",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/felixge/httpsnoop@v1.0.4"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/go-logr/stdr@v1.2.2",
+      "type": "library",
+      "name": "github.com/go-logr/stdr",
+      "version": "v1.2.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/go-logr/stdr@v1.2.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/go-logr/stdr@v1.2.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/google/go-containerregistry@0.21.5",
+      "type": "library",
+      "name": "github.com/google/go-containerregistry",
+      "purl": "pkg:golang/github.com/google/go-containerregistry@0.21.5",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-containerregistry"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ],
+      "version": "0.21.5"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/google/go-containerregistry/cmd/krane",
+      "type": "library",
+      "name": "github.com/google/go-containerregistry/cmd/krane",
+      "purl": "pkg:golang/github.com/google/go-containerregistry/cmd/krane",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-containerregistry/cmd/krane"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/k8schain",
+      "type": "library",
+      "name": "github.com/google/go-containerregistry/pkg/authn/k8schain",
+      "purl": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/k8schain",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-containerregistry/pkg/authn/k8schain"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/kubernetes",
+      "type": "library",
+      "name": "github.com/google/go-containerregistry/pkg/authn/kubernetes",
+      "purl": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/kubernetes",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/google/go-containerregistry/pkg/authn/kubernetes"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/microsoft/go-winio@v0.6.2",
+      "type": "library",
+      "name": "github.com/Microsoft/go-winio",
+      "version": "v0.6.2",
+      "purl": "pkg:golang/github.com/microsoft/go-winio@v0.6.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/Microsoft/go-winio@v0.6.2"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/moby/docker-image-spec@v1.3.1",
+      "type": "library",
+      "name": "github.com/moby/docker-image-spec",
+      "version": "v1.3.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/moby/docker-image-spec@v1.3.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/moby/docker-image-spec@v1.3.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/moby/moby/api@v1.54.1",
+      "type": "library",
+      "name": "github.com/moby/moby/api",
+      "version": "v1.54.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/moby/moby/api@v1.54.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/moby/moby/api@v1.54.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/moby/moby/client@v0.4.0",
+      "type": "library",
+      "name": "github.com/moby/moby/client",
+      "version": "v0.4.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/moby/moby/client@v0.4.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/moby/moby/client@v0.4.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/pkg/errors@v0.9.1",
+      "type": "library",
+      "name": "github.com/pkg/errors",
+      "version": "v0.9.1",
+      "purl": "pkg:golang/github.com/pkg/errors@v0.9.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/pkg/errors@v0.9.1"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/russross/blackfriday/v2@v2.1.0",
+      "type": "library",
+      "name": "github.com/russross/blackfriday/v2",
+      "version": "v2.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/github.com/russross/blackfriday/v2@v2.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "github.com/russross/blackfriday/v2@v2.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/go.opentelemetry.io/auto/sdk@v1.1.0",
+      "type": "library",
+      "name": "go.opentelemetry.io/auto/sdk",
+      "version": "v1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.opentelemetry.io/auto/sdk@v1.1.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.opentelemetry.io/auto/sdk@v1.1.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.61.0",
+      "type": "library",
+      "name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+      "version": "v0.61.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.61.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.61.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.36.0",
+      "type": "library",
+      "name": "go.opentelemetry.io/otel/metric",
+      "version": "v1.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.opentelemetry.io/otel/metric@v1.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.opentelemetry.io/otel/metric@v1.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0",
+      "type": "library",
+      "name": "go.opentelemetry.io/otel/trace",
+      "version": "v1.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.opentelemetry.io/otel/trace@v1.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel@v1.36.0",
+      "type": "library",
+      "name": "go.opentelemetry.io/otel",
+      "version": "v1.36.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:golang/go.opentelemetry.io/otel@v1.36.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "go.opentelemetry.io/otel@v1.36.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/golang.org/x/mod@v0.35.0",
+      "type": "library",
+      "name": "golang.org/x/mod",
+      "version": "v0.35.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/mod@v0.35.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/mod@v0.35.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/golang.org/x/tools@v0.44.0",
+      "type": "library",
+      "name": "golang.org/x/tools",
+      "version": "v0.44.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "purl": "pkg:golang/golang.org/x/tools@v0.44.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/tools@v0.44.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/codespell@2.4.1",
+      "type": "library",
+      "name": "codespell",
+      "version": "2.4.1",
+      "purl": "pkg:pypi/codespell@2.4.1",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "pip"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "038b3d68-3765-484a-b7b1-9445a9852c21",
+      "dependsOn": []
+    },
+    {
+      "ref": "059c0981-26aa-4a07-aeff-612220906a8b",
+      "dependsOn": []
+    },
+    {
+      "ref": "06e416aa-97ad-4b07-93cd-7cca4a41bdf6",
+      "dependsOn": []
+    },
+    {
+      "ref": "0735476f-bcfb-4464-a8c2-93f19587cc43",
+      "dependsOn": []
+    },
+    {
+      "ref": "090c8299-e03f-496e-b818-a804e4a135a9",
+      "dependsOn": []
+    },
+    {
+      "ref": "098cc96b-d9e7-42fc-9f93-c45f674b125d",
+      "dependsOn": []
+    },
+    {
+      "ref": "0fa21edd-f0ac-4ff5-9aaa-d4c7d2e30191",
+      "dependsOn": []
+    },
+    {
+      "ref": "0fe49175-2a58-484d-85a7-b59d49842610",
+      "dependsOn": []
+    },
+    {
+      "ref": "115ac635-4782-447f-af1f-172b535d3535",
+      "dependsOn": []
+    },
+    {
+      "ref": "1203ed5d-6429-4f5f-87c7-127bde80ebde",
+      "dependsOn": []
+    },
+    {
+      "ref": "1209a795-ff47-4155-8be8-8e514d7c422a",
+      "dependsOn": []
+    },
+    {
+      "ref": "1292e82b-3b88-41c7-9241-bb907ae5ced7",
+      "dependsOn": []
+    },
+    {
+      "ref": "13828902-4be0-42e8-8ee2-e89d02ffe2aa",
+      "dependsOn": []
+    },
+    {
+      "ref": "181d79ac-8202-462d-ac46-f5b3270f7276",
+      "dependsOn": [
+        "1e8c1880-348f-48ea-84f5-2ff2a7f1c78e",
+        "91d51a4f-faef-4a67-ba2a-763b1cef3f0f"
+      ]
+    },
+    {
+      "ref": "1bb9f4b4-00a5-41a3-9d75-6eee6adc9422",
+      "dependsOn": []
+    },
+    {
+      "ref": "1e8c1880-348f-48ea-84f5-2ff2a7f1c78e",
+      "dependsOn": []
+    },
+    {
+      "ref": "1f5fec87-f904-45de-b20a-4466e2326f68",
+      "dependsOn": [
+        "251ce868-2ac9-4121-8f72-5fe599057589",
+        "5f144c43-bb3a-4002-a1e1-218d3445e158",
+        "b0e65b48-68b0-4ecd-b586-e62df698667d",
+        "pkg:golang/github.com/cpuguy83/go-md2man/v2@v2.0.7"
+      ]
+    },
+    {
+      "ref": "205ed7c4-af9d-4e91-9488-5380c8a2069c",
+      "dependsOn": []
+    },
+    {
+      "ref": "215a28fb-190d-427c-84b6-2ba1a35dc241",
+      "dependsOn": []
+    },
+    {
+      "ref": "23079af2-0477-4afc-b8ff-267f5ff782ea",
+      "dependsOn": []
+    },
+    {
+      "ref": "251ce868-2ac9-4121-8f72-5fe599057589",
+      "dependsOn": []
+    },
+    {
+      "ref": "262407f2-3c0c-44ba-a121-23647f11d56b",
+      "dependsOn": []
+    },
+    {
+      "ref": "262862d7-eb4e-4794-9248-63fd38718eb8",
+      "dependsOn": []
+    },
+    {
+      "ref": "2a08d02f-ae17-41a0-959b-714d7fd4203c",
+      "dependsOn": []
+    },
+    {
+      "ref": "2b7b13c9-7b7b-4c37-be54-fa2c13d79a81",
+      "dependsOn": []
+    },
+    {
+      "ref": "2bdaaf65-0cd0-42c0-b074-f6806c769d5a",
+      "dependsOn": []
+    },
+    {
+      "ref": "2cd9e216-b3e6-4046-9c66-29098d36c7ca",
+      "dependsOn": []
+    },
+    {
+      "ref": "2cdad8da-b935-446b-b83e-47871b55706e",
+      "dependsOn": []
+    },
+    {
+      "ref": "303d5373-1675-4e52-a7f1-7b48ef9a914a",
+      "dependsOn": []
+    },
+    {
+      "ref": "326df05f-5236-4f3b-8f17-d152ba1247a8",
+      "dependsOn": []
+    },
+    {
+      "ref": "33fc4916-4cd2-4f41-9334-f999088e32e9",
+      "dependsOn": [
+        "d1c03dbc-6924-437c-93b0-2736ff9df281"
+      ]
+    },
+    {
+      "ref": "341faf2e-3e99-4e0f-9450-cca7f69bc39c",
+      "dependsOn": []
+    },
+    {
+      "ref": "35477d7a-1b74-4d0f-ad18-2c78b76de535",
+      "dependsOn": []
+    },
+    {
+      "ref": "354d7e35-6c33-42f9-a143-b2829ae9cc6b",
+      "dependsOn": []
+    },
+    {
+      "ref": "3695d2d7-2765-49e1-8ebd-ccd0c6579905",
+      "dependsOn": []
+    },
+    {
+      "ref": "3781a627-86ec-4aa4-8d91-ef7433e6dd3b",
+      "dependsOn": []
+    },
+    {
+      "ref": "393ab6d2-a868-4e74-a12d-f744f311358a",
+      "dependsOn": []
+    },
+    {
+      "ref": "3a0d1a23-b6d3-47cd-8f50-3fcd010ddaac",
+      "dependsOn": []
+    },
+    {
+      "ref": "3a7b2d2e-163b-447d-994f-c73b8ae8a0e4",
+      "dependsOn": []
+    },
+    {
+      "ref": "3ab91014-80ae-454d-a355-752ce4698327",
+      "dependsOn": []
+    },
+    {
+      "ref": "3c158940-4d98-473d-9fba-ad5ac335e580",
+      "dependsOn": []
+    },
+    {
+      "ref": "3da5a05f-125a-4510-a7e1-b5c1056c49f2",
+      "dependsOn": []
+    },
+    {
+      "ref": "3f3c1b48-cd7f-4552-aac5-6c22ab444669",
+      "dependsOn": []
+    },
+    {
+      "ref": "40ecf96a-bf4f-4fee-befc-18d2c026c0d7",
+      "dependsOn": []
+    },
+    {
+      "ref": "40fc2dfe-4f3a-4025-bff4-07d7c1629c0b",
+      "dependsOn": []
+    },
+    {
+      "ref": "42bc5bc9-628d-4dd4-b5bd-43cf49f16007",
+      "dependsOn": []
+    },
+    {
+      "ref": "4360dd54-067a-4ece-bc24-c066042238e0",
+      "dependsOn": []
+    },
+    {
+      "ref": "43631bc9-89ed-470e-bef8-dee3c873b7f9",
+      "dependsOn": []
+    },
+    {
+      "ref": "467a5ae5-0018-4f2c-b419-ef2c4ef21077",
+      "dependsOn": []
+    },
+    {
+      "ref": "46d355db-155a-4e04-9fd1-bdb72379c49d",
+      "dependsOn": []
+    },
+    {
+      "ref": "485c4ccd-b4c8-4c2a-b07e-176931ddcd52",
+      "dependsOn": []
+    },
+    {
+      "ref": "48e3bd3d-a87d-4554-85d7-b9b63b0c09ea",
+      "dependsOn": []
+    },
+    {
+      "ref": "4907b0ba-8a84-4ddc-bd2a-b4111305d4f8",
+      "dependsOn": []
+    },
+    {
+      "ref": "4a591354-e8f1-407c-b724-430d8cc2ceb4",
+      "dependsOn": []
+    },
+    {
+      "ref": "4bab2dac-b6b4-4014-b8fa-8b168af3eb2b",
+      "dependsOn": []
+    },
+    {
+      "ref": "4d892f2d-72a7-4e3a-8bd4-cab5ee5f2e68",
+      "dependsOn": []
+    },
+    {
+      "ref": "5002241e-478b-4e9a-a8d3-c84601e9d216",
+      "dependsOn": []
+    },
+    {
+      "ref": "517b30a1-d092-4224-86fe-fc1f121c6033",
+      "dependsOn": []
+    },
+    {
+      "ref": "51d5f453-fcd9-405f-8d3f-48a708988241",
+      "dependsOn": []
+    },
+    {
+      "ref": "53b3aa46-3f13-4e8f-a4d9-44190ba030a9",
+      "dependsOn": []
+    },
+    {
+      "ref": "54084be6-dbe0-4572-b1cf-d74349bf71da",
+      "dependsOn": []
+    },
+    {
+      "ref": "576385a5-7fcb-4ccb-ba7d-08ecfd24a044",
+      "dependsOn": [
+        "pkg:pypi/codespell@2.4.1"
+      ]
+    },
+    {
+      "ref": "589a1f4d-64d7-4733-9c0a-3cb9045e99d6",
+      "dependsOn": [
+        "a70a724b-8790-4297-a190-70314570cf21"
+      ]
+    },
+    {
+      "ref": "5a3a39ff-d041-4c33-8b12-dd5e790e14d6",
+      "dependsOn": []
+    },
+    {
+      "ref": "5a7601a2-8259-4d80-bd1e-ca379549ba66",
+      "dependsOn": []
+    },
+    {
+      "ref": "5e692353-888a-41f1-8059-a8bed24b6619",
+      "dependsOn": []
+    },
+    {
+      "ref": "5f144c43-bb3a-4002-a1e1-218d3445e158",
+      "dependsOn": []
+    },
+    {
+      "ref": "5fd4d656-d8de-4d40-8df2-b372ffdbe866",
+      "dependsOn": []
+    },
+    {
+      "ref": "6172c334-4be2-4be2-af03-ef4a64cb22a6",
+      "dependsOn": []
+    },
+    {
+      "ref": "61b95f69-c051-4987-84bf-d1e747a811da",
+      "dependsOn": []
+    },
+    {
+      "ref": "61dd5de9-77f8-4aa2-abe0-4c90078658e4",
+      "dependsOn": []
+    },
+    {
+      "ref": "621df82a-be82-4cb0-a696-8a7336590915",
+      "dependsOn": [
+        "pkg:golang/github.com/google/go-containerregistry/cmd/krane"
+      ]
+    },
+    {
+      "ref": "65acc47d-22db-4f73-911a-fc7f21e509cb",
+      "dependsOn": []
+    },
+    {
+      "ref": "65d9469b-d1da-4b3a-afc7-08aea44257a0",
+      "dependsOn": []
+    },
+    {
+      "ref": "66fc4937-3b05-4d7e-97ba-23bd7f344162",
+      "dependsOn": []
+    },
+    {
+      "ref": "68b0abd3-cc31-48c3-b09a-ae43c33e567e",
+      "dependsOn": []
+    },
+    {
+      "ref": "69a6bdf8-3355-422b-9f7c-de0382547f13",
+      "dependsOn": []
+    },
+    {
+      "ref": "6b1415c6-d2a1-4361-b373-de91e9fc2eab",
+      "dependsOn": []
+    },
+    {
+      "ref": "6b1609eb-54c6-4eb6-8241-d3308e8e0559",
+      "dependsOn": [
+        "3f3c1b48-cd7f-4552-aac5-6c22ab444669"
+      ]
+    },
+    {
+      "ref": "6b245499-2a70-43f3-afb1-6b5bc2f19efa",
+      "dependsOn": [
+        "181d79ac-8202-462d-ac46-f5b3270f7276"
+      ]
+    },
+    {
+      "ref": "6d726488-3c2a-4619-b64b-a65281a1af87",
+      "dependsOn": []
+    },
+    {
+      "ref": "6dbf59fd-4296-40f4-82c1-6fa9dacce27c",
+      "dependsOn": []
+    },
+    {
+      "ref": "6e61d344-2e0e-4abf-8766-554d365ce352",
+      "dependsOn": []
+    },
+    {
+      "ref": "70ceeb8a-e0df-4720-a745-f8500db2b804",
+      "dependsOn": [
+        "098cc96b-d9e7-42fc-9f93-c45f674b125d",
+        "1209a795-ff47-4155-8be8-8e514d7c422a",
+        "33fc4916-4cd2-4f41-9334-f999088e32e9",
+        "efd89f4c-d569-456a-ba4d-a5f939aacfd5"
+      ]
+    },
+    {
+      "ref": "71001b35-e2c8-4587-a8b0-a2a6904186d4",
+      "dependsOn": []
+    },
+    {
+      "ref": "72338c37-522c-45de-8bca-2a6b4290e706",
+      "dependsOn": []
+    },
+    {
+      "ref": "7238d71b-e365-4102-8bf0-86be6bd2033f",
+      "dependsOn": []
+    },
+    {
+      "ref": "74a34690-ab40-41c4-829c-cfd50188da0e",
+      "dependsOn": [
+        "485c4ccd-b4c8-4c2a-b07e-176931ddcd52"
+      ]
+    },
+    {
+      "ref": "759d0793-5b10-404a-b3de-2853b41df89e",
+      "dependsOn": []
+    },
+    {
+      "ref": "762475df-514d-4770-b5cb-d978e15029d8",
+      "dependsOn": []
+    },
+    {
+      "ref": "767a3fbb-5f76-4991-a80f-c283dcede861",
+      "dependsOn": [
+        "5002241e-478b-4e9a-a8d3-c84601e9d216",
+        "de60506d-1105-4998-b830-e1e3235df482"
+      ]
+    },
+    {
+      "ref": "77e64335-bd77-4e79-b887-1cc451e84a5f",
+      "dependsOn": []
+    },
+    {
+      "ref": "78d7e01f-cec5-4ab6-93f1-5e659faed2e5",
+      "dependsOn": []
+    },
+    {
+      "ref": "79b44356-3f59-4e44-abf9-04c57278f060",
+      "dependsOn": []
+    },
+    {
+      "ref": "7c26fe5c-0e60-4dae-8956-0c0fddf7da96",
+      "dependsOn": [
+        "767a3fbb-5f76-4991-a80f-c283dcede861"
+      ]
+    },
+    {
+      "ref": "7cd5cef6-0ec0-490d-8f5c-8c95d51838c8",
+      "dependsOn": []
+    },
+    {
+      "ref": "7cf6823d-1fac-42cc-bc86-2cb201205517",
+      "dependsOn": []
+    },
+    {
+      "ref": "7e33c22f-abb3-426d-a4e8-c6989485e771",
+      "dependsOn": []
+    },
+    {
+      "ref": "7ef5e44d-3794-4162-86c6-730b480bcaef",
+      "dependsOn": [
+        "a351b040-7f45-4858-a2c3-aafa0978aa6c",
+        "a70a724b-8790-4297-a190-70314570cf21",
+        "af38c0bb-0913-46bb-be1e-79f5169cbbc3",
+        "c2d49370-94f4-4dda-b8b3-3fa6a9598873"
+      ]
+    },
+    {
+      "ref": "7f35227c-f091-46a2-9eea-acfca34f3d42",
+      "dependsOn": []
+    },
+    {
+      "ref": "803c902b-b302-4261-a443-1256de9acccc",
+      "dependsOn": []
+    },
+    {
+      "ref": "83be446d-67b3-43c8-b0ef-16c5611d65af",
+      "dependsOn": []
+    },
+    {
+      "ref": "868b0e60-06bf-4dc1-94d2-9d28723f64d3",
+      "dependsOn": []
+    },
+    {
+      "ref": "8736cccd-e638-430c-8e20-34234337efc7",
+      "dependsOn": []
+    },
+    {
+      "ref": "87a5361a-bad8-4312-9ab1-0029d0546336",
+      "dependsOn": []
+    },
+    {
+      "ref": "88a0f07e-70bd-4b38-b9a5-9e952f21b4af",
+      "dependsOn": []
+    },
+    {
+      "ref": "890f5bc4-e2ec-4216-bf16-cca9e551e757",
+      "dependsOn": []
+    },
+    {
+      "ref": "8b455189-a327-4e95-a856-6b20b25db102",
+      "dependsOn": []
+    },
+    {
+      "ref": "8f15415d-2a4a-450d-9a7b-c05cf9b6075b",
+      "dependsOn": []
+    },
+    {
+      "ref": "91530699-69b9-40fe-82f8-77e62044030d",
+      "dependsOn": []
+    },
+    {
+      "ref": "91d51a4f-faef-4a67-ba2a-763b1cef3f0f",
+      "dependsOn": []
+    },
+    {
+      "ref": "927abd63-17c1-4a7a-902f-6c6c3096aa2f",
+      "dependsOn": []
+    },
+    {
+      "ref": "940894cb-a573-4bb5-a24b-3f19c6a71273",
+      "dependsOn": []
+    },
+    {
+      "ref": "975d3585-2808-47aa-ae24-e66be8ce9def",
+      "dependsOn": []
+    },
+    {
+      "ref": "98164d14-fd25-4867-9187-c2194aa6ced6",
+      "dependsOn": []
+    },
+    {
+      "ref": "9b1bf172-a16a-44aa-899a-541d2a5f6769",
+      "dependsOn": []
+    },
+    {
+      "ref": "9b875f9d-e214-401a-8c18-b62be50ee1bd",
+      "dependsOn": []
+    },
+    {
+      "ref": "9c82fd6b-df77-4369-8787-9adbe27a0606",
+      "dependsOn": []
+    },
+    {
+      "ref": "9cfbaf1a-d8a1-4443-b62f-10904466dd66",
+      "dependsOn": []
+    },
+    {
+      "ref": "9dc537d3-2df3-425f-885b-7731d7d49c4f",
+      "dependsOn": []
+    },
+    {
+      "ref": "a0aff549-52a0-4984-b586-bf647e721a9c",
+      "dependsOn": []
+    },
+    {
+      "ref": "a261f136-df37-44c5-9d51-8a87fa11d4ea",
+      "dependsOn": []
+    },
+    {
+      "ref": "a351b040-7f45-4858-a2c3-aafa0978aa6c",
+      "dependsOn": []
+    },
+    {
+      "ref": "a49d7a72-71f5-45f6-9c10-ad1b4228c2fc",
+      "dependsOn": []
+    },
+    {
+      "ref": "a4d12904-2d62-4720-b964-688d66f00be9",
+      "dependsOn": [
+        "1203ed5d-6429-4f5f-87c7-127bde80ebde",
+        "303d5373-1675-4e52-a7f1-7b48ef9a914a"
+      ]
+    },
+    {
+      "ref": "a70a724b-8790-4297-a190-70314570cf21",
+      "dependsOn": []
+    },
+    {
+      "ref": "a7498ef5-f718-41b0-a10b-e12746cafbfc",
+      "dependsOn": []
+    },
+    {
+      "ref": "a89e1192-be18-4616-898a-af3aecabb290",
+      "dependsOn": []
+    },
+    {
+      "ref": "ab129779-7e16-4761-bba1-1165537be126",
+      "dependsOn": []
+    },
+    {
+      "ref": "ae23577e-ec49-45e4-a286-ff9fae532685",
+      "dependsOn": [
+        "f5f6f173-d312-4ab9-aa86-c914c34b99b3"
+      ]
+    },
+    {
+      "ref": "af38c0bb-0913-46bb-be1e-79f5169cbbc3",
+      "dependsOn": [
+        "d4131deb-9be5-4644-bb53-80e3681b5759"
+      ]
+    },
+    {
+      "ref": "b0b003a7-0f08-45ff-b4a3-0a78f895e5ad",
+      "dependsOn": []
+    },
+    {
+      "ref": "b0e65b48-68b0-4ecd-b586-e62df698667d",
+      "dependsOn": []
+    },
+    {
+      "ref": "b1be8e7b-d62d-4deb-9016-42fdb57bb521",
+      "dependsOn": []
+    },
+    {
+      "ref": "b339b5d6-b0c3-458b-8e82-a65685a3cf8f",
+      "dependsOn": []
+    },
+    {
+      "ref": "b3bb9f44-7965-4eed-9d9b-df843a9b1c9c",
+      "dependsOn": [
+        "f81cf343-f79c-4887-8790-a239c904c782"
+      ]
+    },
+    {
+      "ref": "b7940a39-95d5-4132-af05-4591c01a30fc",
+      "dependsOn": []
+    },
+    {
+      "ref": "b841f57d-9a01-488d-976e-460bc2c236a6",
+      "dependsOn": []
+    },
+    {
+      "ref": "b9238bef-c2a9-4da8-84fe-d50308f25251",
+      "dependsOn": []
+    },
+    {
+      "ref": "ba213264-b40e-40c8-9241-4cf2ecd66c83",
+      "dependsOn": []
+    },
+    {
+      "ref": "ba74ef1a-4009-44d4-9128-49c28aadf1a8",
+      "dependsOn": []
+    },
+    {
+      "ref": "baf03181-9f55-4c53-b90c-f3755f59fcd6",
+      "dependsOn": []
+    },
+    {
+      "ref": "bf36fea6-750b-46e3-8e9d-4133211c5021",
+      "dependsOn": []
+    },
+    {
+      "ref": "bf92a5a4-658f-435d-9b8f-e22ea7bfe72f",
+      "dependsOn": []
+    },
+    {
+      "ref": "c2d49370-94f4-4dda-b8b3-3fa6a9598873",
+      "dependsOn": []
+    },
+    {
+      "ref": "c4987d3b-547f-4259-84bf-95ed0f5cbb2f",
+      "dependsOn": []
+    },
+    {
+      "ref": "c6633e17-d1eb-4abe-a08c-ffaa73218fa0",
+      "dependsOn": [
+        "pkg:golang/github.com/google/go-containerregistry/pkg/authn/kubernetes"
+      ]
+    },
+    {
+      "ref": "c7c641f2-4277-4737-a1f8-5a74f8d3c2c0",
+      "dependsOn": []
+    },
+    {
+      "ref": "c7cc8c1a-38b1-4ab5-9000-281a5698ddba",
+      "dependsOn": []
+    },
+    {
+      "ref": "c974d0e2-3499-46ce-a9ee-3902b2034282",
+      "dependsOn": [
+        "pkg:golang/github.com/google/go-containerregistry/pkg/authn/k8schain"
+      ]
+    },
+    {
+      "ref": "c9d6f0aa-67f8-4d81-8b6b-0f2963e295e4",
+      "dependsOn": []
+    },
+    {
+      "ref": "ca88867a-850b-4a5e-bea5-b1c81d8fdc0e",
+      "dependsOn": []
+    },
+    {
+      "ref": "ca8dbe40-038c-45c8-b18c-395392275252",
+      "dependsOn": []
+    },
+    {
+      "ref": "cd8f4b4b-affe-4587-8a33-fe3313982914",
+      "dependsOn": []
+    },
+    {
+      "ref": "cdaaece5-c0cd-4f54-91aa-d6fda87d640f",
+      "dependsOn": []
+    },
+    {
+      "ref": "ce462bca-04bb-4618-ab6a-a50fcb0b2af9",
+      "dependsOn": []
+    },
+    {
+      "ref": "cf7448b7-bb5c-497a-b42b-e99d50966b18",
+      "dependsOn": [
+        "pkg:golang/github.com/google/go-containerregistry@0.21.5"
+      ]
+    },
+    {
+      "ref": "d05f53e4-e6b0-49c8-b1e7-0c0106ba61e6",
+      "dependsOn": []
+    },
+    {
+      "ref": "d1c03dbc-6924-437c-93b0-2736ff9df281",
+      "dependsOn": [
+        "5002241e-478b-4e9a-a8d3-c84601e9d216"
+      ]
+    },
+    {
+      "ref": "d4131deb-9be5-4644-bb53-80e3681b5759",
+      "dependsOn": [
+        "1e8c1880-348f-48ea-84f5-2ff2a7f1c78e"
+      ]
+    },
+    {
+      "ref": "d4bb4034-3b68-4dbd-b1ed-40dcfeeab1ae",
+      "dependsOn": []
+    },
+    {
+      "ref": "d5e771e2-ead4-48d0-b4a5-76dc12df0759",
+      "dependsOn": []
+    },
+    {
+      "ref": "d7f6b2f6-6939-47ca-849e-23954983ef4a",
+      "dependsOn": []
+    },
+    {
+      "ref": "d8d61a8f-d6cb-482a-beb5-6e87ad1d69ba",
+      "dependsOn": []
+    },
+    {
+      "ref": "d963fe57-90a5-4234-8f27-2cb1dc2f6f95",
+      "dependsOn": []
+    },
+    {
+      "ref": "db9e5d96-50bb-4288-8310-caabf5429816",
+      "dependsOn": []
+    },
+    {
+      "ref": "dbd26e68-67fa-4068-b797-38ac38bb1420",
+      "dependsOn": []
+    },
+    {
+      "ref": "dbfcf880-5294-456c-b895-a162efdec910",
+      "dependsOn": []
+    },
+    {
+      "ref": "dd851c1b-1e12-4ebf-8f8b-69b096dedf93",
+      "dependsOn": []
+    },
+    {
+      "ref": "de60506d-1105-4998-b830-e1e3235df482",
+      "dependsOn": []
+    },
+    {
+      "ref": "e24503cd-37e2-443c-bf75-cc854188da88",
+      "dependsOn": []
+    },
+    {
+      "ref": "e2fb802e-91df-44d7-b929-4f121b8fb49d",
+      "dependsOn": []
+    },
+    {
+      "ref": "e364b539-4456-475e-b82d-af2b3f5789cc",
+      "dependsOn": []
+    },
+    {
+      "ref": "e7019d73-e90a-4bfd-9fd4-d90586dd872f",
+      "dependsOn": [
+        "1209a795-ff47-4155-8be8-8e514d7c422a"
+      ]
+    },
+    {
+      "ref": "e8e4547c-1e4e-4edd-83b9-a6e4f6ccc803",
+      "dependsOn": []
+    },
+    {
+      "ref": "e90ff08d-ce7b-40a5-a55e-fb7bfc876ede",
+      "dependsOn": []
+    },
+    {
+      "ref": "e92cbaac-c40e-4466-bc7e-abf78f495111",
+      "dependsOn": [
+        "6b1609eb-54c6-4eb6-8241-d3308e8e0559"
+      ]
+    },
+    {
+      "ref": "ea087e03-7aff-4865-86b6-e9ceafd66ec8",
+      "dependsOn": []
+    },
+    {
+      "ref": "eb329c36-9ec1-456c-b289-c904e7a7846a",
+      "dependsOn": []
+    },
+    {
+      "ref": "ec4b5b27-7e19-4763-a881-2faa0a75db89",
+      "dependsOn": []
+    },
+    {
+      "ref": "eee00c2f-25b2-4f00-b3e8-48687b503b5f",
+      "dependsOn": []
+    },
+    {
+      "ref": "efd89f4c-d569-456a-ba4d-a5f939aacfd5",
+      "dependsOn": []
+    },
+    {
+      "ref": "f09e8d3a-4098-45bf-8846-09c4fd530bfb",
+      "dependsOn": []
+    },
+    {
+      "ref": "f3781dfa-e203-4c8e-9fa0-6b61e687bb87",
+      "dependsOn": []
+    },
+    {
+      "ref": "f4d6b740-c926-48c1-a5da-626df2850fb8",
+      "dependsOn": []
+    },
+    {
+      "ref": "f5f6f173-d312-4ab9-aa86-c914c34b99b3",
+      "dependsOn": [
+        "3f3c1b48-cd7f-4552-aac5-6c22ab444669"
+      ]
+    },
+    {
+      "ref": "f6d75d8e-b566-42e6-95dc-34f1222d1c19",
+      "dependsOn": []
+    },
+    {
+      "ref": "f81cf343-f79c-4887-8790-a239c904c782",
+      "dependsOn": []
+    },
+    {
+      "ref": "f90e1ec8-0dbf-4ea4-bc33-99e58e162f5a",
+      "dependsOn": []
+    },
+    {
+      "ref": "f96d56c6-d9d5-4a4b-a020-40398117cb85",
+      "dependsOn": []
+    },
+    {
+      "ref": "fb94abe3-b06a-4cc2-b3aa-6589a1042b32",
+      "dependsOn": []
+    },
+    {
+      "ref": "fbd940c5-fb9a-48bc-b947-3a43ad86c334",
+      "dependsOn": []
+    },
+    {
+      "ref": "fe3888a7-b46a-4d92-89e4-57ba9f14a2a0",
+      "dependsOn": [
+        "485c4ccd-b4c8-4c2a-b07e-176931ddcd52",
+        "ab129779-7e16-4761-bba1-1165537be126",
+        "e92cbaac-c40e-4466-bc7e-abf78f495111",
+        "f90e1ec8-0dbf-4ea4-bc33-99e58e162f5a"
+      ]
+    },
+    {
+      "ref": "ff62165a-d041-4505-ad24-2a5dc29724be",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/containerd/errdefs/pkg@v0.3.0",
+      "dependsOn": [
+        "pkg:golang/github.com/containerd/errdefs@v1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/containerd/errdefs@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/cpuguy83/go-md2man/v2@v2.0.7",
+      "dependsOn": [
+        "pkg:golang/github.com/russross/blackfriday/v2@v2.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/distribution/reference@v0.6.0",
+      "dependsOn": [
+        "1209a795-ff47-4155-8be8-8e514d7c422a"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/docker/go-connections@v0.6.0",
+      "dependsOn": [
+        "pkg:golang/github.com/microsoft/go-winio@v0.6.2"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/docker/go-units@v0.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/go-logr/stdr@v1.2.2",
+      "dependsOn": [
+        "d7f6b2f6-6939-47ca-849e-23954983ef4a"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/google/go-containerregistry@0.21.5",
+      "dependsOn": [
+        "098cc96b-d9e7-42fc-9f93-c45f674b125d",
+        "1209a795-ff47-4155-8be8-8e514d7c422a",
+        "1f5fec87-f904-45de-b20a-4466e2326f68",
+        "4d892f2d-72a7-4e3a-8bd4-cab5ee5f2e68",
+        "53b3aa46-3f13-4e8f-a4d9-44190ba030a9",
+        "70ceeb8a-e0df-4720-a745-f8500db2b804",
+        "7c26fe5c-0e60-4dae-8956-0c0fddf7da96",
+        "d05f53e4-e6b0-49c8-b1e7-0c0106ba61e6",
+        "de60506d-1105-4998-b830-e1e3235df482",
+        "e7019d73-e90a-4bfd-9fd4-d90586dd872f",
+        "efd89f4c-d569-456a-ba4d-a5f939aacfd5",
+        "pkg:golang/github.com/moby/docker-image-spec@v1.3.1",
+        "pkg:golang/github.com/moby/moby/api@v1.54.1",
+        "pkg:golang/github.com/moby/moby/client@v0.4.0",
+        "pkg:golang/golang.org/x/tools@v0.44.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/google/go-containerregistry/cmd/krane",
+      "dependsOn": [
+        "0735476f-bcfb-4464-a8c2-93f19587cc43",
+        "1292e82b-3b88-41c7-9241-bb907ae5ced7",
+        "1bb9f4b4-00a5-41a3-9d75-6eee6adc9422",
+        "215a28fb-190d-427c-84b6-2ba1a35dc241",
+        "23079af2-0477-4afc-b8ff-267f5ff782ea",
+        "2cdad8da-b935-446b-b83e-47871b55706e",
+        "3a0d1a23-b6d3-47cd-8f50-3fcd010ddaac",
+        "40ecf96a-bf4f-4fee-befc-18d2c026c0d7",
+        "4bab2dac-b6b4-4014-b8fa-8b168af3eb2b",
+        "517b30a1-d092-4224-86fe-fc1f121c6033",
+        "589a1f4d-64d7-4733-9c0a-3cb9045e99d6",
+        "5a7601a2-8259-4d80-bd1e-ca379549ba66",
+        "61dd5de9-77f8-4aa2-abe0-4c90078658e4",
+        "6b245499-2a70-43f3-afb1-6b5bc2f19efa",
+        "7238d71b-e365-4102-8bf0-86be6bd2033f",
+        "762475df-514d-4770-b5cb-d978e15029d8",
+        "79b44356-3f59-4e44-abf9-04c57278f060",
+        "7cd5cef6-0ec0-490d-8f5c-8c95d51838c8",
+        "7e33c22f-abb3-426d-a4e8-c6989485e771",
+        "7ef5e44d-3794-4162-86c6-730b480bcaef",
+        "803c902b-b302-4261-a443-1256de9acccc",
+        "868b0e60-06bf-4dc1-94d2-9d28723f64d3",
+        "87a5361a-bad8-4312-9ab1-0029d0546336",
+        "940894cb-a573-4bb5-a24b-3f19c6a71273",
+        "9cfbaf1a-d8a1-4443-b62f-10904466dd66",
+        "a261f136-df37-44c5-9d51-8a87fa11d4ea",
+        "a49d7a72-71f5-45f6-9c10-ad1b4228c2fc",
+        "a4d12904-2d62-4720-b964-688d66f00be9",
+        "b339b5d6-b0c3-458b-8e82-a65685a3cf8f",
+        "b841f57d-9a01-488d-976e-460bc2c236a6",
+        "c4987d3b-547f-4259-84bf-95ed0f5cbb2f",
+        "c7c641f2-4277-4737-a1f8-5a74f8d3c2c0",
+        "ce462bca-04bb-4618-ab6a-a50fcb0b2af9",
+        "d5e771e2-ead4-48d0-b4a5-76dc12df0759",
+        "e2fb802e-91df-44d7-b929-4f121b8fb49d",
+        "ec4b5b27-7e19-4763-a881-2faa0a75db89",
+        "f09e8d3a-4098-45bf-8846-09c4fd530bfb",
+        "f3781dfa-e203-4c8e-9fa0-6b61e687bb87"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/k8schain",
+      "dependsOn": [
+        "059c0981-26aa-4a07-aeff-612220906a8b",
+        "06e416aa-97ad-4b07-93cd-7cca4a41bdf6",
+        "090c8299-e03f-496e-b818-a804e4a135a9",
+        "0fe49175-2a58-484d-85a7-b59d49842610",
+        "115ac635-4782-447f-af1f-172b535d3535",
+        "13828902-4be0-42e8-8ee2-e89d02ffe2aa",
+        "205ed7c4-af9d-4e91-9488-5380c8a2069c",
+        "262862d7-eb4e-4794-9248-63fd38718eb8",
+        "2a08d02f-ae17-41a0-959b-714d7fd4203c",
+        "2b7b13c9-7b7b-4c37-be54-fa2c13d79a81",
+        "2bdaaf65-0cd0-42c0-b074-f6806c769d5a",
+        "2cd9e216-b3e6-4046-9c66-29098d36c7ca",
+        "326df05f-5236-4f3b-8f17-d152ba1247a8",
+        "35477d7a-1b74-4d0f-ad18-2c78b76de535",
+        "354d7e35-6c33-42f9-a143-b2829ae9cc6b",
+        "3781a627-86ec-4aa4-8d91-ef7433e6dd3b",
+        "3a7b2d2e-163b-447d-994f-c73b8ae8a0e4",
+        "3c158940-4d98-473d-9fba-ad5ac335e580",
+        "40fc2dfe-4f3a-4025-bff4-07d7c1629c0b",
+        "4a591354-e8f1-407c-b724-430d8cc2ceb4",
+        "51d5f453-fcd9-405f-8d3f-48a708988241",
+        "54084be6-dbe0-4572-b1cf-d74349bf71da",
+        "5a3a39ff-d041-4c33-8b12-dd5e790e14d6",
+        "5fd4d656-d8de-4d40-8df2-b372ffdbe866",
+        "6172c334-4be2-4be2-af03-ef4a64cb22a6",
+        "65acc47d-22db-4f73-911a-fc7f21e509cb",
+        "65d9469b-d1da-4b3a-afc7-08aea44257a0",
+        "66fc4937-3b05-4d7e-97ba-23bd7f344162",
+        "68b0abd3-cc31-48c3-b09a-ae43c33e567e",
+        "6b1415c6-d2a1-4361-b373-de91e9fc2eab",
+        "6d726488-3c2a-4619-b64b-a65281a1af87",
+        "74a34690-ab40-41c4-829c-cfd50188da0e",
+        "759d0793-5b10-404a-b3de-2853b41df89e",
+        "77e64335-bd77-4e79-b887-1cc451e84a5f",
+        "78d7e01f-cec5-4ab6-93f1-5e659faed2e5",
+        "7f35227c-f091-46a2-9eea-acfca34f3d42",
+        "83be446d-67b3-43c8-b0ef-16c5611d65af",
+        "8736cccd-e638-430c-8e20-34234337efc7",
+        "88a0f07e-70bd-4b38-b9a5-9e952f21b4af",
+        "890f5bc4-e2ec-4216-bf16-cca9e551e757",
+        "8b455189-a327-4e95-a856-6b20b25db102",
+        "8f15415d-2a4a-450d-9a7b-c05cf9b6075b",
+        "91530699-69b9-40fe-82f8-77e62044030d",
+        "927abd63-17c1-4a7a-902f-6c6c3096aa2f",
+        "975d3585-2808-47aa-ae24-e66be8ce9def",
+        "9b1bf172-a16a-44aa-899a-541d2a5f6769",
+        "9b875f9d-e214-401a-8c18-b62be50ee1bd",
+        "9c82fd6b-df77-4369-8787-9adbe27a0606",
+        "a89e1192-be18-4616-898a-af3aecabb290",
+        "ae23577e-ec49-45e4-a286-ff9fae532685",
+        "b0b003a7-0f08-45ff-b4a3-0a78f895e5ad",
+        "b9238bef-c2a9-4da8-84fe-d50308f25251",
+        "ba213264-b40e-40c8-9241-4cf2ecd66c83",
+        "bf36fea6-750b-46e3-8e9d-4133211c5021",
+        "bf92a5a4-658f-435d-9b8f-e22ea7bfe72f",
+        "c9d6f0aa-67f8-4d81-8b6b-0f2963e295e4",
+        "ca88867a-850b-4a5e-bea5-b1c81d8fdc0e",
+        "cd8f4b4b-affe-4587-8a33-fe3313982914",
+        "d963fe57-90a5-4234-8f27-2cb1dc2f6f95",
+        "db9e5d96-50bb-4288-8310-caabf5429816",
+        "dbd26e68-67fa-4068-b797-38ac38bb1420",
+        "dd851c1b-1e12-4ebf-8f8b-69b096dedf93",
+        "e364b539-4456-475e-b82d-af2b3f5789cc",
+        "e8e4547c-1e4e-4edd-83b9-a6e4f6ccc803",
+        "ea087e03-7aff-4865-86b6-e9ceafd66ec8",
+        "eee00c2f-25b2-4f00-b3e8-48687b503b5f",
+        "f4d6b740-c926-48c1-a5da-626df2850fb8",
+        "f6d75d8e-b566-42e6-95dc-34f1222d1c19",
+        "fb94abe3-b06a-4cc2-b3aa-6589a1042b32",
+        "fe3888a7-b46a-4d92-89e4-57ba9f14a2a0",
+        "ff62165a-d041-4505-ad24-2a5dc29724be",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc",
+        "pkg:golang/github.com/pkg/errors@v0.9.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/google/go-containerregistry/pkg/authn/kubernetes",
+      "dependsOn": [
+        "038b3d68-3765-484a-b7b1-9445a9852c21",
+        "0fa21edd-f0ac-4ff5-9aaa-d4c7d2e30191",
+        "262407f2-3c0c-44ba-a121-23647f11d56b",
+        "341faf2e-3e99-4e0f-9450-cca7f69bc39c",
+        "3695d2d7-2765-49e1-8ebd-ccd0c6579905",
+        "393ab6d2-a868-4e74-a12d-f744f311358a",
+        "3ab91014-80ae-454d-a355-752ce4698327",
+        "3da5a05f-125a-4510-a7e1-b5c1056c49f2",
+        "42bc5bc9-628d-4dd4-b5bd-43cf49f16007",
+        "4360dd54-067a-4ece-bc24-c066042238e0",
+        "43631bc9-89ed-470e-bef8-dee3c873b7f9",
+        "467a5ae5-0018-4f2c-b419-ef2c4ef21077",
+        "46d355db-155a-4e04-9fd1-bdb72379c49d",
+        "48e3bd3d-a87d-4554-85d7-b9b63b0c09ea",
+        "4907b0ba-8a84-4ddc-bd2a-b4111305d4f8",
+        "5e692353-888a-41f1-8059-a8bed24b6619",
+        "61b95f69-c051-4987-84bf-d1e747a811da",
+        "69a6bdf8-3355-422b-9f7c-de0382547f13",
+        "6dbf59fd-4296-40f4-82c1-6fa9dacce27c",
+        "6e61d344-2e0e-4abf-8766-554d365ce352",
+        "71001b35-e2c8-4587-a8b0-a2a6904186d4",
+        "72338c37-522c-45de-8bca-2a6b4290e706",
+        "7cf6823d-1fac-42cc-bc86-2cb201205517",
+        "98164d14-fd25-4867-9187-c2194aa6ced6",
+        "9dc537d3-2df3-425f-885b-7731d7d49c4f",
+        "a0aff549-52a0-4984-b586-bf647e721a9c",
+        "a7498ef5-f718-41b0-a10b-e12746cafbfc",
+        "b1be8e7b-d62d-4deb-9016-42fdb57bb521",
+        "b3bb9f44-7965-4eed-9d9b-df843a9b1c9c",
+        "b7940a39-95d5-4132-af05-4591c01a30fc",
+        "ba74ef1a-4009-44d4-9128-49c28aadf1a8",
+        "baf03181-9f55-4c53-b90c-f3755f59fcd6",
+        "c7cc8c1a-38b1-4ab5-9000-281a5698ddba",
+        "ca8dbe40-038c-45c8-b18c-395392275252",
+        "cdaaece5-c0cd-4f54-91aa-d6fda87d640f",
+        "d4bb4034-3b68-4dbd-b1ed-40dcfeeab1ae",
+        "d8d61a8f-d6cb-482a-beb5-6e87ad1d69ba",
+        "dbfcf880-5294-456c-b895-a162efdec910",
+        "e24503cd-37e2-443c-bf75-cc854188da88",
+        "e90ff08d-ce7b-40a5-a55e-fb7bfc876ede",
+        "eb329c36-9ec1-456c-b289-c904e7a7846a",
+        "f96d56c6-d9d5-4a4b-a020-40398117cb85",
+        "fbd940c5-fb9a-48bc-b947-3a43ad86c334",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/microsoft/go-winio@v0.6.2",
+      "dependsOn": [
+        "5002241e-478b-4e9a-a8d3-c84601e9d216",
+        "d1c03dbc-6924-437c-93b0-2736ff9df281",
+        "pkg:golang/golang.org/x/tools@v0.44.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/moby/docker-image-spec@v1.3.1",
+      "dependsOn": [
+        "e7019d73-e90a-4bfd-9fd4-d90586dd872f"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/moby/moby/api@v1.54.1",
+      "dependsOn": [
+        "1209a795-ff47-4155-8be8-8e514d7c422a",
+        "e7019d73-e90a-4bfd-9fd4-d90586dd872f",
+        "pkg:golang/github.com/docker/go-units@v0.5.0",
+        "pkg:golang/github.com/moby/docker-image-spec@v1.3.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/moby/moby/client@v0.4.0",
+      "dependsOn": [
+        "1209a795-ff47-4155-8be8-8e514d7c422a",
+        "de60506d-1105-4998-b830-e1e3235df482",
+        "e7019d73-e90a-4bfd-9fd4-d90586dd872f",
+        "pkg:golang/github.com/containerd/errdefs/pkg@v0.3.0",
+        "pkg:golang/github.com/containerd/errdefs@v1.0.0",
+        "pkg:golang/github.com/distribution/reference@v0.6.0",
+        "pkg:golang/github.com/docker/go-connections@v0.6.0",
+        "pkg:golang/github.com/docker/go-units@v0.5.0",
+        "pkg:golang/github.com/microsoft/go-winio@v0.6.2",
+        "pkg:golang/github.com/moby/moby/api@v1.54.1",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.61.0",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/pkg/errors@v0.9.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/russross/blackfriday/v2@v2.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/go.opentelemetry.io/auto/sdk@v1.1.0",
+      "dependsOn": [
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0",
+        "pkg:golang/go.opentelemetry.io/otel@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.61.0",
+      "dependsOn": [
+        "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.36.0",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0",
+        "pkg:golang/go.opentelemetry.io/otel@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.36.0",
+      "dependsOn": [
+        "pkg:golang/go.opentelemetry.io/otel@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0",
+      "dependsOn": [
+        "de60506d-1105-4998-b830-e1e3235df482",
+        "pkg:golang/go.opentelemetry.io/otel@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/go.opentelemetry.io/otel@v1.36.0",
+      "dependsOn": [
+        "d7f6b2f6-6939-47ca-849e-23954983ef4a",
+        "de60506d-1105-4998-b830-e1e3235df482",
+        "pkg:golang/github.com/go-logr/stdr@v1.2.2",
+        "pkg:golang/go.opentelemetry.io/auto/sdk@v1.1.0",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.36.0",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.36.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/mod@v0.35.0",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/tools@v0.44.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/tools@v0.44.0",
+      "dependsOn": [
+        "de60506d-1105-4998-b830-e1e3235df482",
+        "efd89f4c-d569-456a-ba4d-a5f939aacfd5",
+        "pkg:golang/golang.org/x/mod@v0.35.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/codespell@2.4.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "nix/store/q4km6n6l28blix1q90a09z8p1ckrrxlf-crane-0.21.5/bin/crane",
+      "dependsOn": [
+        "pkg:golang/github.com/google/go-containerregistry@0.21.5"
+      ]
+    }
+  ],
+  "vulnerabilities": []
+}
