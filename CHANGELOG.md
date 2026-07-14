@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.9.2] - 2026-07-14
+
+### Fixed
+
+- **Ory Kratos connectivity** — the Ory API client now uses its own dedicated HTTP client instead of the shared egress client, working around the new egress SSRF protections blocking the configured Ory domain in some deployments
+
+### Changed
+
+- Removed now-redundant per-integration rate limiters in the GitLab client factory and the open-source-insights service, since outgoing requests are already rate-limited per host by the shared egress client
+- Refreshed the dependency license manifest (`licenses.json`)
+
 ## [v1.9.1] - 2026-07-14
 
 (Multiple security fixes. Information on the vulnerabilities will be added later.)
