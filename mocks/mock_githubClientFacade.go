@@ -491,3 +491,91 @@ func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) RunAndReturn(run f
 	_c.Call.Return(run)
 	return _c
 }
+
+// ListIssues provides a mock function for the type GithubClientFacade
+func (_mock *GithubClientFacade) ListIssues(ctx context.Context, owner string, repo string, opt *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+	ret := _mock.Called(ctx, owner, repo, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListIssues")
+	}
+
+	var r0 []*github.Issue
+	var r1 *github.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error)); ok {
+		return returnFunc(ctx, owner, repo, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, *github.IssueListByRepoOptions) []*github.Issue); ok {
+		r0 = returnFunc(ctx, owner, repo, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*github.Issue)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, *github.IssueListByRepoOptions) *github.Response); ok {
+		r1 = returnFunc(ctx, owner, repo, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*github.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, *github.IssueListByRepoOptions) error); ok {
+		r2 = returnFunc(ctx, owner, repo, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GithubClientFacade_ListIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListIssues'
+type GithubClientFacade_ListIssues_Call struct {
+	*mock.Call
+}
+
+// ListIssues is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner string
+//   - repo string
+//   - opt *github.IssueListByRepoOptions
+func (_e *GithubClientFacade_Expecter) ListIssues(ctx interface{}, owner interface{}, repo interface{}, opt interface{}) *GithubClientFacade_ListIssues_Call {
+	return &GithubClientFacade_ListIssues_Call{Call: _e.mock.On("ListIssues", ctx, owner, repo, opt)}
+}
+
+func (_c *GithubClientFacade_ListIssues_Call) Run(run func(ctx context.Context, owner string, repo string, opt *github.IssueListByRepoOptions)) *GithubClientFacade_ListIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *github.IssueListByRepoOptions
+		if args[3] != nil {
+			arg3 = args[3].(*github.IssueListByRepoOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *GithubClientFacade_ListIssues_Call) Return(issues []*github.Issue, response *github.Response, err error) *GithubClientFacade_ListIssues_Call {
+	_c.Call.Return(issues, response, err)
+	return _c
+}
+
+func (_c *GithubClientFacade_ListIssues_Call) RunAndReturn(run func(ctx context.Context, owner string, repo string, opt *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error)) *GithubClientFacade_ListIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}

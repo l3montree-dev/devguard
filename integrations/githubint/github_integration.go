@@ -17,6 +17,7 @@ package githubint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -169,12 +170,106 @@ func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID s
 	return models.Org{}, fmt.Errorf("not implemented")
 }
 
+func (githubIntegration *GithubIntegration) getExcessIIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) (client shared.GithubClientFacade, owner string, repo string, excessNumbers []int, err error) {
+	repoID := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoID, "github:") {
+		return nil, "", "", nil, nil
+	}
+
+	owner, repo, err = ownerAndRepoFromRepositoryID(repoID)
+	if err != nil {
+		return client, owner, repo, nil, err
+	}
+
+	client, err = githubIntegration.githubClientFactory(repoID)
+	if err != nil {
+		return client, owner, repo, nil, err
+	}
+
+	depVulnNumbers := make([]int, 0, len(vulnsWithTickets))
+	for _, vuln := range vulnsWithTickets {
+		if vuln.TicketID == nil {
+			continue
+		}
+		_, number := githubTicketIDToIDAndNumber(*vuln.TicketID)
+		if number == 0 {
+			continue
+		}
+		depVulnNumbers = append(depVulnNumbers, number)
+	}
+
+	opts := &github.IssueListByRepoOptions{
+		State:       "open",
+		Labels:      []string{"devguard"},
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	githubNumbers := make([]int, 0)
+	for {
+		issues, resp, listErr := client.ListIssues(ctx, owner, repo, opts)
+		if listErr != nil {
+			return client, owner, repo, nil, listErr
+		}
+		for _, issue := range issues {
+			if issue.IsPullRequest() {
+				continue
+			}
+			githubNumbers = append(githubNumbers, issue.GetNumber())
+		}
+		if resp == nil || resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+
+	comparison := utils.CompareSlices(depVulnNumbers, githubNumbers, func(number int) int { return number })
+	return client, owner, repo, comparison.OnlyInB, nil
+}
+
 func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
+	client, owner, repo, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, commonint.ErrNotConnected) {
+			return nil
+		}
+		slog.Error("failed to get github client based on asset", "err", err, "asset", asset)
+		return err
+	}
+	issueRequest := github.IssueRequest{
+		State: new("closed"),
+	}
+	amountClosed := 0
+	closedURLs := make([]string, 0, len(excessNumbers))
+	for _, number := range excessNumbers {
+		updated, _, err := client.EditIssue(ctx, owner, repo, number, &issueRequest)
+		if err != nil {
+			slog.Error("could not close excess github issue", "number", number, "assetID", asset.ID)
+			continue
+		}
+		amountClosed++
+		if updated != nil {
+			closedURLs = append(closedURLs, updated.GetHTMLURL())
+		}
+	}
+
+	if amountClosed > 0 {
+		slog.Info("closed excess github tickets", "assetID", asset.ID, "count", amountClosed, "tickets", closedURLs)
+	}
 	return nil
 }
 
 func (githubIntegration *GithubIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
-	return nil, nil
+	_, _, _, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
+	if err != nil {
+		if errors.Is(err, commonint.ErrNotConnected) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ids := make([]string, len(excessNumbers))
+	for i, number := range excessNumbers {
+		ids[i] = strconv.Itoa(number)
+	}
+	return ids, nil
 }
 
 func (githubIntegration *GithubIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
