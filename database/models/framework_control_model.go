@@ -43,8 +43,6 @@ func (m *FrameworkControl) SetID() {
 }
 
 func (m *FrameworkControl) BeforeSave(tx *gorm.DB) (err error) {
-	if m.FrameworkControlID == "" {
-		m.SetID()
-	}
+	m.SetID()
 	return nil
 }

@@ -39,15 +39,15 @@ func NewCompliancePostureService(compliancePostureRepository shared.CompliancePo
 }
 
 func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControlDTO], error) {
-	postgres, err := s.compliancePostureRepository.GetForAllControlsPaged(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	postures, err := s.compliancePostureRepository.GetForAllControlsPaged(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	//mapping the state to string for the DTO
-	for i, posture := range postgres.Data {
+	for i, posture := range postures.Data {
 		if posture.State == "" {
-			postgres.Data[i].State = dtos.VulnStateOpen
+			postures.Data[i].State = dtos.VulnStateOpen
 		}
 
 	}
-	return postgres, err
+	return postures, err
 }
 
 func (s *compliancePostureService) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error) {
