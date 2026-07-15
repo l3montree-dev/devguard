@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.9.3] - 2026-07-15
+
+### Added
+
+- **GitHub issue reconciliation** — DevGuard now closes stray GitHub issues that carry the `devguard` label but no longer correspond to a tracked vulnerability for the asset, mirroring the reconciliation already available for other providers
+
+### Changed
+
+- **Unified "not connected" handling** — GitHub, GitLab, and Jira integrations now share a single `commonint.ErrNotConnected` error instead of each defining their own, so the asset pipeline can swallow the error consistently across providers; Jira sync errors are now also swallowed when the integration is not connected
+- `licenses` command moved from `devguard-cli` to `devguard-maint`
+- Added highlighting-macros include to the vulnerability report LaTeX template, fixing PDF generation (https://github.com/l3montree-dev/devguard/issues/2120)
+
+### Fixed
+
+- **GitHub issue comparison** — corrected the logic used to compare tracked vulnerabilities against existing GitHub issues
+
 ## [v1.9.2] - 2026-07-14
 
 ### Fixed
