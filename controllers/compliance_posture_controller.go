@@ -28,16 +28,16 @@ import (
 )
 
 type CompliancePostureController struct {
-	CompliancePostureRepository shared.CompliancePostureRepository
-	CompliancePostureService    shared.CompliancePostureService
-	FrameworkControlRepository  shared.FrameworkControlRepository
+	compliancePostureRepository shared.CompliancePostureRepository
+	compliancePostureService    shared.CompliancePostureService
+	frameworkControlRepository  shared.FrameworkControlRepository
 }
 
 func NewCompliancePostureController(compliancePostureRepository shared.CompliancePostureRepository, compliancePostureService shared.CompliancePostureService, frameworkControlRepository shared.FrameworkControlRepository) *CompliancePostureController {
 	return &CompliancePostureController{
-		CompliancePostureRepository: compliancePostureRepository,
-		CompliancePostureService:    compliancePostureService,
-		FrameworkControlRepository:  frameworkControlRepository,
+		compliancePostureRepository: compliancePostureRepository,
+		compliancePostureService:    compliancePostureService,
+		frameworkControlRepository:  frameworkControlRepository,
 	}
 }
 
@@ -47,24 +47,10 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "frameworkControlID is required")
 	}
 
-	var assetVersionName *string
-	var assetID *uuid.UUID
-	var projectID *uuid.UUID
 	orgID := shared.GetOrg(ctx).ID
-	project, err := shared.MaybeGetProject(ctx)
-	if err == nil {
-		projectID = &project.ID
-		asset, err := shared.MaybeGetAsset(ctx)
-		if err == nil {
-			assetID = &asset.ID
-			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
-			if err == nil {
-				assetVersionName = &assetVersion.Name
-			}
-		}
-	}
+	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
 
-	posture, err := c.CompliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionName, assetID, projectID, orgID)
+	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionName, assetID, projectID, orgID)
 	if err != nil {
 		return err
 	}
@@ -73,34 +59,20 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 }
 
 func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
-	var assetVersionName *string
-	var assetID *uuid.UUID
-	var projectID *uuid.UUID
 	orgID := shared.GetOrg(ctx).ID
-	project, err := shared.MaybeGetProject(ctx)
-	if err == nil {
-		projectID = &project.ID
-		asset, err := shared.MaybeGetAsset(ctx)
-		if err == nil {
-			assetID = &asset.ID
-			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
-			if err == nil {
-				assetVersionName = &assetVersion.Name
-			}
-		}
-	}
+	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
 
 	pageInfo := shared.GetPageInfo(ctx)
 	search := ctx.QueryParam("search")
 	filter := shared.GetFilterQuery(ctx)
 	sort := shared.GetSortQuery(ctx)
 
-	postures, err := c.CompliancePostureService.GetForAllControlsPaged(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	postures, err := c.compliancePostureService.GetForAllControlsPaged(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	if err != nil {
 		return err
 	}
 
-	frameworks, err := c.FrameworkControlRepository.ListFrameworkControls(ctx.Request().Context(), nil)
+	frameworks, err := c.frameworkControlRepository.ListFrameworkControls(ctx.Request().Context(), nil)
 	if err != nil {
 		return err
 	}
@@ -115,10 +87,18 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 }
 
 func (c *CompliancePostureController) Stats(ctx shared.Context) error {
-	var assetVersionName *string
-	var assetID *uuid.UUID
-	var projectID *uuid.UUID
 	orgID := shared.GetOrg(ctx).ID
+	filter := shared.GetFilterQuery(ctx)
+	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	stats, err := c.compliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, filter)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, stats)
+}
+
+func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName *string) {
 	project, err := shared.MaybeGetProject(ctx)
 	if err == nil {
 		projectID = &project.ID
@@ -131,15 +111,7 @@ func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 			}
 		}
 	}
-
-	filter := shared.GetFilterQuery(ctx)
-
-	stats, err := c.CompliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, filter)
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, stats)
+	return projectID, assetID, assetVersionName
 }
 
 func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
@@ -153,21 +125,9 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	userAgent := ctx.Request().UserAgent()
 
 	orgID := shared.GetOrg(ctx).ID
-	var projectID *uuid.UUID
-	var assetID *uuid.UUID
-	var assetVersionName *string
-	project, err := shared.MaybeGetProject(ctx)
-	if err == nil {
-		projectID = &project.ID
-		asset, err := shared.MaybeGetAsset(ctx)
-		if err == nil {
-			assetID = &asset.ID
-			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
-			if err == nil {
-				assetVersionName = &assetVersion.Name
-			}
-		}
-	}
+
+	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	var err error
 
 	var state struct {
 		Status        string  `json:"status"`
@@ -195,7 +155,7 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
 	compliancePosture.ID = compliancePosture.CalculateHash()
 
-	compliancePostureNew, err := c.CompliancePostureRepository.FindOrCreate(ctx.Request().Context(), nil, compliancePosture)
+	compliancePostureNew, err := c.compliancePostureRepository.FindOrCreate(ctx.Request().Context(), nil, compliancePosture)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to find or create compliance posture").WithInternal(err)
 	}
@@ -204,7 +164,7 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	if state.Justification != nil {
 		justification = *state.Justification
 	}
-	_, err = c.CompliancePostureService.UpdateCompliancePostureState(ctx.Request().Context(), nil, userID, compliancePostureNew, statusType, justification, "", &userAgent)
+	_, err = c.compliancePostureService.UpdateCompliancePostureState(ctx.Request().Context(), nil, userID, compliancePostureNew, statusType, justification, "", &userAgent)
 	if err != nil {
 		return err
 	}
@@ -243,7 +203,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 
 	}
 
-	compliancePostures, err := c.CompliancePostureService.GetAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, "", filter, nil)
+	compliancePostures, err := c.compliancePostureService.GetAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, "", filter, nil)
 	if err != nil {
 		return err
 	}
@@ -257,7 +217,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 		compliancePostures[i].CompliancePostureID = models.CalculateCompliancePostureHash(compliancePostures[i].FrameworkControlID, postureOrgID, compliancePostures[i].ProjectID, compliancePostures[i].AssetID, compliancePostures[i].AssetVersionName).String()
 	}
 
-	frameworkControls, err := c.FrameworkControlRepository.GetAll(ctx.Request().Context(), nil, framework)
+	frameworkControls, err := c.frameworkControlRepository.GetAll(ctx.Request().Context(), nil, framework)
 	if err != nil {
 		return err
 	}
