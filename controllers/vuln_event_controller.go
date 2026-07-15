@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type VulnEventController struct {
@@ -67,6 +69,9 @@ func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
 
 	err = c.vulnEventRepository.DeleteEventByID(ctx.Request().Context(), nil, eventID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "event not found")
+		}
 		return echo.NewHTTPError(500, "could not delete event").WithInternal(err)
 	}
 

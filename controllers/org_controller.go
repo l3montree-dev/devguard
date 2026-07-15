@@ -74,7 +74,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -207,7 +207,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -275,7 +275,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -325,12 +325,21 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// get the rbac from the context
 	rbac := shared.GetRBAC(ctx)
+
+	members, err := rbac.GetAllMembersOfOrganization()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	if !utils.Contains(members, userID) {
+		return echo.NewHTTPError(400, "user is not a member of the organization")
+	}
 
 	//
 	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
@@ -440,6 +449,12 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
 	configContent := string(body)
+
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
+	}
 
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)

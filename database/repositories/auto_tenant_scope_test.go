@@ -63,6 +63,59 @@ type unscopedModel struct {
 
 func (unscopedModel) TableName() string { return "unscoped" }
 
+// orgAndOptionalProjectScopedModel mirrors WebhookIntegration's shape: a mandatory org column
+// (OrgID, not the "OrganizationID" name/tag autoOwnershipScope also recognizes) plus an optional,
+// nullable project column.
+type orgAndOptionalProjectScopedModel struct {
+	ID        uuid.UUID  `gorm:"column:id"`
+	OrgID     uuid.UUID  `gorm:"column:org_id"`
+	ProjectID *uuid.UUID `gorm:"column:project_id"`
+}
+
+func (orgAndOptionalProjectScopedModel) TableName() string { return "org_and_optional_project_scoped" }
+
+func TestAutoTenantScopeOrgIDColumnName(t *testing.T) {
+	db := dryRunDB(t)
+	orgID := uuid.New()
+	ids := models.OwnershipScope{OrgID: orgID}
+
+	stmt := db.Scopes(autoOwnershipScope(orgAndOptionalProjectScopedModel{}, ids)).
+		Find(&orgAndOptionalProjectScopedModel{}).Statement
+
+	assert.Contains(t, stmt.SQL.String(), "org_id")
+	assert.Contains(t, stmt.Vars, orgID)
+}
+
+func TestAutoTenantScopeMultiColumnAppliesBoth(t *testing.T) {
+	db := dryRunDB(t)
+	orgID := uuid.New()
+	projectID := uuid.New()
+	ids := models.OwnershipScope{OrgID: orgID, ProjectID: projectID}
+
+	stmt := db.Scopes(autoOwnershipScope(orgAndOptionalProjectScopedModel{}, ids)).
+		Find(&orgAndOptionalProjectScopedModel{}).Statement
+
+	sql := stmt.SQL.String()
+	assert.Contains(t, sql, "org_id")
+	assert.Contains(t, sql, "project_id")
+	assert.Contains(t, stmt.Vars, orgID)
+	assert.Contains(t, stmt.Vars, projectID)
+}
+
+func TestAutoTenantScopeNullableColumnSkippedWhenZero(t *testing.T) {
+	db := dryRunDB(t)
+	orgID := uuid.New()
+	// ProjectID left zero - simulates an org-level route where no project is in scope.
+	ids := models.OwnershipScope{OrgID: orgID}
+
+	stmt := db.Scopes(autoOwnershipScope(orgAndOptionalProjectScopedModel{}, ids)).
+		Find(&orgAndOptionalProjectScopedModel{}).Statement
+
+	sql := stmt.SQL.String()
+	assert.Contains(t, sql, "org_id")
+	assert.NotContains(t, sql, "project_id")
+}
+
 func TestAutoTenantScopeAssetScoped(t *testing.T) {
 	db := dryRunDB(t)
 	assetID := uuid.New()

@@ -37,8 +37,11 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
+// MarkAsLastUsedNowByID scopes by id only: id is the PAT's own ID, resolved from a token the
+// caller already presented and that was matched by fingerprint (proof of possession), not from
+// a raw user-suppliable path param.
 func (g *gormPatRepository) MarkAsLastUsedNowByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("id = ?", id).Update("last_used_at", time.Now()).Error
+	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("id = ?", id).Update("last_used_at", time.Now()).Error // nosemgrep: bola-repository-update-missing-tenant-scope
 }
 
 func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) error {

@@ -23,6 +23,7 @@ func main() {
 		commands.ReleaseCICmd,
 		commands.ReleaseHelmCmd,
 		commands.ReleaseK8sIntegrationCmd,
+		commands.NewLicensesCommand(),
 	)
 
 	root.AddCommand(commands.LogsCmd, commands.DocsCmd, release)

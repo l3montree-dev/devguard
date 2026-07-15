@@ -14,7 +14,9 @@ stages:
   - attestation
   - release
 
-
+default:
+  retry: 2
+  
 .common: &common
   devguard_asset_name: "$DEVGUARD_ASSET_NAME"
   devguard_api_url: "$DEVGUARD_API_URL"

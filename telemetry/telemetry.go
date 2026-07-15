@@ -203,6 +203,7 @@ func SendStartup(ctx context.Context, cfg Config, client HTTPDoer, event Startup
 	}
 
 	if client == nil {
+		// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 		client = http.DefaultClient
 	}
 

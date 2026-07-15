@@ -59,12 +59,12 @@
           # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
           # without rebuilding and untarring a whole OCI image just to check
           # one file.
-          devguard-scanner-sbom = ociImagesAmd64.devguardBinaries.devguardScannerSBOM;
-          devguard-sbom = ociImagesAmd64.devguardBinaries.devguardSBOM;
-          devguard-cli-sbom = ociImagesAmd64.devguardBinaries.devguardCLISBOM;
-          crane-sbom = ociImagesAmd64.craneFromSource.sbom;
-          gitleaks-sbom = ociImagesAmd64.gitleaksFromSource.sbom;
-          trivy-sbom = ociImagesAmd64.trivyFromSource.sbom;
+          devguard-scanner-sbom = ociImagesArm64.devguardBinaries.devguardScannerSBOM;
+          devguard-sbom = ociImagesArm64.devguardBinaries.devguardSBOM;
+          devguard-cli-sbom = ociImagesArm64.devguardBinaries.devguardCLISBOM;
+          crane-sbom = ociImagesArm64.craneFromSource.sbom;
+          gitleaks-sbom = ociImagesArm64.gitleaksFromSource.sbom;
+          trivy-sbom = ociImagesArm64.trivyFromSource.sbom;
         };
 
         arm64Packages = {

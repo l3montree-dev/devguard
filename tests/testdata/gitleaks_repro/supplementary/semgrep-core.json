@@ -1,0 +1,12 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "nix/store/ms2nwq7ifz94y4ady8av6mzgxda83shx-semgrep-1.168.0/lib/python3.13/site-packages/semgrep/bin/semgrep-core",
+      "name": "nix/store/ms2nwq7ifz94y4ady8av6mzgxda83shx-semgrep-1.168.0/lib/python3.13/site-packages/semgrep/bin/semgrep-core",
+      "version": "1.168.0"
+    }
+  }
+}

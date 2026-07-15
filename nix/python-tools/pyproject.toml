@@ -17,4 +17,5 @@ constraint-dependencies = [
     "cryptography==48.0.1",
     "python-multipart==0.0.30",
     "pyjwt==2.13.0",
+    "soupsieve==2.8.4"
 ]

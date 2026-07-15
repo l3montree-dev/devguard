@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.9.2] - 2026-07-14
+
+### Fixed
+
+- **Ory Kratos connectivity** — the Ory API client now uses its own dedicated HTTP client instead of the shared egress client, working around the new egress SSRF protections blocking the configured Ory domain in some deployments
+
+### Changed
+
+- Removed now-redundant per-integration rate limiters in the GitLab client factory and the open-source-insights service, since outgoing requests are already rate-limited per host by the shared egress client
+- Refreshed the dependency license manifest (`licenses.json`)
+
+## [v1.9.1] - 2026-07-14
+
+(Multiple security fixes. Information on the vulnerabilities will be added later.)
+
+## [v1.9.0] - 2026-07-14
+
+Thanks to @domzoric for their first contribution to DevGuard! 🎉
+
+### Added
+
+- **SBOM enrichment & Nix build SBOMs** — major overhaul of SBOM generation: implements a `sboms` directory standard, extracts SBOMs from OCI image tar files, and enriches generated SBOMs with external references; Nix-built images now produce a corrected, self-describing SBOM during OCI image builds
+- **CSAF VEX ingestion** — a new CSAF VEX report endpoint per artifact is used to ingest VEX statements during SBOM generation, and dependency vulnerability scans now ingest VEXes automatically
+- **Invitation revocation & expiry** — organisation invitations can now be revoked and carry an expiry date/time, surfaced through new DTOs and returned to the frontend
+- **Bulk selection for code risk (web)** — added multi-select support for bulk-updating code risk findings
+- **Artifact-scoped badge route** — the authenticated badge endpoint is now also exposed per artifact (`.../refs/:assetVersionSlug/artifacts/:artifactName/badges/:badge/`), matching the scoping already available on the public share router, so the badge preview reflects the selected branch/tag/artifact ([#2198](https://github.com/l3montree-dev/devguard/issues/2198))
+- **`--print-token` flag** — `devguard-scanner auth` can now print the resolved token for debugging
+- **Flag passthrough for `devguard-scanner`** — arbitrary flags can now be forwarded to the underlying scanner using a double dash (`--`)
+- **`--path` argument for SCA** — the SCA scan command now accepts a path argument to scan a specific directory
+
+### Changed
+
+- **SBOM artifact strategy** — when multiple SBOMs are supplied for the same artifact, the last one now wins instead of merging, simplifying re-scan semantics
+- **Asset name normalization** — asset names are now normalized consistently, fixing links that previously pointed to the wrong URL
+- **Unresolved component warnings** — components are now checked transitively for versioned children before being reported as unresolved
+- **GitHub label handling** — labels are deduplicated (can occur after truncation) and truncated to GitHub's 50-character limit
+- **Risk threshold calculation** — fixed an inverted open/closed condition when evaluating risk thresholds
+- **Dependency updates** — Go, Python (including a `soupsieve` patch to 2.8.4, and `pyjwt` to 2.13.0), and `oras-go` (to v2.6.1) dependencies updated; Ory Kratos updated to v26.2.0; Trivy updated
+
+### Fixed
+
+- **VEX rule SQL error** — fixed a broken SQL query in VEX rule handling
+- **Exploits table truncation** — the exploits table is now truncated correctly on reset, and an obsolete foreign key drop was removed
+- **Attestation map** — fixed an issue in the attestation output map, with added unit test coverage
+- **Result printing link** — fixed a broken link shown when printing scan results
+- **Quick fixes** — corrected an issue in the quick-fix flow
+- **CI hardening** — removed a code-scanning pin, pinned the release action and `cache-nix` action, and fixed a hardcoded API URL used in CI
+
 ## [v1.8.0] - 2026-07-01
 
 ### Added

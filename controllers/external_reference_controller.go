@@ -113,7 +113,7 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	}
 
 	// validate
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return err
 	}
 

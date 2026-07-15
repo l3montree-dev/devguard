@@ -81,7 +81,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	if config.RuntimeBaseConfig.NoWrite {
 		req.Header.Set("X-No-Write", "1")
 	}
-
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
@@ -310,7 +310,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		if config.RuntimeBaseConfig.NoWrite {
 			req.Header.Set("X-No-Write", "1")
 		}
-
+		// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
