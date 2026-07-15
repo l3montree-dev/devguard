@@ -46,6 +46,7 @@ type frameworkControlPostureRow struct {
 	Events              []models.VulnEvent `gorm:"foreignKey:CompliancePostureID;references:CompliancePostureID"`
 }
 
+// nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
 func (row frameworkControlPostureRow) compliancePostureIDString() string {
 	if row.CompliancePostureID == nil {
 		return ""
@@ -53,6 +54,7 @@ func (row frameworkControlPostureRow) compliancePostureIDString() string {
 	return row.CompliancePostureID.String()
 }
 
+// nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
 func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlDTO {
 	mappedControls := make([]dtos.MappedControlDTO, len(row.MappedControls))
 	for i, mc := range row.MappedControls {
@@ -83,6 +85,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 	}
 }
 
+// nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
 func (row frameworkControlPostureRow) toDetailsDTO() dtos.CompliancePostureWithDetailsDTO {
 	dto := dtos.CompliancePostureWithDetailsDTO{
 		CompliancePostureWithControlDTO: row.toDTO(),
@@ -102,7 +105,8 @@ func NewCompliancePostureRepository(db *gorm.DB) *CompliancePostureRepository {
 
 func (r *CompliancePostureRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, posture models.CompliancePosture) (*models.CompliancePosture, error) {
 	var existingPosture models.CompliancePosture
-	if err := r.GetDB(ctx, tx).Preload("FrameworkControl").Where("id = ?", posture.ID).First(&existingPosture).Error; err != nil {
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", posture.ID), existingPosture)
+	if err := db.Preload("FrameworkControl").First(&existingPosture).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("failed to query compliance posture: %w", err)
 		}
