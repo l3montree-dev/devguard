@@ -36,76 +36,76 @@ func paramWithLabel(id, label string) oscalTypes.Parameter {
 
 func TestResolveInserts_Param(t *testing.T) {
 	t.Run("resolves from Values", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{
 			"arch.2.2-prm1": paramWithValues("arch.2.2-prm1", "Gerätetyp"),
 		}}
-		got := ResolveInserts("Einschränken anhand von {{ insert: param, arch.2.2-prm1 }}.", ctx)
+		got := resolveInserts("Einschränken anhand von {{ insert: param, arch.2.2-prm1 }}.", ctx)
 		assert.Equal(t, "Einschränken anhand von Gerätetyp.", got)
 	})
 
 	t.Run("joins multiple Values", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{
 			"p1": paramWithValues("p1", "Gerätetyp", "Benutzerrolle"),
 		}}
-		got := ResolveInserts("{{ insert: param, p1 }}", ctx)
+		got := resolveInserts("{{ insert: param, p1 }}", ctx)
 		assert.Equal(t, "Gerätetyp, Benutzerrolle", got)
 	})
 
 	t.Run("falls back to Select.Choice when no Values", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{
 			"p1": paramWithSelect("p1", "jährlich", "quartalsweise"),
 		}}
-		got := ResolveInserts("{{ insert: param, p1 }}", ctx)
+		got := resolveInserts("{{ insert: param, p1 }}", ctx)
 		assert.Equal(t, "jährlich, quartalsweise", got)
 	})
 
 	t.Run("falls back to Label when no Values or Select", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{
 			"p1": paramWithLabel("p1", "Kriterien"),
 		}}
-		got := ResolveInserts("{{ insert: param, p1 }}", ctx)
+		got := resolveInserts("{{ insert: param, p1 }}", ctx)
 		assert.Equal(t, "Kriterien", got)
 	})
 
 	t.Run("leaves span untouched when param is unknown", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{}}
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{}}
 		prose := "Text mit {{ insert: param, does-not-exist }} Platzhalter."
-		got := ResolveInserts(prose, ctx)
+		got := resolveInserts(prose, ctx)
 		assert.Equal(t, prose, got)
 	})
 
 	t.Run("resolves multiple distinct inserts in the same prose", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{
 			"p1": paramWithLabel("p1", "A"),
 			"p2": paramWithLabel("p2", "B"),
 		}}
-		got := ResolveInserts("{{ insert: param, p1 }} und {{ insert: param, p2 }}", ctx)
+		got := resolveInserts("{{ insert: param, p1 }} und {{ insert: param, p2 }}", ctx)
 		assert.Equal(t, "A und B", got)
 	})
 
 	t.Run("returns prose unchanged when there is no insert markup", func(t *testing.T) {
-		ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{}}
+		ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{}}
 		prose := "Ganz normaler Text ohne Platzhalter."
-		got := ResolveInserts(prose, ctx)
+		got := resolveInserts(prose, ctx)
 		assert.Equal(t, prose, got)
 	})
 
 	t.Run("nil context returns prose unchanged", func(t *testing.T) {
 		prose := "{{ insert: param, p1 }}"
-		got := ResolveInserts(prose, nil)
+		got := resolveInserts(prose, nil)
 		assert.Equal(t, prose, got)
 	})
 }
 
 func TestResolveInserts_UnknownType(t *testing.T) {
-	ctx := &ResolveContext{Params: map[string]oscalTypes.Parameter{}}
+	ctx := &resolveContext{Params: map[string]oscalTypes.Parameter{}}
 	prose := "Siehe {{ insert: title, some-control-id }} für Details."
-	got := ResolveInserts(prose, ctx)
+	got := resolveInserts(prose, ctx)
 	assert.Equal(t, prose, got, "unregistered insert types should be left untouched")
 }
 
 func TestRegisterInsertResolver(t *testing.T) {
-	RegisterInsertResolver("title", func(idRef string, ctx *ResolveContext) (string, bool) {
+	registerInsertResolver("title", func(idRef string, ctx *resolveContext) (string, bool) {
 		c, ok := ctx.Controls[idRef]
 		if !ok {
 			return "", false
@@ -114,10 +114,10 @@ func TestRegisterInsertResolver(t *testing.T) {
 	})
 	t.Cleanup(func() { delete(insertResolvers, "title") })
 
-	ctx := &ResolveContext{Controls: map[string]oscalTypes.Control{
+	ctx := &resolveContext{Controls: map[string]oscalTypes.Control{
 		"ARCH.2.2.1": {ID: "ARCH.2.2.1", Title: "Externe Netzanschlüsse"},
 	}}
-	got := ResolveInserts("Siehe {{ insert: title, ARCH.2.2.1 }}.", ctx)
+	got := resolveInserts("Siehe {{ insert: title, ARCH.2.2.1 }}.", ctx)
 	assert.Equal(t, "Siehe Externe Netzanschlüsse.", got)
 }
 
@@ -149,7 +149,7 @@ func TestNewResolveContext(t *testing.T) {
 		},
 	}
 
-	ctx := NewResolveContext(catalog)
+	ctx := newResolveContext(catalog)
 
 	assert.Contains(t, ctx.Params, "top-prm")
 	assert.Contains(t, ctx.Params, "grp-prm")
@@ -164,7 +164,7 @@ func TestNewResolveContext(t *testing.T) {
 }
 
 func TestNewResolveContext_NilCatalog(t *testing.T) {
-	ctx := NewResolveContext(nil)
+	ctx := newResolveContext(nil)
 	assert.NotNil(t, ctx)
 	assert.Empty(t, ctx.Params)
 	assert.Empty(t, ctx.Controls)

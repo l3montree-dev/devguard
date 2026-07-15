@@ -27,14 +27,14 @@ import (
 	"gorm.io/datatypes"
 )
 
-type AdditionalMapper func(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any
+type additionalMapper func(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any
 
 func mustMarshalJSON(v any) datatypes.JSON {
 	b, _ := json.Marshal(v)
 	return datatypes.JSON(b)
 }
 
-func ParseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
+func parseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("reading catalog: %w", err)
@@ -52,8 +52,8 @@ func ParseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
 	return schema.Catalog, nil
 }
 
-func ExtractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName string, mapper AdditionalMapper) []models.FrameworkControl {
-	ctx := NewResolveContext(catalog)
+func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName string, mapper additionalMapper) []models.FrameworkControl {
+	ctx := newResolveContext(catalog)
 
 	var controls []models.FrameworkControl
 	for _, g := range derefGroups(catalog.Groups) {
@@ -101,7 +101,7 @@ func extractMappedControls(frameworkControlID string, c oscalTypes.Control) ([]m
 	return mappedControls, nil
 }
 
-func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName string, mapper AdditionalMapper, ctx *ResolveContext) []models.FrameworkControl {
+func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName string, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	groupTitle := &g.Title
 	if parentGroupTitle != nil {
 		combined := fmt.Sprintf("%s / %s", *parentGroupTitle, *groupTitle)
@@ -118,7 +118,7 @@ func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkNam
 	return controls
 }
 
-func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName string, mapper AdditionalMapper, ctx *ResolveContext) []models.FrameworkControl {
+func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName string, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	parts := derefParts(c.Parts)
 
 	// Find the statement part for the description; fall back to any part with prose.
@@ -137,7 +137,7 @@ func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, gr
 			}
 		}
 	}
-	description = ResolveInserts(description, ctx)
+	description = resolveInserts(description, ctx)
 
 	var result []models.FrameworkControl
 

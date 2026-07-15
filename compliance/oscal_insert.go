@@ -26,16 +26,16 @@ import (
 // The first group is the insert type (param, title, prop, link, ...), the second is the id-ref
 var insertPattern = regexp.MustCompile(`\{\{\s*insert:\s*([a-zA-Z][a-zA-Z0-9_-]*)\s*,\s*([^}]+?)\s*\}\}`)
 
-type InsertResolverFunc func(idRef string, ctx *ResolveContext) (string, bool)
+type insertResolverFunc func(idRef string, ctx *resolveContext) (string, bool)
 
-type ResolveContext struct {
+type resolveContext struct {
 	Params   map[string]oscalTypes.Parameter
 	Controls map[string]oscalTypes.Control
 	Groups   map[string]oscalTypes.Group
 }
 
-func NewResolveContext(catalog *oscalTypes.Catalog) *ResolveContext {
-	ctx := &ResolveContext{
+func newResolveContext(catalog *oscalTypes.Catalog) *resolveContext {
+	ctx := &resolveContext{
 		Params:   map[string]oscalTypes.Parameter{},
 		Controls: map[string]oscalTypes.Control{},
 		Groups:   map[string]oscalTypes.Group{},
@@ -54,7 +54,7 @@ func NewResolveContext(catalog *oscalTypes.Catalog) *ResolveContext {
 	return ctx
 }
 
-func indexGroup(ctx *ResolveContext, g oscalTypes.Group) {
+func indexGroup(ctx *resolveContext, g oscalTypes.Group) {
 	if g.ID != "" {
 		ctx.Groups[g.ID] = g
 	}
@@ -67,7 +67,7 @@ func indexGroup(ctx *ResolveContext, g oscalTypes.Group) {
 	}
 }
 
-func indexControl(ctx *ResolveContext, c oscalTypes.Control) {
+func indexControl(ctx *resolveContext, c oscalTypes.Control) {
 	if c.ID != "" {
 		ctx.Controls[c.ID] = c
 	}
@@ -77,7 +77,7 @@ func indexControl(ctx *ResolveContext, c oscalTypes.Control) {
 	}
 }
 
-func indexParams(ctx *ResolveContext, params *[]oscalTypes.Parameter) {
+func indexParams(ctx *resolveContext, params *[]oscalTypes.Parameter) {
 	if params == nil {
 		return
 	}
@@ -86,15 +86,15 @@ func indexParams(ctx *ResolveContext, params *[]oscalTypes.Parameter) {
 	}
 }
 
-var insertResolvers = map[string]InsertResolverFunc{
+var insertResolvers = map[string]insertResolverFunc{
 	"param": resolveParamInsert,
 }
 
-func RegisterInsertResolver(insertType string, resolver InsertResolverFunc) {
+func registerInsertResolver(insertType string, resolver insertResolverFunc) {
 	insertResolvers[insertType] = resolver
 }
 
-func resolveParamInsert(idRef string, ctx *ResolveContext) (string, bool) {
+func resolveParamInsert(idRef string, ctx *resolveContext) (string, bool) {
 	param, ok := ctx.Params[idRef]
 	if !ok {
 		return "", false
@@ -112,7 +112,7 @@ func resolveParamInsert(idRef string, ctx *ResolveContext) (string, bool) {
 	}
 }
 
-func ResolveInserts(prose string, ctx *ResolveContext) string {
+func resolveInserts(prose string, ctx *resolveContext) string {
 	if ctx == nil || !strings.Contains(prose, "insert:") {
 		return prose
 	}

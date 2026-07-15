@@ -59,11 +59,11 @@ func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.
 }
 
 func loadGrundschutzControls() ([]models.FrameworkControl, error) {
-	catalog, err := ParseOSCALCatalog(bytes.NewReader(grundschutzCatalogJSON))
+	catalog, err := parseOSCALCatalog(bytes.NewReader(grundschutzCatalogJSON))
 	if err != nil {
 		return nil, err
 	}
-	return ExtractControlsFromCatalog(catalog, "Grundschutz++", grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, "Grundschutz++", grundschutzAdditionalMapper), nil
 }
 
 type newProperty struct {

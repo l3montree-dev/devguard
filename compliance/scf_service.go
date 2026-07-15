@@ -25,11 +25,11 @@ import (
 var scfCatalogJSON []byte
 
 func loadSCFControls() ([]models.FrameworkControl, error) {
-	catalog, err := ParseOSCALCatalog(bytes.NewReader(scfCatalogJSON))
+	catalog, err := parseOSCALCatalog(bytes.NewReader(scfCatalogJSON))
 	if err != nil {
 		return nil, err
 	}
-	return ExtractControlsFromCatalog(catalog, "SCF", scfAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, "SCF", scfAdditionalMapper), nil
 }
 
 func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
