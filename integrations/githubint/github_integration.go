@@ -40,7 +40,6 @@ import (
 )
 
 var githubTracer = otel.Tracer("devguard/integrations/github")
-var ErrNotConnected = errors.New("not connected to github")
 
 type githubRepository struct {
 	*github.Repository
@@ -229,7 +228,7 @@ func (githubIntegration *GithubIntegration) getExcessIIDs(ctx context.Context, a
 func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	client, owner, repo, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get github client based on asset", "err", err, "asset", asset)
@@ -261,7 +260,7 @@ func (githubIntegration *GithubIntegration) CompareIssueStatesAndResolveDifferen
 func (githubIntegration *GithubIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
 	_, _, _, excessNumbers, err := githubIntegration.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil, nil
 		}
 		return nil, err

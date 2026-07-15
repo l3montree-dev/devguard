@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -57,8 +56,6 @@ type JiraIntegration struct {
 var _ shared.ThirdPartyIntegration = &JiraIntegration{}
 
 var DevguardCommentText = "This comment was added via DevGuard."
-
-var ErrNotConnected = errors.New("not connected to jira")
 
 func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationRepository,
 	aggregatedVulnRepository shared.VulnRepository,
@@ -312,7 +309,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(ctx context.Context, asset model
 
 	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, integrationUUID)
 	if err != nil {
-		return nil, 0, fmt.Errorf("%w: integration %s: %v", ErrNotConnected, integrationUUID, err)
+		return nil, 0, fmt.Errorf("%w: integration %s: %v", commonint.ErrNotConnected, integrationUUID, err)
 	}
 
 	projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)
