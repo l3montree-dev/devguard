@@ -38,7 +38,6 @@ import (
 	"github.com/l3montree-dev/devguard/telemetry"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
-	vulndbcompliance "github.com/l3montree-dev/devguard/vulndb/compliance"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -47,7 +46,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-	"gorm.io/gorm/clause"
 
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -163,44 +161,6 @@ func main() {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					encryptionService.LoadDBEncryptionKey()
-					return nil
-				},
-			})
-		}),
-		//TODO: add a migration system to avoid this
-		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-
-					go func() {
-						controls, err := vulndbcompliance.LoadGrundschutzControls()
-						if err != nil {
-							slog.Error("could not load Grundschutz++ controls", "err", err)
-							return
-						}
-						if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
-							Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
-							UpdateAll: true,
-						}).CreateInBatches(&controls, 100).Error; err != nil {
-							slog.Error("could not seed Grundschutz++ controls", "err", err)
-							return
-						}
-						slog.Info("seeded Grundschutz++ controls", "count", len(controls))
-
-						controls, err = vulndbcompliance.LoadSCFControls()
-						if err != nil {
-							slog.Error("could not load SCF controls", "err", err)
-							return
-						}
-						if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
-							Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
-							UpdateAll: true,
-						}).CreateInBatches(&controls, 100).Error; err != nil {
-							slog.Error("could not seed SCF controls", "err", err)
-							return
-						}
-						slog.Info("seeded SCF controls", "count", len(controls))
-					}()
 					return nil
 				},
 			})

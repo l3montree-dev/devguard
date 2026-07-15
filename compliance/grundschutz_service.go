@@ -1,4 +1,4 @@
-package vulndb
+package compliance
 
 import (
 	"bytes"
@@ -58,12 +58,11 @@ func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.
 	return additional
 }
 
-func LoadGrundschutzControls() ([]models.FrameworkControl, error) {
+func loadGrundschutzControls() ([]models.FrameworkControl, error) {
 	catalog, err := ParseOSCALCatalog(bytes.NewReader(grundschutzCatalogJSON))
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Loaded Grundschutz++ catalog")
 	return ExtractControlsFromCatalog(catalog, "Grundschutz++", grundschutzAdditionalMapper), nil
 }
 

@@ -11,7 +11,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package vulndb
+package compliance
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 //go:embed SCF.json
 var scfCatalogJSON []byte
 
-func LoadSCFControls() ([]models.FrameworkControl, error) {
+func loadSCFControls() ([]models.FrameworkControl, error) {
 	catalog, err := ParseOSCALCatalog(bytes.NewReader(scfCatalogJSON))
 	if err != nil {
 		return nil, err

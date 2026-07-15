@@ -18,11 +18,12 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
-	vulndb "github.com/l3montree-dev/devguard/vulndb/compliance"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -266,7 +267,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 		return err
 	}
 
-	if err := vulndb.ValidateOSCAL(oscal); err != nil {
+	if err := compliance.ValidateOSCAL(oscal); err != nil {
 		return echo.NewHTTPError(500, "OSCAL validation failed").WithInternal(err)
 	}
 

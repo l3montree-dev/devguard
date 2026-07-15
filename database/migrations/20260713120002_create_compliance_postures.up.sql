@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.compliance_postures (
-    id uuid NOT NULL,
+    id uuid PRIMARY KEY NOT NULL,
     message text,
     state text DEFAULT 'open'::text NOT NULL,
     last_detected timestamp with time zone DEFAULT now() NOT NULL,
@@ -16,17 +16,22 @@ CREATE TABLE IF NOT EXISTS public.compliance_postures (
     framework_control_id text NOT NULL
 );
 
-ALTER TABLE ONLY public.compliance_postures
-    ADD CONSTRAINT compliance_postures_pkey PRIMARY KEY (id);
+ALTER TABLE public.compliance_postures DROP CONSTRAINT IF EXISTS fk_compliance_postures_control;
 
 ALTER TABLE ONLY public.compliance_postures
     ADD CONSTRAINT fk_compliance_postures_control FOREIGN KEY (framework_control_id) REFERENCES public.frameworks_controls(framework_control_id) ON DELETE CASCADE;
 
+ALTER TABLE public.compliance_postures DROP CONSTRAINT IF EXISTS fk_compliance_postures_asset;
+
 ALTER TABLE ONLY public.compliance_postures
     ADD CONSTRAINT fk_compliance_postures_asset FOREIGN KEY (asset_id) REFERENCES public.assets(id) ON DELETE CASCADE;
 
+ALTER TABLE public.compliance_postures DROP CONSTRAINT IF EXISTS fk_compliance_postures_project;
+
 ALTER TABLE ONLY public.compliance_postures
     ADD CONSTRAINT fk_compliance_postures_project FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+ALTER TABLE public.compliance_postures DROP CONSTRAINT IF EXISTS fk_compliance_postures_org;
 
 ALTER TABLE ONLY public.compliance_postures
     ADD CONSTRAINT fk_compliance_postures_org FOREIGN KEY (org_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
