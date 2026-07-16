@@ -342,55 +342,6 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
 }
 
-// @Summary Reapply a VEX rule
-// @Tags VEXRules
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
-// @Param ruleId path string true "Rule ID"
-// @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}/reapply [post]
-func (c *VEXRuleController) Reapply(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-
-	ruleID := ctx.Param("ruleId")
-	if ruleID == "" {
-		return echo.NewHTTPError(400, "ruleId path parameter is required")
-	}
-
-	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
-	if err != nil {
-		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
-	}
-
-	// Verify the rule belongs to this asset
-	if rule.AssetID != asset.ID {
-		return echo.NewHTTPError(403, "rule does not belong to this asset")
-	}
-
-	// Reapply the rule to existing vulnerabilities (force reapply ignoring duplicate checks)
-	vulns, err := c.vexRuleService.ApplyRulesToExistingVulnsForce(ctx.Request().Context(), nil, []models.VEXRule{rule})
-	if err != nil {
-		return echo.NewHTTPError(500, "failed to reapply VEX rule").WithInternal(err)
-	}
-
-	// Update artifact risk aggregations in background
-	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
-
-	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
-	if err != nil {
-		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
-		count = 0
-	}
-
-	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
-}
-
 // @Summary Delete a VEX rule
 // @Tags VEXRules
 // @Security CookieAuth

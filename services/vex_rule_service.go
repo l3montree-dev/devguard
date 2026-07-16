@@ -189,15 +189,10 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 }
 
 func (s *VEXRuleService) ApplyRulesToExisting(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, false)
+	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns)
 }
 
-// ApplyRulesToExistingForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingForce(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, true)
-}
-
-func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
+func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
 	vulnsByRule := matchRulesToVulns(rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
@@ -218,7 +213,7 @@ func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx sh
 			}
 
 			// Skip duplicate events unless force reapply is enabled
-			if !forceReapply && isVexEventAlreadyApplied(vuln, ev) {
+			if isVexEventAlreadyApplied(vuln, ev) {
 				continue
 			}
 
@@ -255,9 +250,6 @@ func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx sh
 	}
 
 	logAction := "applied"
-	if forceReapply {
-		logAction = "reapplied"
-	}
 	slog.Info(logAction+" VEX rules to existing vulnerabilities",
 		"rulesApplied", len(rules),
 		"vulnsUpdated", len(updatedVulns),
@@ -281,27 +273,37 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 	return s.ApplyRulesToExisting(ctx, tx, rules, vulns)
 }
 
-// ApplyRulesToExistingVulnsForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingVulnsForce(ctx context.Context, tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
-	if len(rules) == 0 {
-		return nil, nil
-	}
-	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
-	}
-	return s.ApplyRulesToExistingForce(ctx, tx, rules, vulns)
-}
-
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
-	for _, ev := range vuln.GetEvents() {
-		if ev.Type == event.Type && (ev.Justification == nil && event.Justification == nil || *ev.Justification == *event.Justification) {
-			return true
-		}
+
+	events := vuln.GetEvents()
+	if len(events) == 0 {
+		return false
 	}
-	return false
+	var ev models.VulnEvent
+	found := false
+
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated {
+			continue
+		}
+		ev = events[i]
+		found = true
+		break
+	}
+
+	if !found {
+		return false
+	}
+
+	if ev.Type != event.Type {
+		return false
+	}
+
+	if ev.Justification == nil || event.Justification == nil {
+		return ev.Justification == nil && event.Justification == nil
+	}
+
+	return *ev.Justification == *event.Justification
 }
 
 // IngestVEXRules syncs the given rules for a single source and applies them to existing

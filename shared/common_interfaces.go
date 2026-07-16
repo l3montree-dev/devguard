@@ -506,9 +506,7 @@ type VEXRuleService interface {
 	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
 	FindByAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	ApplyRulesToExistingVulns(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
-	ApplyRulesToExistingVulnsForce(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	ApplyRulesToExistingForce(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error
 	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
