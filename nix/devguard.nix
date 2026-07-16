@@ -27,7 +27,7 @@
       # go:embed assets
       ../database/migrations
       ../licenses
-      ../compliance/attestation-compliance-policies
+      ../compliance
       ../normalize/package_mappings.json
       ../integrations/commonint/templates
       ../controllers/report-templates
