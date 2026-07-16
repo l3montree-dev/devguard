@@ -127,22 +127,22 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 			},
 		},
 	}
-	systemComponents := []oscalTypes.SystemComponent{}
 
-	for _, frameworkControl := range frameworkControls {
-		systemComponent := oscalTypes.SystemComponent{
-			UUID:        handleFrameworkControlID(frameworkControl.FrameworkControlID),
-			Title:       frameworkControl.Title,
-			Description: frameworkControl.Description,
-			Status: oscalTypes.SystemComponentStatus{
-				State: "operational",
-			},
-			Type: "software",
-		}
-		systemComponents = append(systemComponents, systemComponent)
+	systemComponent := oscalTypes.SystemComponent{
+		UUID:        uuid.New().String(),
+		Title:       "DevGuard System Component",
+		Description: "This component represents the DevGuard system responsible for managing compliance posture data.",
+		Status: oscalTypes.SystemComponentStatus{
+			State: "operational",
+		},
+		Type: "software",
+	}
+	components := []oscalTypes.SystemComponent{
+		// only a single component for now, - this system, like trestle is doing it
+		systemComponent,
 	}
 
-	systemImplementation.Components = systemComponents
+	systemImplementation.Components = components
 	systemSecurityPlan.SystemImplementation = systemImplementation
 
 	controlImplementation := oscalTypes.ControlImplementation{}
@@ -165,7 +165,7 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		}
 		byComponents := []oscalTypes.ByComponent{}
 		byComponent := oscalTypes.ByComponent{
-			ComponentUuid: handleFrameworkControlID(compliancePosture.FrameworkControlID),
+			ComponentUuid: systemComponent.UUID,
 			Description:   description,
 			ImplementationStatus: &oscalTypes.ImplementationStatus{
 				State: state,
