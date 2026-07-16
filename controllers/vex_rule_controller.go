@@ -76,7 +76,6 @@ type UpdateVEXRuleRequest struct {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 
 	vulnID := ctx.QueryParam("dependencyVulnId")
 	if vulnID != "" {
@@ -84,7 +83,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 		if err != nil {
 			return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
 		}
-		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, vulnIDParsed)
+		rules, err := c.vexRuleService.FindByAssetIDAndVulnID(ctx.Request().Context(), nil, asset.ID, vulnIDParsed)
 		if err != nil {
 			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 		}
@@ -106,7 +105,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	filterQuery := shared.GetFilterQuery(ctx)
 	sortQuery := shared.GetSortQuery(ctx)
 
-	pagedRules, err := c.vexRuleService.FindByAssetVersionPaged(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, pageInfo, search, filterQuery, sortQuery)
+	pagedRules, err := c.vexRuleService.FindByAssetIDPaged(ctx.Request().Context(), nil, asset.ID, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
@@ -177,7 +176,6 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 	session := shared.GetSession(ctx)
 
 	var req CreateVEXRuleRequest
@@ -195,7 +193,6 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 
 	rule := &models.VEXRule{
 		AssetID:                 asset.ID,
-		AssetVersionName:        assetVersion.Name,
 		CVEID:                   req.CVEID,
 		VexSource:               "manual",
 		Justification:           req.Justification,

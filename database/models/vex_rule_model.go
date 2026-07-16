@@ -34,10 +34,9 @@ type VEXRule struct {
 	ID string `json:"id" gorm:"primaryKey;not null;"`
 
 	// Composite key components (for indexing and queries)
-	AssetID          uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"type:text;not null;index:,composite:vex_composite_key"`
-	CVEID            string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
-	VexSource        string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	AssetID   uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
+	CVEID     string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	VexSource string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"createdAt"`

@@ -517,7 +517,6 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 	}
 
 	assetID := rules[0].AssetID
-	assetVersionName := rules[0].AssetVersionName
 
 	cveIDSlice := make([]string, 0, len(cveIDs))
 	for id := range cveIDs {
@@ -528,7 +527,6 @@ func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, 
 	var vulns []models.DependencyVuln
 	err := repository.Repository.GetDB(ctx, tx).
 		Where("asset_id = ?", assetID).
-		Where("asset_version_name = ?", assetVersionName).
 		Where("LOWER(cve_id) IN ?", cveIDSlice).
 		Preload("Events", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC")

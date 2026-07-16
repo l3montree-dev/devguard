@@ -40,14 +40,13 @@ func mapProject(project models.Project, projectTrustscore float64) crowdsourceve
 
 func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
 	return crowdsourcevexing.VexRule{
-		ID:               vexrule.ID,
-		PathPattern:      vexrule.PathPattern,
-		CVE:              crowdsourcevexing.CVE{CVE: vexrule.CVEID},
-		AssetID:          vexrule.AssetID.String(),
-		AssetVersionName: vexrule.AssetVersionName,
-		Reasoning:        vexrule.Justification,
-		Assessment:       string(vexrule.MechanicalJustification),
-		UpdatedAt:        vexrule.UpdatedAt,
+		ID:          vexrule.ID,
+		PathPattern: vexrule.PathPattern,
+		CVE:         crowdsourcevexing.CVE{CVE: vexrule.CVEID},
+		AssetID:     vexrule.AssetID.String(),
+		Reasoning:   vexrule.Justification,
+		Assessment:  string(vexrule.MechanicalJustification),
+		UpdatedAt:   vexrule.UpdatedAt,
 	}
 }
 

@@ -151,23 +151,6 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		return nil, nil, nil, err
 	}
 
-	rules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, asset.ID, assetVersion.Name)
-	if err != nil {
-		slog.Error("failed to fetch VEX rules for asset version", "error", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, nil, nil, fmt.Errorf("failed to fetch VEX rules for asset version: %w", err)
-	}
-
-	// apply the vex rules to the new state
-	newState, err = s.vexRuleService.ApplyRulesToExisting(ctx, tx, rules, newState)
-	if err != nil {
-		slog.Error("failed to apply VEX rules to new state", "error", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, nil, nil, fmt.Errorf("failed to apply VEX rules to new state: %w", err)
-	}
-
 	span.SetAttributes(
 		attribute.Int("scan.opened", len(opened)),
 		attribute.Int("scan.closed", len(closed)),
@@ -871,7 +854,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Ingest VEX rules
-	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, vexRules); err != nil {
+	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, vexRules); err != nil {
 		slog.Error("failed to ingest vex rules in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
 		return nil, nil, nil, fmt.Errorf("failed to ingest vex rules: %w", err)
 	}

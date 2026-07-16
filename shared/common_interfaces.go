@@ -338,8 +338,8 @@ type VEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
 	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
 	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.VEXRule, error)
-	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
-	FindByAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
+	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(ctx context.Context, tx DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
@@ -348,9 +348,9 @@ type VEXRuleRepository interface {
 	Update(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
 	DeleteBatch(ctx context.Context, tx DB, rules []models.VEXRule) error
-	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
+	DeleteByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) error
 	Begin(ctx context.Context) DB
-	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
+	FindByAssetIDAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, cveID string) ([]models.VEXRule, error)
 }
 
 type OrganizationRepository interface {
@@ -502,17 +502,17 @@ type VEXRuleService interface {
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Update(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
-	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
-	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)
-	FindByAssetVersionPaged(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
+	DeleteByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) error
+	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	ApplyRulesToExistingVulns(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error
+	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, rules []models.VEXRule) error
 	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
-	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
-	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetIDAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, cveID string) ([]models.VEXRule, error)
+	FindByAssetIDAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)
 }
 
 type CrowdSourcedVexingService interface {
