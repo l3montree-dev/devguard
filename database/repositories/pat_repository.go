@@ -53,6 +53,25 @@ func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userI
 	err := g.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&pats).Error
 	return pats, err
 }
+ 
+func (g *gormPatRepository) ListByOrgID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.PAT, error) {
+	var pats []models.PAT
+	err := g.GetDB(ctx, tx).Where("org_id = ?", orgID).Find(&pats).Error
+	return pats, err
+}
+
+func (g *gormPatRepository) ListByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.PAT, error) {
+	var pats []models.PAT
+	err := g.GetDB(ctx, tx).Where("project_id = ?", projectID).Find(&pats).Error
+	return pats, err
+}
+
+func (g *gormPatRepository) ListByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.PAT, error) {
+	var pats []models.PAT
+	err := g.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&pats).Error
+	return pats, err
+}
+
 
 // checks if a valid token exists for the fingerprint, this excludes any expired tokens
 func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {

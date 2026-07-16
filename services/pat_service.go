@@ -67,12 +67,28 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 	}
 }
 
-func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
+func ownerToFields(o dtos.TokenOwner) (userID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) {
+	switch o.Type {
+	case dtos.OwnerUser:
+		return &o.ID, nil, nil, nil
+	case dtos.OwnerOrg:
+		return nil, &o.ID, nil, nil
+	case dtos.OwnerProject:
+		return nil, nil, &o.ID, nil
+	case dtos.OwnerAsset:
+		return nil, nil, nil, &o.ID
+	}
+	return nil, nil, nil, nil
+}
+
+func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error) {
 	if !utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes)) {
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
 
 	expiry := new(time.Unix(request.ExpiryDateUnix, 0))
+
+	userID, orgID, projectID, assetID := ownerToFields(owner)
 
 	if request.IsSymmetric() {
 		cleartext, hash, err := generateBearerToken()
@@ -80,7 +96,10 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 			return models.PAT{}, "", fmt.Errorf("could not generate bearer token: %w", err)
 		}
 		return models.PAT{
-			UserID:          uuid.MustParse(userID),
+			UserID:          userID,
+			OrgID:           orgID,
+			ProjectID:       projectID,
+			AssetID:         assetID,
 			Description:     request.Description,
 			Scopes:          request.Scopes,
 			BearerTokenHash: &hash,
@@ -95,8 +114,12 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 	if err != nil {
 		return models.PAT{}, "", fmt.Errorf("could not derive fingerprint from public key: %w", err)
 	}
+
 	return models.PAT{
-		UserID:      uuid.MustParse(userID),
+		UserID:      userID,
+		OrgID:       orgID,
+		ProjectID:   projectID,
+		AssetID:     assetID,
 		Description: request.Description,
 		Scopes:      request.Scopes,
 		PubKey:      request.PubKey,

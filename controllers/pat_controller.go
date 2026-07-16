@@ -49,6 +49,7 @@ func (p *PatController) Create(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
 	userID := session.GetUserID()
+	owner := dtos.TokenOwner{Type: dtos.OwnerUser, ID: uuid.MustParse(userID)}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -61,7 +62,7 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, userID)
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
 	if err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not create personal access token: %s", err.Error()))
 	}

@@ -77,7 +77,7 @@ type PersonalAccessTokenService interface {
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
-	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
+	ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error)
 	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
@@ -323,6 +323,9 @@ type PersonalAccessTokenRepository interface {
 	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(ctx context.Context, tx DB, userID string) ([]models.PAT, error)
+	ListByOrgID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.PAT, error)
+	ListByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.PAT, error)
+	ListByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.PAT, error)
 	DeleteByFingerprint(ctx context.Context, tx DB, fingerprint string) error
 	MarkAsLastUsedNowByID(ctx context.Context, tx DB, id uuid.UUID) error
 }

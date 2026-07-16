@@ -165,8 +165,8 @@ func (_c *PersonalAccessTokenService_RevokeByPrivateKey_Call) RunAndReturn(run f
 }
 
 // ToModel provides a mock function for the type PersonalAccessTokenService
-func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
-	ret := _mock.Called(ctx, request, userID)
+func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error) {
+	ret := _mock.Called(ctx, request, owner)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ToModel")
@@ -175,21 +175,21 @@ func (_mock *PersonalAccessTokenService) ToModel(ctx context.Context, request dt
 	var r0 models.PAT
 	var r1 string
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, string) (models.PAT, string, error)); ok {
-		return returnFunc(ctx, request, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, dtos.TokenOwner) (models.PAT, string, error)); ok {
+		return returnFunc(ctx, request, owner)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, string) models.PAT); ok {
-		r0 = returnFunc(ctx, request, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.PatCreateRequest, dtos.TokenOwner) models.PAT); ok {
+		r0 = returnFunc(ctx, request, owner)
 	} else {
 		r0 = ret.Get(0).(models.PAT)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, dtos.PatCreateRequest, string) string); ok {
-		r1 = returnFunc(ctx, request, userID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, dtos.PatCreateRequest, dtos.TokenOwner) string); ok {
+		r1 = returnFunc(ctx, request, owner)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, dtos.PatCreateRequest, string) error); ok {
-		r2 = returnFunc(ctx, request, userID)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, dtos.PatCreateRequest, dtos.TokenOwner) error); ok {
+		r2 = returnFunc(ctx, request, owner)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -204,12 +204,12 @@ type PersonalAccessTokenService_ToModel_Call struct {
 // ToModel is a helper method to define mock.On call
 //   - ctx context.Context
 //   - request dtos.PatCreateRequest
-//   - userID string
-func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx interface{}, request interface{}, userID interface{}) *PersonalAccessTokenService_ToModel_Call {
-	return &PersonalAccessTokenService_ToModel_Call{Call: _e.mock.On("ToModel", ctx, request, userID)}
+//   - owner dtos.TokenOwner
+func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx any, request any, owner any) *PersonalAccessTokenService_ToModel_Call {
+	return &PersonalAccessTokenService_ToModel_Call{Call: _e.mock.On("ToModel", ctx, request, owner)}
 }
 
-func (_c *PersonalAccessTokenService_ToModel_Call) Run(run func(ctx context.Context, request dtos.PatCreateRequest, userID string)) *PersonalAccessTokenService_ToModel_Call {
+func (_c *PersonalAccessTokenService_ToModel_Call) Run(run func(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner)) *PersonalAccessTokenService_ToModel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -219,9 +219,9 @@ func (_c *PersonalAccessTokenService_ToModel_Call) Run(run func(ctx context.Cont
 		if args[1] != nil {
 			arg1 = args[1].(dtos.PatCreateRequest)
 		}
-		var arg2 string
+		var arg2 dtos.TokenOwner
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(dtos.TokenOwner)
 		}
 		run(
 			arg0,
@@ -237,7 +237,7 @@ func (_c *PersonalAccessTokenService_ToModel_Call) Return(pAT models.PAT, s stri
 	return _c
 }
 
-func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)) *PersonalAccessTokenService_ToModel_Call {
+func (_c *PersonalAccessTokenService_ToModel_Call) RunAndReturn(run func(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error)) *PersonalAccessTokenService_ToModel_Call {
 	_c.Call.Return(run)
 	return _c
 }
