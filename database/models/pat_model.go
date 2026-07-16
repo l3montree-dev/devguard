@@ -13,7 +13,10 @@ import (
 //   - Symmetric (Bearer token): BearerTokenHash is set; PubKey and Fingerprint are empty.
 type PAT struct {
 	CreatedAt       time.Time  `json:"createdAt"`
-	UserID          uuid.UUID  `json:"userId"`
+	UserID          *uuid.UUID `json:"userId"`
+	OrgID           *uuid.UUID `json:"orgID"`
+	ProjectID       *uuid.UUID `json:"projectID"`
+	AssetID         *uuid.UUID `json:"assetID"`
 	PubKey          *string    `json:"pubKey"`
 	Description     string     `json:"description" gorm:"type:text"`
 	ID              uuid.UUID  `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
@@ -25,7 +28,22 @@ type PAT struct {
 }
 
 func (p PAT) TableName() string {
-	return "pat"
+	return "access_tokens"
+}
+
+func (p PAT) OwnerType() string {
+	switch {
+	case p.UserID != nil:
+		return "user"
+	case p.OrgID != nil:
+		return "org"
+	case p.ProjectID != nil:
+		return "project"
+	case p.AssetID != nil:
+		return "asset"
+	default:
+		return ""
+	}
 }
 
 func (p PAT) IsSymmetricSecret() bool {
@@ -47,5 +65,29 @@ func (p PAT) HashToken(token string) string {
 }
 
 func (p PAT) GetUserID() string {
+	if p.UserID == nil {
+		return ""
+	}
 	return p.UserID.String()
+}
+
+func (p PAT) GetOrgID() string {
+	if p.OrgID == nil {
+		return ""
+	}
+	return p.OrgID.String()
+}
+
+func (p PAT) GetProjectID() string {
+	if p.ProjectID == nil {
+		return ""
+	}
+	return p.ProjectID.String()
+}
+
+func (p PAT) GetAssetID() string {
+	if p.AssetID == nil {
+		return ""
+	}
+	return p.AssetID.String()
 }
