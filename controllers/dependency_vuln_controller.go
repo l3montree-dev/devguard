@@ -383,6 +383,18 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	userID := shared.GetSession(ctx).GetUserID()
 
+	//check the last event which is not a rawRiskAssessmentUpdated event. If it was created by a VEX rule, we cannot create a new event.
+	events := dependencyVuln.Events
+	for i := len(events) - 1; i >= 0; i-- {
+		event := events[i]
+		if event.Type == dtos.EventTypeRawRiskAssessmentUpdated {
+			continue
+		} else if event.CreatedByVexRule {
+			return echo.NewHTTPError(400, "cannot create a new event. The last event was created by a VEX rule. Please create a new event of type 'rawRiskAssessmentUpdated' to override the risk assessment created by the VEX rule.")
+		}
+		break
+	}
+
 	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
