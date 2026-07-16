@@ -194,7 +194,8 @@ func (r *eventRepository) HasAccessToEvent(ctx context.Context, tx *gorm.DB, ass
 		Joins("LEFT JOIN dependency_vulns dv ON ve.dependency_vuln_id = dv.id").
 		Joins("LEFT JOIN first_party_vulnerabilities fv ON ve.first_party_vuln_id = fv.id").
 		Joins("LEFT JOIN license_risks lv ON ve.license_risk_id = lv.id").
-		Where("ve.id = ? AND (dv.asset_id = ? OR fv.asset_id = ? OR lv.asset_id = ?)", eventID, assetID, assetID, assetID).
+		Joins("LEFT JOIN compliance_postures cp ON ve.compliance_posture_id = cp.id").
+		Where("ve.id = ? AND (dv.asset_id = ? OR fv.asset_id = ? OR lv.asset_id = ? OR cp.asset_id = ?)", eventID, assetID, assetID, assetID, assetID).
 		Count(&count).Error
 	if err != nil {
 		return false, err

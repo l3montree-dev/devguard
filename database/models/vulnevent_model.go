@@ -17,6 +17,7 @@ type VulnEvent struct {
 	DependencyVulnID         *uuid.UUID                       `json:"dependencyVulnId" gorm:"type:uuid;column:dependency_vuln_id"`
 	LicenseRiskID            *uuid.UUID                       `json:"licenseRiskId" gorm:"type:uuid;column:license_risk_id"`
 	FirstPartyVulnID         *uuid.UUID                       `json:"firstPartyVulnId" gorm:"type:uuid;column:first_party_vuln_id"`
+	CompliancePostureID      *uuid.UUID                       `json:"compliancePostureId" gorm:"type:uuid;column:compliance_posture_id"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
@@ -45,6 +46,9 @@ func (event VulnEvent) GetVulnID() uuid.UUID {
 	if event.FirstPartyVulnID != nil {
 		return *event.FirstPartyVulnID
 	}
+	if event.CompliancePostureID != nil {
+		return *event.CompliancePostureID
+	}
 	return uuid.Nil
 }
 
@@ -59,6 +63,9 @@ func (event VulnEvent) GetVulnType() dtos.VulnType {
 	if event.FirstPartyVulnID != nil {
 		return dtos.VulnTypeFirstPartyVuln
 	}
+	if event.CompliancePostureID != nil {
+		return dtos.VulnTypeCompliancePosture
+	}
 	return ""
 }
 
@@ -71,6 +78,8 @@ func SetVulnIDOnEvent(event *VulnEvent, vulnID uuid.UUID, vulnType dtos.VulnType
 		event.LicenseRiskID = &vulnID
 	case dtos.VulnTypeFirstPartyVuln:
 		event.FirstPartyVulnID = &vulnID
+	case dtos.VulnTypeCompliancePosture:
+		event.CompliancePostureID = &vulnID
 	}
 }
 
@@ -231,6 +240,28 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, 
 	return event
 }
 
+func NewImplementedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:          dtos.EventTypeImplemented,
+		UserID:        userID,
+		Justification: &justification,
+		UserAgent:     userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, vulnType)
+	return ev
+}
+
+func NewNotApplicableEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:          dtos.EventTypeNotApplicable,
+		UserID:        userID,
+		Justification: &justification,
+		UserAgent:     userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, vulnType)
+	return ev
+}
+
 func CheckStatusType(statusType string) error {
 	switch statusType {
 	case "fixed":
@@ -252,6 +283,10 @@ func CheckStatusType(statusType string) error {
 	case "addedScanner":
 		return nil
 	case "removedScanner":
+		return nil
+	case "implemented":
+		return nil
+	case "notApplicable":
 		return nil
 	default:
 		return fmt.Errorf("invalid status type")

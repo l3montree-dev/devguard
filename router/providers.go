@@ -9,6 +9,7 @@ var RouterModule = fx.Options(
 	fx.Provide(NewArtifactRouter),
 	fx.Provide(NewAssetRouter),
 	fx.Provide(NewAssetVersionRouter),
+	fx.Provide(NewCompliancePostureRouter),
 	fx.Provide(NewDependencyVulnRouter),
 	fx.Provide(NewFirstPartyVulnRouter),
 	fx.Provide(NewLicenseRiskRouter),

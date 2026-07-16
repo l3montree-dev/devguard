@@ -12,6 +12,7 @@ require (
 	github.com/casbin/casbin/v2 v2.135.0
 	github.com/casbin/casbin/v3 v3.10.0
 	github.com/casbin/gorm-adapter/v3 v3.41.0
+	github.com/defenseunicorns/go-oscal v0.7.0
 	github.com/exaring/otelpgx v0.11.1
 	github.com/getsentry/sentry-go v0.47.0
 	github.com/go-git/go-git/v5 v5.19.1
