@@ -18,6 +18,7 @@ package models
 import (
 	"fmt"
 
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -39,7 +40,53 @@ type CompliancePosture struct {
 	OrgID     uuid.UUID  `json:"orgId" gorm:"type:uuid;not null;column:org_id"`
 	Org       Org        `json:"org" gorm:"foreignKey:OrgID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	Events []VulnEvent `json:"events" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
+	Events             []VulnEvent                                     `json:"events" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
+	ByComponents       []ComplianceComponentImplementsControlStatement `json:"byComponents" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
+	PossibleComponents []ComplianceComponentImplementsControl          `json:"possibleComponents" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+}
+
+// this connects a component to a specific complianceComponentImplementsControl, which connects a component to a specific control
+// this allows the user to say: Hey thats cool that I can use protected branches, but currently I did not enable it.
+type ComplianceComponentImplementsControlStatement struct {
+	CompliancePostureID uuid.UUID         `json:"compliancePostureId" gorm:"type:uuid;primaryKey;column:compliance_posture_id"`
+	CompliancePosture   CompliancePosture `json:"compliancePosture" gorm:"foreignKey:CompliancePostureID;references:ID;constraint:OnDelete:CASCADE;"`
+
+	ComplianceComponentID uuid.UUID `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
+	FrameworkControlID    string    `json:"frameworkControlId" gorm:"type:text;not null;column:framework_control_id"`
+
+	ComplianceComponentImplementsControl ComplianceComponentImplementsControl `json:"complianceComponentImplementsControl" gorm:"foreignKey:ComplianceComponentID,FrameworkControlID;references:ComplianceComponentID,FrameworkControlID;constraint:OnDelete:CASCADE;"`
+
+	ImplementationStatus oscalTypes.ImplementationStatus `json:"implementationStatus" gorm:"type:jsonb;not null;column:implementation_status"`
+	Description          string                          `json:"description" gorm:"type:text;not null;column:description"`
+}
+
+// A component itself can say something about "Hey this components help you to implement requirement XYZ, if you enable protected branches" for example.
+// But it has an implementation status as well. Maybe its planned currently
+type ComplianceComponentImplementsControl struct {
+	FrameworkControlID    string                          `json:"frameworkControlId" gorm:"type:text;primaryKey;column:framework_control_id"`
+	FrameworkControl      FrameworkControl                `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+	ComplianceComponentID uuid.UUID                       `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
+	ComplianceComponent   ComplianceComponent             `json:"complianceComponent" gorm:"foreignKey:ComplianceComponentID;references:UUID;constraint:OnDelete:CASCADE;"`
+	Description           string                          `json:"description" gorm:"type:text;not null;column:description"`
+	ImplementationStatus  oscalTypes.ImplementationStatus `json:"implementationStatus" gorm:"type:jsonb;not null;column:implementation_status"`
+}
+
+type ComplianceComponent struct {
+	UUID                uuid.UUID                              `json:"uuid" gorm:"type:uuid;primaryKey;column:uuid"`
+	ImplementedControls []ComplianceComponentImplementsControl `json:"implementedControls" gorm:"foreignKey:ComplianceComponentID;constraint:OnDelete:CASCADE;"`
+	Description         string                                 `json:"description" gorm:"type:text;not null;column:description"`
+}
+
+func (m ComplianceComponent) TableName() string {
+	return "compliance_components"
+}
+
+func (m ComplianceComponentImplementsControl) TableName() string {
+	return "compliance_component_implements_controls"
+}
+
+func (m ComplianceComponentImplementsControlStatement) TableName() string {
+	return "compliance_component_implements_control_statements"
 }
 
 func (m CompliancePosture) GetAssetVersionName() string {
