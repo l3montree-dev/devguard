@@ -45,6 +45,7 @@ func NewOrgRouter(
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 	casbinRBACProvider shared.RBACProvider,
 	statisticsController *controllers.StatisticsController,
+	patController *controllers.PatController,
 ) OrgRouter {
 	/**
 	Organization router
@@ -88,6 +89,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/projects/", projectController.List)
 	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
+	organizationRouter.GET("/pats/", patController.ListByOrg)
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
@@ -98,6 +100,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
 	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
 	organizationUpdateAccessControlRequired.POST("/projects/", projectController.Create)
+	organizationUpdateAccessControlRequired.POST("/pats/", patController.CreateForOrg)
 
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
@@ -105,6 +108,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
+	// organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
 	organizationUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.UpdatePolicy)

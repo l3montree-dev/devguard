@@ -42,6 +42,7 @@ func NewProjectRouter(
 	projectRepository shared.ProjectRepository,
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
+	patController *controllers.PatController,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -77,6 +78,7 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
+	projectRouter.GET("/pats/", patController.ListByProject)
 
 	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
@@ -90,6 +92,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
 	projectUpdateAccessControlRequired.POST("/releases/", releaseController.Create)
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
+	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 	projectUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject)
@@ -97,6 +100,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.DELETE("/members/:userID/", projectController.RemoveMember)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/", releaseController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/items/:itemID/", releaseController.RemoveItem)
+	// projectUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByProject)
 
 	projectUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.Update)
 	projectUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.EnablePolicyForProject)

@@ -39,6 +39,7 @@ func NewAssetRouter(
 	integrationController *controllers.IntegrationController,
 	scanController *controllers.ScanController,
 	assetRepository shared.AssetRepository,
+	patController *controllers.PatController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -60,6 +61,7 @@ func NewAssetRouter(
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
+	assetRouter.GET("/pats/", patController.ListByAsset)
 
 	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
@@ -76,6 +78,8 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
+	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
+	// assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
 
 	return AssetRouter{Group: assetRouter}
 }

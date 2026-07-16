@@ -78,6 +78,99 @@ func (p *PatController) Create(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
+func (p *PatController) CreateForOrg(c shared.Context) error {
+	org := shared.GetOrg(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerOrg, ID: org.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
+func (p *PatController) CreateForProject(c shared.Context) error {
+	project := shared.GetProject(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerProject, ID: project.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
+func (p *PatController) CreateForAsset(c shared.Context) error {
+	asset := shared.GetAsset(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerAsset, ID: asset.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
 // @Summary Revoke PAT by private key
 // @Tags Authentication
 // @Param body body dtos.RevokeByPrivateKeyRequest true "Request body"
@@ -145,6 +238,42 @@ func (p *PatController) List(c shared.Context) error {
 	userID := session.GetUserID()
 
 	pats, err := p.patRepository.ListByUserID(c.Request().Context(), nil, userID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByOrg(c shared.Context) error {
+	org := shared.GetOrg(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerOrg, ID: org.ID}
+
+	pats, err := p.patRepository.ListByOrgID(c.Request().Context(), nil, owner.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByProject(c shared.Context) error {
+	project := shared.GetProject(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerProject, ID: project.ID}
+
+	pats, err := p.patRepository.ListByProjectID(c.Request().Context(), nil, owner.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByAsset(c shared.Context) error {
+	asset := shared.GetAsset(c)
+	owner := dtos.TokenOwner{Type: dtos.OwnerAsset, ID: asset.ID}
+
+	pats, err := p.patRepository.ListByAssetID(c.Request().Context(), nil, owner.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
 	}
