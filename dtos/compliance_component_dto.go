@@ -36,10 +36,12 @@ type ComplianceComponentDetailsDTO struct {
 }
 
 type ComplianceComponentImplementsControlStatementDTO struct {
-	ID                    string `json:"id"`
-	CompliancePostureID   string `json:"compliancePostureId"`
-	ComplianceComponentID string `json:"complianceComponentId"`
-	FrameworkControlID    string `json:"frameworkControlId"`
-	ImplementationStatus  string `json:"implementationStatus"`
-	Description           string `json:"description"`
+	ID                             string `json:"id"`
+	CompliancePostureID            string `json:"compliancePostureId"`
+	ComplianceComponentID          string `json:"complianceComponentId"`
+	ComplianceComponentTitle       string `json:"complianceComponentTitle"`
+	ComplianceComponentDescription string `json:"complianceComponentDescription"`
+	FrameworkControlID             string `json:"frameworkControlId"`
+	ImplementationStatus           string `json:"implementationStatus"`
+	Description                    string `json:"description"`
 }

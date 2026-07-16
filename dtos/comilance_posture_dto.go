@@ -71,7 +71,8 @@ type MappedControlDTO struct {
 
 type CompliancePostureWithDetailsDTO struct {
 	CompliancePostureWithControlDTO
-	Events []VulnEventDTO `json:"events"`
+	Events       []VulnEventDTO                                     `json:"events"`
+	ByComponents []ComplianceComponentImplementsControlStatementDTO `json:"byComponents"`
 }
 
 type CompliancePostureStatsDTO struct {

@@ -48,7 +48,7 @@ func (c *ComplianceComponentController) List(ctx shared.Context) error {
 
 	result := make([]any, 0, len(components))
 	for _, comp := range components {
-		result = append(result, transformer.ComplianceComponentToDTO(comp))
+		result = append(result, transformer.ComplianceComponentToDetailsDTO(comp))
 	}
 
 	return ctx.JSON(200, result)

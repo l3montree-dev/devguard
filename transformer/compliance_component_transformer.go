@@ -48,12 +48,15 @@ func ComplianceComponentToDetailsDTO(m models.ComplianceComponent) dtos.Complian
 }
 
 func ComplianceComponentImplementsControlStatementToDTO(m models.ComplianceComponentImplementsControlStatement) dtos.ComplianceComponentImplementsControlStatementDTO {
+	component := m.ComplianceComponentImplementsControl.ComplianceComponent
 	return dtos.ComplianceComponentImplementsControlStatementDTO{
-		ID:                    m.ID.String(),
-		CompliancePostureID:   m.CompliancePostureID.String(),
-		ComplianceComponentID: m.ComplianceComponentID.String(),
-		FrameworkControlID:    m.FrameworkControlID,
-		ImplementationStatus:  m.ImplementationStatus,
-		Description:           m.Description,
+		ID:                             m.ID.String(),
+		CompliancePostureID:            m.CompliancePostureID.String(),
+		ComplianceComponentID:          m.ComplianceComponentID.String(),
+		ComplianceComponentTitle:       component.Title,
+		ComplianceComponentDescription: component.Description,
+		FrameworkControlID:             m.FrameworkControlID,
+		ImplementationStatus:           m.ImplementationStatus,
+		Description:                    m.Description,
 	}
 }
