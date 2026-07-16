@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS public.compliance_components (
     uuid uuid PRIMARY KEY NOT NULL,
+    title text NOT NULL,
     description text NOT NULL
 );
 
@@ -7,7 +8,6 @@ CREATE TABLE IF NOT EXISTS public.compliance_component_implements_controls (
     framework_control_id text NOT NULL,
     compliance_component_id uuid NOT NULL,
     description text NOT NULL,
-    implementation_status jsonb NOT NULL,
     PRIMARY KEY (framework_control_id, compliance_component_id)
 );
 
@@ -22,12 +22,13 @@ ALTER TABLE ONLY public.compliance_component_implements_controls
     ADD CONSTRAINT fk_compliance_component_implements_controls_component FOREIGN KEY (compliance_component_id) REFERENCES public.compliance_components(uuid) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.compliance_component_implements_control_statements (
+    id uuid PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
     compliance_posture_id uuid NOT NULL,
     compliance_component_id uuid NOT NULL,
     framework_control_id text NOT NULL,
-    implementation_status jsonb NOT NULL,
+    implementation_status text NOT NULL,
     description text NOT NULL,
-    PRIMARY KEY (compliance_posture_id, compliance_component_id)
+    CONSTRAINT uq_statement_posture_component UNIQUE (compliance_posture_id, compliance_component_id)
 );
 
 ALTER TABLE public.compliance_component_implements_control_statements DROP CONSTRAINT IF EXISTS fk_statements_posture;

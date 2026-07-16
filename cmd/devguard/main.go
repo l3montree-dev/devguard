@@ -157,6 +157,8 @@ func main() {
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
 		fx.Invoke(func(CompliancePostureRouter router.CompliancePostureRouter) {}),
+		fx.Invoke(func(ComplianceComponentRouter router.ComplianceComponentRouter) {}),
+		fx.Invoke(func(ComplianceComponentStatementRouter router.ComplianceComponentStatementRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

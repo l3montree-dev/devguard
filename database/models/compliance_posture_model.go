@@ -18,7 +18,6 @@ package models
 import (
 	"fmt"
 
-	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -40,40 +39,42 @@ type CompliancePosture struct {
 	OrgID     uuid.UUID  `json:"orgId" gorm:"type:uuid;not null;column:org_id"`
 	Org       Org        `json:"org" gorm:"foreignKey:OrgID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	Events             []VulnEvent                                     `json:"events" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
-	ByComponents       []ComplianceComponentImplementsControlStatement `json:"byComponents" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
-	PossibleComponents []ComplianceComponentImplementsControl          `json:"possibleComponents" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+	Events       []VulnEvent                                     `json:"events" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
+	ByComponents []ComplianceComponentImplementsControlStatement `json:"byComponents" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
 }
 
 // this connects a component to a specific complianceComponentImplementsControl, which connects a component to a specific control
 // this allows the user to say: Hey thats cool that I can use protected branches, but currently I did not enable it.
 type ComplianceComponentImplementsControlStatement struct {
-	CompliancePostureID uuid.UUID         `json:"compliancePostureId" gorm:"type:uuid;primaryKey;column:compliance_posture_id"`
+	ID uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;column:id;default:gen_random_uuid()"`
+
+	CompliancePostureID uuid.UUID         `json:"compliancePostureId" gorm:"type:uuid;not null;column:compliance_posture_id;uniqueIndex:idx_statement_posture_component"`
 	CompliancePosture   CompliancePosture `json:"compliancePosture" gorm:"foreignKey:CompliancePostureID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	ComplianceComponentID uuid.UUID `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
+	ComplianceComponentID uuid.UUID `json:"complianceComponentId" gorm:"type:uuid;not null;column:compliance_component_id;uniqueIndex:idx_statement_posture_component"`
 	FrameworkControlID    string    `json:"frameworkControlId" gorm:"type:text;not null;column:framework_control_id"`
 
 	ComplianceComponentImplementsControl ComplianceComponentImplementsControl `json:"complianceComponentImplementsControl" gorm:"foreignKey:ComplianceComponentID,FrameworkControlID;references:ComplianceComponentID,FrameworkControlID;constraint:OnDelete:CASCADE;"`
 
-	ImplementationStatus oscalTypes.ImplementationStatus `json:"implementationStatus" gorm:"type:jsonb;not null;column:implementation_status"`
-	Description          string                          `json:"description" gorm:"type:text;not null;column:description"`
+	ImplementationStatus string `json:"implementationStatus" gorm:"type:text;not null;column:implementation_status"`
+	Description          string `json:"description" gorm:"type:text;not null;column:description"`
 }
 
 // A component itself can say something about "Hey this components help you to implement requirement XYZ, if you enable protected branches" for example.
-// But it has an implementation status as well. Maybe its planned currently
+// This is a catalog-level claim (from a component-definition), so it is always "implemented" by definition -
+// whether it's actually enabled for a specific system is decided per-posture in ComplianceComponentImplementsControlStatement.
 type ComplianceComponentImplementsControl struct {
-	FrameworkControlID    string                          `json:"frameworkControlId" gorm:"type:text;primaryKey;column:framework_control_id"`
-	FrameworkControl      FrameworkControl                `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
-	ComplianceComponentID uuid.UUID                       `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
-	ComplianceComponent   ComplianceComponent             `json:"complianceComponent" gorm:"foreignKey:ComplianceComponentID;references:UUID;constraint:OnDelete:CASCADE;"`
-	Description           string                          `json:"description" gorm:"type:text;not null;column:description"`
-	ImplementationStatus  oscalTypes.ImplementationStatus `json:"implementationStatus" gorm:"type:jsonb;not null;column:implementation_status"`
+	FrameworkControlID    string              `json:"frameworkControlId" gorm:"type:text;primaryKey;column:framework_control_id"`
+	FrameworkControl      FrameworkControl    `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+	ComplianceComponentID uuid.UUID           `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
+	ComplianceComponent   ComplianceComponent `json:"complianceComponent" gorm:"foreignKey:ComplianceComponentID;references:UUID;constraint:OnDelete:CASCADE;"`
+	Description           string              `json:"description" gorm:"type:text;not null;column:description"`
 }
 
 type ComplianceComponent struct {
 	UUID                uuid.UUID                              `json:"uuid" gorm:"type:uuid;primaryKey;column:uuid"`
 	ImplementedControls []ComplianceComponentImplementsControl `json:"implementedControls" gorm:"foreignKey:ComplianceComponentID;constraint:OnDelete:CASCADE;"`
+	Title               string                                 `json:"title" gorm:"type:text;not null;column:title"`
 	Description         string                                 `json:"description" gorm:"type:text;not null;column:description"`
 }
 
