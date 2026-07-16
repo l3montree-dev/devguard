@@ -24,12 +24,11 @@ func TestVEXRuleServiceUpdate(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := &models.VEXRule{
-		ID:               "test-rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
-		Justification:    "Test justification",
+		ID:            "test-rule-1",
+		AssetID:       assetID,
+		CVEID:         "CVE-2024-1234",
+		PathPattern:   []string{"pkg:golang/lib@v1.0"},
+		Justification: "Test justification",
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -50,10 +49,9 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "test-rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
+		ID:      "test-rule-1",
+		AssetID: assetID,
+		CVEID:   "CVE-2024-1234",
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -71,8 +69,8 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
-// TestVEXRuleServiceDeleteByAssetVersion tests batch deletion
-func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
+// TestVEXRuleServiceDeleteByAssetID tests batch deletion
+func TestVEXRuleServiceDeleteByAssetID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 
@@ -80,31 +78,29 @@ func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	vexRuleRepo.On("DeleteByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(nil)
+	vexRuleRepo.On("DeleteByAssetID", mock.Anything, mock.Anything, assetID).Return(nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
-	err := service.DeleteByAssetVersion(context.Background(), nil, assetID, "v1.0")
+	err := service.DeleteByAssetID(context.Background(), nil, assetID)
 
 	assert.NoError(t, err)
 	vexRuleRepo.AssertExpectations(t)
 }
 
-// TestVEXRuleServiceFindByAssetVersion tests finding rules by asset version
-func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
+// TestVEXRuleServiceFindByAssetID tests finding rules by asset
+func TestVEXRuleServiceFindByAssetID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
-			ID:               "rule-1",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-1234",
+			ID:      "rule-1",
+			AssetID: assetID,
+			CVEID:   "CVE-2024-1234",
 		},
 		{
-			ID:               "rule-2",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-5678",
+			ID:      "rule-2",
+			AssetID: assetID,
+			CVEID:   "CVE-2024-5678",
 		},
 	}
 
@@ -112,10 +108,10 @@ func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	vexRuleRepo.On("FindByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(rules, nil)
+	vexRuleRepo.On("FindByAssetID", mock.Anything, mock.Anything, assetID).Return(rules, nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
-	found, err := service.FindByAssetVersion(context.Background(), nil, assetID, "v1.0")
+	found, err := service.FindByAssetID(context.Background(), nil, assetID)
 
 	assert.NoError(t, err)
 	assert.Len(t, found, 2)
@@ -129,10 +125,9 @@ func TestVEXRuleServiceFindByID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "test-rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
+		ID:      "test-rule-1",
+		AssetID: assetID,
+		CVEID:   "CVE-2024-1234",
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -155,18 +150,16 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
-			ID:               "rule-1",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-1234",
-			PathPattern:      []string{"pkg:golang/lib@v1.0"},
+			ID:          "rule-1",
+			AssetID:     assetID,
+			CVEID:       "CVE-2024-1234",
+			PathPattern: []string{"pkg:golang/lib@v1.0"},
 		},
 		{
-			ID:               "rule-2",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-5678",
-			PathPattern:      []string{"pkg:golang/other@v1.0"},
+			ID:          "rule-2",
+			AssetID:     assetID,
+			CVEID:       "CVE-2024-5678",
+			PathPattern: []string{"pkg:golang/other@v1.0"},
 		},
 	}
 
@@ -214,11 +207,10 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
+		ID:          "rule-1",
+		AssetID:     assetID,
+		CVEID:       "CVE-2024-1234",
+		PathPattern: []string{"pkg:golang/lib@v1.0"},
 	}
 
 	vulns := []models.DependencyVuln{
@@ -264,12 +256,11 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := &models.VEXRule{
-		ID:               "ec6335130396f5af8a51ca5ba9f9400baa144cc290cd5c89c98d2800f1d41029",
-		AssetID:          assetID,
-		AssetVersionName: "",
-		CVEID:            "CVE-2024-1234",
-		Justification:    "Test justification",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
+		ID:            "ec6335130396f5af8a51ca5ba9f9400baa144cc290cd5c89c98d2800f1d41029",
+		AssetID:       assetID,
+		CVEID:         "CVE-2024-1234",
+		Justification: "Test justification",
+		PathPattern:   []string{"pkg:golang/lib@v1.0"},
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -293,22 +284,20 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 	justification := "not_affected"
 
 	rule := models.VEXRule{
-		ID:               "rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
-		Enabled:          true,
-		EventType:        "falsePositive",
-		Justification:    justification,
-		CreatedByID:      "user-1",
+		ID:            "rule-1",
+		AssetID:       assetID,
+		CVEID:         "CVE-2024-1234",
+		PathPattern:   []string{"pkg:golang/lib@v1.0"},
+		Enabled:       true,
+		EventType:     "falsePositive",
+		Justification: justification,
+		CreatedByID:   "user-1",
 	}
 
 	vuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetVersionName: "v1.0",
-			AssetID:          assetID,
-			State:            "open",
+			AssetID: assetID,
+			State:   "open",
 		},
 		CVEID:             "CVE-2024-1234",
 		VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},

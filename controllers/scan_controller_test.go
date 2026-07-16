@@ -48,7 +48,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 		assert.NoError(t, err)
 		// no external reference should have been stored and no VEX ingestion should be attempted
 		externalReferenceRepositoryMock.AssertNotCalled(t, "SaveBatch", mock.Anything, mock.Anything, mock.Anything)
-		vexRuleServiceMock.AssertNotCalled(t, "IngestVEXRules", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		vexRuleServiceMock.AssertNotCalled(t, "IngestVEXRules", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("fetches and ingests VEX rules when an exploitability-statement reference is present", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 			return len(urls) == 1 && urls[0] == vexURL
 		})).Return(fetchedRules, validRefs, nil)
 
-		vexRuleServiceMock.EXPECT().IngestVEXRules(mock.Anything, mock.Anything, asset, assetVersion, fetchedRules).Return(nil)
+		vexRuleServiceMock.EXPECT().IngestVEXRules(mock.Anything, mock.Anything, asset, fetchedRules).Return(nil)
 
 		scanController := &ScanController{
 			externalReferenceRepository: externalReferenceRepositoryMock,
