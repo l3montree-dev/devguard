@@ -32,11 +32,11 @@ type CompliancePosture struct {
 	AssetVersionName   *string          `json:"assetVersionName" gorm:"type:text;"`
 	AssetVersion       AssetVersion     `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
-	AssetID   *uuid.UUID `json:"assetId" gorm:"type:uuid;"`
+	AssetID   *uuid.UUID `json:"assetId" gorm:"type:uuid;column:asset_id"`
 	Asset     Asset      `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	ProjectID *uuid.UUID `json:"projectId" gorm:"type:uuid"`
+	ProjectID *uuid.UUID `json:"projectId" gorm:"type:uuid;column:project_id"`
 	Project   Project    `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
-	OrgID     uuid.UUID  `json:"orgId" gorm:"type:uuid;not null;"`
+	OrgID     uuid.UUID  `json:"orgId" gorm:"type:uuid;not null;column:org_id"`
 	Org       Org        `json:"org" gorm:"foreignKey:OrgID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	Events []VulnEvent `json:"events" gorm:"foreignKey:CompliancePostureID;constraint:OnDelete:CASCADE;"`
