@@ -108,7 +108,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
-	// organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
+	organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
 	organizationUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.UpdatePolicy)

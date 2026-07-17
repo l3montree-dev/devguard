@@ -100,7 +100,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.DELETE("/members/:userID/", projectController.RemoveMember)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/", releaseController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/items/:itemID/", releaseController.RemoveItem)
-	// projectUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByProject)
+	projectUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByProject)
 
 	projectUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.Update)
 	projectUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.EnablePolicyForProject)

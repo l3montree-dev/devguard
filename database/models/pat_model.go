@@ -14,7 +14,7 @@ import (
 type PAT struct {
 	CreatedAt       time.Time  `json:"createdAt"`
 	UserID          *uuid.UUID `json:"userId"`
-	OrgID           *uuid.UUID `json:"orgID"`
+	OrgID           *uuid.UUID `json:"orgID" gorm:"column:org_id"`
 	ProjectID       *uuid.UUID `json:"projectID"`
 	AssetID         *uuid.UUID `json:"assetID"`
 	PubKey          *string    `json:"pubKey"`

@@ -79,7 +79,7 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
-	// assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
+	assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
 
 	return AssetRouter{Group: assetRouter}
 }

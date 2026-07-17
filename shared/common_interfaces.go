@@ -319,6 +319,8 @@ type InTotoLinkRepository interface {
 
 type PersonalAccessTokenRepository interface {
 	utils.Repository[uuid.UUID, models.PAT, DB]
+	ReadUnscoped(ctx context.Context, tx DB, id uuid.UUID) (models.PAT, error)
+	DeleteUnscoped(ctx context.Context, tx DB, id uuid.UUID) error
 	GetByFingerprint(ctx context.Context, tx DB, fingerprint string) (models.PAT, error)
 	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)

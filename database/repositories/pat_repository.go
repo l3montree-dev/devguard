@@ -37,6 +37,23 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
+func (g *gormPatRepository) ReadUnscoped(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.PAT, error) {
+	var t models.PAT
+	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error
+	return t, err
+}
+
+func (g *gormPatRepository) DeleteUnscoped(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
+	res := g.GetDB(ctx, tx).Where("id = ?", id).Delete(&models.PAT{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 // MarkAsLastUsedNowByID scopes by id only: id is the PAT's own ID, resolved from a token the
 // caller already presented and that was matched by fingerprint (proof of possession), not from
 // a raw user-suppliable path param.
@@ -53,7 +70,7 @@ func (g *gormPatRepository) ListByUserID(ctx context.Context, tx *gorm.DB, userI
 	err := g.GetDB(ctx, tx).Where("user_id = ?", userID).Find(&pats).Error
 	return pats, err
 }
- 
+
 func (g *gormPatRepository) ListByOrgID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.PAT, error) {
 	var pats []models.PAT
 	err := g.GetDB(ctx, tx).Where("org_id = ?", orgID).Find(&pats).Error
@@ -71,7 +88,6 @@ func (g *gormPatRepository) ListByAssetID(ctx context.Context, tx *gorm.DB, asse
 	err := g.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&pats).Error
 	return pats, err
 }
-
 
 // checks if a valid token exists for the fingerprint, this excludes any expired tokens
 func (g *gormPatRepository) GetByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) (models.PAT, error) {
