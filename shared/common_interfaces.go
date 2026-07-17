@@ -791,7 +791,7 @@ type ComplianceComponentRepository interface {
 
 	CreateStatement(ctx context.Context, tx DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error)
 	UpdateStatement(ctx context.Context, tx DB, statementID uuid.UUID, implementationStatus string, description string) (*models.ComplianceComponentImplementsControlStatement, error)
-	DeleteStatement(ctx context.Context, tx DB, statementID uuid.UUID) error
+	DeleteStatement(ctx context.Context, tx DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error)
 }
 
 type FrameworkControlRepository interface {

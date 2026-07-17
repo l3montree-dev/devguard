@@ -17,11 +17,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
+	"gorm.io/gorm"
 
 	"github.com/labstack/echo/v4"
 )
@@ -90,6 +92,8 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 
 	orgID := shared.GetOrg(ctx).ID
 	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	userID := shared.GetSession(ctx).GetUserID()
+	userAgent := ctx.Request().UserAgent()
 
 	posture := models.CompliancePosture{
 		FrameworkControlID: frameworkControlID,
@@ -100,20 +104,34 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 	}
 	posture.ID = posture.CalculateHash()
 
-	compliancePosture, err := c.compliancePostureRepository.FindOrCreate(ctx.Request().Context(), nil, posture)
-	if err != nil {
-		return echo.NewHTTPError(500, "failed to find or create compliance posture").WithInternal(err)
-	}
+	var created *models.ComplianceComponentImplementsControlStatement
+	err = c.compliancePostureRepository.Transaction(ctx.Request().Context(), func(tx *gorm.DB) error {
+		compliancePosture, err := c.compliancePostureRepository.FindOrCreate(ctx.Request().Context(), tx, posture)
+		if err != nil {
+			return fmt.Errorf("failed to find or create compliance posture: %w", err)
+		}
 
-	statement := models.ComplianceComponentImplementsControlStatement{
-		CompliancePostureID:   compliancePosture.ID,
-		ComplianceComponentID: complianceComponentID,
-		FrameworkControlID:    frameworkControlID,
-		ImplementationStatus:  payload.ImplementationStatus,
-		Description:           payload.Description,
-	}
+		statement := models.ComplianceComponentImplementsControlStatement{
+			CompliancePostureID:   compliancePosture.ID,
+			ComplianceComponentID: complianceComponentID,
+			FrameworkControlID:    frameworkControlID,
+			ImplementationStatus:  payload.ImplementationStatus,
+			Description:           payload.Description,
+		}
 
-	created, err := c.complianceComponentRepository.CreateStatement(ctx.Request().Context(), nil, statement)
+		created, err = c.complianceComponentRepository.CreateStatement(ctx.Request().Context(), tx, statement)
+		if err != nil {
+			return err
+		}
+
+		component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), tx, complianceComponentID)
+		if err != nil {
+			return err
+		}
+
+		ev := models.NewAttachedComplianceComponentEvent(compliancePosture.ID, userID, component.Title, &userAgent)
+		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, compliancePosture, &ev)
+	})
 	if err != nil {
 		return err
 	}
@@ -146,7 +164,24 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 		return echo.NewHTTPError(400, "invalid statementID")
 	}
 
-	if err := c.complianceComponentRepository.DeleteStatement(ctx.Request().Context(), nil, statementID); err != nil {
+	userID := shared.GetSession(ctx).GetUserID()
+	userAgent := ctx.Request().UserAgent()
+
+	err = c.compliancePostureRepository.Transaction(ctx.Request().Context(), func(tx *gorm.DB) error {
+		deleted, err := c.complianceComponentRepository.DeleteStatement(ctx.Request().Context(), tx, statementID)
+		if err != nil {
+			return err
+		}
+
+		posture, err := c.compliancePostureRepository.Read(ctx.Request().Context(), tx, deleted.CompliancePostureID)
+		if err != nil {
+			return err
+		}
+
+		ev := models.NewRemovedComplianceComponentEvent(deleted.CompliancePostureID, userID, deleted.ComplianceComponentImplementsControl.ComplianceComponent.Title, &userAgent)
+		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, &posture, &ev)
+	})
+	if err != nil {
 		return err
 	}
 

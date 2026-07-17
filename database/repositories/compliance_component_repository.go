@@ -88,7 +88,14 @@ func (r *ComplianceComponentRepository) GetDetails(ctx context.Context, tx *gorm
 }
 
 func (r *ComplianceComponentRepository) CreateStatement(ctx context.Context, tx *gorm.DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error) {
-	if err := r.GetDB(ctx, tx).Create(&statement).Error; err != nil {
+	db := r.GetDB(ctx, tx)
+	if err := db.Create(&statement).Error; err != nil {
+		return nil, err
+	}
+	if err := scopeStatementToTenant(ctx, db).
+		Preload("ComplianceComponentImplementsControl.ComplianceComponent").
+		Where("compliance_component_implements_control_statements.id = ?", statement.ID).
+		First(&statement).Error; err != nil {
 		return nil, err
 	}
 	return &statement, nil
@@ -98,6 +105,7 @@ func (r *ComplianceComponentRepository) UpdateStatement(ctx context.Context, tx 
 	var statement models.ComplianceComponentImplementsControlStatement
 	db := r.GetDB(ctx, tx)
 	if err := scopeStatementToTenant(ctx, db).
+		Preload("ComplianceComponentImplementsControl.ComplianceComponent").
 		Where("compliance_component_implements_control_statements.id = ?", statementID).
 		First(&statement).Error; err != nil {
 		return nil, err
@@ -112,15 +120,19 @@ func (r *ComplianceComponentRepository) UpdateStatement(ctx context.Context, tx 
 	return &statement, nil
 }
 
-func (r *ComplianceComponentRepository) DeleteStatement(ctx context.Context, tx *gorm.DB, statementID uuid.UUID) error {
+func (r *ComplianceComponentRepository) DeleteStatement(ctx context.Context, tx *gorm.DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error) {
 	db := r.GetDB(ctx, tx)
 
 	var statement models.ComplianceComponentImplementsControlStatement
 	if err := scopeStatementToTenant(ctx, db).
+		Preload("ComplianceComponentImplementsControl.ComplianceComponent").
 		Where("compliance_component_implements_control_statements.id = ?", statementID).
 		First(&statement).Error; err != nil {
-		return err
+		return nil, err
 	}
 
-	return db.Delete(&statement).Error
+	if err := db.Delete(&statement).Error; err != nil {
+		return nil, err
+	}
+	return &statement, nil
 }

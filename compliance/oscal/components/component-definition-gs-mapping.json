@@ -1,0 +1,628 @@
+{
+    "component-definition": {
+        "uuid": "7cd74f20-057c-581c-b1f5-b12fbdeb3f02",
+        "metadata": {
+            "title": "Grundschutz++ Compliance Mapping",
+            "last-modified": "2026-07-17T07:34:13.397Z",
+            "version": "1.0.0",
+            "oscal-version": "1.2.1"
+        },
+        "components": [
+            {
+                "uuid": "fde77b64-1009-52b0-8c2f-d44cb765d35e",
+                "type": "service",
+                "title": "openCode",
+                "description": "openCode is Germany's open-source collaboration platform for the public sector, built on GitLab. Public administrations use it to develop, host, and share software following open-source principles, with built-in issue tracking, CI/CD, and role-based project management.",
+                "control-implementations": [
+                    {
+                        "uuid": "929ae1c7-528d-54c3-9f44-0a1d8c51deee",
+                        "source": "Grundschutz++",
+                        "description": "Control implementation for openCode, extracted from the Grundschutz++ compliance mapping table.",
+                        "implemented-requirements": [
+                            {
+                                "uuid": "6792ea07-7651-51a1-8c7e-dc8069f9c7fc",
+                                "control-id": "UMS.3.1",
+                                "description": "Anzeigen der \"Low Hanging Fruits\" denkbar"
+                            },
+                            {
+                                "uuid": "78811a36-e791-5ed9-bc5b-e7b06abe279c",
+                                "control-id": "UMS.4.1",
+                                "description": "Tagging durch openCode Funktionen möglich."
+                            },
+                            {
+                                "uuid": "e7a3dc5f-6099-556f-ad98-3b25d7296ddf",
+                                "control-id": "UMS.4.2",
+                                "description": "Einsetzen von Deadlines für Issues/ Workitems durch openCode Funktionen möglich."
+                            },
+                            {
+                                "uuid": "bc9b996e-86af-543c-8bba-c93436a872cb",
+                                "control-id": "UMS.5.2",
+                                "description": "Die Dokumentation der Ausnahmen kann über die entsprechende Dokumentation in openCode (z. B. Issues/ Workitems) nachgehalten werden."
+                            },
+                            {
+                                "uuid": "34d8f2db-54eb-525c-ae54-02ea8e742e54",
+                                "control-id": "UMS.6.1",
+                                "description": "Die Nachverfolgung der Umsetzung kann durch Issues/ Workitems dokumentiert werden."
+                            },
+                            {
+                                "uuid": "120ec3c3-54c8-5934-8864-7ef53be6a6ae",
+                                "control-id": "ASST.2.3",
+                                "description": "openCode kann als Ablageort der SBOM der untersuchten Software dienen. Es gibt ein entsprechendes SBOM Archiv auf dem die SBOMs abgelegt werden und welches als Source of Truth gelten kann (https://devguard-sbom-frontend-575abd.usercontent.opencode.de/)"
+                            },
+                            {
+                                "uuid": "26117900-d21e-5877-a46d-da9e70387ef6",
+                                "control-id": "ASST.5.1",
+                                "description": "Über die openCode können per Issue/ Workitems Wartungsbedarfe der Softwarekomponenten dokumentiert und zugewiesen werden."
+                            },
+                            {
+                                "uuid": "0f661def-ff94-5047-ae2b-26249eaefd07",
+                                "control-id": "ASST.5.7",
+                                "description": "Wird die Software auf openCode gewartet, kann die Wartung und die geleisteten Tasks durch die Entwickelnden innerhalb der Commit-History bzw. in einem Changelog dokumentiert werden."
+                            },
+                            {
+                                "uuid": "88872c6b-7a28-55a9-9bae-bfde0d49aba2",
+                                "control-id": "PERS.2.2",
+                                "description": "Rollen können über das openCode Rollenmodell wie z. B. Dev/ Maintainer/ Owner festgelegt und dokumentiert werden."
+                            },
+                            {
+                                "uuid": "702a09df-ac95-5beb-aabb-1c60b8ca7c0b",
+                                "control-id": "DLS.2.1",
+                                "description": "openCode selbst unterstützt MFA über eine KeyCloak Instanz."
+                            },
+                            {
+                                "uuid": "1344f4dc-f0ad-55db-a985-ac629efa637b",
+                                "control-id": "TEST.2.1",
+                                "description": "Versionshistorien der betrachteten Software oder abgelegter Dokumente können über die GitLab Funktionen auf einer technischen Ebene (Version der Speicherung oder der Softwareversion) nachgehalten werden."
+                            },
+                            {
+                                "uuid": "cbf97a1a-1ab6-591c-a8e3-a147a04c3bc5",
+                                "control-id": "KONF.6.9",
+                                "description": "Lesenden oder schreibenden Zugriff auf den Code kann über das openCode inhäränte Rollensystem durch die jeweiligen Owner vergeben werden."
+                            },
+                            {
+                                "uuid": "8926b446-caee-50f9-84eb-eae6062920c7",
+                                "control-id": "DEV.1.1.1",
+                                "description": "openCode ermöglicht durch Funktionen wie ein Wiki oder Markdown Editierung eine Projekt- bzw. Code-nahe Dokumentation. Ebenso können über die Funktion der \"Work-Item - description templates\" Vorlagen wie Checklisten angelegt werden, die für bestimmte Prozesse verpflichtend sind. Desweiteren besteht die Möglichkeit automatisierte Pipelines-Checks (z. B. für die Security) anzulegen, die bei jedem Commit der Entwickelnden, verpflichtend durchlaufen werden und fest in den Entwicklungszyklus integriert werden. Die Prüfungen der Pipeline werden nicht nur durch die Pipelineanlage selbst technisch dokumentiert, sondern die Ergebnisse werden auch durch Reportings an die Entwickelnden zurückgespielt und als Artefakt gespeichert."
+                            },
+                            {
+                                "uuid": "0c8251b3-44dc-5afc-9eb8-8642e75fd466",
+                                "control-id": "DEV.1.1.2",
+                                "description": "openCode bietet die Möglichkeit, bestimmte Personen sogenannten Work-Items zuzuweisen. Die Zuweisung erfolgt somit an einen Personenbezogenen Account, der auch über die GitLab Funktionalitäten mit entsprechenden Rollen und damit verbundene Berechtigungen besitzt. Erzwungen werden kann eine solche Zuteilung jedoch nicht auf der technischen Ebene - Hier kann über kommunizierte Vorgaben, oder über den Workaround der Templates gearbeitet werden (Templates können automatische Zuweiseungen im Template-Text enthalten)."
+                            },
+                            {
+                                "uuid": "1f0ffcff-5d3e-5168-80c9-0b5a755c49a5",
+                                "control-id": "DEV.1.1.3",
+                                "description": "In openCode besteht die Möglichkeit den jeweiligen Repositories eine .README Datei hinzuzufügen. Diese Dateien sind Textdokumente, die nach belieben in Markdown Code geschrieben werden und von jedem Mitglied des Projektes gelesen werden können. Ebenso ist es möglich, dass die neuen Mitglieder einer Gruppe oder eines Repositories bei betreten ein Work-Item zugewiesen bekommen, in dem alle Verfahren und Regelungen aufgezeigt werden. Wenn das Work-Item durch die Person nach dem Lesen der jeweiligen Verfahren geschlossen wird, ist dokumentiert nachgewiesen, dass die Person informiert worden ist."
+                            },
+                            {
+                                "uuid": "185942cd-d0bc-53a0-86c3-1337df70d6c2",
+                                "control-id": "DEV.1.2",
+                                "description": "Über openCode lassen sich Issues mit bestimmten Start- und Fälligkeitszeitpunkten festlegen. So kann eine regelmäßige Überprüfung zumindest manuell vorausgeplant werden. Eine Funktionalität zum automatisierten Reopening der Tickets besteht nicht."
+                            },
+                            {
+                                "uuid": "18fc2457-96d3-5f17-b1ab-059266bc9b6d",
+                                "control-id": "DEV.2.2",
+                                "description": "openCode ermöglicht durch Funktionen wie ein Wiki oder Markdown Editierung eine Projekt- bzw. Code-nahe dokumentation."
+                            },
+                            {
+                                "uuid": "7bb2c4ff-bec7-51ef-8cf9-231ceca1e881",
+                                "control-id": "DEV.2.4",
+                                "description": "openCode (GitLab) beschränkt den schreibenden Zugriff auf den Quellcode über rollenbasierte Projektberechtigungen, geschützte Branches und Push-Regeln."
+                            },
+                            {
+                                "uuid": "d05a41dc-1db5-52f5-bea3-b0f5b004acf2",
+                                "control-id": "DEV.2.5",
+                                "description": "openCode (GitLab) schützt Zugangsdaten in der CI/CD über maskierte und geschützte CI/CD-Variablen."
+                            },
+                            {
+                                "uuid": "f1e943ed-3517-55af-ab09-053b261f622d",
+                                "control-id": "DEV.4.3",
+                                "description": "Auf openCode wird ein entsprechendes [SBOM Archiv](https://devguard-sbom-frontend-575abd.usercontent.opencode.de/) bereitgestellt, auf dem die aktuellen SBOMs der Projekte, die über DevGuard generiert werden, abgespeichert und den interessierten Parteien zur Verfügung gestellt werden können."
+                            },
+                            {
+                                "uuid": "214f2bf6-a53d-5b73-89cb-bd6088500fe0",
+                                "control-id": "DEV.4.10",
+                                "description": "openCode (GitLab) protokolliert alle Codeänderungen über die Git-Commit-Historie (Autor, Zeitpunkt, Inhalt) und Merge-Request-Verläufe mit Begründung."
+                            },
+                            {
+                                "uuid": "88b53c30-04a5-59ae-b0cd-6e62129c457b",
+                                "control-id": "DEV.4.11",
+                                "description": "openCode (GitLab) führt, wenn entsprechend konfiguriert, bei jedem Push und Merge Request automatisierte CI/CD-Pipelines und Tests aus."
+                            },
+                            {
+                                "uuid": "b3b4a41d-b81a-59b4-aac4-671663c9a42b",
+                                "control-id": "DEV.5.3",
+                                "description": "openCode (GitLab) unterstützt signierte Commits und Tags (GPG) zur Integritätsverifikation."
+                            },
+                            {
+                                "uuid": "d2472c20-639b-53b3-b04b-6fafdcbefe98",
+                                "control-id": "DEV.6.1",
+                                "description": "openCode (GitLab) ermöglicht Freigaben über Merge-Request-Reviews/Approvals und geschützte Branches vor dem Merge."
+                            },
+                            {
+                                "uuid": "76ecdc98-a4fe-58f9-9c1e-038b14006175",
+                                "control-id": "DEV.7.1",
+                                "description": "openCode (GitLab) stellt CI/CD-Deployment-Pipelines sowie eine integrierte Container- und Paket-Registry für die Bereitstellung bereit."
+                            },
+                            {
+                                "uuid": "f3a09aff-fad8-50f5-a9a8-7256fc0465d7",
+                                "control-id": "DEV.7.2",
+                                "description": "Im Falle von GitLab Pages ist die Ausstellung und Erneuerung der Zertifikate für die verwendeten Domains durch den Plattformbetrieb von openCode sichergestellt."
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "uuid": "8b9497f5-85e5-5198-8963-f92b2b3a8323",
+                "type": "software",
+                "title": "DevGuard",
+                "description": "DevGuard is an open-source developer security platform that hardens the software supply chain. It generates SBOMs, runs a dependency firewall, tracks vulnerabilities with triage history, publishes VEX/CSAF advisories, and surfaces compliance dashboards across an organization's projects.",
+                "control-implementations": [
+                    {
+                        "uuid": "0f2fe4eb-efb9-5188-a386-eb2a0c62503a",
+                        "source": "Grundschutz++",
+                        "description": "Control implementation for DevGuard, extracted from the Grundschutz++ compliance mapping table.",
+                        "implemented-requirements": [
+                            {
+                                "uuid": "8e95a141-1140-5841-8e95-54fed64dc96c",
+                                "control-id": "STM.4.1",
+                                "description": "DevGuard erfasst Software-Assets automatisch in einer Organisationshierarchie (Organisation → Projekt → Repository → Asset-Version) mit versionierten SBOMs und Schwachstellenzustand je Branch/Tag. Bildet technische Grundlage für das Softwarekomponenten-Inventar."
+                            },
+                            {
+                                "uuid": "ed099176-7337-570a-a9c3-df875db838af",
+                                "control-id": "STM.4.2",
+                                "description": "DevGuard dokumentiert alle Asset-Versionen mit maschinenlesbarer CycloneDX-SBOM (Komponentenname, Version, Lizenz, PURL) und verknüpftem Schwachstellenstatus. Export für Auditoren und Behörden auf Anforderung."
+                            },
+                            {
+                                "uuid": "7086c301-a16a-5a60-96a0-1ad79ae9edcf",
+                                "control-id": "UMS.1.1",
+                                "description": "DevGuard's Compliance-Dashboards auf Organisations-, Projekt- und Asset-Ebene können den aktuellen Umsetzungsstatus von ausgewählten Sicherheitsmaßnahmen mit Referenz auf CRA, ISO 27001 und BSI IT-Grundschutz ++ im Bezug auf die Softwareprojekte anzeigen."
+                            },
+                            {
+                                "uuid": "5c92fcd1-f154-5dcc-96d2-899b6a0501fc",
+                                "control-id": "VRB.3.1",
+                                "description": "DevGuard's Compliance-Dashboards und Schwachstellentrends über Zeit identifizieren systematisch Verbesserungspotenziale in der Softwaresicherheit und ermöglichen datengetriebene Verbesserungsentscheidungen."
+                            },
+                            {
+                                "uuid": "f1a9988c-7a52-5a9b-99d2-f4c95895d4bc",
+                                "control-id": "PERF.2.1",
+                                "description": "DevGuard's Compliance-Dashboards überwachen kontinuierlich die Einhaltung technischer Sicherheitsvorgaben mit expliziten Referenzen auf ISO 27001, EU CRA und BSI IT-Grundschutz. Policy-Verstöße werden auf allen Ebenen sichtbar gemacht. Deren Einhaltung und die Erfüllungsdokumentation kann ebenfalls über OSCAL exportiert werden."
+                            },
+                            {
+                                "uuid": "0629bb0f-82d3-5919-975a-e5ff05c1510d",
+                                "control-id": "PERF.4.1",
+                                "description": "DevGuard generiert revisionssichere Audit-Evidenz: CI/CD-Scan-Reports, Vulnerability-Triage-Historien (Identität, Zeitstempel, Begründung), SBOM-Exports, CSAF-Advisories und Compliance-Dashboard-Snapshots als direkte Grundlage für Auditberichte."
+                            },
+                            {
+                                "uuid": "e8fe0443-890e-5e6d-b976-4c43b39fb48d",
+                                "control-id": "PERF.6.1",
+                                "description": "DevGuard's Webhook-Integration (4 Event-Typen: SBOM generiert, Dependency-Schwachstellen erkannt, SAST-Findings erkannt, Test-Event; HMAC-verifiziert; 3 automatische Wiederholungen) ermöglicht strukturierte Anbindung an SIEM-Systeme und Incident-Management-Plattformen."
+                            },
+                            {
+                                "uuid": "0319ac7d-7a27-5906-97ed-95d4483425da",
+                                "control-id": "ASST.2.3",
+                                "description": "DevGuard führt ein automatisch aktualisiertes Software-Asset-Inventar mit CycloneDX-SBOM (Komponenten, Versionen, Lizenzen, PURLs) über alle Repositories und Asset-Versionen der Organisation. Komponentensuche quer über alle Projekte."
+                            },
+                            {
+                                "uuid": "b36280ec-15c0-58f6-9053-107ceb126680",
+                                "control-id": "ASST.5.1",
+                                "description": "DevGuard kann Wartungsbedarfe der Softwareassets hinsichtlich vorhandener Softwareschwachstellen anzeigen und dokumentieren (Inklusive deren Umsetzungszustand)."
+                            },
+                            {
+                                "uuid": "9855339d-d893-5566-bce2-f0e9f815ab3e",
+                                "control-id": "BES.4.5",
+                                "description": "DevGuard's SAST-Scans (Semgrep) und IaC-Scanning prüfen automatisiert, ob Security-by-Design-Prinzipien im Quellcode (Fehlerbehandlung, Eingabevalidierung, sichere Defaults) und der Infrastrukturkonfiguration umgesetzt wurden. Der Einsatz von openCode DevGuard an sich, ist durch die Implementierung einer DevSecOps Pipeline und deren Nutzung eine Dokumentation, dass Security by Design in dem entsprechenden Softwareprojekt eingesetzt wird."
+                            },
+                            {
+                                "uuid": "602fbe3d-cdea-5ffa-bbe8-538ec0e06b26",
+                                "control-id": "BES.4.6",
+                                "description": "DevGuard's IaC-Scanner erkennt unsichere Standardkonfigurationen in Kubernetes-Manifesten, Terraform und Dockerfiles (z.B. zu weitreichende Berechtigungen, fehlende Security Policies), die gegen Security-by-Default-Prinzipien verstoßen."
+                            },
+                            {
+                                "uuid": "61ab3f99-9fa0-597f-904e-fa07f1aa1c67",
+                                "control-id": "BES.5.4",
+                                "description": "Die Nutzung von DevGuard kann als Nachweis von Security-Kontrollmechanismen bezogen auf die Softwareentwicklung dienen."
+                            },
+                            {
+                                "uuid": "aa55bca0-e24f-54da-a79d-19d29e998c96",
+                                "control-id": "BES.7.1",
+                                "description": "DevGuard's SCA und Dependency Firewall prüfen neu integrierte Softwarebibliotheken automatisch auf bekannte Schwachstellen (CVEs/GHSAs aus 13+ Ökosystemen) und bekannte Schadsoftware (OSSF Malicious Packages Dataset) vor dem Build."
+                            },
+                            {
+                                "uuid": "7bdd484e-3ca9-5f6e-96af-d34441583d8c",
+                                "control-id": "DLS.2.1",
+                                "description": "DevGuard selbst unterstützt MFA über OIDC/SSO-Integration (GitHub, GitLab und weitere Anbieter) mit Ory Kratos als Identity-Management-Backend. OIDC-Only-Modus erzwingt exklusives SSO und verhindert Passwort-only-Zugang."
+                            },
+                            {
+                                "uuid": "8bee40bc-992e-5973-8dcf-a0a087bf8539",
+                                "control-id": "DLS.2.2",
+                                "description": "DevGuard erzwingt TLS für alle Verbindungen zum Server und nutzt HTTP Message Signing für authentifizierte Scan-Ergebnis-Uploads. Alle Daten bleiben bei Self-Hosting in der eigenen Infrastruktur."
+                            },
+                            {
+                                "uuid": "1319837d-503e-5058-a60e-12626ba17e2e",
+                                "control-id": "DLS.3.1",
+                                "description": "DevGuard selbst kann für Compliancevorgaben gewisse Checks und Compliancedokumentationen in OSCAL selbst ermöglichen und bei gewissen Vorgaben wie z. B. der Freiheit von Schwachstellen, harte Kontrollmaßnahmen, wie etwa eine failende CI/CD-Pipeline ermöglichen. Somit wird die Einhaltung der Maßnahmen erzwungen."
+                            },
+                            {
+                                "uuid": "6c67aa6f-4246-5f62-aaec-0b4b42fd1bc2",
+                                "control-id": "TEST.1.2",
+                                "description": "Software-Security Testungen finden durch den mindestens täglichen Abgleich der SBOM mit der aktuellen Vulnerability Datenbank in einem regelmäßigen Rhytmus statt."
+                            },
+                            {
+                                "uuid": "69ef3cd5-6e26-544b-80b5-ffa1bd6775a2",
+                                "control-id": "TEST.3.1",
+                                "description": "DevGuard automatisiert umfassende Software-Sicherheitstests im CI/CD-Prozess: SAST (Semgrep), SCA (Trivy/Grype, 13+ Ökosysteme), Secret Scanning (Gitleaks), Container Image Scanning, IaC-Scanning (Kubernetes/Terraform/Dockerfile) mit konfigurierbarem Threshold-basiertem Pipeline-Blocking."
+                            },
+                            {
+                                "uuid": "3bf631fa-32fc-55e1-9e00-0083aebc0bfd",
+                                "control-id": "TEST.3.2",
+                                "description": "DevGuard deckt alle für die Softwareentwicklung relevanten Scan-Kategorien ab (SAST, SCA, Secret, Container, IaC) und integriert sich in GitHub Actions und GitLab CI. SARIF-Normalisierung ermöglicht die Erweiterung um beliebige SARIF-kompatible Tools."
+                            },
+                            {
+                                "uuid": "e0bc7aa3-c1e3-564e-a0b3-720037842913",
+                                "control-id": "TEST.4.2",
+                                "description": "DevGuard unterstützt kryptografische Artefaktsignierung (Cosign für Container-Images) und in-toto-Link-Attestierungen sowie SLSA-Provenance-Generierung im CI/CD-Prozess als Nachweis der Build-Integrität."
+                            },
+                            {
+                                "uuid": "d9b5533d-4d27-556b-aa4f-48ab671422bb",
+                                "control-id": "TEST.5.2",
+                                "description": "DevGuard's CI/CD-Pipeline unterstützt Cosign-Signierung von Container-Artefakten und in-toto-Attestierungen als kryptografisch gesicherte Bereitstellung. Dependency Firewall schützt die Lieferkette bei der Paketbereitstellung."
+                            },
+                            {
+                                "uuid": "7694ad4b-f73c-5ebb-a1a3-60577dab7e5f",
+                                "control-id": "BER.3.6",
+                                "description": "DevGuard unterstützt Single-Sign-On über OIDC-Integration (GitHub, GitLab und weitere Anbieter) als primären Authentifizierungsmechanismus. OIDC-Only-Modus erzwingt ausschließlich SSO-basierte Anmeldung."
+                            },
+                            {
+                                "uuid": "f32b6778-a9e6-51bc-8eab-eec51565ec02",
+                                "control-id": "BER.5.4",
+                                "description": "DevGuard's Secret Scanning (Gitleaks) erkennt versehentlich eingecheckte Credentials, API-Keys, Tokens und Passwörter im Quellcode. CI/CD-Pipeline-Blocking verhindert Releases mit gefundenen kompromittierten Berechtigungsmitteln."
+                            },
+                            {
+                                "uuid": "20d24676-ca34-5ee3-9ee6-a4c3556632ce",
+                                "control-id": "BER.6.10",
+                                "description": "DevGuard's Secret Scanning überwacht kontinuierlich Quellcode-Repositories auf exponierte Zugangsdaten, API-Schlüssel und Tokens (Gitleaks). Scheduled Rescans erkennen auch nachträglich identifizierte Leak-Muster."
+                            },
+                            {
+                                "uuid": "46dc0539-2eaa-5f55-9651-ed5046a4f113",
+                                "control-id": "DET.2.1",
+                                "description": "DevGuard's Webhook-System (4 Event-Typen, HMAC-verifiziert, 3 automatische Wiederholungsversuche, strukturierte JSON-Payloads) ermöglicht direkte Integration in Meldeverfahren und SIEM-Systeme für automatisierte Sicherheitsereignismeldungen."
+                            },
+                            {
+                                "uuid": "94031568-5f94-5be2-a427-b6b7069d39a2",
+                                "control-id": "DET.3.1",
+                                "description": "DevGuard führt vollständige, revisionssichere Audit-Trails aller sicherheitsrelevanten Entscheidungen: Vulnerability-Triage (Identität, Zeitstempel, Begründung), VEX-Uploads, Lizenz-Bewilligungen. Prometheus-Metriken für Betriebsüberwachung."
+                            },
+                            {
+                                "uuid": "19affb13-00e4-5ca9-a7a1-1c731d911908",
+                                "control-id": "DET.5.1",
+                                "description": "DevGuard's Kernfunktion: Kontinuierliches SCA-/SAST-Scanning mit Scheduled Rescans (automatische CVE-Erkennung für bestehende Komponenten), Risk-Score-Priorisierung (CVSS + EPSS + CIA-Anforderungen), automatisches Ticket-Reopening bei neuen CVEs, CI/CD-Pipeline-Blocking."
+                            },
+                            {
+                                "uuid": "94e5d357-b825-599a-8405-96fabd9b5244",
+                                "control-id": "DET.5.2",
+                                "description": "DevGuard führt ein vollständiges, lückenlos nachverfolgtes Schwachstellenregister über alle Assets: CVE-ID, CVSS, EPSS, Triage-Status (Open/Resolved/Accepted Risk/False Positive/Mitigated/Under Investigation), vollständige Entscheidungshistorie mit Identität und Begründung."
+                            },
+                            {
+                                "uuid": "5c8ff155-15b4-5ab9-bd48-f47d843bdf4c",
+                                "control-id": "DET.5.3",
+                                "description": "DevGuard automatisiert SCA, SAST (Semgrep), Secret Scanning (Gitleaks), Container Image Scanning (Trivy/Grype), IaC-Scanning sowie Scheduled Rescans ohne Code-Änderungen für neu publizierte CVEs. SARIF-basierte Normalisierung aller Scanner-Ergebnisse."
+                            },
+                            {
+                                "uuid": "74938378-6a52-5804-9de3-1fd35c8a10ac",
+                                "control-id": "DET.5.8",
+                                "description": "DevGuard's kontextuelles Risk Scoring (CVSS-BE × (EPSS+1) / 2 / Component Depth) mit konfigurierbaren CIA-Anforderungen pro Asset liefert eine quantifizierte Bedrohungsanalyse je Schwachstelle auf Basis aktueller Exploit-Wahrscheinlichkeiten (EPSS, täglich aktualisiert)."
+                            },
+                            {
+                                "uuid": "faf3e3e6-fb48-5d9c-addb-a8c47e142e5d",
+                                "control-id": "DET.5.9",
+                                "description": "DevGuard stellt technische Infrastruktur für externe Schwachstellenmeldungen bereit: CSAF-Provider-Listing (maschinenlesbar, öffentlich), CVD-Infrastruktur mit VEX-Endpunkten. DevGuard selbst hat dokumentierte CVD-Richtlinie (SECURITY.md, security.txt, GitHub Private Vulnerability Reporting, PGP-Kommunikation)."
+                            },
+                            {
+                                "uuid": "89ceafaa-ffc5-5585-98c6-32a85bad54cb",
+                                "control-id": "DET.5.10",
+                                "description": "DevGuard verknüpft Schwachstellenfindungen mit Issue-Trackern (GitHub Issues, GitLab Issues, Jira), automatisiert Ticket-Erstellung und Reopening, trackt Behebungsstatus mit Audit-Trail und blockiert Releases mit unbehandelten kritischen Findings via CI/CD-Thresholds."
+                            },
+                            {
+                                "uuid": "b73a9abe-8397-5c69-897a-b8008d6f74b5",
+                                "control-id": "REA.2.1",
+                                "description": "DevGuard's strukturierter Triage-Workflow mit 6 Status (Open, Resolved, Accepted Risk, False Positive, Mitigated, Under Investigation), Begründungspflicht, automatischer Issue-Tracker-Synchronisation und Slash-Command-Integration unterstützt sofortige, nachweisbare Erstreaktion."
+                            },
+                            {
+                                "uuid": "b5845695-9c8c-5d75-a946-5b551e16af9e",
+                                "control-id": "REA.2.3",
+                                "description": "DevGuard's Audit-Trail dokumentiert alle Vulnerability-Triage-Entscheidungen mit Identität, Zeitstempel und Begründung unveränderlich. SBOM-, VEX- und CSAF-Exports ermöglichen vollständige Vorfallsdokumentation für forensische und behördliche Zwecke."
+                            },
+                            {
+                                "uuid": "25b35ed8-6831-5747-ae5e-0f3b9b7bd308",
+                                "control-id": "REA.2.6",
+                                "description": "DevGuard's Dependency-Graph-Visualisierung (direkte vs. transitive Abhängigkeiten, Bottleneck-Komponenten, Risikofärbung) und SBOM-basierte Komponentenanalyse ermöglichen systematische Ursachenanalyse bei komponentenbezogenen Sicherheitsvorfällen."
+                            },
+                            {
+                                "uuid": "a13035ff-be5c-5c3f-a4bf-51adac21375e",
+                                "control-id": "KONF.1.5",
+                                "description": "DevGuard's Secret Scanning (Gitleaks) erkennt unverschlüsselte Konfigurationsgeheimnisse (Passwörter, API-Keys, Tokens, Private Keys) in Quellcode, IaC-Dateien und Konfigurationsdateien. CI/CD-Blocking verhindert Deployments mit exponierten Secrets."
+                            },
+                            {
+                                "uuid": "e697bcf7-c2d1-52f6-ad01-b61cb89a3910",
+                                "control-id": "KONF.2.5",
+                                "description": "DevGuard's IaC-Scanner prüft automatisiert Kubernetes-Manifeste, Terraform-Konfigurationen und Dockerfiles auf sicherheitsrelevante Fehlkonfigurationen. CI/CD-Integration erzwingt konforme Konfiguration als Releasevoraussetzung."
+                            },
+                            {
+                                "uuid": "fc7d0983-6d91-582d-bad2-efad04f88143",
+                                "control-id": "KONF.7.9",
+                                "description": "DevGuard's Dependency Firewall (Proxy für npm, Go, PyPI) blockiert bekannte Schadsoftware aus dem OSSF Malicious Packages Dataset (inkl. Typosquatting, injiziertem Schadcode, kompromittierte Versionen) vor der Installation. 2-Stunden-Update-Zyklus der Blockliste."
+                            },
+                            {
+                                "uuid": "cec74cff-a7e1-5487-9d29-3c166347ce02",
+                                "control-id": "KONF.8.1",
+                                "description": "DevGuard's Scheduled Rescans überprüfen automatisch und regelmäßig alle Asset-Versionen auf neu veröffentlichte CVEs und Sicherheitsupdates, auch ohne Code-Änderungen. Neue Findings triggern automatisch Tickets in konfigurierten Issue-Trackern."
+                            },
+                            {
+                                "uuid": "f7e9c0b8-4130-5629-ac54-6782ec42fb22",
+                                "control-id": "KONF.8.2",
+                                "description": "DevGuard erkennt verfügbare Patch-Versionen für verwundbare Abhängigkeiten und gibt die Mindest-Patch-Version je Schwachstelle an. Automatische Ticket-Erstellung und Reopening in GitHub/GitLab/Jira stellt zeitnahe Entwicklerbenachrichtigung sicher."
+                            },
+                            {
+                                "uuid": "4f852d03-2f8c-5300-9a2a-45f0de41cb1e",
+                                "control-id": "DEV.1.1",
+                                "description": "DevGuard etabliert strukturierte Sicherheitsentwicklungsprozesse als Tool: CI/CD-Integration mit definierten Scan-Typen, dokumentierter Triage-Workflow mit Begründungspflicht, Compliance-Dashboards für Entwicklungsorganisationen und auditfähige Evidenzgenerierung. Ein konsequenter Einsatz von DevGuard für alle Entwicklungsprodukte bietet eine dokumentierte und damit auditierbare Möglichkeit, um Regelungen für die Sicherheit in der Entwicklung von IT-Produkten per Rego-Policies zu überprüfen und der Umsetzung durch die Entwickler zu erzwingen."
+                            },
+                            {
+                                "uuid": "ce01eab7-f45b-5519-9259-cfa739345f25",
+                                "control-id": "DEV.1.1.1",
+                                "description": "Siehe DEV.1.1"
+                            },
+                            {
+                                "uuid": "e8c80035-1b5c-53e3-a558-f56d5e706501",
+                                "control-id": "DEV.2.1",
+                                "description": "Durch die Nutzung von DevGuard für die Entwicklung von Softwareprojekten kann ein Security by Design, durch die Nutzung einer DevSecOps Pipeline und weiterer Software Security Funktionalitäten nachgewiesen werden. Die Arbeitsweise/ Nutzung von DevGuard ist auch durch die Speicherung der SBOMs und Vulnerability-Handling (z. B. per VEX) auditierbar"
+                            },
+                            {
+                                "uuid": "e84b5647-ca39-5371-8e0a-d19399b4ff87",
+                                "control-id": "DEV.2.5",
+                                "description": "DevGuards Secret Scanning (Gitleaks) erkennt versehentlich in Quellcode und Git-Historie eingebettete Zugangsdaten (API-Keys, Passwörter, Tokens) und verhindert deren Offenlegung im CI/CD-Prozess."
+                            },
+                            {
+                                "uuid": "08e2fc38-3948-5569-929a-80ee29b9dc6b",
+                                "control-id": "DEV.2.6",
+                                "description": "Durch den Einsatz eines SAST Scanners über DevGuard können präventiv Code-Schwächen aufgedeckt werden, die im Code der Entwickelnden existieren. So können Angriffe, die auf diese Schwächen abzielen frühzeitig erkannt werden. Es handelt sich dabei aber um eine rein Code-basierte Präventive Maßnahme."
+                            },
+                            {
+                                "uuid": "f68523e9-508a-5726-826d-50dd14ca8bab",
+                                "control-id": "DEV.2.6.1",
+                                "description": "DevGuards SAST-Scanner (Semgrep) erkennt viele fehlende Eingabevalidierung und Injection-Schwachstellen im Quellcode."
+                            },
+                            {
+                                "uuid": "2de36055-190c-55a2-98fb-4b3bfc3b4dc3",
+                                "control-id": "DEV.2.6.2",
+                                "description": "DevGuards SAST-Scanner (Semgrep) erkennt viele Schwachstellen durch fehlende Ausgabekodierung (z.B. XSS) im Quellcode."
+                            },
+                            {
+                                "uuid": "d729455e-7c50-5dbd-8ef0-05f02d367791",
+                                "control-id": "DEV.4.1",
+                                "description": "Durch die Möglichkeit VEX oder CSAF Informationen an die Nachnutzenden weiterzugeben, können diese über Schwachstellen und Sicherheitslücken in deren Anwendungen informiert werden. Dies ist jedoch nur möglich, wenn diese entsprechende Formate auch einlesen und verarbeiten können."
+                            },
+                            {
+                                "uuid": "b418dd75-cf7e-598b-aa2d-eee4aad87f27",
+                                "control-id": "DEV.4.2",
+                                "description": "DevGuard's Dependency Firewall agiert als Schutz-Proxy für npm, Go, PyPI sowie OCI-Images und prüft alle Paketquellen gegen den OSSF Malicious Packages Datensatz (inkl. Typosquatting, injizierten Schadcode, kompromittierte Versionen). Integritätsprüfung via SHA256. Nutzenden können auch eigenen Regeln zum Blockieren bzw. Erlauben definieren."
+                            },
+                            {
+                                "uuid": "2ee3ab92-1e26-57c1-8160-934d18f6a2cb",
+                                "control-id": "DEV.4.3",
+                                "description": "DevGuard generiert automatisch CycloneDX-JSON-SBOMs für alle Softwarekomponenten inkl. transitiver Abhängigkeiten. Öffentliche Live-SBOM-Endpunkt, Multi-SBOM-Merge-Tooling sowie Export-Funktionen unterstützen darüber hinaus."
+                            },
+                            {
+                                "uuid": "03bec109-cb6d-5efc-b54b-2f2cc9468867",
+                                "control-id": "DEV.4.4",
+                                "description": "DevGuard's Dependency Firewall verifiziert SHA256-Prüfsummen aller gecachten Pakete, verhindert Cache-Poisoning. In-toto-Attestierungen und Cosign-Signierung ermöglichen kryptografische Build-Integrität."
+                            },
+                            {
+                                "uuid": "49b8089f-b5a1-5a2e-b2a8-f4c434026a5a",
+                                "control-id": "DEV.4.5",
+                                "description": "DevGuard's SCA und kontinuierliche Rescans identifizieren verwundbare Abhängigkeiten. Automatische Ticketerstellung stellt die Präsenz im Entwicklungsteam sicher. CI/CD-Blocking verhindert Releases mit kritisch verwundbaren Libraries."
+                            },
+                            {
+                                "uuid": "9e112a3e-fb30-59cd-87ad-ef2f38214e08",
+                                "control-id": "DEV.4.7",
+                                "description": "DevGuard unterstützt SLSA-Provenance-Generierung und in-toto-Attestierungen für nachweisbare Builds."
+                            },
+                            {
+                                "uuid": "d370850c-0a53-54e8-82f2-5bffb03651da",
+                                "control-id": "DEV.4.11",
+                                "description": "DevGuard triggert automatisch vollständige Sicherheitstests (SAST, SCA, Secret Scanning, Container Scanning, IaC) bei jedem Code-Commit im CI/CD-Prozess (GitHub Actions, GitLab CI) und blockiert die Pipeline bei Überschreitung definierter Risikothresholds."
+                            },
+                            {
+                                "uuid": "9e4d6b4f-6afe-5bf9-bd59-d72a7d0e6c27",
+                                "control-id": "DEV.5.2",
+                                "description": "DevGuard veröffentlicht maschinenlesbare VEX-Dokumente und CSAF-Sicherheitshinweise über öffentliche Live-Endpunkte, die Auftraggeber und nachgelagerte Betroffene fortlaufend über den Behebungs- und Update-Status betroffener Komponenten informieren."
+                            },
+                            {
+                                "uuid": "86485563-06ad-582c-a087-c55b5c5c2ff4",
+                                "control-id": "DEV.5.3",
+                                "description": "DevGuard's CI/CD-Pipeline unterstützt Cosign-Artefaktsignierung, in-toto-Link-Attestierungen und SLSA-Provenance-Generierung als kryptografische Integritätsnachweise für Software-Updates und ermöglicht Empfängern die Signaturverifikation."
+                            },
+                            {
+                                "uuid": "ae59f457-fda3-5606-94d1-a4825f0800c8",
+                                "control-id": "DEV.6.1",
+                                "description": "DevGuard's CI/CD-Pipeline-Blocking mit konfigurierbaren Thresholds (`--failOnRisk`, `--failOnCVSS`) erzwingt Sicherheitstest-Freigabe als Releasevoraussetzung. Release-Artefakte ohne bestandene Sicherheitsprüfung werden automatisch blockiert."
+                            },
+                            {
+                                "uuid": "6276a769-6d4b-5f6d-83af-f535f948f6d0",
+                                "control-id": "DEV.7.1",
+                                "description": "Cosign-Artefaktsignierung, in-toto-Attestierungen, SLSA-Provenance und Dependency-Firewall-Schutz der Lieferkette gewährleisten eine kryptografisch verifizierbare, sichere Bereitstellung von Software-Artefakten aus dem CI/CD-Prozess."
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "uuid": "5893a5a9-6627-52a2-b339-7975bb93aee5",
+                "type": "service",
+                "title": "container.gov.de",
+                "description": "The Secure Government Container Initiative (container.gov.de) is a German government program, part of openCode under ZenDiS, that provides hardened, vetted open-source container images for public administration. Images are actively evaluated for vulnerabilities to cut down false-positive CVE noise, and updates are managed systematically across participating organizations.",
+                "control-implementations": [
+                    {
+                        "uuid": "e3252cb9-990c-56bd-b6d7-8c34f63fa4ac",
+                        "source": "Grundschutz++",
+                        "description": "Control implementation for container.gov.de, extracted from the Grundschutz++ compliance mapping table.",
+                        "implemented-requirements": [
+                            {
+                                "uuid": "974b3917-189e-55fb-8ff8-7cdf15c50fbb",
+                                "control-id": "ASST.5.2",
+                                "description": "Das Container.gov Programm kann durch die vertraglich geregelten SLAs eine entsprechende geregelte Wartung genutzter Container-Images garantieren."
+                            },
+                            {
+                                "uuid": "d38ebd98-bd22-5d39-a955-6e72c574cb4b",
+                                "control-id": "BES.4.5",
+                                "description": "Durch den Einsatz gehärteter Container Images aus dem Container.gov Repository kann ein Einsatz von Security by Design Prinzipien dokumentiert und nachgewiesen werden."
+                            },
+                            {
+                                "uuid": "da03089a-acab-558d-8124-ebc894ca5a2f",
+                                "control-id": "KONF.10.1",
+                                "description": "Über das Container-gov Projekt werden bereits gehärtete und vorkonfigurierte Container Images bereitgestellt. Hier kann man von einer sicheren Grundkonfiguration der jeweiligen Anwendungen sprechen."
+                            },
+                            {
+                                "uuid": "227e9ab5-fe9a-5a54-8039-482fc70a1195",
+                                "control-id": "KONF.10.4",
+                                "description": "Über das Container-gov Projekt werden bereits gehärtete und vorkonfigurierte Container Images bereitgestellt. Zur Härtung der Images zählt auch die Daktivierung nicht benötigter Anwendungsfunktionen."
+                            },
+                            {
+                                "uuid": "e3b66333-6ca6-5bf5-91e2-7cbaa50e1fc0",
+                                "control-id": "DEV.1.1",
+                                "description": "Im Rahmen der Initiative müssen aktuell kritische und hohe bekannte Schwachstellen über den VEX dokumentiert und behandelt werden. Diese Informationen stehen Nutzenden zur Verfügung. Für diesen Teilbereich, z.B. Base-Image ist damit der Prozess etabliert. Wird im Entwicklungsprozess nur auf Containerimages von container.gov.de zurückgegriffen, wenn möglich kann sich für diese Images die Reglung vererben."
+                            },
+                            {
+                                "uuid": "d582c8f1-452e-5637-b25b-de3755845264",
+                                "control-id": "DEV.1.1.1",
+                                "description": "Siehe DEV.1.1, die Initiative gibt sich klare, maschinell und in Code dokumentierte Regeln."
+                            },
+                            {
+                                "uuid": "dc35e2e3-adcb-52e7-b426-f329c6d2a40d",
+                                "control-id": "DEV.2.1",
+                                "description": "Die Nutzung von gehärteten Container Images folgt den Security by Design Prinzipien dadurch, dass die Anwendungsimages von Beginn an sicher bezogen werden. Der Bezug der Images ist audierbatr und nachweisbar."
+                            },
+                            {
+                                "uuid": "786aca60-32cf-577e-bc8b-2e73515c4afa",
+                                "control-id": "DEV.4.4",
+                                "description": "Die Initiative unterstützt explizit die Integritätsprüfung der angebotenen Images via Digest."
+                            },
+                            {
+                                "uuid": "3bf5e3a5-9b49-5d58-a357-043f5169bc8a",
+                                "control-id": "DEV.4.5",
+                                "description": "Siehe DEV1.1, die Images sind verpflichtend bereits geprüft und Ergebnisse werden in offenen Standardformaten bereitgestellt."
+                            },
+                            {
+                                "uuid": "a2b761c6-aa9b-56c7-9fb9-e374a227f12b",
+                                "control-id": "DEV.4.7",
+                                "description": "Einiges der Images werden bereits reproduzierbar gebaut. Attestierungen geben Kontext über den Build-Prozess."
+                            },
+                            {
+                                "uuid": "cc0cc015-e961-5147-9247-0b0dbee2473a",
+                                "control-id": "DEV.4.9",
+                                "description": "Die über container.gov.de bezogenen Images werden bereits per Default auf einem gewissen, festgelegten Sicherheitslevel ausgeliefert. Hier müssen die Entwickelnden jedoch darauf achten, diese Konfigurationen nur dann abzuändern, wenn es wirklich notwendig ist."
+                            },
+                            {
+                                "uuid": "f028526e-2993-5131-8304-aa09ba10e7e0",
+                                "control-id": "DEV.5.2",
+                                "description": "Die Images enthalten bei Bereitstellung über Container.gov bereits einen VEX. Dieser muss jedoch bei der Weiterentwicklung durch die Entwickelnden weiterführend gepflegt werden."
+                            },
+                            {
+                                "uuid": "be68d38e-bc2d-590f-ac26-2cdff8a7cd86",
+                                "control-id": "DEV.5.3",
+                                "description": "Container.Gov gibt einen entsprechenden Digest und Signaturen für die verschiedenen, bereitgestellten Images an. Bei Änderungen muss dieser jedoch weitergepflegt werden."
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "uuid": "5af743cb-4393-5daf-aef5-83af49f76b3a",
+                "type": "service",
+                "title": "Badge-Programm",
+                "description": "BadgeReport (badges.opencode.de) is an automated verification system for repositories in the openCode Software Catalog. Given a repository URL, it runs automated checks and awards badges across three dimensions - maintenance status, reusability, and security - via a RESTful API, with a detailed explanation of each result.",
+                "control-implementations": [
+                    {
+                        "uuid": "8001b7ba-e908-5814-a79e-8554307bcb3f",
+                        "source": "Grundschutz++",
+                        "description": "Control implementation for Badge-Programm, extracted from the Grundschutz++ compliance mapping table.",
+                        "implemented-requirements": [
+                            {
+                                "uuid": "1f77f978-2b12-5f72-8a3e-f9b1ca7eff38",
+                                "control-id": "UMS.1.1",
+                                "description": "Das Badgeprogramm soll über automatisierte Prüfungen die Umsetzung der Grundschutz++ Vorgaben auf Basis der Systemchecks und der Auswertung der Entwickler:innen Angaben unterstützen und über das Tooling (PoC) darstellen."
+                            },
+                            {
+                                "uuid": "fff902f5-2daa-5e8f-be01-22bb75a9b3c1",
+                                "control-id": "UMS.3.1",
+                                "description": "Anzeigen der \"Low Hanging Fruits\" denkbar"
+                            },
+                            {
+                                "uuid": "102943e1-8942-563b-ba5f-cc9e0e24d393",
+                                "control-id": "UMS.3.2",
+                                "description": "Das Badge Programm könnte den Nutzenden anzeigen die fehlenden Maßnahmen anzeigen und hier die Priorisierung \"leicht\" unterstützen."
+                            },
+                            {
+                                "uuid": "6afea8a6-2edc-51a5-98b9-2fa7aca26c4f",
+                                "control-id": "UMS.7.1",
+                                "description": "Durch die aktuellen Prüfungen durch das Badge Programm kann die Einhaltung der der automatisiert prüfbaren Maßnahmen gewährleistet und den Nutzenden in Form von Badges angezeigt werden."
+                            },
+                            {
+                                "uuid": "ac86677d-505b-501d-8004-22db316ca0bd",
+                                "control-id": "VRB.3.1",
+                                "description": "Das Badgeprogramm ist in der Lage den aktuellen Zustand der Umsetzung, aber auch die nicht erfüllten Maßnahmen anzuzeigen. Auf Basis dieser Informationen können die Nutzerinnen Verbesserungspotenziale identifizieren und erhalten Informationen zu deren Umsetzung."
+                            },
+                            {
+                                "uuid": "694281c0-e9f6-5409-9e5b-17e865cc92c6",
+                                "control-id": "ASST.2.3",
+                                "description": "Das BadgeProgramm kann das vorhandensein einer entsprechenden SBOM überprüfen und die Erfüllung, sowie die Evidenz (inkl. Pfad) bestätigen."
+                            },
+                            {
+                                "uuid": "a167ca12-2460-5e8c-ad8c-c979429c2a92",
+                                "control-id": "ASST.5.7",
+                                "description": "Das Badge-Programm kann überprüfen, ob eine Wartung über openCode erfolgt und die Einhaltung bestimmter Sicherheitsanforderungen wie etwa das Commit-Signing prüfen sowie dokumentieren."
+                            },
+                            {
+                                "uuid": "f79b7759-fc4a-50d5-9823-a090d0fa0105",
+                                "control-id": "BES.4.5",
+                                "description": "Überprüfung und Dokumentation der Schließung entsprechender Issues resultierend aus den DevGuard Scans - Innerhalb eines entsprechenden Zeitrahmens ist möglich."
+                            },
+                            {
+                                "uuid": "936e4b7e-547e-5f31-ba66-6b17d7cc3336",
+                                "control-id": "BES.4.6",
+                                "description": "Überprüfung und Dokumentation der Schließung entsprechender Issues resultierend aus den DevGuard Scans - Innerhalb eines entsprechenden Zeitrahmens ist möglich."
+                            },
+                            {
+                                "uuid": "573fdeb9-3e05-548d-a679-f1f5869546d9",
+                                "control-id": "TEST.3.2",
+                                "description": "Das Badge-Programm kann die Aktivierung und Durchführung solcher Security-Tests überprüfuen und die Anforderungserfüllung dahingehend dokumentieren."
+                            },
+                            {
+                                "uuid": "c2bf0185-4cb2-5261-9271-a9b9008843e4",
+                                "control-id": "SENS.2.3",
+                                "description": "Das Badgeprogramm kann Signaturen von Tags und die kryptographisch signierten Attestierungen der Build-Provenance überprüfen und bei einem nicht vorhanden sein die Entwickelnden darauf aufmerksam machen (Awareness schaffen)"
+                            },
+                            {
+                                "uuid": "72401fff-490e-52bf-a101-153bba32e3c3",
+                                "control-id": "DEV.1.1",
+                                "description": "Das Badge Programm prüft verschiedene Verfahren und Regelungen der Softwareentwicklung. Wenn die Softwareprojekte die entsprechenden Badges erhalten, kann automatisiert geprüft werden, ob Regelungen im Bereich der Entwicklung durch die Entwickelnden eingehalten werden."
+                            },
+                            {
+                                "uuid": "b6a2db38-41a6-5505-9320-c5af40454266",
+                                "control-id": "DEV.1.1.2",
+                                "description": "Es ist eine Test denkbar, der überprüft, ob Issues mit bestimmten Labeln einer Person zugewiesen sind (Assignee)"
+                            },
+                            {
+                                "uuid": "c8d976c8-89ac-5a72-853e-dc5495433eec",
+                                "control-id": "DEV.4.5",
+                                "description": "Das Badge Programm prüft dies in der Security Badge"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

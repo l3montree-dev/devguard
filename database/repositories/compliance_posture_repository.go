@@ -214,6 +214,12 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+		case f.Field == "has_component_coverage" && f.Operator == "is":
+			if fmt.Sprint(f.Value()) == "true" {
+				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			} else {
+				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			}
 		default:
 			subquery = subquery.Where(f.SQL(), f.Value())
 		}
@@ -302,6 +308,12 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+		case f.Field == "has_component_coverage" && f.Operator == "is":
+			if fmt.Sprint(f.Value()) == "true" {
+				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			} else {
+				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			}
 		default:
 			subquery = subquery.Where(f.SQL(), f.Value())
 		}
