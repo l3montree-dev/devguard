@@ -42,7 +42,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request")
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
