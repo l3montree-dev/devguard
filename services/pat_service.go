@@ -25,9 +25,11 @@ import (
 )
 
 type PatService struct {
-	patRepository  shared.PersonalAccessTokenRepository
-	adminPubKey    ecdsa.PublicKey
-	adminKeyLoaded bool
+	patRepository     shared.PersonalAccessTokenRepository
+	assetRepository   shared.AssetRepository
+	projectRepository shared.ProjectRepository
+	adminPubKey       ecdsa.PublicKey
+	adminKeyLoaded    bool
 }
 
 var _ shared.Verifier = (*PatService)(nil) // Ensure PatService implements shared.PatService interface
@@ -65,6 +67,151 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 		adminPubKey:    adminPubKey,
 		adminKeyLoaded: true,
 	}
+}
+
+func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	sessionOwnerType := session.GetOwnerType()
+	ownerID := session.GetOwnerID()
+	requestGoesToOrg := shared.GetOrg(ctx)
+	switch sessionOwnerType {
+	case dtos.OwnerUser:
+		// get the rbac
+		rbac := shared.GetRBAC(ctx)
+
+		// continue with RBAC system
+		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
+	case dtos.OwnerOrg:
+		// owner id is an org id
+		// an org access token should have access to EVERYTHING inside an organization
+		if act == shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToOrg.ID.String(), nil
+
+	case dtos.OwnerProject:
+		if act != shared.ActionRead {
+			return false, nil
+		}
+		// we allow org read request for an project token, if the project is part of the organization
+		parsedOwnerID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, err
+		}
+		project, err := p.projectRepository.Read(ctx.Request().Context(), nil, parsedOwnerID)
+		if err != nil {
+			return false, err
+		}
+		if requestGoesToOrg.ID != project.OrganizationID {
+			return false, nil
+		}
+		// we already did the database query for the project
+		// lets store it in the context to avoid doing the query again
+		shared.SetProject(ctx, project)
+		return true, nil
+
+	case dtos.OwnerAsset:
+		if act != shared.ActionRead {
+			return false, nil
+		}
+		// we allow org read request for an asset token, if the asset is part of the organization
+		parsedOwnerID, err := uuid.Parse(ownerID)
+		// make sure we preload the project - maybe hy adding a new function "ReadWithProject"
+		asset, err := p.assetRepository.ReadWithProject(ctx.Request().Context(), nil, parsedOwnerID)
+		if err != nil {
+			return false, err
+		}
+		if requestGoesToOrg.ID != asset.Project.OrganizationID {
+			return false, nil
+		}
+
+		// set project and asset to context
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, asset.Project)
+
+		return true, nil
+	}
+	return false, nil
+}
+
+func (p *PatService) IsAllowedInProject(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	sessionOwnerType := session.GetOwnerType()
+	ownerID := session.GetOwnerID()
+	requestGoesToOrg := shared.GetOrg(ctx)
+	requestGoesToProject := shared.GetProject(ctx)
+	switch sessionOwnerType {
+	case dtos.OwnerUser:
+		// get the rbac
+		rbac := shared.GetRBAC(ctx)
+
+		// continue with RBAC system
+		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
+
+	case dtos.OwnerOrg:
+		// owner id is an org id
+		// an org access token should have access to EVERYTHING inside an organization
+		if act == shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToOrg.ID.String(), nil
+	case dtos.OwnerProject:
+		if act == shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToProject.ID.String(), nil
+	case dtos.OwnerAsset:
+		if act != shared.ActionRead {
+			return false, nil
+		}
+		// we allow org read request for an asset token, if the asset is part of the organization
+		parsedOwnerID, err := uuid.Parse(ownerID)
+		connectedOrgID, err := p.assetRepository.Read(ctx.Request().Context(), nil, parsedOwnerID)
+		if err != nil {
+			return false, err
+		}
+		if requestGoesToOrg.ID != connectedOrgID.ProjectID {
+			return false, nil
+		}
+
+		return true, nil
+	}
+	return false, nil
+}
+
+func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	sessionOwnerType := session.GetOwnerType()
+	ownerID := session.GetOwnerID()
+	requestGoesToOrg := shared.GetOrg(ctx)
+	requestGoesToProject := shared.GetProject(ctx)
+	requestGoesToAsset := shared.GetAsset(ctx)
+	switch sessionOwnerType {
+	case dtos.OwnerUser:
+		// get the rbac
+		rbac := shared.GetRBAC(ctx)
+
+		// continue with RBAC system
+		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
+
+	case dtos.OwnerOrg:
+		// owner id is an org id
+		// an org access token should have access to EVERYTHING inside an organization
+		if act == shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToOrg.ID.String(), nil
+
+	case dtos.OwnerProject:
+		if act != shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToProject.ID.String(), nil
+
+	case dtos.OwnerAsset:
+		if act != shared.ActionUpdate {
+			return false, nil
+		}
+		return ownerID == requestGoesToAsset.ID.String(), nil
+	}
+	return false, nil
 }
 
 func ownerToFields(o dtos.TokenOwner) (userID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) {

@@ -91,7 +91,7 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("returns userID and scopes for a valid token", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000010")
 		pat := models.PAT{Scopes: "read write", Fingerprint: new("fp1")}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ID = patID
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
@@ -126,7 +126,7 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("returns error when token is expired", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		pat := models.PAT{Scopes: "scan"}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ExpiryDate = &past
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
@@ -142,7 +142,7 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("still returns success when MarkAsLastUsedNowByID fails", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000011")
 		pat := models.PAT{Scopes: "scan", Fingerprint: new("fp2")}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ID = patID
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
@@ -161,14 +161,14 @@ func TestVerifyAPIToken(t *testing.T) {
 }
 
 func TestToModel(t *testing.T) {
-	userID := "00000000-0000-0000-0000-000000000002"
+	owner := dtos.TokenOwner{Type: dtos.OwnerUser, ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
 
 	t.Run("symmetric: generates bearer token, stores hash, returns cleartext", func(t *testing.T) {
 		patService := NewPatService(nil)
 		pat, cleartext, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			Description: "trivy",
 			Scopes:      "scan",
-		}, userID)
+		}, owner)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -192,7 +192,7 @@ func TestToModel(t *testing.T) {
 		pat, cleartext, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			PubKey: &pubKey,
 			Scopes: "scan",
-		}, userID)
+		}, owner)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,7 +211,7 @@ func TestToModel(t *testing.T) {
 		patService := NewPatService(nil)
 		_, _, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			Scopes: "invalid-scope",
-		}, userID)
+		}, owner)
 		if err == nil {
 			t.Fatal("expected error for invalid scopes")
 		}
@@ -223,7 +223,7 @@ func TestToModel(t *testing.T) {
 		_, _, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			PubKey: &invalidKey,
 			Scopes: "scan",
-		}, userID)
+		}, owner)
 		if err == nil {
 			t.Fatal("expected error for invalid public key")
 		}

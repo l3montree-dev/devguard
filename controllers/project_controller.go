@@ -247,7 +247,7 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
-	if userID == shared.GetSession(c).GetUserID() {
+	if userID == shared.GetSession(c).GetOwnerID() {
 		return echo.NewHTTPError(400, "cannot change your own role")
 	}
 
@@ -342,7 +342,7 @@ func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetOwnerID())
 	if err != nil {
 		return err
 	}
@@ -492,7 +492,7 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 	}
 	// get rbac
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetOwnerID())
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 
 	if probe.Verb == "delete" {
 		proExternalEntityID := probe.ProjectExternalEntityID

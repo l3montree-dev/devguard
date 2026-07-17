@@ -498,7 +498,7 @@ func (controller *AdminController) runDaemonSSE(
 	fn func(sse *sseWriter) error,
 ) error {
 	session := shared.GetSession(ctx)
-	userID := session.GetUserID()
+	userID := session.GetOwnerID()
 
 	// ---- cooldown check (multi-instance safe via config DB) ----
 	ok, retryAfter := controller.checkCooldown(ctx.Request().Context(), configKey)

@@ -121,7 +121,7 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "frameworkControlID is required")
 	}
 
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 	userAgent := ctx.Request().UserAgent()
 
 	orgID := shared.GetOrg(ctx).ID

@@ -57,7 +57,7 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 		// the whole point of the middleware: elevate to an admin session
 		assert.NotNil(t, gotSession)
 		assert.True(t, gotSession.IsInstanceAdmin())
-		assert.Equal(t, "admin", gotSession.GetUserID())
+		assert.Equal(t, "admin", gotSession.GetOwnerID())
 	})
 
 	t.Run("denies access when PAT is valid but not an admin", func(t *testing.T) {
@@ -118,17 +118,16 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
+		middleware := OrganizationAccessControlMiddleware(&mockPAT, shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -138,7 +137,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 
 	t.Run("denies access without organization permissions", func(t *testing.T) {
@@ -148,17 +147,16 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)
+		middleware := OrganizationAccessControlMiddleware(&mockPAT, shared.ObjectOrganization, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -168,7 +166,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		// Assert
 		assert.Error(t, err)
 		assert.Equal(t, http.StatusNotFound, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 
 	t.Run("allows read access to public organization", func(t *testing.T) {
@@ -178,17 +176,16 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 
-		middleware := OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead)
+		middleware := OrganizationAccessControlMiddleware(&mockPAT, shared.ObjectOrganization, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -198,7 +195,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 }
 
@@ -211,7 +208,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -222,15 +219,14 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo, &mockPAT)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -240,7 +236,7 @@ func TestProjectAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockProjectRepo.AssertExpectations(t)
 	})
 
@@ -251,7 +247,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -262,15 +258,14 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionUpdate).Return(false, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, mockSession, shared.ObjectProject, shared.ActionUpdate).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionUpdate)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo, &mockPAT)(shared.ObjectProject, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -279,7 +274,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		// Assert
 		assert.Error(t, err)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockProjectRepo.AssertExpectations(t)
 	})
 
@@ -290,7 +285,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -302,15 +297,14 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
-		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead).Return(false, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, mockSession, shared.ObjectProject, shared.ActionRead).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo, &mockPAT)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -320,7 +314,7 @@ func TestProjectAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockProjectRepo.AssertExpectations(t)
 	})
 
@@ -331,7 +325,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -342,16 +336,15 @@ func TestProjectAccessControl(t *testing.T) {
 		}
 
 		// Project already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 		ctx.Set("project", project)
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo, &mockPAT)(shared.ObjectProject, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -361,7 +354,7 @@ func TestProjectAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockProjectRepo.AssertNotCalled(t, "ReadBySlug", mock.Anything, mock.Anything)
 	})
 }
@@ -375,7 +368,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -386,15 +379,14 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -404,7 +396,7 @@ func TestAssetAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
 
@@ -415,7 +407,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -426,15 +418,14 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionUpdate).Return(false, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionUpdate).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionUpdate)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionUpdate)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -446,7 +437,7 @@ func TestAssetAccessControl(t *testing.T) {
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
 		assert.Equal(t, http.StatusNotFound, httpErr.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
 
@@ -457,7 +448,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -469,15 +460,14 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(false, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionRead).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -487,7 +477,7 @@ func TestAssetAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
 
@@ -498,7 +488,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -509,16 +499,15 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		// Asset already in context - should NOT call ReadBySlug
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.Set("asset", asset)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -528,7 +517,7 @@ func TestAssetAccessControl(t *testing.T) {
 		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertNotCalled(t, "ReadBySlug", mock.Anything, mock.Anything)
 	})
 
@@ -539,20 +528,19 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "nonexistent-asset").Return(models.Asset{}, errors.New("not found"))
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("nonexistent-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -574,7 +562,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -585,15 +573,14 @@ func TestAssetAccessControl(t *testing.T) {
 		}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(false, errors.New("rbac error"))
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionRead).Return(false, errors.New("rbac error"))
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		// Act
 		err := middleware(func(ctx echo.Context) error {
@@ -605,7 +592,7 @@ func TestAssetAccessControl(t *testing.T) {
 		httpErr, ok := err.(*echo.HTTPError)
 		assert.True(t, ok)
 		assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
 }
@@ -695,7 +682,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("org-admin", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -707,22 +694,21 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, org.ID, "test-project").Return(project, nil)
 		// The RBAC implementation should return true for org admins
-		mockRBAC.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, mockSession, shared.ObjectProject, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", org)
 		ctx.SetParamNames("projectSlug")
 		ctx.SetParamValues("test-project")
 
-		middleware := ProjectAccessControlFactory(&mockProjectRepo)(shared.ObjectProject, shared.ActionRead)
+		middleware := ProjectAccessControlFactory(&mockProjectRepo, &mockPAT)(shared.ObjectProject, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
 		})(ctx)
 
 		assert.NoError(t, err)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockProjectRepo.AssertExpectations(t)
 	})
 
@@ -733,7 +719,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("project-admin", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -745,22 +731,21 @@ func TestAccessControlHierarchy(t *testing.T) {
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "test-asset").Return(asset, nil)
 		// The RBAC implementation should return true for project admins
-		mockRBAC.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("project", project)
 		ctx.SetParamNames("assetSlug")
 		ctx.SetParamValues("test-asset")
 
-		middleware := AssetAccessControlFactory(&mockAssetRepo)(shared.ObjectAsset, shared.ActionRead)
+		middleware := AssetAccessControlFactory(&mockAssetRepo, &mockPAT)(shared.ObjectAsset, shared.ActionRead)
 
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
 		})(ctx)
 
 		assert.NoError(t, err)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 		mockAssetRepo.AssertExpectations(t)
 	})
 }

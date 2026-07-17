@@ -34,7 +34,7 @@ type SessionRouter struct {
 // @Router /whoami [get]
 func whoami(ctx echo.Context) error {
 	return ctx.JSON(200, map[string]string{
-		"userID": shared.GetSession(ctx).GetUserID(),
+		"userID": shared.GetSession(ctx).GetOwnerID(),
 	})
 }
 
@@ -54,9 +54,10 @@ func NewSessionRouter(
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
 	assetVersionRepository shared.AssetVersionRepository,
+	patVerifier shared.Verifier,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
-		middlewares.SessionMiddleware(adminClient, configService, patService),
+		middlewares.SessionMiddleware(adminClient, configService, patVerifier),
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 	)
 
@@ -71,8 +72,8 @@ func NewSessionRouter(
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository, patVerifier)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patVerifier)
 
 	fastAccessRoutes := sessionRouter.Group("",
 		middlewares.NeededScope([]string{"scan"}),

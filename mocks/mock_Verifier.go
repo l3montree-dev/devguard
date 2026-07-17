@@ -39,6 +39,240 @@ func (_m *Verifier) EXPECT() *Verifier_Expecter {
 	return &Verifier_Expecter{mock: &_m.Mock}
 }
 
+// IsAllowed provides a mock function for the type Verifier
+func (_mock *Verifier) IsAllowed(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	ret := _mock.Called(ctx, session, obj, act)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAllowed")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(ctx, session, obj, act)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(ctx, session, obj, act)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(ctx, session, obj, act)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Verifier_IsAllowed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowed'
+type Verifier_IsAllowed_Call struct {
+	*mock.Call
+}
+
+// IsAllowed is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - session shared.AuthSession
+//   - obj shared.Object
+//   - act shared.Action
+func (_e *Verifier_Expecter) IsAllowed(ctx any, session any, obj any, act any) *Verifier_IsAllowed_Call {
+	return &Verifier_IsAllowed_Call{Call: _e.mock.On("IsAllowed", ctx, session, obj, act)}
+}
+
+func (_c *Verifier_IsAllowed_Call) Run(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action)) *Verifier_IsAllowed_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
+		}
+		var arg2 shared.Object
+		if args[2] != nil {
+			arg2 = args[2].(shared.Object)
+		}
+		var arg3 shared.Action
+		if args[3] != nil {
+			arg3 = args[3].(shared.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Verifier_IsAllowed_Call) Return(b bool, err error) *Verifier_IsAllowed_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *Verifier_IsAllowed_Call) RunAndReturn(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error)) *Verifier_IsAllowed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsAllowedInAsset provides a mock function for the type Verifier
+func (_mock *Verifier) IsAllowedInAsset(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	ret := _mock.Called(ctx, session, obj, act)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAllowedInAsset")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(ctx, session, obj, act)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(ctx, session, obj, act)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(ctx, session, obj, act)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Verifier_IsAllowedInAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowedInAsset'
+type Verifier_IsAllowedInAsset_Call struct {
+	*mock.Call
+}
+
+// IsAllowedInAsset is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - session shared.AuthSession
+//   - obj shared.Object
+//   - act shared.Action
+func (_e *Verifier_Expecter) IsAllowedInAsset(ctx any, session any, obj any, act any) *Verifier_IsAllowedInAsset_Call {
+	return &Verifier_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", ctx, session, obj, act)}
+}
+
+func (_c *Verifier_IsAllowedInAsset_Call) Run(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action)) *Verifier_IsAllowedInAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
+		}
+		var arg2 shared.Object
+		if args[2] != nil {
+			arg2 = args[2].(shared.Object)
+		}
+		var arg3 shared.Action
+		if args[3] != nil {
+			arg3 = args[3].(shared.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Verifier_IsAllowedInAsset_Call) Return(b bool, err error) *Verifier_IsAllowedInAsset_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *Verifier_IsAllowedInAsset_Call) RunAndReturn(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error)) *Verifier_IsAllowedInAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsAllowedInProject provides a mock function for the type Verifier
+func (_mock *Verifier) IsAllowedInProject(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	ret := _mock.Called(ctx, session, obj, act)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAllowedInProject")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(ctx, session, obj, act)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(ctx, session, obj, act)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(ctx, session, obj, act)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Verifier_IsAllowedInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowedInProject'
+type Verifier_IsAllowedInProject_Call struct {
+	*mock.Call
+}
+
+// IsAllowedInProject is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - session shared.AuthSession
+//   - obj shared.Object
+//   - act shared.Action
+func (_e *Verifier_Expecter) IsAllowedInProject(ctx any, session any, obj any, act any) *Verifier_IsAllowedInProject_Call {
+	return &Verifier_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", ctx, session, obj, act)}
+}
+
+func (_c *Verifier_IsAllowedInProject_Call) Run(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action)) *Verifier_IsAllowedInProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
+		}
+		var arg2 shared.Object
+		if args[2] != nil {
+			arg2 = args[2].(shared.Object)
+		}
+		var arg3 shared.Action
+		if args[3] != nil {
+			arg3 = args[3].(shared.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Verifier_IsAllowedInProject_Call) Return(b bool, err error) *Verifier_IsAllowedInProject_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *Verifier_IsAllowedInProject_Call) RunAndReturn(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error)) *Verifier_IsAllowedInProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifyAPIToken provides a mock function for the type Verifier
 func (_mock *Verifier) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
 	ret := _mock.Called(ctx, token)
@@ -79,7 +313,7 @@ type Verifier_VerifyAPIToken_Call struct {
 // VerifyAPIToken is a helper method to define mock.On call
 //   - ctx context.Context
 //   - token string
-func (_e *Verifier_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *Verifier_VerifyAPIToken_Call {
+func (_e *Verifier_Expecter) VerifyAPIToken(ctx any, token any) *Verifier_VerifyAPIToken_Call {
 	return &Verifier_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
 }
 
@@ -147,7 +381,7 @@ type Verifier_VerifyRequestSignature_Call struct {
 // VerifyRequestSignature is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *http.Request
-func (_e *Verifier_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *Verifier_VerifyRequestSignature_Call {
+func (_e *Verifier_Expecter) VerifyRequestSignature(ctx any, req any) *Verifier_VerifyRequestSignature_Call {
 	return &Verifier_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 

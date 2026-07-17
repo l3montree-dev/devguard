@@ -224,7 +224,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	}
 
 	// get the user id from the session
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 	// get the email of that user
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -316,7 +316,7 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	if userID == "" {
 		return echo.NewHTTPError(400, "userID is required")
 	}
-	currentUserID := shared.GetSession(ctx).GetUserID()
+	currentUserID := shared.GetSession(ctx).GetOwnerID()
 	if userID == currentUserID {
 		return echo.NewHTTPError(400, "you cannot change your own role")
 	}
@@ -569,7 +569,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 // @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {
 	// get all organizations the user has access to
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 
 	domains, err := controller.rbacProvider.DomainsOfUser(userID)
 

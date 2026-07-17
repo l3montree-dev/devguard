@@ -147,7 +147,7 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 
 func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
 	return withRLock(func() (bool, error) {
-		roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetUserID(), "domain::"+c.domain)
+		roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetOwnerID(), "domain::"+c.domain)
 		return len(roles) > 0, nil
 	})
 }
@@ -456,7 +456,7 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 
 func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
+		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
 	})
 	if err != nil {
 		return false, err
@@ -471,7 +471,7 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 
 func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
+		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
 	})
 
 	if err != nil {
@@ -488,7 +488,7 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 
 func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetUserID(), "domain::"+c.domain)
+		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
 	})
 	if err != nil {
 		return false, err

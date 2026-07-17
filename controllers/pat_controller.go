@@ -48,7 +48,7 @@ func NewPatController(service shared.PersonalAccessTokenService, repository shar
 func (p *PatController) Create(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
-	userID := session.GetUserID()
+	userID := session.GetOwnerID()
 	owner := dtos.TokenOwner{Type: dtos.OwnerUser, ID: uuid.MustParse(userID)}
 
 	// get the json body
@@ -214,7 +214,7 @@ func (p *PatController) Delete(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}
 	// check the owner of the token
-	if pat.UserID.String() != shared.GetSession(c).GetUserID() {
+	if pat.UserID.String() != shared.GetSession(c).GetOwnerID() {
 		return echo.NewHTTPError(403, "not allowed to delete this token")
 	}
 	err = p.patRepository.DeleteUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID))
@@ -298,7 +298,7 @@ func (p *PatController) DeleteByAsset(c shared.Context) error {
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
-	userID := session.GetUserID()
+	userID := session.GetOwnerID()
 
 	pats, err := p.patRepository.ListByUserID(c.Request().Context(), nil, userID)
 	if err != nil {

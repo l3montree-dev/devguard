@@ -15,18 +15,25 @@
 
 package accesscontrol
 
+import "github.com/l3montree-dev/devguard/dtos"
+
 type session struct {
-	userID          string
+	ownerID         string
 	scopes          []string
 	isInstanceAdmin bool
+	ownerType       dtos.OwnerType
 }
 
 func (a session) IsInstanceAdmin() bool {
 	return a.isInstanceAdmin
 }
 
-func (a session) GetUserID() string {
-	return a.userID
+func (a session) GetOwnerID() string {
+	return a.ownerID
+}
+
+func (a session) GetOwnerType() dtos.OwnerType {
+	return a.ownerType
 }
 
 func (a session) GetScopes() []string {
@@ -35,12 +42,12 @@ func (a session) GetScopes() []string {
 
 func NewSession(userID string, scopes []string, isInstanceAdmin bool) session {
 	return session{
-		userID:          userID,
+		ownerID:         userID,
 		scopes:          scopes,
 		isInstanceAdmin: isInstanceAdmin,
 	}
 }
 
 var NoSession session = session{
-	userID: "NO_SESSION",
+	ownerID: "NO_SESSION",
 }

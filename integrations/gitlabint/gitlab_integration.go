@@ -223,7 +223,7 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 
 func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, shared.GetSession(ctx).GetUserID(), externalEntityProviderID)
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, shared.GetSession(ctx).GetOwnerID(), externalEntityProviderID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
@@ -276,7 +276,7 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 	ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 10*time.Second)
 	defer cancel()
 
-	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, shared.GetSession(ctx).GetUserID())
+	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, shared.GetSession(ctx).GetOwnerID())
 	if err != nil {
 		slog.Error("failed to get identity", "err", err)
 		return nil, err
@@ -296,7 +296,7 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 			RefreshToken: token.RefreshToken,
 			BaseURL:      token.BaseURL,
 			GitLabUserID: token.GitLabUserID,
-			UserID:       shared.GetSession(ctx).GetUserID(),
+			UserID:       shared.GetSession(ctx).GetOwnerID(),
 			ProviderID:   providerID,
 			Expiry:       token.Expiry,
 		})
@@ -908,7 +908,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetOwnerID(), *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
@@ -920,7 +920,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 		}
 
 		// check if the user has a gitlab oauth2 token
-		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetUserID(), providerID)
+		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetOwnerID(), providerID)
 		if err != nil {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}

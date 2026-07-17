@@ -63,16 +63,14 @@ func InstanceSettings(configService shared.ConfigService, disabled func(shared.I
 	}
 }
 
-func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) echo.MiddlewareFunc {
+func OrganizationAccessControlMiddleware(patService shared.Verifier, obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			// get the rbac
-			rbac := shared.GetRBAC(ctx)
 			org := shared.GetOrg(ctx)
 			// get the user
 			session := shared.GetSession(ctx)
 
-			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
+			allowed, err := patService.IsAllowedInOrg(ctx, session, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -83,7 +81,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				if org.IsPublic && act == shared.ActionRead {
 					shared.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied in accessControlMiddleware", "user", session.GetUserID(), "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "user", session.GetOwnerID(), "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
 					return echo.NewHTTPError(404, "could not find organization")
 				}
@@ -121,12 +119,10 @@ func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
+func AssetAccessControlFactory(assetRepository shared.AssetRepository, patService shared.Verifier) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
-				// get the rbac
-				rbac := shared.GetRBAC(ctx)
 				// get the user
 				session := shared.GetSession(ctx)
 				// get the project
@@ -148,7 +144,8 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 					}
 				}
 
-				allowed, err := rbac.IsAllowedInAsset(ctx.Request().Context(), &asset, session, obj, act)
+				shared.SetAsset(ctx, asset)
+				allowed, err := patService.IsAllowedInAsset(ctx, session, obj, act)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
 				}
@@ -158,11 +155,10 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in AssetAccess", "user", session.GetUserID(), "object", obj, "action", act, "assetSlug", assetSlug)
+						slog.Warn("access denied in AssetAccess", "user", session.GetOwnerID(), "object", obj, "action", act, "assetSlug", assetSlug)
 						return echo.NewHTTPError(404, "could not find asset")
 					}
 				}
-				shared.SetAsset(ctx, asset)
 				// Propagate tenant IDs into the plain context.Context so that
 				// GormRepository.Read can scope queries without echo.Context.
 				tenantIDs := shared.OwnershipScopeFromAsset(ctx, asset)
@@ -173,13 +169,10 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 	}
 }
 
-func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) shared.RBACMiddleware {
+func ProjectAccessControlFactory(projectRepository shared.ProjectRepository, patService shared.Verifier) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
-				// get the rbac
-				rbac := shared.GetRBAC(ctx)
-
 				// get the user
 				session := shared.GetSession(ctx)
 
@@ -202,7 +195,9 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 					return echo.NewHTTPError(404, "could not find project")
 				}
 
-				allowed, err := rbac.IsAllowedInProject(ctx.Request().Context(), &project, session, obj, act)
+				shared.SetProject(ctx, project)
+
+				allowed, err := patService.IsAllowedInProject(ctx, session, obj, act)
 
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -214,12 +209,11 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in ProjectAccess", "user", session.GetUserID(), "object", obj, "action", act, "projectSlug", projectSlug)
+						slog.Warn("access denied in ProjectAccess", "user", session.GetOwnerID(), "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(404, "could not find project")
 					}
 				}
 
-				ctx.Set("project", project)
 				tenantIDs := shared.OwnershipScopeFromProject(ctx, project)
 				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 
@@ -262,7 +256,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session)
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
-					slog.Info("oauth2 token not valid, asking user to reauthorize", "user", session.GetUserID(), "organization", organization)
+					slog.Info("oauth2 token not valid, asking user to reauthorize", "user", session.GetOwnerID(), "organization", organization)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
 				if org.IsPublic {
@@ -282,7 +276,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 					shared.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
-					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
+					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetOwnerID(), "organization", organization)
 					return ctx.JSON(404, map[string]string{"error": "could not find organization"})
 				}
 			}

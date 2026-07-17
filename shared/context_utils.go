@@ -34,9 +34,10 @@ import (
 )
 
 type AuthSession interface {
-	GetUserID() string
+	GetOwnerID() string
 	GetScopes() []string
 	IsInstanceAdmin() bool
+	GetOwnerType() dtos.OwnerType
 }
 
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {

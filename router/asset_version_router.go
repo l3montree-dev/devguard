@@ -41,8 +41,9 @@ func NewAssetVersionRouter(
 	assetVersionRepository shared.AssetVersionRepository,
 	assetRepository shared.AssetRepository,
 	vulnEventRepository shared.VulnEventRepository,
+	patService shared.PersonalAccessTokenService,
 ) AssetVersionRouter {
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patService)
 
 	assetVersionRouter := assetGroup.Group.Group("/refs/:assetVersionSlug", middlewares.AssetVersionMiddleware(assetVersionRepository))
 

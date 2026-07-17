@@ -39,7 +39,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 	limiter := &sync.Map{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
-			key := shared.GetSession(ctx).GetUserID()
+			key := shared.GetSession(ctx).GetOwnerID()
 			now := time.Now()
 
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
@@ -71,14 +71,14 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 			org := shared.GetOrg(ctx)
 
 			if org.IsExternalEntity() {
-				key := org.GetID().String() + "/" + shared.GetSession(ctx).GetUserID()
+				key := org.GetID().String() + "/" + shared.GetSession(ctx).GetOwnerID()
 				now := time.Now()
 
 				if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 					limiter.Store(key, now.Add(15*time.Minute))
 
 					safeCtx := GoroutineSafeContext(ctx)
-					userID := shared.GetSession(ctx).GetUserID()
+					userID := shared.GetSession(ctx).GetOwnerID()
 					orgID := org.GetID()
 
 					go func() {

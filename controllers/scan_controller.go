@@ -248,7 +248,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 
-	userID := shared.GetSession(c).GetUserID()
+	userID := shared.GetSession(c).GetOwnerID()
 	userAgent := c.Request().UserAgent()
 
 	tag := c.Request().Header.Get("X-Tag")
@@ -457,7 +457,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	asset := shared.GetAsset(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 
 	tag := ctx.Request().Header.Get("X-Tag")
 
@@ -873,7 +873,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 	asset := shared.GetAsset(c)
-	userID := shared.GetSession(c).GetUserID()
+	userID := shared.GetSession(c).GetOwnerID()
 
 	tag := c.Request().Header.Get("X-Tag")
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")

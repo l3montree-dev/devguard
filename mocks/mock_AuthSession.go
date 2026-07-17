@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/l3montree-dev/devguard/dtos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -33,6 +34,94 @@ type AuthSession_Expecter struct {
 
 func (_m *AuthSession) EXPECT() *AuthSession_Expecter {
 	return &AuthSession_Expecter{mock: &_m.Mock}
+}
+
+// GetOwnerID provides a mock function for the type AuthSession
+func (_mock *AuthSession) GetOwnerID() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOwnerID")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// AuthSession_GetOwnerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOwnerID'
+type AuthSession_GetOwnerID_Call struct {
+	*mock.Call
+}
+
+// GetOwnerID is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) GetOwnerID() *AuthSession_GetOwnerID_Call {
+	return &AuthSession_GetOwnerID_Call{Call: _e.mock.On("GetOwnerID")}
+}
+
+func (_c *AuthSession_GetOwnerID_Call) Run(run func()) *AuthSession_GetOwnerID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AuthSession_GetOwnerID_Call) Return(s string) *AuthSession_GetOwnerID_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *AuthSession_GetOwnerID_Call) RunAndReturn(run func() string) *AuthSession_GetOwnerID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOwnerType provides a mock function for the type AuthSession
+func (_mock *AuthSession) GetOwnerType() dtos.OwnerType {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOwnerType")
+	}
+
+	var r0 dtos.OwnerType
+	if returnFunc, ok := ret.Get(0).(func() dtos.OwnerType); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(dtos.OwnerType)
+	}
+	return r0
+}
+
+// AuthSession_GetOwnerType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOwnerType'
+type AuthSession_GetOwnerType_Call struct {
+	*mock.Call
+}
+
+// GetOwnerType is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) GetOwnerType() *AuthSession_GetOwnerType_Call {
+	return &AuthSession_GetOwnerType_Call{Call: _e.mock.On("GetOwnerType")}
+}
+
+func (_c *AuthSession_GetOwnerType_Call) Run(run func()) *AuthSession_GetOwnerType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AuthSession_GetOwnerType_Call) Return(ownerType dtos.OwnerType) *AuthSession_GetOwnerType_Call {
+	_c.Call.Return(ownerType)
+	return _c
+}
+
+func (_c *AuthSession_GetOwnerType_Call) RunAndReturn(run func() dtos.OwnerType) *AuthSession_GetOwnerType_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetScopes provides a mock function for the type AuthSession
@@ -77,50 +166,6 @@ func (_c *AuthSession_GetScopes_Call) Return(strings []string) *AuthSession_GetS
 }
 
 func (_c *AuthSession_GetScopes_Call) RunAndReturn(run func() []string) *AuthSession_GetScopes_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetUserID provides a mock function for the type AuthSession
-func (_mock *AuthSession) GetUserID() string {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserID")
-	}
-
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	return r0
-}
-
-// AuthSession_GetUserID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserID'
-type AuthSession_GetUserID_Call struct {
-	*mock.Call
-}
-
-// GetUserID is a helper method to define mock.On call
-func (_e *AuthSession_Expecter) GetUserID() *AuthSession_GetUserID_Call {
-	return &AuthSession_GetUserID_Call{Call: _e.mock.On("GetUserID")}
-}
-
-func (_c *AuthSession_GetUserID_Call) Run(run func()) *AuthSession_GetUserID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *AuthSession_GetUserID_Call) Return(s string) *AuthSession_GetUserID_Call {
-	_c.Call.Return(s)
-	return _c
-}
-
-func (_c *AuthSession_GetUserID_Call) RunAndReturn(run func() string) *AuthSession_GetUserID_Call {
 	_c.Call.Return(run)
 	return _c
 }

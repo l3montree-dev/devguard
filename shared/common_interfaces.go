@@ -74,6 +74,9 @@ type PersonalAccessTokenService interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
 	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	IsAllowed(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
@@ -124,6 +127,9 @@ type ProjectRepository interface {
 type Verifier interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	IsAllowedInOrg(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 }
 
 type PolicyRepository interface {
@@ -175,6 +181,7 @@ type AssetRepository interface {
 	GetAssetsWithVulnSharingEnabled(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.Asset, error)
 	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
+	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 }
 
 type AttestationRepository interface {

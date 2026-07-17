@@ -52,7 +52,7 @@ func (s externalEntityProviderService) TriggerSync(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	if org.IsExternalEntity() {
 		// Trigger the sync for the external entity provider projects
-		err := s.RefreshExternalEntityProviderProjects(ctx, org, shared.GetSession(ctx).GetUserID())
+		err := s.RefreshExternalEntityProviderProjects(ctx, org, shared.GetSession(ctx).GetOwnerID())
 		if err != nil {
 			return echo.NewHTTPError(500, "could not trigger sync").WithInternal(err)
 		}
@@ -75,7 +75,7 @@ func (s externalEntityProviderService) TriggerOrgSync(ctx shared.Context) error 
 func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.Org, error) {
 	// return the enabled git providers as well
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 	orgs, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
 		orgs, err := thirdPartyIntegration.ListOrgs(ctx)
 		if err != nil {

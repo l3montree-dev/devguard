@@ -83,7 +83,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 			}
 		}
 
-		return g.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID(), userAgent)
+		return g.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetOwnerID(), userAgent)
 	case shared.VulnEvent:
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event

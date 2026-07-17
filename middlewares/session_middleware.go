@@ -52,12 +52,13 @@ func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratos
 
 func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.ConfigService, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) error {
-			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
+		return func(ctx shared.Context) error {
 			instanceSettings, err := configService.GetInstanceSettings(ctx.Request().Context())
 			if err != nil {
 				return err
 			}
+
+			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
 			authHeader := ctx.Request().Header.Get("Authorization")
 
 			var userID string

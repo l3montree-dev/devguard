@@ -40,12 +40,13 @@ func NewAssetRouter(
 	scanController *controllers.ScanController,
 	assetRepository shared.AssetRepository,
 	patController *controllers.PatController,
+	patService shared.PersonalAccessTokenService,
 ) AssetRouter {
 	/**
 	Asset scoped router
 	All routes below this line are scoped to a specific asset.
 	*/
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patService)
 
 	assetRouter := projectGroup.Group.Group("/assets/:assetSlug", assetScopedRBAC(shared.ObjectAsset, shared.ActionRead))
 	assetRouter.GET("/", assetController.Read)

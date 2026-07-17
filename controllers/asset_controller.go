@@ -113,7 +113,7 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	rbac := shared.GetRBAC(ctx)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(ctx).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(ctx).GetOwnerID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
@@ -210,7 +210,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx).GetUserID(), newAsset)
+	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx).GetOwnerID(), newAsset)
 	if err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if justification != "" {
-		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetUserID(), justification)
+		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetOwnerID(), justification)
 		if err != nil {
 			return fmt.Errorf("error updating requirements: %v", err)
 		}
@@ -563,7 +563,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 
 		// log the invitation for audit
 		slog.Info("adding member to asset",
-			"addedBy", shared.GetSession(c).GetUserID(),
+			"addedBy", shared.GetSession(c).GetOwnerID(),
 			"addedUser", newMemberID,
 			"assetID", asset.ID.String())
 
@@ -587,7 +587,7 @@ func (a *AssetController) RemoveMember(c shared.Context) error {
 	}
 	// Log the removal for audit
 	slog.Info("removing member from asset",
-		"removedBy", shared.GetSession(c).GetUserID(),
+		"removedBy", shared.GetSession(c).GetOwnerID(),
 		"removedUser", userID,
 		"assetID", asset.ID.String())
 
@@ -612,7 +612,7 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
-	if userID == shared.GetSession(c).GetUserID() {
+	if userID == shared.GetSession(c).GetOwnerID() {
 		return echo.NewHTTPError(400, "cannot change your own role")
 	}
 
@@ -640,7 +640,7 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 
 	// log for audit
 	slog.Info("changing role of member in asset",
-		"changedBy", shared.GetSession(c).GetUserID(),
+		"changedBy", shared.GetSession(c).GetOwnerID(),
 		"changedUser", userID,
 		"assetID", asset.ID.String(),
 		"newRole", req.Role)

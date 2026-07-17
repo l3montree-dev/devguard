@@ -151,20 +151,19 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(true, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(true, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -174,7 +173,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		// assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 
 	t.Run("it should deny access if user does not have the required role", func(t *testing.T) {
@@ -184,20 +183,19 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -207,7 +205,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		// assert
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 		assert.Error(t, err)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 
 	t.Run("it should allow access if organization is public and action is read", func(t *testing.T) {
@@ -217,7 +215,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{
 			IsPublic: true,
@@ -226,13 +224,12 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -242,7 +239,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		// assert
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 
 	t.Run("it should return error if unable to determine access", func(t *testing.T) {
@@ -252,20 +249,19 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccessControl{}
+		mockPAT := mocks.Verifier{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockRBAC.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, errors.New("error"))
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, errors.New("error"))
 
-		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
 		ctx.Set("organization", mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -275,7 +271,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		// assert
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Error(t, err)
-		mockRBAC.AssertExpectations(t)
+		mockPAT.AssertExpectations(t)
 	})
 }
 func TestMiddlewareNeededScope(t *testing.T) {

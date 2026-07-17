@@ -30,8 +30,9 @@ func NewExternalReferenceRouter(
 	assetVersionRouter AssetVersionRouter,
 	externalReferenceController *controllers.ExternalReferenceController,
 	assetRepository shared.AssetRepository,
+	patVerifier shared.Verifier,
 ) ExternalReferenceRouter {
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patVerifier)
 	// External references are scoped to asset versions
 	// Read access - anyone who can read the asset version can list references
 	refGroup := assetVersionRouter.Group.Group("/external-references")

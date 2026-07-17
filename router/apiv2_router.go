@@ -29,8 +29,8 @@ func NewAPIV2Router(
 	configService shared.ConfigService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 ) APIV2Router {
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository, patService)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patService)
 
 	v2 := srv.Echo.Group("/api/v2",
 		func(next echo.HandlerFunc) echo.HandlerFunc {

@@ -239,7 +239,7 @@ func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository share
 
 func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	// get the user
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 	code := ctx.QueryParam("code")
 	if code == "" {
 		return ctx.JSON(400, map[string]any{
@@ -333,7 +333,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 	verifier := oauth2.GenerateVerifier()
 	// get the user
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetOwnerID()
 
 	redirectTo := ctx.QueryParam("redirectTo")
 

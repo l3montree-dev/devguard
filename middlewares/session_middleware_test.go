@@ -38,7 +38,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user1", sess.GetUserID())
+			assert.Equal(t, "user1", sess.GetOwnerID())
 			assert.ElementsMatch(t, []string{"read", "write"}, sess.GetScopes())
 			return nil
 		})
@@ -88,7 +88,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user3", sess.GetUserID())
+			assert.Equal(t, "user3", sess.GetOwnerID())
 			assert.ElementsMatch(t, []string{"scan"}, sess.GetScopes())
 			return nil
 		})
@@ -139,7 +139,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user5", sess.GetUserID())
+			assert.Equal(t, "user5", sess.GetOwnerID())
 			return nil
 		})
 
@@ -170,7 +170,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user4", sess.GetUserID())
+			assert.Equal(t, "user4", sess.GetOwnerID())
 			return nil
 		})
 
@@ -201,7 +201,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user2", sess.GetUserID())
+			assert.Equal(t, "user2", sess.GetOwnerID())
 			assert.ElementsMatch(t, []string{"scan", "manage"}, sess.GetScopes())
 			return nil
 		})
