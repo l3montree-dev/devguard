@@ -32,5 +32,18 @@ func LoadControlsIntoDB(db shared.DB) error {
 		return err
 	}
 	slog.Info("seeded SCF controls", "count", len(controls))
+
+	components, err := loadDevGuardComplianceComponents()
+	if err != nil {
+		return err
+	}
+	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "uuid"}},
+		UpdateAll: true,
+	}).CreateInBatches(&components, 100).Error; err != nil {
+		return err
+	}
+	slog.Info("seeded DevGuard compliance components", "count", len(components))
+
 	return nil
 }

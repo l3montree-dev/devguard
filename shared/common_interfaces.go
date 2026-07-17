@@ -785,6 +785,15 @@ type CompliancePostureRepository interface {
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
+type ComplianceComponentRepository interface {
+	ListAll(ctx context.Context, tx DB, filter []FilterQuery) ([]models.ComplianceComponent, error)
+	GetDetails(ctx context.Context, tx DB, id uuid.UUID) (*models.ComplianceComponent, error)
+
+	CreateStatement(ctx context.Context, tx DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error)
+	UpdateStatement(ctx context.Context, tx DB, statementID uuid.UUID, implementationStatus string, description string) (*models.ComplianceComponentImplementsControlStatement, error)
+	DeleteStatement(ctx context.Context, tx DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error)
+}
+
 type FrameworkControlRepository interface {
 	utils.Repository[uuid.UUID, models.FrameworkControl, DB]
 	GetAll(ctx context.Context, tx DB, framework *string) ([]models.FrameworkControl, error)

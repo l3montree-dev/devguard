@@ -14,7 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
-//go:embed Grundschutz++-catalog.json
+//go:embed oscal/catalogs/Grundschutz++-catalog.json
 var grundschutzCatalogJSON []byte
 
 func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {

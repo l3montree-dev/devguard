@@ -21,7 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
-//go:embed SCF.json
+//go:embed oscal/catalogs/SCF.json
 var scfCatalogJSON []byte
 
 func loadSCFControls() ([]models.FrameworkControl, error) {

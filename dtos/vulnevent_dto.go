@@ -32,6 +32,9 @@ const (
 	EventTypeImplemented   VulnEventType = "implemented"
 	EventTypeNotApplicable VulnEventType = "notApplicable"
 
+	EventTypeAttachedComplianceComponent VulnEventType = "attachedComplianceComponent"
+	EventTypeRemovedComplianceComponent  VulnEventType = "removedComplianceComponent"
+
 	// Automated Events (Events that are triggered by automation's on the server)
 	EventTypeDetected VulnEventType = "detected"
 

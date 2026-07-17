@@ -16,7 +16,7 @@ type FrameworkControl struct {
 	Importance string `json:"importance"`
 
 	Framework string `yaml:"framework" json:"framework"`
-	ControlID string `yaml:"controls"  json:"controls"`
+	ControlID string `yaml:"controls"  json:"controls" gorm:"column:control_id;type:text;index"`
 
 	Additional datatypes.JSON `yaml:"additional" json:"additional" gorm:"type:jsonb"`
 

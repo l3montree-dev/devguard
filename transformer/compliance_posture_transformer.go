@@ -66,9 +66,14 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 	for i, e := range c.Events {
 		events[i] = ConvertVulnEventToDto(e)
 	}
+	byComponents := make([]dtos.ComplianceComponentImplementsControlStatementDTO, len(c.ByComponents))
+	for i, bc := range c.ByComponents {
+		byComponents[i] = ComplianceComponentImplementsControlStatementToDTO(bc)
+	}
 	return dtos.CompliancePostureWithDetailsDTO{
 		CompliancePostureWithControlDTO: p,
 		Events:                          events,
+		ByComponents:                    byComponents,
 	}
 }
 
@@ -122,7 +127,11 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		},
 	}
 
-	systemComponent := oscalTypes.SystemComponent{
+	// DevGuard itself is always a component of the system - it directly
+	// tracks and assesses every control's posture, regardless of whether any
+	// additional real-world components (branch protection, etc.) also claim
+	// to implement it.
+	devGuardComponent := oscalTypes.SystemComponent{
 		UUID:        uuid.New().String(),
 		Title:       "DevGuard System Component",
 		Description: "This component represents the DevGuard system responsible for managing compliance posture data.",
@@ -131,13 +140,12 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		},
 		Type: "software",
 	}
-	components := []oscalTypes.SystemComponent{
-		// only a single component for now, - this system, like trestle is doing it
-		systemComponent,
-	}
 
-	systemImplementation.Components = components
-	systemSecurityPlan.SystemImplementation = systemImplementation
+	// seenComponents dedupes components across postures/controls - the same
+	// tracked component (e.g. "branch protection") can implement many controls.
+	seenComponents := map[string]oscalTypes.SystemComponent{
+		devGuardComponent.UUID: devGuardComponent,
+	}
 
 	controlImplementation := oscalTypes.ControlImplementation{}
 	implementedRequirements := []oscalTypes.ImplementedRequirement{}
@@ -157,20 +165,54 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		if len(compliancePosture.Events) > 0 && compliancePosture.Events[len(compliancePosture.Events)-1].Justification != nil {
 			description = *compliancePosture.Events[len(compliancePosture.Events)-1].Justification
 		}
-		byComponents := []oscalTypes.ByComponent{}
-		byComponent := oscalTypes.ByComponent{
-			ComponentUuid: systemComponent.UUID,
-			Description:   description,
-			ImplementationStatus: &oscalTypes.ImplementationStatus{
-				State: state,
+
+		// DevGuard's own direct assessment of this control is always present.
+		byComponents := []oscalTypes.ByComponent{
+			{
+				ComponentUuid: devGuardComponent.UUID,
+				Description:   description,
+				ImplementationStatus: &oscalTypes.ImplementationStatus{
+					State: state,
+				},
+				UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
 			},
-			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
 		}
-		byComponents = append(byComponents, byComponent)
+
+		// Plus any real-world components tracked for this control.
+		for _, statement := range compliancePosture.ByComponents {
+			if _, ok := seenComponents[statement.ComplianceComponentID]; !ok {
+				seenComponents[statement.ComplianceComponentID] = oscalTypes.SystemComponent{
+					UUID:        statement.ComplianceComponentID,
+					Title:       statement.ComplianceComponentTitle,
+					Description: statement.ComplianceComponentDescription,
+					Status: oscalTypes.SystemComponentStatus{
+						State: "operational",
+					},
+					Type: "software",
+				}
+			}
+
+			byComponents = append(byComponents, oscalTypes.ByComponent{
+				ComponentUuid: statement.ComplianceComponentID,
+				Description:   statement.Description,
+				ImplementationStatus: &oscalTypes.ImplementationStatus{
+					State: statement.ImplementationStatus,
+				},
+				UUID: statement.ID,
+			})
+		}
+
 		implementedRequirement.ByComponents = &byComponents
 
 		implementedRequirements = append(implementedRequirements, implementedRequirement)
 	}
+
+	components := make([]oscalTypes.SystemComponent, 0, len(seenComponents))
+	for _, c := range seenComponents {
+		components = append(components, c)
+	}
+	systemImplementation.Components = components
+	systemSecurityPlan.SystemImplementation = systemImplementation
 
 	controlImplementation.ImplementedRequirements = implementedRequirements
 	systemSecurityPlan.ControlImplementation = controlImplementation

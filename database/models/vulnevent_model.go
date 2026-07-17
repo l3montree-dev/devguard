@@ -262,6 +262,34 @@ func NewNotApplicableEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID stri
 	return ev
 }
 
+// NewAttachedComplianceComponentEvent records that a component was attached to
+// a compliance posture (an OSCAL by-component statement was created). This is
+// an audit-log entry only - it does not change the posture's state.
+func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, componentTitle string, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:      dtos.EventTypeAttachedComplianceComponent,
+		UserID:    userID,
+		UserAgent: userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
+	ev.SetArbitraryJSONData(map[string]any{"componentTitle": componentTitle})
+	return ev
+}
+
+// NewRemovedComplianceComponentEvent records that a component was removed from
+// a compliance posture (its by-component statement was deleted). This is an
+// audit-log entry only - it does not change the posture's state.
+func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, componentTitle string, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:      dtos.EventTypeRemovedComplianceComponent,
+		UserID:    userID,
+		UserAgent: userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
+	ev.SetArbitraryJSONData(map[string]any{"componentTitle": componentTitle})
+	return ev
+}
+
 func CheckStatusType(statusType string) error {
 	switch statusType {
 	case "fixed":
