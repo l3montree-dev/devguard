@@ -17,6 +17,7 @@ package transformer
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +31,24 @@ import (
 func mustMarshalJSON(v any) datatypes.JSON {
 	b, _ := json.Marshal(v)
 	return datatypes.JSON(b)
+}
+
+var urlRegex = regexp.MustCompile(`https?://[^\s)\]"'<>]+`)
+
+// evidenceLinks extracts URLs found in the given texts and turns them into
+// OSCAL evidence links, so anything a user posted as a link on a compliance
+// posture or control implementation shows up as evidence in the SSP export.
+func evidenceLinks(texts ...string) []oscalTypes.Link {
+	var links []oscalTypes.Link
+	for _, text := range texts {
+		for _, url := range urlRegex.FindAllString(text, -1) {
+			links = append(links, oscalTypes.Link{
+				Href: url,
+				Rel:  "evidence",
+			})
+		}
+	}
+	return links
 }
 
 func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetailsDTO {
@@ -162,21 +181,27 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		if state == "open" {
 			state = "planned"
 		}
-		if len(compliancePosture.Events) > 0 && compliancePosture.Events[len(compliancePosture.Events)-1].Justification != nil {
-			description = *compliancePosture.Events[len(compliancePosture.Events)-1].Justification
+		for i := len(compliancePosture.Events) - 1; i >= 0; i-- {
+			event := compliancePosture.Events[i]
+			if event.Type == dtos.EventTypeImplemented && event.Justification != nil {
+				description = *event.Justification
+				break
+			}
 		}
 
 		// DevGuard's own direct assessment of this control is always present.
-		byComponents := []oscalTypes.ByComponent{
-			{
-				ComponentUuid: devGuardComponent.UUID,
-				Description:   description,
-				ImplementationStatus: &oscalTypes.ImplementationStatus{
-					State: state,
-				},
-				UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+		devGuardByComponent := oscalTypes.ByComponent{
+			ComponentUuid: devGuardComponent.UUID,
+			Description:   description,
+			ImplementationStatus: &oscalTypes.ImplementationStatus{
+				State: state,
 			},
+			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
 		}
+		if links := evidenceLinks(description); len(links) > 0 {
+			devGuardByComponent.Links = &links
+		}
+		byComponents := []oscalTypes.ByComponent{devGuardByComponent}
 
 		// Plus any real-world components tracked for this control.
 		for _, statement := range compliancePosture.ByComponents {
@@ -192,14 +217,18 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 				}
 			}
 
-			byComponents = append(byComponents, oscalTypes.ByComponent{
+			statementByComponent := oscalTypes.ByComponent{
 				ComponentUuid: statement.ComplianceComponentID,
 				Description:   statement.Description,
 				ImplementationStatus: &oscalTypes.ImplementationStatus{
 					State: statement.ImplementationStatus,
 				},
 				UUID: statement.ID,
-			})
+			}
+			if links := evidenceLinks(statement.Description); len(links) > 0 {
+				statementByComponent.Links = &links
+			}
+			byComponents = append(byComponents, statementByComponent)
 		}
 
 		implementedRequirement.ByComponents = &byComponents
