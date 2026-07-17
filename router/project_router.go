@@ -18,6 +18,7 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -33,12 +34,15 @@ func NewProjectRouter(
 	assetController *controllers.AssetController,
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
+	compliancePostureController *controllers.CompliancePostureController,
+	complianceComponentController *controllers.ComplianceComponentController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
 	webhookIntegration *controllers.WebhookController,
 	projectRepository shared.ProjectRepository,
 	componentController *controllers.ComponentController,
+	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -51,6 +55,14 @@ func NewProjectRouter(
 	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/compliance-postures/", compliancePostureController.ListPaged)
+	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
+	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
+	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
+	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
@@ -58,8 +70,10 @@ func NewProjectRouter(
 	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)
-	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.VEXJSON)
-	projectRouter.GET("/releases/:releaseID/vex.xml/", releaseController.VEXXML)
+	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.CycloneDXVexJSON)
+	projectRouter.GET("/releases/:releaseID/vex.xml/", releaseController.CycloneDXVexXML)
+	projectRouter.GET("/releases/:releaseID/csaf.json/", releaseController.CSAFJSON)
+	projectRouter.GET("/releases/:releaseID/openvex.json/", releaseController.OpenCycloneDXVexJSON)
 	projectRouter.GET("/releases/:releaseID/stats/risk-history/", statisticsController.GetReleaseRiskHistory)
 	projectRouter.GET("/releases/:releaseID/stats/average-fixing-time/", statisticsController.GetAverageReleaseFixingTime)
 	projectRouter.GET("/releases/:releaseID/candidates/", releaseController.ListCandidates)
@@ -67,6 +81,9 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
+
+	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
 

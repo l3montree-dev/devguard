@@ -24,9 +24,11 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
@@ -38,7 +40,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
-	"github.com/package-url/packageurl-go"
+	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -585,7 +587,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -648,7 +650,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url, keepOriginalSbomRootComponent)
+			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
@@ -667,86 +669,130 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 	return boms, validURLs, invalidURLs
 }
 
-func (s *scanService) FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) (vexReports []*normalize.VexReport, valid []models.ExternalReference, invalid []models.ExternalReference) {
-	//check if the upstream urls are valid urls
-	for _, ref := range upstreamURLs {
-		switch ref.Type {
-		case models.ExternalReferenceTypeCSAF:
-			purl, err := packageurl.FromString(ref.CSAFPackageScope)
+// sniffVexFormat detects the VEX document format from top-level JSON keys.
+// nosemgrep: service-method-missing-ctx
+func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return dtos.ExternalReferenceTypeUnknown
+	}
+	if _, ok := probe["bomFormat"]; ok {
+		return dtos.ExternalReferenceTypeCycloneDX
+	}
+	if _, ok := probe["document"]; ok {
+		return dtos.ExternalReferenceTypeCSAF
+	}
+	if _, ok := probe["statements"]; ok {
+		return dtos.ExternalReferenceTypeOpenVEX
+	}
+	if _, ok := probe["@context"]; ok {
+		return dtos.ExternalReferenceTypeOpenVEX
+	}
+	return dtos.ExternalReferenceTypeUnknown
+}
+
+// vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
+// nosemgrep: service-method-missing-ctx
+func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+	format := s.sniffVexFormat(body)
+
+	switch format {
+	case dtos.ExternalReferenceTypeCSAF:
+		var advisory gocsaf.Advisory
+		if err := json.Unmarshal(body, &advisory); err != nil {
+			return nil, format, fmt.Errorf("could not decode vex file as CSAF advisory: %w", err)
+		}
+		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, assetVersionName, source)
+		return rules, format, err
+	case dtos.ExternalReferenceTypeOpenVEX:
+		var doc vex.VEX
+		if err := json.Unmarshal(body, &doc); err != nil {
+			return nil, format, fmt.Errorf("could not decode vex file as OpenVEX document: %w", err)
+		}
+		rules, err := transformer.OpenVEXToRules(&doc, assetID, assetVersionName, source)
+		return rules, format, err
+	case dtos.ExternalReferenceTypeCycloneDX:
+		var doc cyclonedx.BOM
+		if err := json.Unmarshal(body, &doc); err != nil {
+			return nil, format, fmt.Errorf("could not decode vex file as CycloneDX BOM: %w", err)
+		}
+		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, assetVersionName, source)
+		return rules, format, err
+	default:
+		return nil, format, fmt.Errorf("unsupported VEX document format")
+	}
+}
+
+// FetchVexFromUpstream downloads VEX from the given external references and converts it into
+// VEX rules scoped to the given asset version. Both CSAF and CycloneDX are parsed to rules by
+// their respective transformers; the returned rules carry their VexSource (the reference URL).
+func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+	rules := make([]models.VEXRule, 0)
+	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
+	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
+	mut := sync.Mutex{}
+	wg := sync.WaitGroup{}
+	for _, url := range upstreamURLs {
+		// fetch the url and sniff the type
+		wg.Go(func() {
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
-				// this should actually never happen, because we validate the purl on creation of the external reference, but just to be sure, we catch this error and continue with the next url
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			bom, err := s.csafService.GetVexFromCsafProvider(ctx, purl, ref.URL)
-			if err != nil {
-				slog.Warn("could not download csaf from csaf provider", "err", err)
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			vexReport, err := normalize.NewVexReport(bom, ref.URL)
-			if err != nil {
-				slog.Warn("could not normalize csaf from csaf provider", "err", err)
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			valid = append(valid, ref)
-			vexReports = append(vexReports, vexReport)
-
-		case models.ExternalReferenceTypeCycloneDxVEX:
-			//check if the file is a valid url
-
-			if ref.URL == "" || !strings.HasPrefix(ref.URL, "http") {
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			var bom cyclonedx.BOM
-			ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-			defer cancel()
-			// fetch the file from the url
-			req, err := http.NewRequestWithContext(ctx, "GET", ref.URL, nil)
-
-			if err != nil {
-				invalid = append(invalid, ref)
-				continue
+				mut.Lock()
+				invalid = append(invalid, models.ExternalReference{
+					AssetID:          assetID,
+					AssetVersionName: assetVersionName,
+					URL:              url,
+					Type:             dtos.ExternalReferenceTypeUnknown,
+					Error:            new(fmt.Sprintf("could not create request for url: %v", err)),
+				})
+				return
 			}
 
 			resp, err := utils.EgressClient.Do(req)
-			if err != nil || resp.StatusCode != 200 {
-				invalid = append(invalid, ref)
-				continue
+			if err != nil {
+				mut.Lock()
+				invalid = append(invalid, models.ExternalReference{})
+				return
 			}
+
 			defer resp.Body.Close()
-
-			// download the url and check if it is a valid vex file
-			file, err := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			err = json.Unmarshal(file, &bom)
-			if err != nil {
-				invalid = append(invalid, ref)
-				continue
-			}
-
-			// Only process VEX (not SBOMs)
-			if !normalize.BomIsSBOM(&bom) {
-				valid = append(valid, ref)
-				vexReports = append(vexReports, &normalize.VexReport{
-					Report: &bom,
-					Source: ref.URL,
+				mut.Lock()
+				invalid = append(invalid, models.ExternalReference{
+					AssetID:          assetID,
+					AssetVersionName: assetVersionName,
+					URL:              url,
+					Type:             dtos.ExternalReferenceTypeUnknown,
+					Error:            new(fmt.Sprintf("could not read response body: %v", err)),
 				})
+				return
 			}
-		}
+			vexRules, format, err := s.VexRulesFromDocument(body, assetID, assetVersionName, url)
+			if err != nil {
+				mut.Lock()
+				invalid = append(invalid, models.ExternalReference{
+					Type:             format,
+					Error:            new(fmt.Sprintf("could not parse vex file from url: %v", err)),
+					AssetID:          assetID,
+					AssetVersionName: assetVersionName,
+					URL:              url,
+				})
+				return
+			}
+			mut.Lock()
+			rules = append(rules, vexRules...)
+			valid = append(valid, models.ExternalReference{
+				URL:              url,
+				AssetID:          assetID,
+				AssetVersionName: assetVersionName,
+				Type:             format,
+			})
+			mut.Unlock()
+		})
 	}
-
-	return vexReports, valid, invalid
+	wg.Wait()
+	return rules, valid, invalid
 }
 
 // RunArtifactSecurityLifecycle orchestrates the complete security lifecycle for an artifact:
@@ -766,7 +812,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	artifact models.Artifact,
 	userID string,
 	userAgent *string,
-) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error) {
+) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
 	// Fetch information sources (SBOM URLs) from the artifact
 	rootNodes, err := s.componentService.FetchInformationSources(ctx, nil, &artifact)
 	if err != nil {
@@ -792,8 +838,9 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs, asset.KeepOriginalSbomRootComponent)
-	vexReports, _, _ := s.FetchVexFromUpstream(ctx, vexRefs)
+	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
+	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name,
+		utils.Map(vexRefs, func(ref models.ExternalReference) string { return ref.URL }))
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
 	for _, bom := range boms {
@@ -824,12 +871,12 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Ingest VEX rules
-	if err := s.vexRuleService.IngestVexes(ctx, tx, asset, assetVersion, vexReports); err != nil {
-		slog.Error("failed to ingest vex reports in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
-		return nil, nil, nil, fmt.Errorf("failed to ingest vex reports: %w", err)
+	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, vexRules); err != nil {
+		slog.Error("failed to ingest vex rules in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
+		return nil, nil, nil, fmt.Errorf("failed to ingest vex rules: %w", err)
 	}
 
-	return normalizedBom, vexReports, dependencyVulns, nil
+	return normalizedBom, vexRules, dependencyVulns, nil
 }
 
 func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error) {
@@ -892,7 +939,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 }
 
 func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT", false)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT")
 	if err != nil {
 		return dtos.ScanResponse{}, fmt.Errorf("invalid SBOM: %w", err)
 	}

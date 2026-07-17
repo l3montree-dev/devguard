@@ -36,6 +36,11 @@ type DetailedLicenseRiskDTO struct {
 	Events []VulnEventDTO `json:"events"`
 }
 
+type MakeFinalLicenseDecisionRequest struct {
+	License       string `json:"license"`
+	Justification string `json:"justification" validate:"max=4000"`
+}
+
 func BeautifyFinalLicenseDecision(licenseDecision *string) *string {
 	if licenseDecision == nil {
 		return nil

@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -1169,39 +1168,39 @@ func (_c *VEXRuleService_FindByID_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
-// IngestVEX provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) IngestVEX(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error {
-	ret := _mock.Called(ctx, tx, asset, assetVersion, vexReport)
+// IngestVEXRules provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error {
+	ret := _mock.Called(ctx, tx, asset, assetVersion, rules)
 
 	if len(ret) == 0 {
-		panic("no return value specified for IngestVEX")
+		panic("no return value specified for IngestVEXRules")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, models.AssetVersion, *normalize.VexReport) error); ok {
-		r0 = returnFunc(ctx, tx, asset, assetVersion, vexReport)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, models.AssetVersion, []models.VEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, asset, assetVersion, rules)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// VEXRuleService_IngestVEX_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IngestVEX'
-type VEXRuleService_IngestVEX_Call struct {
+// VEXRuleService_IngestVEXRules_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IngestVEXRules'
+type VEXRuleService_IngestVEXRules_Call struct {
 	*mock.Call
 }
 
-// IngestVEX is a helper method to define mock.On call
+// IngestVEXRules is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
-//   - vexReport *normalize.VexReport
-func (_e *VEXRuleService_Expecter) IngestVEX(ctx interface{}, tx interface{}, asset interface{}, assetVersion interface{}, vexReport interface{}) *VEXRuleService_IngestVEX_Call {
-	return &VEXRuleService_IngestVEX_Call{Call: _e.mock.On("IngestVEX", ctx, tx, asset, assetVersion, vexReport)}
+//   - rules []models.VEXRule
+func (_e *VEXRuleService_Expecter) IngestVEXRules(ctx interface{}, tx interface{}, asset interface{}, assetVersion interface{}, rules interface{}) *VEXRuleService_IngestVEXRules_Call {
+	return &VEXRuleService_IngestVEXRules_Call{Call: _e.mock.On("IngestVEXRules", ctx, tx, asset, assetVersion, rules)}
 }
 
-func (_c *VEXRuleService_IngestVEX_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport)) *VEXRuleService_IngestVEX_Call {
+func (_c *VEXRuleService_IngestVEXRules_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule)) *VEXRuleService_IngestVEXRules_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1219,9 +1218,9 @@ func (_c *VEXRuleService_IngestVEX_Call) Run(run func(ctx context.Context, tx sh
 		if args[3] != nil {
 			arg3 = args[3].(models.AssetVersion)
 		}
-		var arg4 *normalize.VexReport
+		var arg4 []models.VEXRule
 		if args[4] != nil {
-			arg4 = args[4].(*normalize.VexReport)
+			arg4 = args[4].([]models.VEXRule)
 		}
 		run(
 			arg0,
@@ -1234,87 +1233,12 @@ func (_c *VEXRuleService_IngestVEX_Call) Run(run func(ctx context.Context, tx sh
 	return _c
 }
 
-func (_c *VEXRuleService_IngestVEX_Call) Return(err error) *VEXRuleService_IngestVEX_Call {
+func (_c *VEXRuleService_IngestVEXRules_Call) Return(err error) *VEXRuleService_IngestVEXRules_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *VEXRuleService_IngestVEX_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error) *VEXRuleService_IngestVEX_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// IngestVexes provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) IngestVexes(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error {
-	ret := _mock.Called(ctx, tx, asset, assetVersion, vexReports)
-
-	if len(ret) == 0 {
-		panic("no return value specified for IngestVexes")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, models.AssetVersion, []*normalize.VexReport) error); ok {
-		r0 = returnFunc(ctx, tx, asset, assetVersion, vexReports)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// VEXRuleService_IngestVexes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IngestVexes'
-type VEXRuleService_IngestVexes_Call struct {
-	*mock.Call
-}
-
-// IngestVexes is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - asset models.Asset
-//   - assetVersion models.AssetVersion
-//   - vexReports []*normalize.VexReport
-func (_e *VEXRuleService_Expecter) IngestVexes(ctx interface{}, tx interface{}, asset interface{}, assetVersion interface{}, vexReports interface{}) *VEXRuleService_IngestVexes_Call {
-	return &VEXRuleService_IngestVexes_Call{Call: _e.mock.On("IngestVexes", ctx, tx, asset, assetVersion, vexReports)}
-}
-
-func (_c *VEXRuleService_IngestVexes_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport)) *VEXRuleService_IngestVexes_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 models.Asset
-		if args[2] != nil {
-			arg2 = args[2].(models.Asset)
-		}
-		var arg3 models.AssetVersion
-		if args[3] != nil {
-			arg3 = args[3].(models.AssetVersion)
-		}
-		var arg4 []*normalize.VexReport
-		if args[4] != nil {
-			arg4 = args[4].([]*normalize.VexReport)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_IngestVexes_Call) Return(err error) *VEXRuleService_IngestVexes_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *VEXRuleService_IngestVexes_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error) *VEXRuleService_IngestVexes_Call {
+func (_c *VEXRuleService_IngestVEXRules_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error) *VEXRuleService_IngestVEXRules_Call {
 	_c.Call.Return(run)
 	return _c
 }

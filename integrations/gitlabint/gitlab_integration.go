@@ -395,7 +395,7 @@ func (g *GitlabIntegration) getExcessIIDs(ctx context.Context, asset models.Asse
 func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
 	_, _, iids, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil, nil
 		}
 		return nil, err
@@ -410,7 +410,7 @@ func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models
 func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	client, projectID, excessIIDs, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1358,8 +1358,6 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	return err
 }
 
-var ErrNotConnected = errors.New("not connected to gitlab")
-
 func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset models.Asset) (shared.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
@@ -1394,7 +1392,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 		return client, projectID, nil
 	}
 
-	return nil, 0, ErrNotConnected
+	return nil, 0, fmt.Errorf("%w: gitlab", commonint.ErrNotConnected)
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
@@ -1408,7 +1406,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	)
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1477,7 +1475,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
-		return nil, err
+		return createdIssue, err
 	}
 
 	return createdIssue, nil
@@ -1507,7 +1505,10 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
-	return createdIssue, err
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+	}
+	return createdIssue, nil
 }
 
 func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
@@ -1540,7 +1541,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1585,7 +1586,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)

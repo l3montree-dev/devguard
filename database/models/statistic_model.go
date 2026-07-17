@@ -53,10 +53,10 @@ type Distribution struct {
 	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
 	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
 
-	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCVSS"`
-	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCVSS"`
-	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCVSS"`
-	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCVSS"`
+	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCvss"`
+	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCvss"`
+	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCvss"`
+	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCvss"`
 }
 
 type History struct {

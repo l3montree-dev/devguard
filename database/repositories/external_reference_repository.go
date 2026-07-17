@@ -13,21 +13,43 @@ import (
 )
 
 type externalReferenceRepository struct {
-	*GormRepository[uuid.UUID, models.ExternalReference]
+	db *gorm.DB
 }
 
 var _ shared.ExternalReferenceRepository = (*externalReferenceRepository)(nil)
 
 func NewExternalReferenceRepository(db *gorm.DB) shared.ExternalReferenceRepository {
 	return &externalReferenceRepository{
-		GormRepository: newGormRepository[uuid.UUID, models.ExternalReference](db),
+		db: db,
 	}
+}
+
+func (r *externalReferenceRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
+	}
+	return r.db.WithContext(ctx)
+}
+
+func (r *externalReferenceRepository) Create(ctx context.Context, tx *gorm.DB, t *models.ExternalReference) error {
+	return r.GetDB(ctx, tx).Create(t).Error
+}
+
+func (r *externalReferenceRepository) SaveBatch(ctx context.Context, tx *gorm.DB, ts []models.ExternalReference) error {
+	if len(ts) == 0 {
+		return nil
+	}
+	return r.GetDB(ctx, tx).Save(ts).Error
 }
 
 func (r *externalReferenceRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error) {
 	var refs []models.ExternalReference
 	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&refs).Error
 	return refs, err
+}
+
+func (r *externalReferenceRepository) DeleteByURL(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, url string) error {
+	return r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND url = ?", assetID, assetVersionName, url).Delete(&models.ExternalReference{}).Error
 }
 
 func (r *externalReferenceRepository) DeleteByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) error {

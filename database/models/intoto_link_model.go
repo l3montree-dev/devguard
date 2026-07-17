@@ -16,6 +16,7 @@
 package models
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,4 +45,8 @@ type InTotoLink struct {
 
 func (InTotoLink) TableName() string {
 	return "in_toto_links"
+}
+
+func (l InTotoLink) SafeFilePath() string {
+	return filepath.Base(l.Filename)
 }

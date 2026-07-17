@@ -20,11 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/in-toto/go-witness/log"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -178,13 +181,89 @@ func (g *GormRepository[ID, T]) CreateBatch(ctx context.Context, tx *gorm.DB, ts
 
 func (g *GormRepository[ID, T]) Read(ctx context.Context, tx *gorm.DB, id ID) (T, error) {
 	var t T
-	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error
+	db := g.GetDB(ctx, tx).Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(t, ids))
+	}
+	err := db.First(&t).Error
 	return t, err
+}
+
+// withOwnershipScope applies autoOwnershipScope to db when tenant IDs are present in
+// ctx. Use this in custom Read() overrides that need Preload chains but must
+// still enforce the tenant boundary.
+func withOwnershipScope(ctx context.Context, db *gorm.DB, model any) *gorm.DB {
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		return db.Scopes(autoOwnershipScope(model, ids))
+	}
+	return db
+}
+
+func gormColumnName(tag string) string {
+	for _, part := range strings.Split(tag, ";") {
+		part = strings.TrimSpace(part)
+		if after, ok := strings.CutPrefix(part, "column:"); ok {
+			return after
+		}
+	}
+	return ""
+}
+
+// autoOwnershipScope inspects the GORM struct tags and field names of model (including embedded
+// structs) to detect tenant columns (asset_id, project_id, organization_id/org_id) and ANDs a
+// filter for every one found - not just the first, since some models (e.g. WebhookIntegration)
+// have more than one (GHSA-gxhm-8569-26mq). A *pointer* tenant field (nullable column, e.g.
+// WebhookIntegration.ProjectID) is only constrained when ids carries a value for it, so a
+// broader-scoped request doesn't wrongly exclude rows whose optional tenant column is NULL; a
+// non-pointer field is always constrained, preserving the old fail-closed behavior.
+func autoOwnershipScope(model any, ids models.OwnershipScope) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		t := reflect.TypeOf(model)
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+		for _, f := range reflect.VisibleFields(t) {
+			tag := f.Tag.Get("gorm")
+			name := f.Name
+			col := gormColumnName(tag)
+			nullable := f.Type.Kind() == reflect.Pointer
+			switch {
+			case col == "asset_id" || name == "AssetID":
+				if !nullable || ids.AssetID != uuid.Nil {
+					db = db.Where("asset_id = ?", ids.AssetID)
+				}
+			case col == "project_id" || name == "ProjectID":
+				if !nullable || ids.ProjectID != uuid.Nil {
+					db = db.Where("project_id = ?", ids.ProjectID)
+				}
+			case col == "organization_id" || col == "org_id" || name == "OrganizationID" || name == "OrgID":
+				orgColumn := col
+				if orgColumn == "" {
+					orgColumn = "organization_id"
+				}
+				if !nullable || ids.OrgID != uuid.Nil {
+					db = db.Where(orgColumn+" = ?", ids.OrgID)
+				}
+			}
+		}
+		return db
+	}
 }
 
 func (g *GormRepository[ID, T]) Delete(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(ctx, tx).Delete(&t, id).Error
+	db := g.GetDB(ctx, tx).Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(t, ids))
+	}
+	res := db.Delete(&t)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (g *GormRepository[ID, T]) List(ctx context.Context, tx *gorm.DB, ids []ID) ([]T, error) {
@@ -202,7 +281,7 @@ func (g *GormRepository[ID, T]) List(ctx context.Context, tx *gorm.DB, ids []ID)
 
 func (g *GormRepository[ID, T]) Activate(ctx context.Context, tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(ctx, tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
+	return g.GetDB(ctx, tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error // nosemgrep: bola-repository-update-missing-tenant-scope
 }
 
 func (g *GormRepository[ID, T]) CleanupOrphanedRecords(ctx context.Context) error {

@@ -39,21 +39,32 @@
         ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
 
         amd64Dependencies = [
-          ociImagesAmd64.craneFromSource
-          ociImagesAmd64.gitleaksFromSource
-          ociImagesAmd64.trivyFromSource
+          ociImagesAmd64.craneFromSource.package
+          ociImagesAmd64.gitleaksFromSource.package
+          ociImagesAmd64.trivyFromSource.package
         ];
 
         arm64Dependencies = [
-          ociImagesArm64.craneFromSource
-          ociImagesArm64.gitleaksFromSource
-          ociImagesArm64.trivyFromSource
+          ociImagesArm64.craneFromSource.package
+          ociImagesArm64.gitleaksFromSource.package
+          ociImagesArm64.trivyFromSource.package
         ];
 
         commonBuildOutputs = {
           devguardScanner = binaries.devguardScanner;
           devguard = binaries.devguard;
           devguardCLI = binaries.devguardCLI;
+
+          # supplementary SBOMs, exposed directly so they can be inspected
+          # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
+          # without rebuilding and untarring a whole OCI image just to check
+          # one file.
+          devguard-scanner-sbom = ociImagesArm64.devguardBinaries.devguardScannerSBOM;
+          devguard-sbom = ociImagesArm64.devguardBinaries.devguardSBOM;
+          devguard-cli-sbom = ociImagesArm64.devguardBinaries.devguardCLISBOM;
+          crane-sbom = ociImagesArm64.craneFromSource.sbom;
+          gitleaks-sbom = ociImagesArm64.gitleaksFromSource.sbom;
+          trivy-sbom = ociImagesArm64.trivyFromSource.sbom;
         };
 
         arm64Packages = {

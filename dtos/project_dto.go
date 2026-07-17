@@ -16,6 +16,7 @@
 package dtos
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -94,4 +95,44 @@ type ProjectAssetDTO struct {
 	UpdatedAt    time.Time  `json:"updatedAt"`
 
 	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset" gorm:"-"`
+}
+
+type AssetVersionEntryDTO struct {
+	AssetVersionName string   `json:"assetVersionName"`
+	Artifacts        []string `json:"artifacts"`
+}
+
+type AssetEntryDTO struct {
+	AssetExternalEntityID string                `json:"assetExternalEntityId"`
+	AssetName             string                `json:"assetName"`
+	AssetVersions         []AssetVersionEntryDTO `json:"assetVersions"`
+}
+
+type SubProjectEntryDTO struct {
+	SubProjectExternalEntityID string         `json:"subProjectExternalEntityId,omitempty"`
+	SubProjectName             string         `json:"subProjectName,omitempty"`
+	SubProjectDescription      string         `json:"subProjectDescription,omitempty"`
+	Assets                     []AssetEntryDTO `json:"assets"`
+}
+
+type ProjectExternalEntityTree struct {
+	ProjectExternalEntityID string               `json:"projectExternalEntityId"`
+	ProjectName             string               `json:"projectName"`
+	SubProjects             []SubProjectEntryDTO `json:"subProjects,omitempty"`
+	Assets                  []AssetEntryDTO      `json:"assets"`
+}
+type ExternalSubprojectRequestDTO struct {
+	Verb                       string          `json:"verb" validate:"required,oneof=update delete"`
+	ProjectExternalEntityID    string          `json:"projectExternalEntityId" validate:"required"`
+	ProjectName                string          `json:"projectName"`
+	ProjectDescription         string          `json:"projectDescription"`
+	SubProjectExternalEntityID string          `json:"subProjectExternalEntityId,omitempty"`
+	SubProjectName             string          `json:"subProjectName,omitempty"`
+	SubProjectDescription      string          `json:"subProjectDescription,omitempty"`
+	AssetExternalEntityID      string          `json:"assetExternalEntityId" validate:"required"`
+	AssetName                  string          `json:"assetName"`
+	AssetDescription           string          `json:"assetDescription"`
+	AssetVersionName           string          `json:"assetVersionName"`
+	Artifact                   string          `json:"artifact"`
+	Sbom                       json.RawMessage `json:"sbom,omitempty"`
 }

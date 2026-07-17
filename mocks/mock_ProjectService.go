@@ -161,6 +161,104 @@ func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx shared.Co
 	return _c
 }
 
+// FindOrCreateProject provides a mock function for the type ProjectService
+func (_mock *ProjectService) FindOrCreateProject(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error) {
+	ret := _mock.Called(ctx, providerID, orgID, name, externalEntityID, parentID, description)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindOrCreateProject")
+	}
+
+	var r0 *models.Project
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) (*models.Project, error)); ok {
+		return returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) *models.Project); ok {
+		r0 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, string, uuid.UUID, string, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, providerID, orgID, name, externalEntityID, parentID, description)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_FindOrCreateProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOrCreateProject'
+type ProjectService_FindOrCreateProject_Call struct {
+	*mock.Call
+}
+
+// FindOrCreateProject is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - providerID string
+//   - orgID uuid.UUID
+//   - name string
+//   - externalEntityID string
+//   - parentID uuid.UUID
+//   - description string
+func (_e *ProjectService_Expecter) FindOrCreateProject(ctx interface{}, providerID interface{}, orgID interface{}, name interface{}, externalEntityID interface{}, parentID interface{}, description interface{}) *ProjectService_FindOrCreateProject_Call {
+	return &ProjectService_FindOrCreateProject_Call{Call: _e.mock.On("FindOrCreateProject", ctx, providerID, orgID, name, externalEntityID, parentID, description)}
+}
+
+func (_c *ProjectService_FindOrCreateProject_Call) Run(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string)) *ProjectService_FindOrCreateProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(uuid.UUID)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_FindOrCreateProject_Call) Return(project *models.Project, err error) *ProjectService_FindOrCreateProject_Call {
+	_c.Call.Return(project, err)
+	return _c
+}
+
+func (_c *ProjectService_FindOrCreateProject_Call) RunAndReturn(run func(ctx shared.Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)) *ProjectService_FindOrCreateProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDirectChildProjects provides a mock function for the type ProjectService
 func (_mock *ProjectService) GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error) {
 	ret := _mock.Called(ctx, projectID)

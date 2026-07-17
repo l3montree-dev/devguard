@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/zalando/go-keyring"
+	"gopkg.in/yaml.v3"
 )
 
 type baseConfig struct {
@@ -48,11 +49,13 @@ type baseConfig struct {
 	AssetName string `json:"assetName" mapstructure:"assetName"`
 	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
 
-	Image      string `json:"image" mapstructure:"image"`
-	Path       string `json:"path" mapstructure:"path"`
-	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
-	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
-	WebUI      string `json:"webUI" mapstructure:"webUI"`
+	Image          string `json:"image" mapstructure:"image"`
+	Path           string `json:"path" mapstructure:"path"`
+	SBOMPath       string `json:"sbomPath" mapstructure:"sbomPath"`
+	SBOMOutputPath string `json:"sbomOutputPath" mapstructure:"sbomOutputPath"`
+	FailOnRisk     string `json:"failOnRisk" mapstructure:"failOnRisk"`
+	FailOnCVSS     string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
+	WebUI          string `json:"webUI" mapstructure:"webUI"`
 
 	IsDirScan bool `json:"dir" mapstructure:"dir"`
 
@@ -77,12 +80,11 @@ type baseConfig struct {
 	NoWrite bool   `json:"noWrite" mapstructure:"noWrite"`
 	Output  string `json:"output" mapstructure:"output"`
 
-	ImagePath                     string `json:"imagePath" mapstructure:"imagePath"`
-	ImagePathSuffix               string `json:"imageSuffix" mapstructure:"imageSuffix"`
-	UpstreamVersion               string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
-	Architecture                  string `json:"architecture" mapstructure:"architecture"`
-	ImageVariant                  string `json:"imageVariant" mapstructure:"imageVariant"`
-	KeepOriginalSbomRootComponent *bool  `json:"keepOriginalSbomRootNodes" mapstructure:"keepOriginalSbomRootComponent"`
+	ImagePath       string `json:"imagePath" mapstructure:"imagePath"`
+	ImagePathSuffix string `json:"imageSuffix" mapstructure:"imageSuffix"`
+	UpstreamVersion string `json:"upstreamVersion" mapstructure:"upstreamVersion"`
+	Architecture    string `json:"architecture" mapstructure:"architecture"`
+	ImageVariant    string `json:"imageVariant" mapstructure:"imageVariant"`
 }
 
 type InTotoConfig struct {
@@ -109,6 +111,10 @@ type AttestationConfig struct {
 var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
 var RuntimeAttestationConfig AttestationConfig
+
+// RuntimeExtraArgs holds args passed after a "--" separator on the command line, to be
+// forwarded verbatim to the underlying scanner binary (trivy, semgrep, checkov, gitleaks).
+var RuntimeExtraArgs []string
 
 func ParseBaseConfig(runningCMD string) {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
@@ -153,8 +159,16 @@ func ParseBaseConfig(runningCMD string) {
 		}
 	}
 
+	if RuntimeBaseConfig.AssetName != "" {
+		// normalize the asset name. We allow two different formats.
+		RuntimeBaseConfig.AssetName, err = normalize.AssetName(RuntimeBaseConfig.AssetName)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	if RuntimeBaseConfig.Token == "" && !utils.RunsInCI() {
-		if token, err := getTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
+		if token, err := GetTokenFromKeyring(RuntimeBaseConfig.APIURL, RuntimeBaseConfig.AssetName); err == nil {
 			RuntimeBaseConfig.Token = token
 		}
 	}
@@ -172,7 +186,7 @@ func StoreTokenInKeyring(apiURL, assetName, token string) error {
 	return keyring.Set("devguard/"+apiURL+"/"+assetName, "token", token)
 }
 
-func getTokenFromKeyring(apiURL, assetName string) (string, error) {
+func GetTokenFromKeyring(apiURL, assetName string) (string, error) {
 	return keyring.Get("devguard/"+apiURL+"/"+assetName, "token")
 }
 
@@ -271,10 +285,11 @@ func getSlugsFromAssetName(assetName string) (string, string, string, error) {
 
 func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) (string, error) {
 	configContent, err := GetConfigFile(ctx, configFileName, assetName)
-
 	if err != nil {
 		return "", err
 	} else {
+		// sanitize the config (https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq)
+		configContent = sanitizeConfig(configFileName, configContent)
 		dir := os.TempDir()
 		filePath := path.Join(dir, configFileName)
 		// write the config to a file
@@ -283,6 +298,70 @@ func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName
 			return "", err
 		}
 		return filePath, nil
+	}
+}
+
+var unsecureCheckovConfigProperties = []string{
+	"external-checks-git",
+}
+
+var unsecureTrivyConfigProperties = []string{
+	"template",
+}
+
+// sanitizeConfig implements https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq
+func sanitizeConfig(configFileName string, configContent string) string {
+	var unsecureProperties []string
+	switch configFileName {
+	case ".checkov.yml", "checkov-config.yaml":
+		unsecureProperties = unsecureCheckovConfigProperties
+	case "trivy.yaml":
+		unsecureProperties = unsecureTrivyConfigProperties
+	default:
+		return configContent
+	}
+
+	var parsed map[string]any
+	if err := yaml.Unmarshal([]byte(configContent), &parsed); err != nil {
+		slog.Warn("could not parse config file as yaml, skipping sanitization", "file", configFileName, "err", err)
+		return configContent
+	}
+	if parsed == nil {
+		return configContent
+	}
+
+	removeUnsecureProperties(parsed, unsecureProperties)
+
+	sanitized, err := yaml.Marshal(parsed)
+	if err != nil {
+		slog.Warn("could not re-marshal sanitized config, using original content", "file", configFileName, "err", err)
+		return configContent
+	}
+	return string(sanitized)
+}
+
+func removeUnsecureProperties(node any, unsecureProperties []string) {
+	switch v := node.(type) {
+	case map[string]any:
+		for key, val := range v {
+			isUnsecure := false
+			for _, unsecureProperty := range unsecureProperties {
+				if strings.Contains(key, unsecureProperty) {
+					isUnsecure = true
+					break
+				}
+			}
+			if isUnsecure {
+				slog.Warn("removing unsecure config property", "key", key)
+				delete(v, key)
+				continue
+			}
+			removeUnsecureProperties(val, unsecureProperties)
+		}
+	case []any:
+		for _, item := range v {
+			removeUnsecureProperties(item, unsecureProperties)
+		}
 	}
 }
 

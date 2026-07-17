@@ -4,13 +4,17 @@ Merge multiple SBOMs into one SBOM
 
 ### Synopsis
 
-Merge multiple CycloneDX SBOMs into a single SBOM.
+Merge multiple CycloneDX SBOMs into a single combined SBOM.
 
-The command expects a JSON configuration file with the target purl and a list
-of SBOM file paths to merge. The merged SBOM is written to stdout in pretty JSON.
+If you are building a product that consists of several independently scanned components
+(for example a frontend, a backend, and a set of shared libraries each with their own SBOM),
+use this command to combine them into one SBOM before uploading to DevGuard.
 
-Example config file:
-  { "purl": "pkg:foo/bar@1.2.3", "sboms": ["a.json", "b.json"] }
+The command reads a JSON config file that lists the component PURLs and SBOM file paths,
+and writes the merged SBOM to stdout. Pipe the output directly into 'devguard-scanner sbom'.
+
+Config file format:
+  { "purl": "pkg:oci/my-app@1.2.3", "sboms": ["frontend.sbom.json", "backend.sbom.json"] }
 
 ```shell
 devguard-scanner merge-sboms <config file> [flags]

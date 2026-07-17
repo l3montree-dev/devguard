@@ -8,28 +8,21 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
-	"golang.org/x/time/rate"
 )
 
 type openSourceInsightService struct {
-	depsDevRateLimiter   rate.Limiter
-	packagistRateLimiter rate.Limiter
 }
 
 var _ shared.OpenSourceInsightService = (*openSourceInsightService)(nil) // Ensure openSourceInsightService implements shared.OpenSourceInsightService interface
 
 func NewOpenSourceInsightService() *openSourceInsightService {
-	return &openSourceInsightService{
-		depsDevRateLimiter:   *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
-		packagistRateLimiter: *rate.NewLimiter(rate.Every(100*time.Millisecond), 5),
-	}
+	return &openSourceInsightService{}
 }
 
 var openSourceInsightsAPIURL = "https://api.deps.dev/v3"
@@ -47,10 +40,6 @@ func combineNamespaceAndName(namespace, name string) string {
 func (s *openSourceInsightService) GetProject(ctx context.Context, projectID string) (dtos.OpenSourceInsightsProjectResponse, error) {
 	// make sure the projectID (which is usually a github repository url) is url encoded
 	projectID = url.PathEscape(projectID)
-
-	if err := s.depsDevRateLimiter.Wait(ctx); err != nil {
-		return dtos.OpenSourceInsightsProjectResponse{}, err
-	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/projects/%s", openSourceInsightsAPIURL, projectID), nil)
 
@@ -191,9 +180,6 @@ func (s *openSourceInsightService) getVersion(ctx context.Context, purl packageu
 
 	switch purl.Type {
 	case "composer":
-		if err := s.packagistRateLimiter.Wait(ctx); err != nil {
-			return dtos.OpenSourceInsightsVersionResponse{}, err
-		}
 		packageNameDecoded, err := url.PathUnescape(packageName)
 		if err != nil {
 			return dtos.OpenSourceInsightsVersionResponse{}, fmt.Errorf("invalid packageName for packagist alternative, could not get version information: %s", packageName)

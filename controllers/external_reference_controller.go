@@ -18,16 +18,16 @@ package controllers
 import (
 	"context"
 	"log/slog"
+	neturl "net/url"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
-	"github.com/package-url/packageurl-go"
 )
 
 type ExternalReferenceController struct {
@@ -57,20 +57,6 @@ func NewExternalReferenceController(
 	}
 }
 
-type ExternalReferenceDTO struct {
-	ID               string `json:"id"`
-	AssetID          string `json:"assetId"`
-	AssetVersionName string `json:"assetVersionName"`
-	URL              string `json:"url"`
-	Type             string `json:"type"`
-}
-
-type CreateExternalReferenceRequest struct {
-	URL              string `json:"url" validate:"required,url"`
-	Type             string `json:"type" validate:"required,oneof=cyclonedxvex csaf"`
-	CSAFPackageScope string `json:"csafPackageScope"` // only relevant for csaf references - NEEDS TO BE A VALID PURL
-}
-
 // @Summary List external references for an asset version
 // @Tags ExternalReferences
 // @Security CookieAuth
@@ -92,14 +78,13 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to list external references").WithInternal(err)
 	}
 
-	result := make([]ExternalReferenceDTO, len(refs))
+	result := make([]dtos.ExternalReferenceDTO, len(refs))
 	for i, ref := range refs {
-		result[i] = ExternalReferenceDTO{
-			ID:               ref.ID.String(),
+		result[i] = dtos.ExternalReferenceDTO{
 			AssetID:          ref.AssetID.String(),
 			AssetVersionName: ref.AssetVersionName,
 			URL:              ref.URL,
-			Type:             string(ref.Type),
+			Type:             ref.Type,
 		}
 	}
 
@@ -122,45 +107,21 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	var req CreateExternalReferenceRequest
+	var req dtos.CreateExternalReferenceRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
 
 	// validate
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return err
-	}
-
-	if req.Type == "csaf" {
-		if req.CSAFPackageScope == "" {
-			return echo.NewHTTPError(400, "csafPackageScope is required for csaf references")
-		}
-		purl, err := packageurl.FromString(req.CSAFPackageScope)
-		if err != nil {
-			return echo.NewHTTPError(400, "csafPackageScope must be a valid PURL").WithInternal(err)
-		}
-		if err := utils.ValidatePurlFields(purl); err != nil {
-			return echo.NewHTTPError(400, "csafPackageScope PURL contains invalid characters").WithInternal(err)
-		}
-	}
-
-	var refType models.ExternalReferenceType
-	switch req.Type {
-	case "cyclonedxvex":
-		refType = models.ExternalReferenceTypeCycloneDxVEX
-	case "csaf":
-		refType = models.ExternalReferenceTypeCSAF
-	default:
-		return echo.NewHTTPError(400, "invalid external reference type")
 	}
 
 	ref := models.ExternalReference{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
 		URL:              req.URL,
-		Type:             refType,
-		CSAFPackageScope: req.CSAFPackageScope,
+		Type:             req.Type, // already validated by struct tags
 	}
 
 	if err := c.externalReferenceRepository.Create(ctx.Request().Context(), nil, &ref); err != nil {
@@ -168,12 +129,11 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to create external reference").WithInternal(err)
 	}
 
-	return ctx.JSON(201, ExternalReferenceDTO{
-		ID:               ref.ID.String(),
+	return ctx.JSON(201, dtos.ExternalReferenceDTO{
 		AssetID:          ref.AssetID.String(),
 		AssetVersionName: ref.AssetVersionName,
 		URL:              ref.URL,
-		Type:             string(ref.Type),
+		Type:             ref.Type,
 	})
 }
 
@@ -262,7 +222,7 @@ func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
-// @Summary Delete all external references for an asset version
+// @Summary Delete an external reference by URL
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
@@ -271,17 +231,20 @@ func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
+// @Param url path string true "URL-encoded external reference URL"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{id} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{url} [delete]
 func (c *ExternalReferenceController) Delete(ctx shared.Context) error {
-	id := ctx.Param("id")
-	// parse to uuid
-	uuidID, err := uuid.Parse(id)
+	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
+
+	encodedURL := ctx.Param("url")
+	url, err := neturl.QueryUnescape(encodedURL)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid external reference ID").WithInternal(err)
+		return echo.NewHTTPError(400, "invalid url path parameter").WithInternal(err)
 	}
 
-	if err := c.externalReferenceRepository.Delete(ctx.Request().Context(), nil, uuidID); err != nil {
+	if err := c.externalReferenceRepository.DeleteByURL(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, url); err != nil {
 		slog.Error("failed to delete external reference", "error", err)
 		return echo.NewHTTPError(500, "failed to delete external reference").WithInternal(err)
 	}

@@ -185,6 +185,7 @@ rules:
           - pattern: "&http.Client{}"
           - pattern: "http.Client{Timeout: $T}"
           - pattern: "&http.Client{Timeout: $T}"
+          - pattern: "http.DefaultClient"
 
   - id: http-client-egress-transport-missing-timeout
     message: |
@@ -248,3 +249,163 @@ rules:
       - pattern-either:
           - pattern: context.Background()
           - pattern: context.TODO()
+
+  - id: bola-raw-gorm-first-bypasses-tenant-scope
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      A raw .First() call inside a repository method bypasses GormRepository.Read(), which
+      is the central place where autoOwnershipScope appends the tenant column (asset_id /
+      project_id / organization_id) to every query. Calling .First() directly returns any
+      row matching the bare UUID regardless of which tenant the caller belongs to.
+      Attack vector: user supplies a UUID from tenant A via tenant B's route prefix.
+      Route-level RBAC authorizes the carrier path; the unscoped First() returns tenant A's
+      row.
+
+      Fix: use GormRepository.Read(ctx, tx, id) so autoTenantScope is applied automatically,
+      or add an explicit tenant column to the raw query:
+        .First(&t, "id = ? AND asset_id = ?", id, tenantIDs.AssetID)
+    severity: ERROR
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern-either:
+          - pattern: $DB.First(&$T, "id = ?", $ID)
+          - pattern: $DB.Where("id = ?", $ID).First(&$T)
+      - pattern-not: $DB.First(&$T, "id = ? AND $REST", ...)
+      - pattern-not: $DB.Where($SCOPE1, ...).Where($SCOPE2, ...).First(&$T)
+
+  - id: bola-repository-read-override-missing-tenant-scope
+    severity: ERROR
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      This repository type overrides the generic GormRepository.Read() with a custom
+      implementation (typically to add Preload chains), but does not call withOwnershipScope().
+      The generic Read() applies autoOwnershipScope automatically; any override that skips it
+      loses that protection and returns records across tenant boundaries.
+
+      Fix: apply withOwnershipScope before the Preload/First chain:
+        db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+        err := db.Preload(...).First(&t).Error
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+      exclude:
+        - "**/database/repositories/gorm_repository.go"
+    patterns:
+      - pattern-inside: |
+          func ($RECV $TYPE) Read(ctx context.Context, $TX *gorm.DB, $ID $IDT) ($RET, error) {
+            ...
+          }
+      - pattern-either:
+          - pattern: $DB.First(&$T, "id = ?", $ID)
+          - pattern: $DB.Where("id = ?", $ID).First(&$T)
+      - pattern-not-inside: |
+          func ($RECV $TYPE) Read(ctx context.Context, $TX *gorm.DB, $ID $IDT) ($RET, error) {
+            ...
+            withOwnershipScope(...)
+            ...
+          }
+
+  - id: bola-repository-delete-missing-tenant-scope
+    severity: ERROR
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      A .Delete(...) call in a repository deletes a row by bare primary key with no
+      tenant column in the WHERE clause. Unlike GormRepository.Read(), which applies
+      autoOwnershipScope automatically, a plain Delete(&t, id) or
+      Where("id = ?", id).Delete(...) removes any row matching the ID regardless of
+      which tenant the caller belongs to.
+      Attack vector: user supplies a UUID belonging to tenant A via tenant B's route
+      prefix. Route-level RBAC authorizes the carrier path; the unscoped Delete()
+      still deletes tenant A's row.
+
+      Fix: scope the query with autoOwnershipScope/withOwnershipScope before deleting:
+        db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+        return db.Delete(&t).Error
+      or add an explicit tenant column to the query:
+        .Where("id = ? AND asset_id = ?", id, tenantIDs.AssetID).Delete(&t)
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+    patterns:
+      - pattern-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+          }
+      - pattern-either:
+          - pattern: $DB.Delete(&$T, $ID)
+          - pattern: $DB.Delete(&$T, "id = ?", $ID)
+          - pattern: $DB.Where("id = ?", $ID).Delete(&$T)
+      - pattern-not: $DB.Delete(&$T, "id = ? AND $REST", ...)
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+            autoOwnershipScope(...)
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+            withOwnershipScope(...)
+            ...
+          }
+
+  - id: bola-repository-update-missing-tenant-scope
+    severity: ERROR
+    message: |
+      BOLA (Broken Object-Level Authorization) risk — OWASP API Security #1.
+
+      A raw .Where("id = ?", id).Update(...)/.Updates(...) call in a repository mutates
+      a row by bare primary key with no tenant column in the WHERE clause. Unlike
+      GormRepository.Save(), which mutates an already-fetched (and therefore
+      tenant-verified) struct, this form re-resolves the row by a user-suppliable ID
+      with no ownership check.
+      Attack vector: user supplies a UUID belonging to tenant A via tenant B's route
+      prefix. Route-level RBAC authorizes the carrier path; the unscoped
+      Where/Update still mutates tenant A's row.
+
+      Fix: scope the query with autoOwnershipScope/withOwnershipScope before updating:
+        db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("id = ?", id), t)
+        return db.Update("field", value).Error
+      or add an explicit tenant column to the query:
+        .Where("id = ? AND asset_id = ?", id, tenantIDs.AssetID).Update("field", value)
+      or, if the ID is already derived from a tenant-verified object in the same
+      request (e.g. fetched via a scoped Read, or proven by possession such as a
+      token fingerprint), this finding is a false positive — document why with a
+      nosemgrep comment.
+    languages: [go]
+    paths:
+      include:
+        - "**/database/repositories/**"
+    patterns:
+      - pattern-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+          }
+      - pattern-either:
+          - pattern: $DB.Where("id = ?", $ID).Update(...)
+          - pattern: $DB.Where("id = ?", $ID).Updates(...)
+          - pattern: $DB.Model(&$T).Where("id = ?", $ID).Update(...)
+          - pattern: $DB.Model(&$T).Where("id = ?", $ID).Updates(...)
+      - pattern-not: $DB.Where("id = ? AND $REST", ...).$METHOD2(...)
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+            autoOwnershipScope(...)
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $METHOD(...) $RETTYPE {
+            ...
+            withOwnershipScope(...)
+            ...
+          }

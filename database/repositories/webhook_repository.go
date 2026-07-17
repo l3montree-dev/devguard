@@ -125,7 +125,7 @@ func (r *webhookRepository) GetProjectWebhooks(ctx context.Context, tx *gorm.DB,
 
 func (r *webhookRepository) GetClientByIntegrationID(ctx context.Context, tx *gorm.DB, integrationID uuid.UUID) (models.WebhookIntegration, error) {
 	var integration models.WebhookIntegration
-	if err := r.GetDB(ctx, tx).First(&integration, "id = ?", integrationID).Error; err != nil {
+	if err := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", integrationID), integration).First(&integration).Error; err != nil {
 		return models.WebhookIntegration{}, err
 	}
 

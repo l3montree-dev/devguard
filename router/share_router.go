@@ -36,7 +36,9 @@ func NewShareRouter(apiV1Router APIV1Router,
 	artifactController *controllers.ArtifactController,
 ) ShareRouter {
 	shareRouter := apiV1Router.Group.Group("/public/:assetID/refs/:assetVersionSlug/artifacts/:artifactName", middlewares.ShareMiddleware(orgRepository, projectRepository, assetRepository, assetVersionRepository, artifactRepository))
-	shareRouter.GET("/vex.json/", artifactController.VEXJSON)
+	shareRouter.GET("/vex.json/", artifactController.CycloneDXVexJSON)
+	shareRouter.GET("/openvex.json/", artifactController.OpenCycloneDXVexJSON)
+	shareRouter.GET("/csaf.json/", artifactController.CSAFJSON)
 	shareRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	shareRouter.GET("/badges/:badge/", assetController.GetBadges)
 

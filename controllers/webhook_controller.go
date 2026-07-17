@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 type WebhookController struct {
@@ -47,6 +49,9 @@ func (w *WebhookController) Delete(ctx shared.Context) error {
 	}
 
 	if err := w.webhookRepository.Delete(ctx.Request().Context(), nil, uuidID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.JSON(404, "webhook integration not found")
+		}
 		slog.Error("failed to delete webhook integration", "err", err)
 		return ctx.JSON(500, "failed to delete webhook integration")
 	}
@@ -94,6 +99,9 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 
 	oldWebhookIntegration, err := w.webhookRepository.GetClientByIntegrationID(ctx.Request().Context(), nil, uuidID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.JSON(404, "webhook integration not found")
+		}
 		slog.Error("failed to get webhook integration by ID", "err", err)
 		return ctx.JSON(500, "failed to get webhook integration")
 	}

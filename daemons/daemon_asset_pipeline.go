@@ -219,7 +219,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 				for _, el := range vuln.VulnerabilityPath {
 					elPURL, err := packageurl.FromString(el)
 					if err != nil {
-						slog.Warn("could not parse purl from vulnerability path", "purl", el, "err", err)
+						// slog.Warn("could not parse purl from vulnerability path", "purl", el, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
 						continue outer
 					}
 					purls = append(purls, elPURL)
@@ -227,7 +227,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 
 				directDependencyFixedVersion, err := runner.fixedVersionResolver.ResolveFixedVersions(purls, *vuln.ComponentFixedVersion)
 				if err != nil {
-					slog.Debug("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
+					// slog.Debug("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
 					continue
 				}
 
@@ -412,6 +412,11 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 				// No transaction needed: SyncAllIssues delegates to thirdPartyIntegration.CreateIssue/UpdateIssue,
 				// which in dry-run mode are intercepted by dryRunIntegration and never reach the DB write inside the real integration.
 				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion, nil)
+				if errors.Is(err, commonint.ErrNotConnected) {
+					// swallow if error
+					continue
+				}
+
 				if err != nil {
 					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
 					errs = append(errs, err)

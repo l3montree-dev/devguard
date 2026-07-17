@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -42,19 +43,6 @@ type DependencyVulnController struct {
 	vulnEventRepository      shared.VulnEventRepository
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
-}
-
-type DependencyVulnStatus struct {
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-}
-
-type BatchDependencyVulnStatus struct {
-	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
@@ -395,10 +383,14 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status DependencyVulnStatus
+	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	statusType := status.StatusType
@@ -449,10 +441,14 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status BatchDependencyVulnStatus
+	var status dtos.BatchDependencyVulnStatus
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	if len(status.VulnIDs) == 0 {

@@ -29,6 +29,7 @@ type ArtifactRouter struct {
 func NewArtifactRouter(
 	assetVersionGroup AssetVersionRouter,
 	artifactController *controllers.ArtifactController,
+	assetController *controllers.AssetController,
 	externalReferenceController *controllers.ExternalReferenceController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
@@ -38,11 +39,13 @@ func NewArtifactRouter(
 
 	artifactRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	artifactRouter.GET("/sbom.xml/", artifactController.SBOMXML)
-	artifactRouter.GET("/vex.json/", artifactController.VEXJSON)
-	artifactRouter.GET("/openvex.json/", artifactController.OpenVEXJSON)
-	artifactRouter.GET("/vex.xml/", artifactController.VEXXML)
+	artifactRouter.GET("/vex.json/", artifactController.CycloneDXVexJSON)
+	artifactRouter.GET("/openvex.json/", artifactController.OpenCycloneDXVexJSON)
+	artifactRouter.GET("/csaf.json/", artifactController.CSAFJSON)
+	artifactRouter.GET("/vex.xml/", artifactController.CycloneDXVexXML)
 	artifactRouter.GET("/sbom.pdf/", artifactController.BuildPDFFromSBOM)
 	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
+	artifactRouter.GET("/badges/:badge/", assetController.GetBadges)
 
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))

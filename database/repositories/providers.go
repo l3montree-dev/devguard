@@ -23,6 +23,7 @@ import (
 // Module provides all repository constructors as their interfaces
 var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewPATRepository, fx.As(new(shared.PersonalAccessTokenRepository)))),
+	fx.Provide(fx.Annotate(NewFrameworkControlRepository, fx.As(new(shared.FrameworkControlRepository)))),
 	fx.Provide(fx.Annotate(NewAssetRepository, fx.As(new(shared.AssetRepository)))),
 	fx.Provide(fx.Annotate(NewArtifactRiskHistoryRepository, fx.As(new(shared.ArtifactRiskHistoryRepository)))),
 	fx.Provide(fx.Annotate(NewAssetVersionRepository, fx.As(new(shared.AssetVersionRepository)))),
@@ -60,4 +61,6 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewDependencyProxyRepository, fx.As(new(shared.DependencyProxySecretRepository)))),
 	fx.Provide(fx.Annotate(NewAdminRepository, fx.As(new(shared.AdminRepository)))),
 	fx.Provide(fx.Annotate(NewAdvisoryRepository, fx.As(new(shared.AdvisoryRepository)))),
+	fx.Provide(fx.Annotate(NewCompliancePostureRepository, fx.As(new(shared.CompliancePostureRepository)))),
+	fx.Provide(fx.Annotate(NewComplianceComponentRepository, fx.As(new(shared.ComplianceComponentRepository)))),
 )

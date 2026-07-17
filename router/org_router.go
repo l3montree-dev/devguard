@@ -36,6 +36,8 @@ func NewOrgRouter(
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	firstPartyVulnController *controllers.FirstPartyVulnController,
+	compliancePostureController *controllers.CompliancePostureController,
+	complianceComponentController *controllers.ComplianceComponentController,
 	policyController *controllers.PolicyController,
 	integrationController *controllers.IntegrationController,
 	webhookIntegration *controllers.WebhookController,
@@ -75,6 +77,14 @@ func NewOrgRouter(
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/compliance-postures/", compliancePostureController.ListPaged)
+	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
+	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
+	organizationRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
 	organizationRouter.GET("/members/", orgController.Members)
@@ -96,6 +106,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/members/:userID/", orgController.RemoveMember)
+	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 

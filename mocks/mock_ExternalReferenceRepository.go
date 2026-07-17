@@ -11,7 +11,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
-	"gorm.io/gorm/clause"
 )
 
 // NewExternalReferenceRepository creates a new instance of ExternalReferenceRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -39,241 +38,6 @@ type ExternalReferenceRepository_Expecter struct {
 
 func (_m *ExternalReferenceRepository) EXPECT() *ExternalReferenceRepository_Expecter {
 	return &ExternalReferenceRepository_Expecter{mock: &_m.Mock}
-}
-
-// Activate provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(ctx, tx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Activate")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(ctx, tx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
-type ExternalReferenceRepository_Activate_Call struct {
-	*mock.Call
-}
-
-// Activate is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - id uuid.UUID
-func (_e *ExternalReferenceRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ExternalReferenceRepository_Activate_Call {
-	return &ExternalReferenceRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
-}
-
-func (_c *ExternalReferenceRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ExternalReferenceRepository_Activate_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Activate_Call) Return(err error) *ExternalReferenceRepository_Activate_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *ExternalReferenceRepository_Activate_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// All provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) All(ctx context.Context, tx shared.DB) ([]models.ExternalReference, error) {
-	ret := _mock.Called(ctx, tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for All")
-	}
-
-	var r0 []models.ExternalReference
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]models.ExternalReference, error)); ok {
-		return returnFunc(ctx, tx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []models.ExternalReference); ok {
-		r0 = returnFunc(ctx, tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ExternalReference)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
-		r1 = returnFunc(ctx, tx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ExternalReferenceRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
-type ExternalReferenceRepository_All_Call struct {
-	*mock.Call
-}
-
-// All is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-func (_e *ExternalReferenceRepository_Expecter) All(ctx interface{}, tx interface{}) *ExternalReferenceRepository_All_Call {
-	return &ExternalReferenceRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
-}
-
-func (_c *ExternalReferenceRepository_All_Call) Run(run func(ctx context.Context, tx shared.DB)) *ExternalReferenceRepository_All_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_All_Call) Return(externalReferences []models.ExternalReference, err error) *ExternalReferenceRepository_All_Call {
-	_c.Call.Return(externalReferences, err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_All_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.ExternalReference, error)) *ExternalReferenceRepository_All_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Begin provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Begin(ctx context.Context) shared.DB {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Begin")
-	}
-
-	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(shared.DB)
-		}
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
-type ExternalReferenceRepository_Begin_Call struct {
-	*mock.Call
-}
-
-// Begin is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *ExternalReferenceRepository_Expecter) Begin(ctx interface{}) *ExternalReferenceRepository_Begin_Call {
-	return &ExternalReferenceRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
-}
-
-func (_c *ExternalReferenceRepository_Begin_Call) Run(run func(ctx context.Context)) *ExternalReferenceRepository_Begin_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Begin_Call) Return(v shared.DB) *ExternalReferenceRepository_Begin_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *ExternalReferenceRepository_Begin_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CleanupOrphanedRecords provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) CleanupOrphanedRecords(ctx context.Context) error {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CleanupOrphanedRecords")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
-type ExternalReferenceRepository_CleanupOrphanedRecords_Call struct {
-	*mock.Call
-}
-
-// CleanupOrphanedRecords is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *ExternalReferenceRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ExternalReferenceRepository_CleanupOrphanedRecords_Call {
-	return &ExternalReferenceRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
-}
-
-func (_c *ExternalReferenceRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *ExternalReferenceRepository_CleanupOrphanedRecords_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_CleanupOrphanedRecords_Call) Return(err error) *ExternalReferenceRepository_CleanupOrphanedRecords_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *ExternalReferenceRepository_CleanupOrphanedRecords_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // Create provides a mock function for the type ExternalReferenceRepository
@@ -339,100 +103,38 @@ func (_c *ExternalReferenceRepository_Create_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
-// CreateBatch provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error {
-	ret := _mock.Called(ctx, tx, ts)
+// DeleteByAssetVersion provides a mock function for the type ExternalReferenceRepository
+func (_mock *ExternalReferenceRepository) DeleteByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CreateBatch")
+		panic("no return value specified for DeleteByAssetVersion")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.ExternalReference) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// ExternalReferenceRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
-type ExternalReferenceRepository_CreateBatch_Call struct {
+// ExternalReferenceRepository_DeleteByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByAssetVersion'
+type ExternalReferenceRepository_DeleteByAssetVersion_Call struct {
 	*mock.Call
 }
 
-// CreateBatch is a helper method to define mock.On call
+// DeleteByAssetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ts []models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ExternalReferenceRepository_CreateBatch_Call {
-	return &ExternalReferenceRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
+//   - assetID uuid.UUID
+//   - assetVersionName string
+func (_e *ExternalReferenceRepository_Expecter) DeleteByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
+	return &ExternalReferenceRepository_DeleteByAssetVersion_Call{Call: _e.mock.On("DeleteByAssetVersion", ctx, tx, assetID, assetVersionName)}
 }
 
-func (_c *ExternalReferenceRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.ExternalReference)) *ExternalReferenceRepository_CreateBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.ExternalReference
-		if args[2] != nil {
-			arg2 = args[2].([]models.ExternalReference)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_CreateBatch_Call) Return(err error) *ExternalReferenceRepository_CreateBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error) *ExternalReferenceRepository_CreateBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Delete provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
-	ret := _mock.Called(ctx, tx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Delete")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(ctx, tx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type ExternalReferenceRepository_Delete_Call struct {
-	*mock.Call
-}
-
-// Delete is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - id uuid.UUID
-func (_e *ExternalReferenceRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ExternalReferenceRepository_Delete_Call {
-	return &ExternalReferenceRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
-}
-
-func (_c *ExternalReferenceRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ExternalReferenceRepository_Delete_Call {
+func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -446,56 +148,63 @@ func (_c *ExternalReferenceRepository_Delete_Call) Run(run func(ctx context.Cont
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_Delete_Call) Return(err error) *ExternalReferenceRepository_Delete_Call {
+func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) Return(err error) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *ExternalReferenceRepository_Delete_Call {
+func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// DeleteBatch provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.ExternalReference) error {
-	ret := _mock.Called(ctx, tx, ids)
+// DeleteByURL provides a mock function for the type ExternalReferenceRepository
+func (_mock *ExternalReferenceRepository) DeleteByURL(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string) error {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionName, url)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteBatch")
+		panic("no return value specified for DeleteByURL")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.ExternalReference) error); ok {
-		r0 = returnFunc(ctx, tx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionName, url)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// ExternalReferenceRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
-type ExternalReferenceRepository_DeleteBatch_Call struct {
+// ExternalReferenceRepository_DeleteByURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByURL'
+type ExternalReferenceRepository_DeleteByURL_Call struct {
 	*mock.Call
 }
 
-// DeleteBatch is a helper method to define mock.On call
+// DeleteByURL is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ids []models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ExternalReferenceRepository_DeleteBatch_Call {
-	return &ExternalReferenceRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
+//   - assetID uuid.UUID
+//   - assetVersionName string
+//   - url string
+func (_e *ExternalReferenceRepository_Expecter) DeleteByURL(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, url interface{}) *ExternalReferenceRepository_DeleteByURL_Call {
+	return &ExternalReferenceRepository_DeleteByURL_Call{Call: _e.mock.On("DeleteByURL", ctx, tx, assetID, assetVersionName, url)}
 }
 
-func (_c *ExternalReferenceRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.ExternalReference)) *ExternalReferenceRepository_DeleteBatch_Call {
+func (_c *ExternalReferenceRepository_DeleteByURL_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string)) *ExternalReferenceRepository_DeleteByURL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -505,25 +214,35 @@ func (_c *ExternalReferenceRepository_DeleteBatch_Call) Run(run func(ctx context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []models.ExternalReference
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].([]models.ExternalReference)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_DeleteBatch_Call) Return(err error) *ExternalReferenceRepository_DeleteBatch_Call {
+func (_c *ExternalReferenceRepository_DeleteByURL_Call) Return(err error) *ExternalReferenceRepository_DeleteByURL_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.ExternalReference) error) *ExternalReferenceRepository_DeleteBatch_Call {
+func (_c *ExternalReferenceRepository_DeleteByURL_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string) error) *ExternalReferenceRepository_DeleteByURL_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -608,274 +327,6 @@ func (_c *ExternalReferenceRepository_FindByAssetVersion_Call) RunAndReturn(run 
 	return _c
 }
 
-// GetDB provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
-	ret := _mock.Called(ctx, tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDB")
-	}
-
-	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
-		r0 = returnFunc(ctx, tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(shared.DB)
-		}
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
-type ExternalReferenceRepository_GetDB_Call struct {
-	*mock.Call
-}
-
-// GetDB is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-func (_e *ExternalReferenceRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ExternalReferenceRepository_GetDB_Call {
-	return &ExternalReferenceRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
-}
-
-func (_c *ExternalReferenceRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *ExternalReferenceRepository_GetDB_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_GetDB_Call) Return(v shared.DB) *ExternalReferenceRepository_GetDB_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *ExternalReferenceRepository_GetDB_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// List provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.ExternalReference, error) {
-	ret := _mock.Called(ctx, tx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for List")
-	}
-
-	var r0 []models.ExternalReference
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.ExternalReference, error)); ok {
-		return returnFunc(ctx, tx, ids)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.ExternalReference); ok {
-		r0 = returnFunc(ctx, tx, ids)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ExternalReference)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, ids)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ExternalReferenceRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type ExternalReferenceRepository_List_Call struct {
-	*mock.Call
-}
-
-// List is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ids []uuid.UUID
-func (_e *ExternalReferenceRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ExternalReferenceRepository_List_Call {
-	return &ExternalReferenceRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
-}
-
-func (_c *ExternalReferenceRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *ExternalReferenceRepository_List_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].([]uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_List_Call) Return(externalReferences []models.ExternalReference, err error) *ExternalReferenceRepository_List_Call {
-	_c.Call.Return(externalReferences, err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.ExternalReference, error)) *ExternalReferenceRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.ExternalReference, error) {
-	ret := _mock.Called(ctx, tx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.ExternalReference
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.ExternalReference, error)); ok {
-		return returnFunc(ctx, tx, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.ExternalReference); ok {
-		r0 = returnFunc(ctx, tx, id)
-	} else {
-		r0 = ret.Get(0).(models.ExternalReference)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ExternalReferenceRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type ExternalReferenceRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - id uuid.UUID
-func (_e *ExternalReferenceRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ExternalReferenceRepository_Read_Call {
-	return &ExternalReferenceRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
-}
-
-func (_c *ExternalReferenceRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ExternalReferenceRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Read_Call) Return(externalReference models.ExternalReference, err error) *ExternalReferenceRepository_Read_Call {
-	_c.Call.Return(externalReference, err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.ExternalReference, error)) *ExternalReferenceRepository_Read_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Save provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Save(ctx context.Context, tx shared.DB, t *models.ExternalReference) error {
-	ret := _mock.Called(ctx, tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Save")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.ExternalReference) error); ok {
-		r0 = returnFunc(ctx, tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
-type ExternalReferenceRepository_Save_Call struct {
-	*mock.Call
-}
-
-// Save is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - t *models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ExternalReferenceRepository_Save_Call {
-	return &ExternalReferenceRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
-}
-
-func (_c *ExternalReferenceRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.ExternalReference)) *ExternalReferenceRepository_Save_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *models.ExternalReference
-		if args[2] != nil {
-			arg2 = args[2].(*models.ExternalReference)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Save_Call) Return(err error) *ExternalReferenceRepository_Save_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.ExternalReference) error) *ExternalReferenceRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SaveBatch provides a mock function for the type ExternalReferenceRepository
 func (_mock *ExternalReferenceRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error {
 	ret := _mock.Called(ctx, tx, ts)
@@ -935,201 +386,6 @@ func (_c *ExternalReferenceRepository_SaveBatch_Call) Return(err error) *Externa
 }
 
 func (_c *ExternalReferenceRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error) *ExternalReferenceRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatchBestEffort provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.ExternalReference) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type ExternalReferenceRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *ExternalReferenceRepository_SaveBatchBestEffort_Call {
-	return &ExternalReferenceRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *ExternalReferenceRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.ExternalReference)) *ExternalReferenceRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.ExternalReference
-		if args[2] != nil {
-			arg2 = args[2].([]models.ExternalReference)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_SaveBatchBestEffort_Call) Return(err error) *ExternalReferenceRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.ExternalReference) error) *ExternalReferenceRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
-	ret := _mock.Called(ctx, fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
-		r0 = returnFunc(ctx, fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type ExternalReferenceRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - ctx context.Context
-//   - fn func(tx shared.DB) error
-func (_e *ExternalReferenceRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ExternalReferenceRepository_Transaction_Call {
-	return &ExternalReferenceRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
-}
-
-func (_c *ExternalReferenceRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *ExternalReferenceRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 func(tx shared.DB) error
-		if args[1] != nil {
-			arg1 = args[1].(func(tx shared.DB) error)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Transaction_Call) Return(err error) *ExternalReferenceRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *ExternalReferenceRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Upsert provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.ExternalReference, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Upsert")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.ExternalReference, []clause.Column, []string) error); ok {
-		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
-type ExternalReferenceRepository_Upsert_Call struct {
-	*mock.Call
-}
-
-// Upsert is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - t *[]*models.ExternalReference
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
-func (_e *ExternalReferenceRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ExternalReferenceRepository_Upsert_Call {
-	return &ExternalReferenceRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
-}
-
-func (_c *ExternalReferenceRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.ExternalReference, conflictingColumns []clause.Column, updateOnly []string)) *ExternalReferenceRepository_Upsert_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *[]*models.ExternalReference
-		if args[2] != nil {
-			arg2 = args[2].(*[]*models.ExternalReference)
-		}
-		var arg3 []clause.Column
-		if args[3] != nil {
-			arg3 = args[3].([]clause.Column)
-		}
-		var arg4 []string
-		if args[4] != nil {
-			arg4 = args[4].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Upsert_Call) Return(err error) *ExternalReferenceRepository_Upsert_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.ExternalReference, conflictingColumns []clause.Column, updateOnly []string) error) *ExternalReferenceRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }
