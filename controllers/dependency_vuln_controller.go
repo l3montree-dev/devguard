@@ -40,6 +40,7 @@ type DependencyVulnController struct {
 	projectService           shared.ProjectService
 	statisticsService        shared.StatisticsService
 	vulnEventRepository      shared.VulnEventRepository
+	cveRepository            shared.CveRepository
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
@@ -57,7 +58,7 @@ type BatchDependencyVulnStatus struct {
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
+func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer, cveRepository shared.CveRepository) *DependencyVulnController {
 	return &DependencyVulnController{
 		dependencyVulnRepository:  dependencyVulnRepository,
 		dependencyVulnService:     dependencyVulnService,
@@ -65,6 +66,7 @@ func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnR
 		statisticsService:         statisticsService,
 		vulnEventRepository:       vulnEventRepository,
 		FireAndForgetSynchronizer: synchronizer,
+		cveRepository:             cveRepository,
 	}
 }
 
@@ -276,13 +278,26 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
+	advisories, err := controller.cveRepository.FindAdvisoriesForCVE(ctx.Request().Context(), nil, dependencyVuln.CVE.CVE)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
+	}
+
 	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 	if dependencyVuln.CVE != nil {
 		dependencyVuln.CVE.Risk = risk
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
+	type vulnWithAdvisories struct {
+		dtos.DetailedDependencyVulnDTO
+		Advisories []models.CVE `json:"advisories"`
+	}
+
+	return ctx.JSON(200, vulnWithAdvisories{
+		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
+		Advisories:                advisories,
+	})
 }
 
 func (controller DependencyVulnController) Hints(ctx shared.Context) error {

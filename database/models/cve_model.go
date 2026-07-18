@@ -53,7 +53,7 @@ type CVE struct {
 
 type CVEWithAdvisories struct {
 	CVE
-	Advisories []CVE
+	Advisories []CVE `json:"advisories"`
 }
 
 type Weakness struct {
