@@ -59,9 +59,10 @@ type csafService struct {
 	assetVersionRepository   shared.AssetVersionRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
+	advisoryRepository       shared.AdvisoryRepository
 }
 
-func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *csafService {
+func NewCSAFService(client http.Client, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository, advisoryRepository shared.AdvisoryRepository) *csafService {
 	return &csafService{
 		client:                   client,
 		dependencyVulnRepository: dependencyVulnRepository,
@@ -70,6 +71,7 @@ func NewCSAFService(client http.Client, dependencyVulnRepository shared.Dependen
 		assetVersionRepository:   assetVersionRepository,
 		cveRepository:            cveRepository,
 		artifactRepository:       artifactRepository,
+		advisoryRepository:       advisoryRepository,
 	}
 }
 
@@ -1178,4 +1180,188 @@ func (service *csafService) GetOldestVulnPerUniqueCVE(ctx context.Context, asset
 	}
 
 	return service.dependencyVulnService.GetAllUniqueCVEsForAsset(ctx, assetID, getOldestVuln)
+}
+
+func (service *csafService) GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	return service.advisoryRepository.GetAllAdvisoriesByAssetID(ctx, nil, assetID)
+}
+
+func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (gocsaf.Advisory, error) {
+	csafDoc := gocsaf.Advisory{}
+
+	if len(advisory.AffectedPackages) == 0 {
+		return csafDoc, fmt.Errorf("no affected packages found for asset %s", advisory.AssetID)
+	}
+
+	cveID := fmt.Sprintf("DGSA-%d-%d", advisory.CreatedAt.Year(), advisory.ID)
+
+	csafDoc.Document = &gocsaf.Document{
+		CSAFVersion: new(gocsaf.CSAFVersion20),
+		Publisher: &gocsaf.DocumentPublisher{
+			Category:  new(gocsaf.CSAFCategoryVendor),
+			Name:      &orgName,
+			Namespace: new("https://devguard.org"),
+		},
+		Title: GenerateDocumentTitle(assetName, cveID),
+		Lang:  new(gocsaf.Lang("en-US")),
+	}
+
+	csafDoc.Document.Distribution = &gocsaf.DocumentDistribution{
+		TLP: &gocsaf.TLP{
+			DocumentTLPLabel: new(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
+			URL:              new("https://first.org/tlp"),
+		},
+	}
+
+	csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_security_advisory"))
+
+	tracking, err := generateTrackingObjectForAdvisory(ctx, advisory, assetName, cveID)
+	if err != nil {
+		return csafDoc, err
+	}
+	csafDoc.Document.Tracking = &tracking
+
+	tree, err := generateProductTreeForAdvisory(ctx, assetID, advisory.AffectedPackages)
+	if err != nil {
+		return csafDoc, err
+	}
+	csafDoc.ProductTree = &tree
+
+	vulnerabilities, err := generateVulnerabilityObjectsForAdvisory(advisory, cveID)
+	if err != nil {
+		return csafDoc, err
+	}
+	csafDoc.Vulnerabilities = vulnerabilities
+
+	return csafDoc, nil
+}
+
+func generateTrackingObjectForAdvisory(ctx context.Context, advisory *models.Advisory, assetName, cveID string) (gocsaf.Tracking, error) {
+	tracking := gocsaf.Tracking{}
+
+	revisions := []*gocsaf.Revision{
+		{
+			Date:    new(advisory.UpdatedAt.Format(time.RFC3339)),
+			Number:  new(gocsaf.RevisionNumber("1")),
+			Summary: new(fmt.Sprintf("Security advisory %s published.", cveID)),
+		},
+	}
+	if len(revisions) == 0 {
+		return tracking, fmt.Errorf("missing Revision entries")
+	}
+	tracking.RevisionHistory = revisions
+
+	tracking.InitialReleaseDate = new(advisory.CreatedAt.Format(time.RFC3339))
+	tracking.CurrentReleaseDate = revisions[len(revisions)-1].Date
+
+	version := fmt.Sprintf("%d", len(revisions))
+	tracking.ID = (*gocsaf.TrackingID)(GenerateDocumentTitle(assetName, cveID))
+	tracking.Version = new(gocsaf.RevisionNumber(version))
+	tracking.Status = new(gocsaf.CSAFTrackingStatusInterim)
+
+	engineVersion := config.Version
+	if engineVersion == "" {
+		engineVersion = "debug"
+	}
+	tracking.Generator = &gocsaf.Generator{
+		Engine: &gocsaf.Engine{
+			Name:    new("DevGuard CSAF Generator"),
+			Version: &engineVersion,
+		},
+		Date: tracking.CurrentReleaseDate,
+	}
+	return tracking, nil
+}
+
+func generateProductTreeForAdvisory(ctx context.Context, assetID uuid.UUID, affectedPackages []models.AffectedPackage) (gocsaf.ProductTree, error) {
+	tree := gocsaf.ProductTree{}
+
+	branches := make(gocsaf.Branches, 0, len(affectedPackages))
+	for _, affectedPackage := range affectedPackages {
+		vers := versRangeForAffectedPackage(affectedPackage)
+		productID := productIDForAffectedPackage(affectedPackage)
+
+		versionRangeBranch := &gocsaf.Branch{
+			Category: new(gocsaf.CSAFBranchCategoryProductVersionRange),
+			Name:     &vers,
+			Product: &gocsaf.FullProductName{
+				Name:      new(string(productID)),
+				ProductID: new(productID),
+			},
+		}
+
+		branches = append(branches, &gocsaf.Branch{
+			Category: new(gocsaf.CSAFBranchCategoryProductName),
+			Name:     new(affectedPackage.PackageName),
+			Branches: gocsaf.Branches{versionRangeBranch},
+		})
+	}
+
+	tree.Branches = branches
+	return tree, nil
+}
+
+func versRangeForAffectedPackage(ap models.AffectedPackage) string {
+	switch {
+	case ap.SemverIntroduced != nil && ap.SemverFixed != nil:
+		return fmt.Sprintf("vers:%s/>=%s|<%s", ap.Ecosystem, *ap.SemverIntroduced, *ap.SemverFixed)
+	case ap.SemverIntroduced != nil:
+		return fmt.Sprintf("vers:%s/>=%s", ap.Ecosystem, *ap.SemverIntroduced)
+	case ap.SemverFixed != nil:
+		return fmt.Sprintf("vers:%s/<%s", ap.Ecosystem, *ap.SemverFixed)
+	default:
+		return fmt.Sprintf("vers:%s/*", ap.Ecosystem)
+	}
+}
+
+func productIDForAffectedPackage(ap models.AffectedPackage) gocsaf.ProductID {
+	return gocsaf.ProductID(fmt.Sprintf("%s@%s", ap.PackageName, versRangeForAffectedPackage(ap)))
+}
+
+func generateVulnerabilityObjectsForAdvisory(advisory *models.Advisory, cveID string) ([]*gocsaf.Vulnerability, error) {
+	vulnerabilities := []*gocsaf.Vulnerability{}
+
+	if len(advisory.AffectedPackages) == 0 {
+		return vulnerabilities, nil
+	}
+
+	vulnObject := gocsaf.Vulnerability{
+		IDs:   []*gocsaf.VulnerabilityID{{SystemName: new("DevGuard"), Text: &cveID}},
+		Title: &advisory.Title,
+	}
+
+	if utils.IsCVE(cveID) {
+		vulnObject.CVE = (*gocsaf.CVE)(&cveID)
+	}
+
+	notes := gocsaf.Notes{}
+	if advisory.Description != "" {
+		notes = append(notes, &gocsaf.Note{
+			NoteCategory: new(gocsaf.CSAFNoteCategoryDescription),
+			Title:        new(fmt.Sprintf("textual description of %s", cveID)),
+			Text:         &advisory.Description,
+		})
+	}
+
+	knownAffected := make(gocsaf.Products, 0, len(advisory.AffectedPackages))
+	remediations := gocsaf.Remediations{}
+	for _, ap := range advisory.AffectedPackages {
+		productID := productIDForAffectedPackage(ap)
+		knownAffected = append(knownAffected, new(productID))
+
+		if ap.SemverFixed != nil {
+			details := fmt.Sprintf("Upgrade %s to version %s or later.", ap.PackageName, *ap.SemverFixed)
+			remediations = append(remediations, &gocsaf.Remediation{
+				Category:   new(gocsaf.CSAFRemediationCategoryVendorFix),
+				Details:    &details,
+				ProductIds: new(gocsaf.Products{new(productID)}),
+			})
+		}
+	}
+
+	vulnObject.Notes = notes
+	vulnObject.Remediations = remediations
+	vulnObject.ProductStatus = &gocsaf.ProductStatus{KnownAffected: &knownAffected}
+
+	return append(vulnerabilities, &vulnObject), nil
 }

@@ -156,6 +156,7 @@ func main() {
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
+		fx.Invoke(func(AdvisoryRouter router.AdvisoryRouter) {}),
 		fx.Invoke(func(CompliancePostureRouter router.CompliancePostureRouter) {}),
 		fx.Invoke(func(ComplianceComponentRouter router.ComplianceComponentRouter) {}),
 		fx.Invoke(func(ComplianceComponentStatementRouter router.ComplianceComponentStatementRouter) {}),

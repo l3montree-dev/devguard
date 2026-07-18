@@ -60,6 +60,7 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewTrustedEntityRepository, fx.As(new(shared.TrustedEntityRepository)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyRepository, fx.As(new(shared.DependencyProxySecretRepository)))),
 	fx.Provide(fx.Annotate(NewAdminRepository, fx.As(new(shared.AdminRepository)))),
+	fx.Provide(fx.Annotate(NewAdvisoryRepository, fx.As(new(shared.AdvisoryRepository)))),
 	fx.Provide(fx.Annotate(NewCompliancePostureRepository, fx.As(new(shared.CompliancePostureRepository)))),
 	fx.Provide(fx.Annotate(NewComplianceComponentRepository, fx.As(new(shared.ComplianceComponentRepository)))),
 )
