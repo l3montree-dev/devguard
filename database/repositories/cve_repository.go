@@ -260,7 +260,7 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 	return g.GetDB(ctx, tx).Exec(sql, ids, epss, percentiles).Error
 }
 
-func (g *cveRepository) FindAdvisoriesForCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.CVE, error) {
+func (g *cveRepository) FindAdvisoriesForCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.CVE, error) {
 	var advisories []models.CVE
 	// find advisories either through direct relations or 1 layer deeper (e.g. for downstream cves)
 	err := g.GetDB(ctx, tx).Raw(`
