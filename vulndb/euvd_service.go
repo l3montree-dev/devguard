@@ -34,7 +34,7 @@ func NewEUVDService(cveRepository shared.CveRepository, cveRelationshipRepositor
 		cveRepository:             cveRepository,
 		cveRelationshipRepository: cveRelationshipRepository,
 		pool:                      pool,
-		httpClient:                &http.Client{Transport: utils.EgressTransport},
+		httpClient:                utils.NewEgressClient(45 * time.Second),
 	}
 }
 
