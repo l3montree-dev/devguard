@@ -660,6 +660,80 @@ func (_c *CveRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// FindAdvisoriesForCVE provides a mock function for the type CveRepository
+func (_mock *CveRepository) FindAdvisoriesForCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.CVE, error) {
+	ret := _mock.Called(ctx, tx, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAdvisoriesForCVE")
+	}
+
+	var r0 []models.CVE
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.CVE, error)); ok {
+		return returnFunc(ctx, tx, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.CVE); ok {
+		r0 = returnFunc(ctx, tx, cveID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVE)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CveRepository_FindAdvisoriesForCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAdvisoriesForCVE'
+type CveRepository_FindAdvisoriesForCVE_Call struct {
+	*mock.Call
+}
+
+// FindAdvisoriesForCVE is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - cveID string
+func (_e *CveRepository_Expecter) FindAdvisoriesForCVE(ctx interface{}, tx interface{}, cveID interface{}) *CveRepository_FindAdvisoriesForCVE_Call {
+	return &CveRepository_FindAdvisoriesForCVE_Call{Call: _e.mock.On("FindAdvisoriesForCVE", ctx, tx, cveID)}
+}
+
+func (_c *CveRepository_FindAdvisoriesForCVE_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string)) *CveRepository_FindAdvisoriesForCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_FindAdvisoriesForCVE_Call) Return(cVEs []models.CVE, err error) *CveRepository_FindAdvisoriesForCVE_Call {
+	_c.Call.Return(cVEs, err)
+	return _c
+}
+
+func (_c *CveRepository_FindAdvisoriesForCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string) ([]models.CVE, error)) *CveRepository_FindAdvisoriesForCVE_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindAllListPaged provides a mock function for the type CveRepository
 func (_mock *CveRepository) FindAllListPaged(ctx context.Context, tx shared.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	ret := _mock.Called(ctx, tx, pageInfo, filter, sort)
@@ -1612,69 +1686,6 @@ func (_c *CveRepository_Transaction_Call) Return(err error) *CveRepository_Trans
 }
 
 func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *CveRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UpdateCISAKEVBatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) UpdateCISAKEVBatch(ctx context.Context, tx shared.DB, batch []models.CVE) error {
-	ret := _mock.Called(ctx, tx, batch)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateCISAKEVBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVE) error); ok {
-		r0 = returnFunc(ctx, tx, batch)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CveRepository_UpdateCISAKEVBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateCISAKEVBatch'
-type CveRepository_UpdateCISAKEVBatch_Call struct {
-	*mock.Call
-}
-
-// UpdateCISAKEVBatch is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - batch []models.CVE
-func (_e *CveRepository_Expecter) UpdateCISAKEVBatch(ctx interface{}, tx interface{}, batch interface{}) *CveRepository_UpdateCISAKEVBatch_Call {
-	return &CveRepository_UpdateCISAKEVBatch_Call{Call: _e.mock.On("UpdateCISAKEVBatch", ctx, tx, batch)}
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) Run(run func(ctx context.Context, tx shared.DB, batch []models.CVE)) *CveRepository_UpdateCISAKEVBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.CVE
-		if args[2] != nil {
-			arg2 = args[2].([]models.CVE)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) Return(err error) *CveRepository_UpdateCISAKEVBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batch []models.CVE) error) *CveRepository_UpdateCISAKEVBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
