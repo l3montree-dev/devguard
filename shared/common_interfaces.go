@@ -833,7 +833,7 @@ type AdvisoryRepository interface {
 	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
 	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
 	Delete(ctx context.Context, tx DB, id int64) error
-	GetAllAdvisoriesByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
+	GetAllAdvisoriesByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Advisory, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

@@ -55,8 +55,8 @@ func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *g
 
 func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id int64) (models.Advisory, error) {
 	advisory := models.Advisory{}
-	db := advisoryRepository.GetDB(ctx, tx)
-	err := db.Preload("AffectedPackages").Where("id = ?", id).First(&advisory).Error
+	db := withOwnershipScope(ctx, advisoryRepository.GetDB(ctx, tx).Where("id = ?", id), advisory)
+	err := db.Preload("AffectedPackages").First(&advisory).Error
 	return advisory, err
 }
 
@@ -73,10 +73,10 @@ func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *go
 	return nil
 }
 
-func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.Advisory, error) {
 	advisories := []models.Advisory{}
 	public := "public"
-	err := advisoryRepository.GetDB(ctx, nil).
+	err := advisoryRepository.GetDB(ctx, tx).
 		Preload("AffectedPackages").
 		Where("asset_id = ?", assetID).
 		Where("visibility = ?", public).

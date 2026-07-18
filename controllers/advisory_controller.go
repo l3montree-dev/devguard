@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -43,7 +44,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 	}
 
 	if err := dtos.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("invalid request: %s", err.Error()))
 	}
 
 	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)

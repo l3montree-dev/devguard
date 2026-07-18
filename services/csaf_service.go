@@ -1183,7 +1183,7 @@ func (service *csafService) GetOldestVulnPerUniqueCVE(ctx context.Context, asset
 }
 
 func (service *csafService) GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
-	return service.advisoryRepository.GetAllAdvisoriesByAssetID(ctx, assetID)
+	return service.advisoryRepository.GetAllAdvisoriesByAssetID(ctx, nil, assetID)
 }
 
 func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (gocsaf.Advisory, error) {
