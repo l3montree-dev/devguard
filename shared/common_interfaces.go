@@ -503,6 +503,7 @@ type ConfigRepository interface {
 type VEXRuleService interface {
 	Begin(ctx context.Context) DB
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
+	CreateOrGet(ctx context.Context, tx DB, rule *models.VEXRule) (models.VEXRule, bool, error)
 	Update(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
 	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error

@@ -58,6 +58,14 @@ func (s *VEXRuleService) Create(ctx context.Context, tx shared.DB, rule *models.
 	return nil
 }
 
+func (s *VEXRuleService) CreateOrGet(ctx context.Context, tx shared.DB, rule *models.VEXRule) (models.VEXRule, bool, error) {
+	persistedRule, created, err := s.vexRuleRepository.CreateOrGet(ctx, tx, rule)
+	if err != nil {
+		return models.VEXRule{}, false, fmt.Errorf("failed to create or find VEX rule: %w", err)
+	}
+	return persistedRule, created, nil
+}
+
 func (s *VEXRuleService) Begin(ctx context.Context) shared.DB {
 	return s.vexRuleRepository.Begin(ctx)
 }

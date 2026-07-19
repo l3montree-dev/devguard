@@ -848,6 +848,54 @@ func TestMatchVulnsToRules(t *testing.T) {
 	})
 }
 
+func TestVEXRuleServiceCreateOrGet(t *testing.T) {
+	assetID := uuid.New()
+	requestedRule := &models.VEXRule{
+		AssetID:          assetID,
+		AssetVersionName: "main",
+		CVEID:            "CVE-2024-1234",
+		VexSource:        "manual",
+		Justification:    "requested justification",
+		PathPattern:      []string{"pkg:golang/lib@v1.0"},
+	}
+	requestedRule.EnsureID()
+	existingRule := *requestedRule
+	existingRule.Justification = "persisted justification"
+
+	for _, test := range []struct {
+		name          string
+		persistedRule models.VEXRule
+		created       bool
+	}{
+		{
+			name:          "returns newly created rule",
+			persistedRule: *requestedRule,
+			created:       true,
+		},
+		{
+			name:          "returns existing rule without replacing its metadata",
+			persistedRule: existingRule,
+			created:       false,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			vexRuleRepo := mocks.NewVEXRuleRepository(t)
+			depVulnRepo := mocks.NewDependencyVulnRepository(t)
+			vulnEventRepo := mocks.NewVulnEventRepository(t)
+
+			vexRuleRepo.On("CreateOrGet", mock.Anything, mock.Anything, requestedRule).
+				Return(test.persistedRule, test.created, nil)
+
+			service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+			persistedRule, created, err := service.CreateOrGet(context.Background(), nil, requestedRule)
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.created, created)
+			assert.Equal(t, test.persistedRule, persistedRule)
+		})
+	}
+}
+
 // TestVEXRuleServiceCreate tests rule creation
 func TestVEXRuleServiceCreate(t *testing.T) {
 	assetID := uuid.New()

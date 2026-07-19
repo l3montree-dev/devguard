@@ -610,6 +610,84 @@ func (_c *VEXRuleService_Create_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// CreateOrGet provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) CreateOrGet(ctx context.Context, tx shared.DB, rule *models.VEXRule) (models.VEXRule, bool, error) {
+	ret := _mock.Called(ctx, tx, rule)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateOrGet")
+	}
+
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.VEXRule) (models.VEXRule, bool, error)); ok {
+		return returnFunc(ctx, tx, rule)
+	}
+
+	var r0 models.VEXRule
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.VEXRule) models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, rule)
+	} else if ret.Get(0) != nil {
+		r0 = ret.Get(0).(models.VEXRule)
+	}
+
+	var r1 bool
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *models.VEXRule) bool); ok {
+		r1 = returnFunc(ctx, tx, rule)
+	} else {
+		r1 = ret.Bool(1)
+	}
+
+	var r2 error
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, *models.VEXRule) error); ok {
+		r2 = returnFunc(ctx, tx, rule)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// VEXRuleService_CreateOrGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateOrGet'
+type VEXRuleService_CreateOrGet_Call struct {
+	*mock.Call
+}
+
+// CreateOrGet is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - rule *models.VEXRule
+func (_e *VEXRuleService_Expecter) CreateOrGet(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleService_CreateOrGet_Call {
+	return &VEXRuleService_CreateOrGet_Call{Call: _e.mock.On("CreateOrGet", ctx, tx, rule)}
+}
+
+func (_c *VEXRuleService_CreateOrGet_Call) Run(run func(ctx context.Context, tx shared.DB, rule *models.VEXRule)) *VEXRuleService_CreateOrGet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.VEXRule
+		if args[2] != nil {
+			arg2 = args[2].(*models.VEXRule)
+		}
+		run(arg0, arg1, arg2)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_CreateOrGet_Call) Return(rule models.VEXRule, created bool, err error) *VEXRuleService_CreateOrGet_Call {
+	_c.Call.Return(rule, created, err)
+	return _c
+}
+
+func (_c *VEXRuleService_CreateOrGet_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rule *models.VEXRule) (models.VEXRule, bool, error)) *VEXRuleService_CreateOrGet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type VEXRuleService
 func (_mock *VEXRuleService) Delete(ctx context.Context, tx shared.DB, rule models.VEXRule) error {
 	ret := _mock.Called(ctx, tx, rule)
