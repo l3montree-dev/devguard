@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -2285,16 +2286,17 @@ func TestPathPatternVEXRules(t *testing.T) {
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
 			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
 			vexRuleController := f.App.VEXRuleController
-			postRule := func(body string) (*httptest.ResponseRecorder, error) {
+			postRule := func(body string, version models.AssetVersion) (*httptest.ResponseRecorder, error) {
 				recorder := httptest.NewRecorder()
 				req := httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(body))
 				req.Header.Set("Content-Type", "application/json")
 				ctx := app.NewContext(req, recorder)
 				setupContext(ctx)
+				shared.SetAssetVersion(ctx, version)
 				return recorder, vexRuleController.Create(ctx)
 			}
 
-			recorder, err = postRule(ruleBody)
+			recorder, err = postRule(ruleBody, assetVersion)
 			assert.Nil(t, err)
 			assert.Equal(t, 201, recorder.Code)
 
@@ -2327,7 +2329,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 
 			// Creating the same rule again should reapply the persisted rule instead of failing.
 			duplicateRuleBody := strings.Replace(ruleBody, "Not exploitable in our context", "replacement justification", 1)
-			recorder, err = postRule(duplicateRuleBody)
+			recorder, err = postRule(duplicateRuleBody, assetVersion)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 
@@ -2361,13 +2363,22 @@ func TestPathPatternVEXRules(t *testing.T) {
 			}
 
 			// Retrying while the vulnerabilities are already closed remains idempotent.
-			recorder, err = postRule(ruleBody)
+			recorder, err = postRule(ruleBody, assetVersion)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)
 			for vulnID, eventCount := range eventCounts {
 				persistedVuln, readErr := dependencyVulnRepository.Read(context.Background(), nil, vulnID)
 				assert.Nil(t, readErr)
 				assert.Len(t, persistedVuln.Events, eventCount)
+			}
+
+			// The historical deterministic ID does not include the asset version.
+			// Surface a same-ID rule from another version as a conflict rather than a server failure.
+			otherVersion := f.CreateAssetVersion(asset.ID, "release", false)
+			_, err = postRule(ruleBody, otherVersion)
+			var httpError *echo.HTTPError
+			if assert.ErrorAs(t, err, &httpError) {
+				assert.Equal(t, http.StatusConflict, httpError.Code)
 			}
 		})
 	})

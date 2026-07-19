@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -25,10 +26,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type VEXRuleController struct {
@@ -212,6 +215,9 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 
 	persistedRule, created, err := c.vexRuleService.CreateOrGet(ctx.Request().Context(), tx, rule)
 	if err != nil {
+		if errors.Is(err, services.ErrVEXRuleAssetVersionConflict) {
+			return echo.NewHTTPError(409, "matching VEX rule belongs to a different asset version").WithInternal(err)
+		}
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
@@ -376,7 +382,10 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 
 	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
 	if err != nil {
-		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "rule not found").WithInternal(err)
+		}
+		return echo.NewHTTPError(500, "failed to find VEX rule").WithInternal(err)
 	}
 
 	// Verify the rule belongs to this asset version

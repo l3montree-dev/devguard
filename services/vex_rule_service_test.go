@@ -868,7 +868,7 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 		name          string
 		persistedRule models.VEXRule
 		created       bool
-		wantError     bool
+		wantError     error
 	}{
 		{
 			name:          "returns newly created rule",
@@ -884,7 +884,7 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 			name:          "rejects an ID conflict outside the requested asset version",
 			persistedRule: otherVersionRule,
 			created:       false,
-			wantError:     true,
+			wantError:     ErrVEXRuleAssetVersionConflict,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -898,8 +898,8 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 			service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 			persistedRule, created, err := service.CreateOrGet(context.Background(), nil, requestedRule)
 
-			if test.wantError {
-				assert.Error(t, err)
+			if test.wantError != nil {
+				assert.ErrorIs(t, err, test.wantError)
 				assert.False(t, created)
 				assert.Equal(t, models.VEXRule{}, persistedRule)
 				return
