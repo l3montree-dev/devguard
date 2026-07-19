@@ -18,8 +18,10 @@ package dtos
 import (
 	"slices"
 
+	"github.com/Masterminds/semver"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
+	packageurl "github.com/package-url/packageurl-go"
 )
 
 // PathPattern wildcard for VEX rules
@@ -54,7 +56,6 @@ func IsWildcard(elem string) bool {
 // Unexported: callers should use MatchesSuffixForArtifacts, which also
 // strips a leading artifact-identity path segment before delegating here.
 func (p PathPattern) matchesSuffix(path []string) bool {
-
 	if len(p) == 0 {
 		return true
 	}
@@ -88,6 +89,40 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	return false
 }
 
+// elementMatches checks whether a single pattern element matches a single
+// path element. Besides a plain literal comparison, it supports semver
+// constraints in the pattern element's version: a pattern purl like
+// "pkg:npm/lib@>=1.0.0,<2.0.0" matches any path purl of the same package
+// whose version satisfies that constraint (e.g. "pkg:npm/lib@1.5.0").
+// Wildcards are already consumed
+func elementMatches(patternElem, pathElem string) bool {
+	if patternElem == pathElem {
+		return true
+	}
+
+	patternPurl, err := packageurl.FromString(patternElem)
+	if err != nil {
+		return false
+	}
+	pathPurl, err := packageurl.FromString(pathElem)
+	if err != nil {
+		return false
+	}
+	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+		return false
+	}
+
+	constraint, err := semver.NewConstraint(patternPurl.Version)
+	if err != nil {
+		return false
+	}
+	version, err := semver.NewVersion(pathPurl.Version)
+	if err != nil {
+		return false
+	}
+	return constraint.Check(version)
+}
+
 // matchPatternExact checks if the pattern exactly matches the path.
 // Wildcards can match zero or more elements.
 func matchPatternExact(pattern, path []string) bool {
@@ -119,7 +154,7 @@ func matchPatternExact(pattern, path []string) bool {
 			nextPattern := pattern[pIdx+1]
 
 			for i := pathIdx; i < len(path); i++ {
-				if nextPattern == path[i] {
+				if elementMatches(nextPattern, path[i]) {
 					// Found next pattern element, recursively match the rest
 					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
 						return true
@@ -150,7 +185,7 @@ func matchPatternExact(pattern, path []string) bool {
 		}
 
 		// Literal match
-		if pathIdx >= len(path) || pattern[pIdx] != path[pathIdx] {
+		if pathIdx >= len(path) || !elementMatches(pattern[pIdx], path[pathIdx]) {
 			return false
 		}
 
@@ -159,11 +194,6 @@ func matchPatternExact(pattern, path []string) bool {
 	}
 
 	return pathIdx == len(path)
-}
-
-// ContainsWildcard returns true if the pattern contains a wildcard (*).
-func (p PathPattern) ContainsWildcard() bool {
-	return slices.ContainsFunc(p, IsWildcard)
 }
 
 // MatchesSuffixForArtifacts is like matchesSuffix, but first strips a leading

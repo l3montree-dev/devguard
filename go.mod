@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.11.0
+	github.com/Masterminds/semver v1.5.0
 	github.com/ProtonMail/gopenpgp/v2 v2.10.0
 	github.com/ProtonMail/gopenpgp/v3 v3.4.1
 	github.com/blang/semver v3.5.1+incompatible

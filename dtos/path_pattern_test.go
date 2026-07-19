@@ -44,25 +44,6 @@ func TestIsWildcard(t *testing.T) {
 	}
 }
 
-func TestPathPatternContainsWildcard(t *testing.T) {
-	tests := []struct {
-		name     string
-		pattern  PathPattern
-		expected bool
-	}{
-		{"empty pattern", PathPattern{}, false},
-		{"no wildcards", PathPattern{"A", "B", "C"}, false},
-		{"single wildcard", PathPattern{"A", "*", "C"}, true},
-		{"only wildcard", PathPattern{"*"}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.ContainsWildcard())
-		})
-	}
-}
-
 func TestPathPatternMatchesSuffix_ExactMatch(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -144,6 +125,52 @@ func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
 		{"* * matches anything", PathPattern{"*", "*"}, []string{"A", "B", "C"}, true},
 		{"* A * matches X A Y", PathPattern{"*", "A", "*"}, []string{"X", "A", "Y"}, true},
 		{"* A * matches A (zero on both sides)", PathPattern{"*", "A", "*"}, []string{"A"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+		})
+	}
+}
+
+func TestPathPatternMatchesSuffix_SemverConstraint(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  PathPattern
+		path     []string
+		expected bool
+	}{
+		{
+			"constraint matches version in range",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.5.0"},
+			true,
+		},
+		{
+			"constraint does not match version out of range",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/vulnerable@2.5.0"},
+			false,
+		},
+		{
+			"constraint does not match a different package name",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/other@1.5.0"},
+			false,
+		},
+		{
+			"exact version still matches without a constraint",
+			PathPattern{"pkg:npm/vulnerable@1.0.0"},
+			[]string{"pkg:npm/vulnerable@1.0.0"},
+			true,
+		},
+		{
+			"constraint combined with wildcard prefix",
+			PathPattern{"*", "pkg:npm/vulnerable@^1.0.0"},
+			[]string{"pkg:npm/app@1.0.0", "pkg:npm/lodash@4.17.0", "pkg:npm/vulnerable@1.9.9"},
+			true,
+		},
 	}
 
 	for _, tt := range tests {
