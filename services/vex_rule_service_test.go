@@ -861,11 +861,14 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 	requestedRule.EnsureID()
 	existingRule := *requestedRule
 	existingRule.Justification = "persisted justification"
+	otherVersionRule := existingRule
+	otherVersionRule.AssetVersionName = "release"
 
 	for _, test := range []struct {
 		name          string
 		persistedRule models.VEXRule
 		created       bool
+		wantError     bool
 	}{
 		{
 			name:          "returns newly created rule",
@@ -876,6 +879,12 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 			name:          "returns existing rule without replacing its metadata",
 			persistedRule: existingRule,
 			created:       false,
+		},
+		{
+			name:          "rejects an ID conflict outside the requested asset version",
+			persistedRule: otherVersionRule,
+			created:       false,
+			wantError:     true,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -889,6 +898,12 @@ func TestVEXRuleServiceCreateOrGet(t *testing.T) {
 			service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 			persistedRule, created, err := service.CreateOrGet(context.Background(), nil, requestedRule)
 
+			if test.wantError {
+				assert.Error(t, err)
+				assert.False(t, created)
+				assert.Equal(t, models.VEXRule{}, persistedRule)
+				return
+			}
 			assert.NoError(t, err)
 			assert.Equal(t, test.created, created)
 			assert.Equal(t, test.persistedRule, persistedRule)

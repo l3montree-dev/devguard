@@ -63,6 +63,12 @@ func (s *VEXRuleService) CreateOrGet(ctx context.Context, tx shared.DB, rule *mo
 	if err != nil {
 		return models.VEXRule{}, false, fmt.Errorf("failed to create or find VEX rule: %w", err)
 	}
+	// AssetVersionName is not part of the deterministic rule ID, so a conflict
+	// can resolve to a rule from another version. Enforce the full requested
+	// scope before allowing callers to apply the persisted rule.
+	if persistedRule.AssetID != rule.AssetID || persistedRule.AssetVersionName != rule.AssetVersionName {
+		return models.VEXRule{}, false, fmt.Errorf("vex rule ID resolved outside the requested asset version")
+	}
 	return persistedRule, created, nil
 }
 
