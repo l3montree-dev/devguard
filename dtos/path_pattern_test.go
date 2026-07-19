@@ -237,20 +237,20 @@ func TestPathPatternMatchesSuffixForArtifacts(t *testing.T) {
 		path := []string{"pkg:npm/vulnerable@1.0.0"}
 
 		assert.False(t, pattern.matchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
-		assert.True(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+		assert.True(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 
 	t.Run("does not strip when the leading element isn't one of the given artifacts", func(t *testing.T) {
 		pattern := PathPattern{"pkg:oci/some-other-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/vulnerable@1.0.0"}
 
-		assert.False(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+		assert.False(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 
 	t.Run("behaves like plain suffix matching when no artifact identities are given", func(t *testing.T) {
 		pattern := PathPattern{"pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 
-		assert.True(t, pattern.MatchesSuffixForArtifacts(path, nil))
+		assert.True(t, pattern.Matches(path, nil))
 	})
 }

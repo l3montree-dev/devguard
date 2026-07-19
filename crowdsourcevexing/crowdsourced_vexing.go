@@ -215,7 +215,7 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 		// No artifact context is available for a foreign, crowdsourced rule
 		// here (it belongs to a different asset entirely), so no leading
 		// artifact-identity segment is stripped for this match.
-		if rule.PathPattern.MatchesSuffixForArtifacts(dependencyPath, nil) && rule.CVE.CVE == cve.CVE {
+		if rule.PathPattern.Matches(dependencyPath, nil) && rule.CVE.CVE == cve.CVE {
 			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
 			if utils.Contains(AssessmentOptions, rule.Assessment) {
 				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure

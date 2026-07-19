@@ -65,7 +65,7 @@ var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
 					if err != nil {
 						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
 					}
-					matches := dtos.PathPattern(pattern).MatchesSuffixForArtifacts(path, artifactPurls)
+					matches := dtos.PathPattern(pattern).Matches(path, artifactPurls)
 					return types.Bool(matches)
 				}),
 			),
@@ -142,7 +142,7 @@ func (s *VEXRuleService) FindByAssetIDAndVulnID(ctx context.Context, tx shared.D
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
 		pattern := dtos.PathPattern(rule.PathPattern)
-		if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, artifactIdentities) {
+		if pattern.Matches(vuln.VulnerabilityPath, artifactIdentities) {
 			matchingRules = append(matchingRules, rule)
 		}
 	}
@@ -429,7 +429,7 @@ func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) ma
 		vulnsForCVE := m[rule.CVEID]
 		for _, vuln := range vulnsForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
+			if pattern.Matches(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[vuln.ID] = append(result[vuln.ID], rule)
 			}
 		}
@@ -525,7 +525,7 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 		rulesForCVE := m[vuln.CVEID]
 		for _, rule := range rulesForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
+			if pattern.Matches(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}

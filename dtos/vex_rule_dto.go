@@ -63,7 +63,7 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	// ROOT is a stop marker meaning "direct dependency only". When the pattern
 	// contains ROOT, skip suffix scanning and match the full path from position 0.
 	if slices.Contains(p, normalize.GraphRootNodeID) {
-		return matchPatternExact(p, path)
+		return matchPattern(p, path)
 	}
 
 	// For suffix matching, we try increasingly longer suffixes
@@ -82,7 +82,7 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	// Try matching against suffixes of increasing length
 	for suffixStart := len(path) - minLen; suffixStart >= 0; suffixStart-- {
 		suffix := path[suffixStart:]
-		if matchPatternExact(p, suffix) {
+		if matchPattern(p, suffix) {
 			return true
 		}
 	}
@@ -123,9 +123,9 @@ func elementMatches(patternElem, pathElem string) bool {
 	return constraint.Check(version)
 }
 
-// matchPatternExact checks if the pattern exactly matches the path.
+// matchPattern checks if the pattern exactly matches the path.
 // Wildcards can match zero or more elements.
-func matchPatternExact(pattern, path []string) bool {
+func matchPattern(pattern, path []string) bool {
 	if len(pattern) == 0 {
 		return len(path) == 0
 	}
@@ -145,7 +145,7 @@ func matchPatternExact(pattern, path []string) bool {
 			// match for this wildcard. [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]:
 			// ROOT anchors the remainder to the current path position.
 			if pattern[pIdx+1] == normalize.GraphRootNodeID {
-				if matchPatternExact(pattern[pIdx+1:], path[pathIdx:]) {
+				if matchPattern(pattern[pIdx+1:], path[pathIdx:]) {
 					return true
 				}
 			}
@@ -156,7 +156,7 @@ func matchPatternExact(pattern, path []string) bool {
 			for i := pathIdx; i < len(path); i++ {
 				if elementMatches(nextPattern, path[i]) {
 					// Found next pattern element, recursively match the rest
-					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
+					if matchPattern(pattern[pIdx+1:], path[i:]) {
 						return true
 					}
 				}
@@ -196,7 +196,7 @@ func matchPatternExact(pattern, path []string) bool {
 	return pathIdx == len(path)
 }
 
-// MatchesSuffixForArtifacts is like matchesSuffix, but first strips a leading
+// Matches is like matchesSuffix, but first strips a leading
 // pattern element that identifies one of the vulnerability's own artifacts.
 //
 // VulnerabilityPath is always component-only and never includes the
@@ -212,9 +212,9 @@ func matchPatternExact(pattern, path []string) bool {
 // dependency graph, so a shorter pattern must not match as a mere suffix of
 // a longer, distinct path through a shared component - that per-path
 // distinction is exactly what CSAF's product tree encodes.
-func (p PathPattern) MatchesSuffixForArtifacts(path []string, artifactIdentities []string) bool {
+func (p PathPattern) Matches(path []string, artifactIdentities []string) bool {
 	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
-		return matchPatternExact(p[1:], path)
+		return matchPattern(p[1:], path)
 	}
 	return p.matchesSuffix(path)
 }
