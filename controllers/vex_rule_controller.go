@@ -173,7 +173,8 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param body body CreateVEXRuleRequest true "Rule data"
-// @Success 201 {object} dtos.VEXRuleDTO
+// @Success 200 {object} dtos.VEXRuleDTO "Existing rule reapplied"
+// @Success 201 {object} dtos.VEXRuleDTO "Rule created"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -209,32 +210,42 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	tx := c.vexRuleService.Begin(ctx.Request().Context())
 	defer tx.Rollback()
 
-	if err := c.vexRuleService.Create(ctx.Request().Context(), tx, rule); err != nil {
+	persistedRule, created, err := c.vexRuleService.CreateOrGet(ctx.Request().Context(), tx, rule)
+	if err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
-	// Apply this rule to all matching existing dependency vulns
-	vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), tx, []models.VEXRule{*rule})
+	// Apply new rules normally. Existing rules must be forced so a historical
+	// matching event does not prevent an explicitly reopened vulnerability from closing again.
+	var vulns []models.DependencyVuln
+	if created {
+		vulns, err = c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), tx, []models.VEXRule{persistedRule})
+	} else {
+		vulns, err = c.vexRuleService.ApplyRulesToExistingVulnsForce(ctx.Request().Context(), tx, []models.VEXRule{persistedRule})
+	}
 	if err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
-			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
-		tx.Rollback()
+			"cveID", persistedRule.CVEID, "assetID", persistedRule.AssetID, "vexSource", persistedRule.VexSource)
+		return echo.NewHTTPError(500, "failed to apply VEX rule to existing vulnerabilities").WithInternal(err)
 	}
 	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
 		return echo.NewHTTPError(500, "failed to commit VEX rule creation").WithInternal(err)
 	}
 
 	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, *rule)
+	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, persistedRule)
 	if err != nil {
-		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
+		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", persistedRule.ID, "error", err)
 		count = 0
 	}
 	// Update artifact risk aggregations in background
 	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
 
-	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
+	status := 201
+	if !created {
+		status = 200
+	}
+	return ctx.JSON(status, transformer.VEXRuleToDTOWithCount(persistedRule, count))
 }
 
 func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, asset models.Asset, vulns []models.DependencyVuln) {
@@ -356,6 +367,7 @@ func (c *VEXRuleController) Update(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}/reapply [post]
 func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+	assetVersion := shared.GetAssetVersion(ctx)
 
 	ruleID := ctx.Param("ruleId")
 	if ruleID == "" {
@@ -367,9 +379,9 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
 
-	// Verify the rule belongs to this asset
-	if rule.AssetID != asset.ID {
-		return echo.NewHTTPError(403, "rule does not belong to this asset")
+	// Verify the rule belongs to this asset version
+	if rule.AssetID != asset.ID || rule.AssetVersionName != assetVersion.Name {
+		return echo.NewHTTPError(403, "rule does not belong to this asset version")
 	}
 
 	// Reapply the rule to existing vulnerabilities (force reapply ignoring duplicate checks)
