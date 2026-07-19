@@ -127,6 +127,27 @@ func (r *vexRuleRepository) Create(ctx context.Context, tx *gorm.DB, rule *model
 	return r.GetDB(ctx, tx).Create(rule).Error
 }
 
+func (r *vexRuleRepository) CreateOrGet(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) (models.VEXRule, bool, error) {
+	rule.EnsureID()
+
+	result := r.GetDB(ctx, tx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoNothing: true,
+	}).Create(rule)
+	if result.Error != nil {
+		return models.VEXRule{}, false, result.Error
+	}
+	if result.RowsAffected == 1 {
+		return *rule, true, nil
+	}
+
+	persistedRule, err := r.FindByID(ctx, tx, rule.ID)
+	if err != nil {
+		return models.VEXRule{}, false, err
+	}
+	return persistedRule, false, nil
+}
+
 func (r *vexRuleRepository) Upsert(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
 	// Ensure the ID is calculated
 	rule.EnsureID()
