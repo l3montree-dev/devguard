@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -2283,14 +2284,17 @@ func TestPathPatternVEXRules(t *testing.T) {
 			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
 			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
-			req.Header.Set("Content-Type", "application/json")
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-
 			vexRuleController := f.App.VEXRuleController
-			err = vexRuleController.Create(ctx)
+			postRule := func(body string) (*httptest.ResponseRecorder, error) {
+				recorder := httptest.NewRecorder()
+				req := httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				ctx := app.NewContext(req, recorder)
+				setupContext(ctx)
+				return recorder, vexRuleController.Create(ctx)
+			}
+
+			recorder, err = postRule(ruleBody)
 			assert.Nil(t, err)
 			assert.Equal(t, 201, recorder.Code)
 
@@ -2305,6 +2309,66 @@ func TestPathPatternVEXRules(t *testing.T) {
 				}
 			}
 			assert.Equal(t, 2, falsePositiveCount, "both vulnerabilities should be marked as false positive by VEX rule")
+
+			// Reopen the vulnerabilities while leaving the matching VEX rule in place.
+			for i := range vulns {
+				reopenedEvent := models.NewReopenedEvent(
+					vulns[i].ID,
+					dtos.VulnTypeDependencyVuln,
+					"test-user",
+					"reopened for verification",
+					false,
+					nil,
+				)
+				err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &vulns[i], &reopenedEvent)
+				assert.Nil(t, err)
+				assert.Equal(t, dtos.VulnStateOpen, vulns[i].State)
+			}
+
+			// Creating the same rule again should reapply the persisted rule instead of failing.
+			duplicateRuleBody := strings.Replace(ruleBody, "Not exploitable in our context", "replacement justification", 1)
+			recorder, err = postRule(duplicateRuleBody)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+
+			vulns, err = dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
+			assert.Nil(t, err)
+			eventCounts := make(map[uuid.UUID]int, len(vulns))
+			for _, vuln := range vulns {
+				assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+
+				persistedVuln, readErr := dependencyVulnRepository.Read(context.Background(), nil, vuln.ID)
+				assert.Nil(t, readErr)
+				falsePositiveEvents := 0
+				reopenedEvents := 0
+				for _, event := range persistedVuln.Events {
+					switch event.Type {
+					case dtos.EventTypeFalsePositive:
+						falsePositiveEvents++
+					case dtos.EventTypeReopened:
+						reopenedEvents++
+					}
+				}
+				assert.Equal(t, 2, falsePositiveEvents)
+				assert.Equal(t, 1, reopenedEvents)
+				eventCounts[vuln.ID] = len(persistedVuln.Events)
+			}
+
+			rules, err := f.App.VexRuleRepository.FindByAssetVersion(context.Background(), nil, asset.ID, assetVersion.Name)
+			assert.Nil(t, err)
+			if assert.Len(t, rules, 1, "reapplying must not create another VEX rule") {
+				assert.Equal(t, "Not exploitable in our context", rules[0].Justification, "reapplying must preserve the existing rule")
+			}
+
+			// Retrying while the vulnerabilities are already closed remains idempotent.
+			recorder, err = postRule(ruleBody)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+			for vulnID, eventCount := range eventCounts {
+				persistedVuln, readErr := dependencyVulnRepository.Read(context.Background(), nil, vulnID)
+				assert.Nil(t, readErr)
+				assert.Len(t, persistedVuln.Events, eventCount)
+			}
 		})
 	})
 }
