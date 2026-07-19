@@ -17,9 +17,16 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"sync"
 
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -35,6 +42,36 @@ type VEXRuleService struct {
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
+
+var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
+	return cel.NewEnv(
+		cel.Variable("vuln", cel.AnyType),
+		cel.Function("matchesPattern",
+
+			cel.Overload(
+				"matchesPattern_vuln_list",
+				[]*cel.Type{cel.DynType, cel.ListType(cel.StringType)},
+				cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
+					path, err := stringListField(lhs, "vulnerabilityPath")
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid vuln.vulnerabilityPath: %v", err)
+					}
+					artifactPurls, err := stringListField(lhs, "artifactPurls")
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid vuln.artifactPurls: %v", err)
+					}
+					pattern, err := toStringList(rhs)
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
+					}
+					matches := dtos.PathPattern(pattern).MatchesSuffixForArtifacts(path, artifactPurls)
+					return types.Bool(matches)
+				}),
+			),
+		),
+	)
+})
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
@@ -398,6 +435,78 @@ func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) ma
 		}
 	}
 	return result
+}
+
+func toStringList(val ref.Val) ([]string, error) {
+	native, err := val.ConvertToNative(reflect.TypeOf([]string{}))
+	if err != nil {
+		return nil, err
+	}
+	return native.([]string), nil
+}
+
+func stringListField(mapVal ref.Val, key string) ([]string, error) {
+	mapper, ok := mapVal.(traits.Mapper)
+	if !ok {
+		return nil, fmt.Errorf("expected a map, got %s", mapVal.Type().TypeName())
+	}
+	fieldVal, found := mapper.Find(types.String(key))
+	if !found || fieldVal == nil {
+		return nil, nil
+	}
+	if types.IsError(fieldVal) {
+		return nil, fmt.Errorf("field %q: %v", key, fieldVal)
+	}
+	return toStringList(fieldVal)
+}
+
+func (s *VEXRuleService) EvalCELExpression(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
+	if rule.CELExpression == "" {
+		return false, nil
+	}
+
+	celEnv, err := vexRuleCelEnv()
+	if err != nil {
+		return false, fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+
+	ast, iss := celEnv.Compile(rule.CELExpression)
+	if iss != nil && iss.Err() != nil {
+		return false, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+	}
+
+	prg, err := celEnv.Program(ast)
+	if err != nil {
+		return false, fmt.Errorf("failed to build CEL program: %w", err)
+	}
+
+	m, err := json.Marshal(vuln)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
+	}
+
+	var vulnMap map[string]interface{}
+	if err := json.Unmarshal(m, &vulnMap); err != nil {
+		return false, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
+	}
+	// artifactPurls is derived (vuln.ArtifactPurls()), not a JSON field of
+	// DependencyVuln, so it has to be added to the map explicitly for
+	// matchesPattern(vuln, pattern) to see it.
+	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
+
+	out, _, err := prg.Eval(map[string]any{
+		"vuln": vulnMap,
+	})
+
+	if err != nil {
+		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
+	}
+
+	result, ok := out.Value().(bool)
+	if !ok {
+		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
+	}
+	return result, nil
 }
 
 func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {

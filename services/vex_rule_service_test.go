@@ -850,3 +850,79 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 	assert.NoError(t, err)
 	vexRuleRepo.AssertExpectations(t)
 }
+
+func TestEvalCELExpression(t *testing.T) {
+	t.Run("matchesPattern function should be define and work as expected", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(["pkg:golang/lib@v1.0"], ["pkg:golang/lib@v1.0"])`,
+			},
+			models.DependencyVuln{},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, res)
+	})
+
+	t.Run("vuln should be provided as variable", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
+			},
+			models.DependencyVuln{
+				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, res)
+
+		res, err = s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
+			},
+			models.DependencyVuln{
+				VulnerabilityPath: []string{"pkg:golang/lib@v1.0", "pkg:golang/other@v1.0"},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, false, res)
+	})
+
+	t.Run("should be filterable by cve id, or other properties", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `vuln.cveId == "CVE-2024-1234"`,
+			},
+			models.DependencyVuln{
+				CVEID: "CVE-2024-1234",
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, res)
+	})
+}
+
+func BenchmarkEvalCELExpression(b *testing.B) {
+	s := VEXRuleService{}
+	rule := models.VEXRule{
+		CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"]) && vuln.cveId == "CVE-2024-1234"`,
+	}
+	vuln := models.DependencyVuln{
+		CVEID:             "CVE-2024-1234",
+		VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+	}
+	ctx := b.Context()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := s.EvalCELExpression(ctx, rule, vuln); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

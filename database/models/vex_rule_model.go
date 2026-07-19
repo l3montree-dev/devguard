@@ -53,8 +53,9 @@ type VEXRule struct {
 
 	// PathPattern stores the path patterns for this VEX rule.
 	// Supports wildcards: "*" matches any element.
-	PathPattern []string `json:"pathPattern" gorm:"type:jsonb;not null;serializer:json"`
-	CreatedByID string   `json:"createdById" gorm:"type:text;not null"`
+	PathPattern   []string `json:"pathPattern" gorm:"type:jsonb;not null;serializer:json"`
+	CELExpression string   `json:"celExpression" gorm:"type:text;"`
+	CreatedByID   string   `json:"createdById" gorm:"type:text;not null"`
 
 	// Enabled indicates whether this rule should be applied to matching vulnerabilities.
 	// When false, the rule exists but does not create events or modify vulnerability state.
