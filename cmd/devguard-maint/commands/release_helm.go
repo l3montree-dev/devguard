@@ -91,7 +91,8 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 
 	cl := &i.Changelog{}
 
-	if err := updateDockerCompose(apiTag, webTag, cl); err != nil {
+	composeChanged, err := updateDockerCompose(apiTag, webTag, cl)
+	if err != nil {
 		return err
 	}
 	if err := updateHelmChart(semver, apiTag, webTag, ciComponentsTag, cl); err != nil {
@@ -108,16 +109,20 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err := i.GitAdd("devguard", "docker-compose-try-it.yaml"); err != nil {
-		return err
+	if composeChanged {
+		if err := i.GitAdd("devguard", "docker-compose-try-it.yaml"); err != nil {
+			return err
+		}
+		if err := i.GitCommit("devguard", fmt.Sprintf("chore: update docker-compose-try-it.yaml (api=%s web=%s)", apiTag, webTag)); err != nil {
+			return err
+		}
+		if err := i.GitPush("devguard"); err != nil {
+			return err
+		}
+		cl.Change("Committed and pushed docker-compose-try-it.yaml")
+	} else {
+		fmt.Println("docker-compose-try-it.yaml already up to date — nothing to commit")
 	}
-	if err := i.GitCommit("devguard", fmt.Sprintf("chore: update docker-compose-try-it.yaml (api=%s web=%s)", apiTag, webTag)); err != nil {
-		return err
-	}
-	if err := i.GitPush("devguard"); err != nil {
-		return err
-	}
-	cl.Change("Committed and pushed docker-compose-try-it.yaml")
 
 	helmMsg := fmt.Sprintf(
 		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- devguard-ci-components: %s\n- Helm chart version: %s, appVersion: %s",
@@ -149,11 +154,15 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) error {
+// updateDockerCompose rewrites image tags in docker-compose-try-it.yaml.
+// Returns whether the file's content actually changed on disk, so the caller
+// can skip commit/push when it was already up to date (a distinct case from
+// the image patterns not matching at all, which is a real failure).
+func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) (bool, error) {
 	path := "devguard/docker-compose-try-it.yaml"
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Replace each image prefix independently so api and web get different tags.
@@ -167,22 +176,30 @@ func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) error {
 		{regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard/postgresql:)[^\s"]+`), apiTag},
 		{regexp.MustCompile(`(ghcr\.io/l3montree-dev/devguard:)[^\s"]+`), apiTag},
 	}
+	matched := false
 	for _, r := range replacements {
+		if r.re.MatchString(updated) {
+			matched = true
+		}
 		updated = r.re.ReplaceAllStringFunc(updated, func(m string) string {
 			idx := strings.LastIndex(m, ":")
 			return m[:idx+1] + r.tag
 		})
 	}
+	if !matched {
+		cl.Fail("No changes in docker-compose-try-it.yaml — verify image patterns")
+		return false, nil
+	}
 
 	if updated == string(data) {
-		cl.Fail("No changes in docker-compose-try-it.yaml — verify image patterns")
-		return nil
+		cl.Change("docker-compose-try-it.yaml already up to date (api=" + apiTag + ", web=" + webTag + ")")
+		return false, nil
 	}
 	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
-		return err
+		return false, err
 	}
 	cl.Change(fmt.Sprintf("Updated docker-compose-try-it.yaml (api=%s, web=%s)", apiTag, webTag))
-	return nil
+	return true, nil
 }
 
 // updateHelmChart regenerates values.yaml, Chart.yaml, and questions.yaml from
