@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.10.0] - 2026-07-20
+
+Thanks to @nicksan222 for their first contribution to DevGuard! 🎉
+
+### Added
+
+- **Compliance posture** — a new compliance module tracking framework controls and posture per project/org, seeded from the Grundschutz++ and Secure Controls Framework (SCF) catalogs, with a new API (`compliance_posture_controller`) and OSCAL/CSAF-based control mappings
+- **OSCAL component support** — compliance components can now be ingested from an OSCAL component definition (with a Grundschutz control mapping), stored, and queried per project, including filtering for vulnerabilities that are solvable via a given component
+- **Evidence links in OSCAL export** — the OSCAL/compliance posture export now includes evidence links back to the originating findings
+- **Advisory tab (first approach)** — a new advisory feature backed by its own model, repository, state machine, and CSAF-driven service, exposed through a dedicated advisory API and router
+- **Faster SCA scanning** — `devguard-scanner sca` can now use an embedded Trivy source DB for faster scans
+- **Component reparenting in SBOMs** — root components' direct children are now reparented under the detected artifact name during SBOM normalization, improving dependency tree accuracy for SARIF/SCA scans
+
+### Changed
+
+- **Database health check** — the health check endpoint now fails when the PostgreSQL pub/sub listener disconnects, instead of reporting healthy while broker notifications are silently lost ([#2589](https://github.com/l3montree-dev/devguard/issues/2589))
+- Compliance migrations renamed/reordered for consistent ordering after the compliance posture and OSCAL components features landed side by side
+
+### Fixed
+
+- **Vulnerability report PDF generation (opencode template)** — added the missing highlighting-macros include to the opencode LaTeX template, fixing PDF generation for that report style
+
 ## [v1.9.3] - 2026-07-15
 
 ### Added
