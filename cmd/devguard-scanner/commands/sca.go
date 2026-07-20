@@ -669,7 +669,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		// download any config file if exists
 		configFilePath, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
 		if err != nil {
-			slog.Warn("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
+			slog.Debug("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
 		} else {
 			// set the config file path in the runtime config so that it can be used by the scanner commands
 			config.RuntimeBaseConfig.ConfigFilePath = configFilePath
