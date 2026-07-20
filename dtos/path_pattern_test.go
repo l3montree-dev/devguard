@@ -39,7 +39,7 @@ func TestIsWildcard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, IsWildcard(tt.elem))
+			assert.Equal(t, tt.expected, isWildcard(tt.elem))
 		})
 	}
 }
@@ -95,7 +95,7 @@ func TestRootPathPattern(t *testing.T) {
 	}
 }
 
-func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
+func TestPathPatternMatchesSuffixWildcard(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -134,7 +134,7 @@ func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
 	}
 }
 
-func TestPathPatternMatchesSuffix_SemverConstraint(t *testing.T) {
+func TestPathPatternMatchesSuffixSemverConstraint(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -180,7 +180,7 @@ func TestPathPatternMatchesSuffix_SemverConstraint(t *testing.T) {
 	}
 }
 
-func TestPathPatternMatchesSuffix_RealWorldExamples(t *testing.T) {
+func TestPathPatternMatchesSuffixRealWorldExamples(t *testing.T) {
 	// Simulating real vulnerability paths like:
 	// ["pkg:npm/app@1.0.0", "pkg:npm/lodash@4.17.0", "pkg:npm/vulnerable@1.0.0"]
 	tests := []struct {
@@ -252,5 +252,12 @@ func TestPathPatternMatchesSuffixForArtifacts(t *testing.T) {
 		path := []string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 
 		assert.True(t, pattern.Matches(path, nil))
+	})
+
+	t.Run("should work with constraints", func(t *testing.T) {
+		pattern := PathPattern{"pkg:oci/my-app@1.0.0", "pkg:npm/vulnerable@>=1.0.0,<2.0.0"}
+		path := []string{"pkg:npm/vulnerable@1.5.0"}
+
+		assert.True(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 }

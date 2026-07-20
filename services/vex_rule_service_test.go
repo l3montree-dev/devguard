@@ -857,9 +857,11 @@ func TestEvalCELExpression(t *testing.T) {
 		res, err := s.EvalCELExpression(
 			t.Context(),
 			models.VEXRule{
-				CELExpression: `matchesPattern(["pkg:golang/lib@v1.0"], ["pkg:golang/lib@v1.0"])`,
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
 			},
-			models.DependencyVuln{},
+			models.DependencyVuln{
+				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+			},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, true, res)
@@ -905,6 +907,68 @@ func TestEvalCELExpression(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, true, res)
+	})
+
+	t.Run("matchesPattern should respect semver constraints", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@>=1.0.0,<2.0.0"])`,
+			},
+			models.DependencyVuln{
+				VulnerabilityPath: []string{"pkg:golang/lib@1.5.0"},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, res)
+	})
+
+	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
+			},
+
+			models.DependencyVuln{
+				Artifacts: []models.Artifact{
+					{
+						ArtifactName: "pkg:/golang/github.com/l3montree-dev/devguard",
+					},
+				},
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "1.0.0",
+				},
+				VulnerabilityPath: []string{"pkg:golang/vulnlib@1.0.0"},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, true, res)
+	})
+	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
+		s := VEXRuleService{}
+		res, err := s.EvalCELExpression(
+			t.Context(),
+			models.VEXRule{
+				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
+			},
+
+			models.DependencyVuln{
+				Artifacts: []models.Artifact{
+					{
+						ArtifactName: "pkg:/golang/github.com/l3montree-dev/devguard",
+					},
+				},
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "4.0.0",
+				},
+				VulnerabilityPath: []string{"pkg:golang/vulnlib@1.0.0"},
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, false, res)
 	})
 }
 

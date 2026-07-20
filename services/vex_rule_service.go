@@ -485,7 +485,7 @@ func (s *VEXRuleService) EvalCELExpression(ctx context.Context, rule models.VEXR
 		return false, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
 	}
 
-	var vulnMap map[string]interface{}
+	var vulnMap map[string]any
 	if err := json.Unmarshal(m, &vulnMap); err != nil {
 		return false, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
 	}

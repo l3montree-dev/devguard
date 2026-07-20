@@ -39,8 +39,8 @@ const (
 //   - ["*"] matches any path suffix
 type PathPattern []string
 
-// IsWildcard returns true if the element is a wildcard (*).
-func IsWildcard(elem string) bool {
+// isWildcard returns true if the element is a wildcard (*).
+func isWildcard(elem string) bool {
 	return elem == PathPatternWildcard
 }
 
@@ -70,7 +70,7 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	// Count non-wildcard elements to determine minimum suffix length
 	minLen := 0
 	for _, elem := range p {
-		if !IsWildcard(elem) {
+		if !isWildcard(elem) {
 			minLen++
 		}
 	}
@@ -134,7 +134,7 @@ func matchPattern(pattern, path []string) bool {
 	pathIdx := 0
 
 	for pIdx < len(pattern) {
-		if IsWildcard(pattern[pIdx]) {
+		if isWildcard(pattern[pIdx]) {
 			// Wildcard: try to match zero or more elements
 			// If this is the last element in pattern, it matches everything remaining
 			if pIdx == len(pattern)-1 {
@@ -166,7 +166,7 @@ func matchPattern(pattern, path []string) bool {
 			// Check if remaining pattern is all wildcards or empty
 			allWildcards := true
 			for j := pIdx + 1; j < len(pattern); j++ {
-				if !IsWildcard(pattern[j]) {
+				if !isWildcard(pattern[j]) {
 					allWildcards = false
 					break
 				}
@@ -212,9 +212,17 @@ func matchPattern(pattern, path []string) bool {
 // dependency graph, so a shorter pattern must not match as a mere suffix of
 // a longer, distinct path through a shared component - that per-path
 // distinction is exactly what CSAF's product tree encodes.
-func (p PathPattern) Matches(path []string, artifactIdentities []string) bool {
-	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
-		return matchPattern(p[1:], path)
+func (p PathPattern) Matches(path []string, artifactPurls []string) bool {
+	if len(p) > 0 {
+		// check if at least one artifact purl matches the first element of the pattern
+		// we are only checking for AT LEAST ONE artifact purl matches, because that is our semantic how artifacts
+		// should work: Compiled from the same source
+		for _, artifactPurl := range artifactPurls {
+			if elementMatches(p[0], artifactPurl) {
+				// strip the first element of the pattern and continue matching the rest
+				return matchPattern(p[1:], path)
+			}
+		}
 	}
 	return p.matchesSuffix(path)
 }
