@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -29,9 +30,11 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	required := []string{
 		"devguard",
 		"devguard-web",
+		"devguard-ci-components",
 		"devguard/docker-compose-try-it.yaml",
 		"devguard-helm-chart/Chart.yaml",
 		"devguard-helm-chart/values.yaml",
+		"devguard-helm-chart/schema/schema.ts",
 	}
 	for _, path := range required {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -43,7 +46,8 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Require at least one devguard and devguard-web release with the same minor.
+	// Require at least one devguard, devguard-web, and devguard-ci-components
+	// release with the same minor.
 	apiTag, err := i.GitLatestTagWithMinor("devguard", minor)
 	if err != nil {
 		return fmt.Errorf("could not detect latest devguard tag for minor %s: %w", minor, err)
@@ -60,8 +64,17 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("no devguard-web release found with minor version %s — run 'release web' first", minor)
 	}
 
+	ciComponentsTag, err := i.GitLatestTagWithMinor("devguard-ci-components", minor)
+	if err != nil {
+		return fmt.Errorf("could not detect latest devguard-ci-components tag for minor %s: %w", minor, err)
+	}
+	if ciComponentsTag == "" {
+		return fmt.Errorf("no devguard-ci-components release found with minor version %s — run 'release ci-components' first", minor)
+	}
+
 	fmt.Printf("✓ devguard latest tag for minor %s: %s\n", minor, apiTag)
 	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
+	fmt.Printf("✓ devguard-ci-components latest tag for minor %s: %s\n", minor, ciComponentsTag)
 
 	for _, d := range []string{"devguard", "devguard-helm-chart"} {
 		if err := i.GitCheckoutMain(d); err != nil {
@@ -81,7 +94,7 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	if err := updateDockerCompose(apiTag, webTag, cl); err != nil {
 		return err
 	}
-	if err := updateHelmChart(tag, semver, apiTag, webTag, cl); err != nil {
+	if err := updateHelmChart(semver, apiTag, webTag, ciComponentsTag, cl); err != nil {
 		return err
 	}
 
@@ -107,8 +120,8 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	cl.Change("Committed and pushed docker-compose-try-it.yaml")
 
 	helmMsg := fmt.Sprintf(
-		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- Helm chart version: %s, appVersion: %s",
-		tag, apiTag, webTag, semver, tag,
+		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- devguard-ci-components: %s\n- Helm chart version: %s, appVersion: %s",
+		tag, apiTag, webTag, ciComponentsTag, semver, apiTag,
 	)
 	if err := i.GitAdd("devguard-helm-chart", "."); err != nil {
 		return err
@@ -172,66 +185,29 @@ func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) error {
 	return nil
 }
 
-func updateHelmChart(tag, semver, apiTag, webTag string, cl *i.Changelog) error {
-	chartPath := "devguard-helm-chart/Chart.yaml"
-	valuesPath := "devguard-helm-chart/values.yaml"
-
-	_, err := i.ReplaceLineInFile(chartPath, func(line string) string {
-		if regexp.MustCompile(`^version:\s`).MatchString(line) {
-			return "version: " + semver
-		}
-		if regexp.MustCompile(`^appVersion:\s`).MatchString(line) {
-			return "appVersion: " + tag
-		}
-		return line
-	})
-	if err != nil {
-		return err
+// updateHelmChart regenerates values.yaml, Chart.yaml, and questions.yaml from
+// devguard-helm-chart/schema (see schema/schema.ts) by running `bun run
+// generate` with the four version knobs it requires — one per independently
+// released component, all confirmed present via CheckChangelogEntry /
+// GitLatestTagWithMinor before this runs.
+func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag string, cl *i.Changelog) error {
+	cmd := exec.Command("bun", "run", "generate")
+	cmd.Dir = "devguard-helm-chart/schema"
+	cmd.Env = append(os.Environ(),
+		"API_VERSION="+strings.TrimPrefix(apiTag, "v"),
+		"WEB_VERSION="+strings.TrimPrefix(webTag, "v"),
+		"CHART_VERSION="+chartSemver,
+		"CI_COMPONENTS_VERSION="+strings.TrimPrefix(ciComponentsTag, "v"),
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		cl.Fail("bun run generate failed: " + err.Error())
+		return fmt.Errorf("bun run generate failed: %w", err)
 	}
-	cl.Change(fmt.Sprintf("Updated Chart.yaml: version=%s appVersion=%s", semver, tag))
-
-	// Track the current repository so each image gets the right tag.
-	currentRepo := ""
-	_, err = i.ReplaceLineInFile(valuesPath, func(line string) string {
-		if strings.Contains(line, "repository:") {
-			if strings.Contains(line, "ghcr.io/l3montree-dev/") {
-				currentRepo = line
-			} else {
-				currentRepo = ""
-			}
-		}
-		if currentRepo != "" && regexp.MustCompile(`^\s+tag:\s`).MatchString(line) {
-			var t string
-			if strings.Contains(currentRepo, "devguard-web") {
-				t = webTag
-			} else {
-				t = apiTag
-			}
-			return regexp.MustCompile(`tag:.*`).ReplaceAllString(line, "tag: "+t)
-		}
-		return line
-	})
-	if err != nil {
-		return err
-	}
-	cl.Change(fmt.Sprintf("Updated values.yaml image tags (api=%s, web=%s)", apiTag, webTag))
-
-	rawURLRe := regexp.MustCompile(`gitlab\.com/l3montree/devguard/-/raw/[^"]+`)
-	data, err := os.ReadFile(valuesPath)
-	if err != nil {
-		return err
-	}
-	updated := rawURLRe.ReplaceAllStringFunc(string(data), func(m string) string {
-		return regexp.MustCompile(`/raw/[^/]+`).ReplaceAllString(m, "/raw/"+tag)
-	})
-	if updated != string(data) {
-		if err := os.WriteFile(valuesPath, []byte(updated), 0o644); err != nil {
-			return err
-		}
-		cl.Change("Updated values.yaml ciComponentBase to " + tag)
-	} else {
-		cl.Fail("No ciComponentBase URL changes in values.yaml")
-	}
-
+	cl.Change(fmt.Sprintf(
+		"Regenerated Helm chart from schema (chart=%s, api=%s, web=%s, ci-components=%s)",
+		chartSemver, apiTag, webTag, ciComponentsTag,
+	))
 	return nil
 }
