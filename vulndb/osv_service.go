@@ -987,6 +987,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
     CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
 
 	CREATE INDEX idx_cve_relationships_source_cve ON public.cve_relationships USING btree (source_cve);
+	CREATE INDEX IF NOT EXISTS idx_cve_relationships_target_cve ON public.cve_relationships USING hash (target_cve);
 	
 	CREATE INDEX idx_affected_component_purl_version
   		ON affected_components (purl, version);
