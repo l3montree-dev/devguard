@@ -103,7 +103,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		}
 
 		slog.Info("scanning oci image", "image", image)
-		args := []string{"image", image, "--format", "cyclonedx", "--output", sbomFile}
+		args := []string{"image", image, "--image-src", "docker,containerd,podman,remote", "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
 		args = append(args, config.RuntimeExtraArgs...)
 
