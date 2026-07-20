@@ -124,12 +124,12 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 		extras = append(extras, &bom)
 	}
 
-	if err := mergeSupplementarySBOMs(result, extras); err != nil {
+	if err := MergeSupplementarySBOMs(result, extras); err != nil {
 		return err
 	}
 
 	// validate against sbom_graph.go
-	if _, err := normalize.SBOMGraphFromCycloneDX(result, "", "", false); err != nil {
+	if _, err := normalize.SBOMGraphFromCycloneDX(result, "", ""); err != nil {
 		return err
 	}
 	// print the sbom to stdout

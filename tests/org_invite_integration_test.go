@@ -294,6 +294,33 @@ func TestOrgInviteWorkflow(t *testing.T) {
 	})
 }
 
+// TestChangeRoleRejectsNonMember verifies GHSA-m62h-gqp7-9jrw: an admin cannot use ChangeRole to
+// grant a role to an arbitrary user who was never invited to, or a member of, the organization.
+func TestChangeRoleRejectsNonMember(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		const (
+			userAID    = "user-a-id"
+			outsiderID = "outsider-id"
+		)
+
+		e := echo.New()
+		org := f.CreateOrgWithOwner(t, e, userAID, "test-changerole-non-member")
+
+		err := f.ChangeRole(t, e, org, userAID, outsiderID, "admin")
+		require.Error(t, err)
+		assert.Equal(t, 400, err.(*echo.HTTPError).Code)
+
+		roles := rolesFromMembers(f.GetOrgMembers(t, e, org, []client.Identity{
+			{Id: userAID, Traits: map[string]any{"email": "user-a@example.com"}},
+			{Id: outsiderID, Traits: map[string]any{"email": "outsider@example.com"}},
+		}))
+
+		_, isMember := roles[outsiderID]
+		assert.False(t, isMember, "outsider must not have been granted any role in the organization")
+	})
+}
+
 // TestAdminCannotChangeOwnerRole verifies that an admin cannot change the owner's role.
 func TestAdminCannotChangeOwnerRole(t *testing.T) {
 	t.Parallel()

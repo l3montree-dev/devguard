@@ -285,7 +285,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			}
 			assert.Nil(t, f.DB.Create(&depVuln).Error)
 
-			msg := controllers.DependencyVulnStatus{
+			msg := dtos.DependencyVulnStatus{
 				StatusType:    "reopened",
 				Justification: "Reopening the ticket for further investigation",
 			}

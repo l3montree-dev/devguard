@@ -99,7 +99,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 
 			result, err := fetchAllRepos(ctx, client)
 			if err != nil {
-				return nil, err
+				return nil, nil
 			}
 
 			// filter the result set based on the search query
@@ -138,6 +138,10 @@ func (client githubClient) EditIssue(ctx context.Context, owner string, repo str
 
 func (client githubClient) EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error) {
 	return client.Issues.EditLabel(ctx, owner, repo, name, label)
+}
+
+func (client githubClient) ListIssues(ctx context.Context, owner string, repo string, opt *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+	return client.Issues.ListByRepo(ctx, owner, repo, opt)
 }
 
 func NewGithubClient(installationID int) (githubClient, error) {

@@ -196,7 +196,7 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 	return doc
 }
 
-func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, frontendURL string, organizationName string, organizationSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
+func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	// get all vex rules for this asset version
 	// this way, we can again match them against the vulns and add more information about any false positive path
 	vexRules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
@@ -322,7 +322,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, fronten
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.SBOMGraphFromVulnerabilities(vulnerabilities)
+	return normalize.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

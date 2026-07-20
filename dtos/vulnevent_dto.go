@@ -11,9 +11,10 @@ type VulnEventType string
 type VulnType string
 
 const (
-	VulnTypeDependencyVuln VulnType = "dependencyVuln"
-	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
-	VulnTypeLicenseRisk    VulnType = "licenseRisk"
+	VulnTypeDependencyVuln    VulnType = "dependencyVuln"
+	VulnTypeFirstPartyVuln    VulnType = "firstPartyVuln"
+	VulnTypeLicenseRisk       VulnType = "licenseRisk"
+	VulnTypeCompliancePosture VulnType = "compliancePosture"
 )
 
 const (
@@ -27,6 +28,12 @@ const (
 	EventTypeFalsePositive     VulnEventType = "falsePositive"
 	EventTypeMarkedForTransfer VulnEventType = "markedForTransfer"
 	EventTypeComment           VulnEventType = "comment"
+
+	EventTypeImplemented   VulnEventType = "implemented"
+	EventTypeNotApplicable VulnEventType = "notApplicable"
+
+	EventTypeAttachedComplianceComponent VulnEventType = "attachedComplianceComponent"
+	EventTypeRemovedComplianceComponent  VulnEventType = "removedComplianceComponent"
 
 	// Automated Events (Events that are triggered by automation's on the server)
 	EventTypeDetected VulnEventType = "detected"

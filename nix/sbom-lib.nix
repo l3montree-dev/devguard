@@ -7,8 +7,16 @@
 # compiled into it (shown as a versionless "library"/gomod component) - see
 # gitleaks.nix for why. This produces one supplementary SBOM per binary that
 # fixes both: it runs trivy's own `fs` scanner against the tool's actual Go
-# source (its go.sum is enough - no network access needed or available in the
-# build sandbox) to get the real, complete transitive dependency tree.
+# source to get its dependency tree.
+#
+# go.sum only records the flat, resolved (module, version) set - not which
+# module requires which. To turn that into a real transitive tree, trivy
+# needs each dependency's own go.mod. Without them it has no edges to work
+# with and reports every resolved module as a direct dependency of the main
+# module (a flat tree). Passing `goModules` (a buildGoModule package's
+# `.goModules` passthru - the FOD containing its downloaded module cache)
+# provides them; the fs-scan step below rearranges it into the extracted
+# layout trivy actually reads (see there).
 #
 # `trivy fs` wraps the whole result under its own synthetic root (an
 # arbitrary UUID) plus an intermediate grouping node, both discarded here -
@@ -29,9 +37,10 @@
 
 { trivy }:
 
-{ toolName, src, version, modulePurl, binaries }:
+{ toolName, src, version, modulePurl, binaries, externalReferences ? [ ], goModules ? null }:
 let
   versionedModule = "${modulePurl}@${version}";
+  externalReferencesJson = builtins.toJSON externalReferences;
 in
 runCommand "${toolName}-sbom" {
   nativeBuildInputs = [ trivy jq ];
@@ -43,6 +52,32 @@ runCommand "${toolName}-sbom" {
 
   cp -r ${src} ./src
   chmod -R u+w ./src
+
+  ${lib.optionalString (goModules != null) ''
+    # For a real transitive tree, trivy reads each dependency's go.mod from the
+    # EXTRACTED module layout ($GOPATH/pkg/mod/<escaped-module>@<version>/go.mod;
+    # it reads GOPATH, never GOMODCACHE, and never runs `go`). goModules only
+    # ships the DOWNLOAD cache (.../cache/download/<module>/@v/<version>.mod),
+    # which trivy ignores - so without this, no dep go.mod is found, no edges
+    # are built, and every module is dumped flat under the main module.
+    # Both layouts share the same escaping, so materialize the extracted go.mod
+    # tree from the download cache with a plain copy - no `go`, no network.
+    export GOPATH="$TMPDIR/go"
+    modcache="$GOPATH/pkg/mod"
+    mkdir -p "$modcache/cache"
+    cp -r --no-preserve=mode,ownership ${goModules} "$modcache/cache/download"
+    chmod -R u+w "$modcache/cache/download"
+
+    prefix="$modcache/cache/download/"
+    find "$modcache/cache/download" -type f -name '*.mod' | while read -r modfile; do
+      rel="''${modfile#$prefix}"   # <escaped-module>/@v/<version>.mod
+      mod="''${rel%%/@v/*}"        # <escaped-module>
+      ver="$(basename "$modfile" .mod)"  # <version>
+      dest="$modcache/$mod@$ver"
+      mkdir -p "$dest"
+      cp "$modfile" "$dest/go.mod"
+    done
+  ''}
 
   trivy fs --offline-scan --format cyclonedx --output raw.json ./src
 
@@ -68,9 +103,10 @@ runCommand "${toolName}-sbom" {
 
   ${lib.concatMapStringsSep "\n" ({ name, binPath }:
     let binRef = lib.removePrefix "/" binPath; in ''
-    jq '
+    jq --argjson externalReferences '${externalReferencesJson}' '
       .metadata.component = {"type": "application", "bom-ref": "${binRef}", "name": "${binRef}"}
       | .dependencies += [{"ref": "${binRef}", "dependsOn": ["${versionedModule}"]}]
+      | if ($externalReferences | length) > 0 then .externalReferences = ((.externalReferences // []) + $externalReferences) else . end
     ' versioned.json > $out/sboms/${name}.json
   '') binaries}
 ''

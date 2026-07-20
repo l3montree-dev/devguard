@@ -78,6 +78,7 @@ type TestApp struct {
 	VEXRuleController           *controllers.VEXRuleController
 	ExternalReferenceController *controllers.ExternalReferenceController
 	StatisticsController        *controllers.StatisticsController
+	VulnDBController            *controllers.VulnDBController
 
 	// Repositories
 	AssetRepository             shared.AssetRepository
@@ -213,6 +214,10 @@ func NewTestAppWithT(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestA
 
 // noopBroker is a no-op implementation of the Broker interface for testing
 type noopBroker struct{}
+
+func (n *noopBroker) IsHealthy() bool {
+	return true
+}
 
 func (n *noopBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
 	return nil

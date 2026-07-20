@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -410,10 +411,14 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status DependencyVulnStatus
+	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	statusType := status.StatusType
@@ -464,10 +469,14 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status BatchDependencyVulnStatus
+	var status dtos.BatchDependencyVulnStatus
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	if len(status.VulnIDs) == 0 {

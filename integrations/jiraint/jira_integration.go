@@ -309,7 +309,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(ctx context.Context, asset model
 
 	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, integrationUUID)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get Jira client for integration %s: %w", integrationUUID, err)
+		return nil, 0, fmt.Errorf("%w: integration %s: %v", commonint.ErrNotConnected, integrationUUID, err)
 	}
 
 	projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)

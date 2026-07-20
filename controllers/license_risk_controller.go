@@ -27,7 +27,7 @@ type LicenseRiskController struct {
 
 type LicenseRiskStatus struct {
 	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
+	Justification           string                           `json:"justification" validate:"max=4000"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
@@ -47,7 +47,7 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(newLicenseRisk); err != nil {
+	if err := dtos.V.Struct(newLicenseRisk); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	if newLicenseRisk.FinalLicenseDecision == "" {
@@ -211,6 +211,10 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
 	statusType := status.StatusType
 	err = models.CheckStatusType(statusType)
 	if err != nil {
@@ -238,14 +242,15 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 }
 
 func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Context) error {
-	var licenseDecision struct {
-		License       string `json:"license"`
-		Justification string `json:"justification"`
-	}
+	var licenseDecision dtos.MakeFinalLicenseDecisionRequest
 
 	err := ctx.Bind(&licenseDecision)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not bind the request to a licenseDecision")
+	}
+
+	if err := dtos.V.Struct(licenseDecision); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	vulnID, vulnType, err := shared.GetVulnID(ctx)

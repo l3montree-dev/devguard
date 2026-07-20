@@ -141,7 +141,20 @@ func (r *releaseRepository) DeleteReleaseItem(ctx context.Context, tx *gorm.DB, 
 	if tx != nil {
 		db = tx
 	}
-	return db.Delete(&models.ReleaseItem{}, "id = ?", id).Error
+	db = db.Where("id = ?", id)
+	// ReleaseItem has no project_id/organization_id column of its own, so scope through
+	// the parent release's project instead - prevents deleting another tenant's item by UUID.
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Where("release_id IN (SELECT id FROM releases WHERE project_id = ?)", ids.ProjectID)
+	}
+	res := db.Delete(&models.ReleaseItem{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetByProjectIDPaged returns a paged list of releases for a project with optional search, filter and sort

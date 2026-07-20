@@ -3,9 +3,9 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -19,19 +19,6 @@ type FirstPartyVulnController struct {
 	firstPartyVulnRepository shared.FirstPartyVulnRepository
 	firstPartyVulnService    shared.FirstPartyVulnService
 	projectService           shared.ProjectService
-}
-
-type FirstPartyVulnStatus struct {
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-}
-
-type BatchFirstPartyVulnStatus struct {
-	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnRepository, firstPartyVulnService shared.FirstPartyVulnService, projectService shared.ProjectService) *FirstPartyVulnController {
@@ -188,10 +175,14 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	}
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status FirstPartyVulnStatus
+	var status dtos.FirstPartyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	statusType := status.StatusType
@@ -396,9 +387,12 @@ func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status BatchFirstPartyVulnStatus
+	var status dtos.BatchFirstPartyVulnStatus
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 	if len(status.VulnIDs) == 0 {
 		return echo.NewHTTPError(400, "vulnIds must not be empty")

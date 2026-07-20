@@ -42,6 +42,7 @@ type APIV1Router struct {
 func NewAPIV1Router(srv api.Server,
 	db shared.DB,
 	pool *pgxpool.Pool,
+	broker shared.PubSubBroker,
 	thirdPartyIntegration shared.IntegrationAggregate,
 	oryAdmin shared.AdminClient,
 	configService shared.ConfigService,
@@ -257,6 +258,14 @@ func NewAPIV1Router(srv api.Server,
 			return ctx.JSON(503, map[string]string{
 				"status": "unhealthy",
 				"error":  "database ping failed",
+			})
+		}
+
+		if !broker.IsHealthy() {
+			slog.Info("database pub/sub connection is unhealthy")
+			return ctx.JSON(503, map[string]string{
+				"status": "unhealthy",
+				"error":  "database pub/sub connection failed",
 			})
 		}
 

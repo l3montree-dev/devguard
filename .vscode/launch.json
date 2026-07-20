@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Launch Daemon Pipeline",
             "type": "go",
@@ -29,9 +28,10 @@
             "args": [
                 "daemon",
                 "runPipeline",
-                "4381b801-2b27-4569-bba6-5a14591e4eb5",
-                "--assetVersionSlug",
-                "develop"
+                "264d682d-a9ba-4680-a9bf-018f35e561f2",
+                "--stage",
+                "SyncTickets",
+                "--dryRun=false"
             ],
         },
         {
@@ -50,8 +50,7 @@
             "cwd": "${workspaceRoot}",
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-cli/test",
-            "args": [
-            ],
+            "args": [],
         },
         {
             "name": "Launch Policy eval",
@@ -142,7 +141,7 @@
                 "migrate"
             ]
         },
-         {
+        {
             "name": "VulnDB ExportRC",
             "type": "go",
             "request": "launch",

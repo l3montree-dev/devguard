@@ -76,7 +76,7 @@ func (projectController *ProjectController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -172,7 +172,7 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -255,7 +255,7 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -572,6 +572,12 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	configContent := string(body)
 
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
+	}
+
 	if project.ConfigFiles == nil {
 		project.ConfigFiles = make(map[string]any)
 	}
@@ -613,7 +619,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
 	}
 
-	if err := shared.V.Struct(probe); err != nil {
+	if err := dtos.V.Struct(probe); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -698,7 +704,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
 	}
 
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator", asset.KeepOriginalSbomRootComponent)
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator")
 	if err != nil {
 		slog.Error("trivy operator: failed to normalize BOM", "err", err)
 		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})

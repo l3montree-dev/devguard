@@ -57,7 +57,7 @@ func (p *PatController) Create(c shared.Context) error {
 	}
 
 	// validate the request
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -90,7 +90,7 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	}
 
 	// validate the request
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 

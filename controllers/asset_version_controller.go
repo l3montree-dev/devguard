@@ -169,14 +169,11 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
 
-func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
-	project := shared.GetProject(ctx)
+func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
-	org := shared.GetOrg(ctx)
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
+	if os.Getenv("FRONTEND_URL") == "" {
 		return echo.NewHTTPError(500, "FRONTEND_URL not set in environment variables")
 	}
 
@@ -186,12 +183,12 @@ func (a *AssetVersionController) VEXJSON(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
 	}
 
-	sbom := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, frontendURL, org.Name, org.Slug, project.Slug, asset, assetVersion, dependencyVulns)
+	vexBOM := a.assetVersionService.BuildVeX(ctx.Request().Context(), nil, ctxToBOMMetadata(ctx), asset, assetVersion, dependencyVulns)
 
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(vexBOM)
 
 }
 

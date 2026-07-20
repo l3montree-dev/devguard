@@ -41,7 +41,7 @@ func NewExternalReferenceRouter(
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
 	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))       // Create reference
 	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))    // Sync external sources
-	refWriteGroup.DELETE("/:id/", externalReferenceController.Delete, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate)) // Delete reference
+	refWriteGroup.DELETE("/:url/", externalReferenceController.Delete, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate)) // Delete reference by URL-encoded URL
 
 	return ExternalReferenceRouter{Group: refGroup}
 }

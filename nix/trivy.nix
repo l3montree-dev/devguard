@@ -62,6 +62,7 @@ in
   sbom = mkToolSBOM {
     toolName = "trivy";
     inherit src version modulePurl;
+    goModules = package.goModules;
     binaries = [{ name = "trivy"; binPath = "${package}/bin/trivy"; }];
   };
 }

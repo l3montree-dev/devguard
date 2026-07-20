@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/config"
@@ -19,6 +21,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +33,9 @@ type VulnDBController struct {
 	componentService            shared.ComponentService
 	fixedVersionResolver        shared.FixedVersionResolver
 	dependencyVulnRepository    shared.DependencyVulnRepository
+
+	// pointer, so the value-receiver methods share one cache instead of copying the lock
+	ecosystemDistributionCache *ecosystemDistributionCache
 }
 
 func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, fixedVersionResolver shared.FixedVersionResolver, dependencyVulnRepository shared.DependencyVulnRepository) *VulnDBController {
@@ -41,6 +47,7 @@ func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChe
 		componentService:            componentService,
 		fixedVersionResolver:        fixedVersionResolver,
 		dependencyVulnRepository:    dependencyVulnRepository,
+		ecosystemDistributionCache:  &ecosystemDistributionCache{},
 	}
 }
 
@@ -264,8 +271,62 @@ type ecosystemRow struct {
 	Count     int    `gorm:"count" json:"count"`
 }
 
+// the distribution aggregates the whole global vuln db (no org/user/request dimension),
+// only changes when the vulndb mirror runs (~hourly) and is expensive to compute (15-20s),
+// so a single cached value with a long TTL is safe
+const ecosystemDistributionExpiryTime = 1 * time.Hour
+
+type ecosystemDistributionCache struct {
+	mutex      sync.RWMutex
+	group      singleflight.Group
+	value      map[string]int
+	expiryTime time.Time
+}
+
+// nosemgrep: service-method-missing-ctx -- private in-memory cache helper; no I/O
+func (c *ecosystemDistributionCache) get() (map[string]int, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	if c.value == nil || c.expiryTime.Before(time.Now()) {
+		return nil, false
+	}
+	return c.value, true
+}
+
+// nosemgrep: service-method-missing-ctx -- private in-memory cache helper; no I/O
+func (c *ecosystemDistributionCache) set(value map[string]int) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.value = value
+	c.expiryTime = time.Now().Add(ecosystemDistributionExpiryTime)
+}
+
 // return the number of vulnerabilities in affected packages per ecosystem
 func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
+	if distribution, found := c.ecosystemDistributionCache.get(); found {
+		return ctx.JSONPretty(200, distribution, config.PrettyJSONIndent)
+	}
+
+	// use singleflight to avoid concurrent recomputations of the expensive aggregation
+	result, err, _ := c.ecosystemDistributionCache.group.Do("cve-ecosystem-distribution", func() (any, error) {
+		if distribution, found := c.ecosystemDistributionCache.get(); found {
+			return distribution, nil
+		}
+		distribution, err := c.computeCVEEcosystemDistribution(ctx.Request().Context())
+		if err != nil {
+			return nil, err
+		}
+		c.ecosystemDistributionCache.set(distribution)
+		return distribution, nil
+	})
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
+	}
+
+	return ctx.JSONPretty(200, result.(map[string]int), config.PrettyJSONIndent)
+}
+
+func (c VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) (map[string]int, error) {
 	cveResults := make([]ecosystemRow, 0, 1024)
 	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 
@@ -273,18 +334,18 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(DISTINCT a.cve_id) FROM cve_affected_component a
 	LEFT JOIN affected_components b ON b.id = a.affected_component_id
 	GROUP BY LOWER(b.ecosystem);`
-	err := c.affectedComponentRepository.GetDB(ctx.Request().Context(), nil).Raw(cveSQL).Find(&cveResults).Error
+	err := c.affectedComponentRepository.GetDB(ctx, nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
-		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
+		return nil, err
 	}
 
 	// do the same thing for malicious packages
-	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a 
-	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id 
+	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a
+	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id
 	GROUP BY LOWER(b.ecosystem);`
-	err = c.affectedComponentRepository.GetDB(ctx.Request().Context(), nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
+	err = c.affectedComponentRepository.GetDB(ctx, nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
 	if err != nil {
-		return echo.NewHTTPError(500, "could not fetch data from database").WithInternal(err)
+		return nil, err
 	}
 
 	// group the results in a map by cutting the ecosystem identifier before the ':'
@@ -294,6 +355,5 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 		ecosystemToAmount[key] += row.Count
 	}
 
-	// convert the result in a map and return it
-	return ctx.JSONPretty(200, ecosystemToAmount, config.PrettyJSONIndent)
+	return ecosystemToAmount, nil
 }

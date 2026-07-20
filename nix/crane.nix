@@ -17,8 +17,15 @@ let
   package = buildGoModule {
     inherit pname version src;
 
-    # Source tree includes a vendor/ directory.
-    vendorHash = null;
+    # Source tree includes a vendor/ directory, but that only records
+    # versions (vendor/modules.txt), not which module requires which - not
+    # enough for the supplementary SBOM below to build a real transitive
+    # tree. Fetch modules via the Go module proxy instead (like trivy.nix)
+    # so a `goModules` module-cache derivation is available to hand to
+    # mkToolSBOM - which requires deleting the committed vendor/ dir first.
+    deleteVendor = true;
+    proxyVendor = true;
+    vendorHash = "sha256-OWYMRoC+rgGykbSgseszgUfZbkbZeXRXfx+q5oKA5xA=";
 
     subPackages = [ "cmd/crane" ];
 
@@ -51,6 +58,7 @@ in
   sbom = mkToolSBOM {
     toolName = "crane";
     inherit src version modulePurl;
+    goModules = package.goModules;
     binaries = [{ name = "crane"; binPath = "${package}/bin/crane"; }];
   };
 }

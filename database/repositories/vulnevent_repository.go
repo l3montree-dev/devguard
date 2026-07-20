@@ -167,7 +167,25 @@ func (r *eventRepository) GetLastEventBeforeTimestamp(ctx context.Context, tx *g
 }
 
 func (r *eventRepository) DeleteEventByID(ctx context.Context, tx *gorm.DB, eventID string) error {
-	return r.Repository.GetDB(ctx, tx).Delete(&models.VulnEvent{}, "id = ?", eventID).Error
+	db := r.Repository.GetDB(ctx, tx).Where("id = ?", eventID)
+	// VulnEvent has no project_id/organization_id column of its own, so scope through the
+	// underlying vuln's asset's project instead - prevents deleting another tenant's event by ID,
+	// even if a future caller reuses this method without going through EventMiddleware first.
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Where(`
+			dependency_vuln_id IN (SELECT id FROM dependency_vulns WHERE asset_id IN (SELECT id FROM assets WHERE project_id = ?))
+			OR first_party_vuln_id IN (SELECT id FROM first_party_vulnerabilities WHERE asset_id IN (SELECT id FROM assets WHERE project_id = ?))
+			OR license_risk_id IN (SELECT id FROM license_risks WHERE asset_id IN (SELECT id FROM assets WHERE project_id = ?))
+		`, ids.ProjectID, ids.ProjectID, ids.ProjectID)
+	}
+	res := db.Delete(&models.VulnEvent{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *eventRepository) HasAccessToEvent(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, eventID string) (bool, error) {
@@ -176,7 +194,8 @@ func (r *eventRepository) HasAccessToEvent(ctx context.Context, tx *gorm.DB, ass
 		Joins("LEFT JOIN dependency_vulns dv ON ve.dependency_vuln_id = dv.id").
 		Joins("LEFT JOIN first_party_vulnerabilities fv ON ve.first_party_vuln_id = fv.id").
 		Joins("LEFT JOIN license_risks lv ON ve.license_risk_id = lv.id").
-		Where("ve.id = ? AND (dv.asset_id = ? OR fv.asset_id = ? OR lv.asset_id = ?)", eventID, assetID, assetID, assetID).
+		Joins("LEFT JOIN compliance_postures cp ON ve.compliance_posture_id = cp.id").
+		Where("ve.id = ? AND (dv.asset_id = ? OR fv.asset_id = ? OR lv.asset_id = ? OR cp.asset_id = ?)", eventID, assetID, assetID, assetID, assetID).
 		Count(&count).Error
 	if err != nil {
 		return false, err

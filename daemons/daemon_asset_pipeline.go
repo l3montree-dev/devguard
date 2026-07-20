@@ -412,6 +412,11 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 				// No transaction needed: SyncAllIssues delegates to thirdPartyIntegration.CreateIssue/UpdateIssue,
 				// which in dry-run mode are intercepted by dryRunIntegration and never reach the DB write inside the real integration.
 				err := runner.dependencyVulnService.SyncAllIssues(stageCtx, assetWithDetails.org, assetWithDetails.project, asset, assetVersion, nil)
+				if errors.Is(err, commonint.ErrNotConnected) {
+					// swallow if error
+					continue
+				}
+
 				if err != nil {
 					slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", asset.ID, "error", err)
 					errs = append(errs, err)

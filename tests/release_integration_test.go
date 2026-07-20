@@ -113,7 +113,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 		t.Run("sbom returns merged components", func(t *testing.T) {
 			// build controller using repo/service patterns
-			releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository)
+			releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.CSAFService)
 
 			// prepare context with echo request/recorder
 			req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)

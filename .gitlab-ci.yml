@@ -14,7 +14,9 @@ stages:
   - attestation
   - release
 
-
+default:
+  retry: 2
+  
 .common: &common
   devguard_asset_name: "$DEVGUARD_ASSET_NAME"
   devguard_api_url: "$DEVGUARD_API_URL"
@@ -33,6 +35,7 @@ include:
       <<: *common
       nix_target_amd64: "devguard-amd64"
       nix_target_arm64: "devguard-arm64"
+      nix_impure: "true"
       arm64_runner_tag: "arm"
     rules:
       - if: $CI_COMMIT_BRANCH == "main"
@@ -45,6 +48,7 @@ include:
       image_suffix: "scanner"
       nix_target_amd64: "devguard-scanner-amd64"
       nix_target_arm64: "devguard-scanner-arm64"
+      nix_impure: "true"
       arm64_runner_tag: "arm"
       job_suffix: ":scanner"
     rules:

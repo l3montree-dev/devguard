@@ -201,7 +201,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -262,6 +262,10 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("error decoding request: %v", err)
+	}
+
+	if err := dtos.V.Struct(patchRequest); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	var justification = ""
@@ -452,6 +456,12 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	}
 	configContent := string(body)
 
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
+	}
+
 	if asset.ConfigFiles == nil {
 		asset.ConfigFiles = make(map[string]any)
 	}
@@ -537,7 +547,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -610,7 +620,7 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 

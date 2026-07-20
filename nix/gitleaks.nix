@@ -17,12 +17,8 @@ let
   package = buildGoModule {
     inherit pname version src;
 
-    vendorHash = "sha256-whJtl34dNltH/dk9qWSThcCYXC0x9PzbAUOO97Int+k=";
-
-    # Without this, buildGoModule installs every cmd/main package it finds,
-    # which includes cmd/generate/config (an internal dev tool gitleaks uses
-    # to regenerate its own default ruleset) as a second binary confusingly
-    # named "config" - not something devguard-scanner needs shipped at all.
+    proxyVendor = true;
+    vendorHash = "sha256-FlXL2gyYdAe+n2fxePJu2zogIULIpmsdbikew0Lqx0U=";
     subPackages = [ "." ];
 
     ldflags = [
@@ -56,6 +52,7 @@ in
   sbom = mkToolSBOM {
     toolName = "gitleaks";
     inherit src version modulePurl;
+    goModules = package.goModules;
     binaries = [{ name = "gitleaks"; binPath = "${package}/bin/gitleaks"; }];
   };
 }
