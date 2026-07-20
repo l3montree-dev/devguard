@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
 
+## [v1.10.1] - 2026-07-20
+
+### Changed
+
+- **Compliance posture permissions** — changing an organization's compliance posture is now restricted to org admins, instead of any org member
+
+### Fixed
+
+- **`devguard-maint release helm-chart`** — no longer fails when `docker-compose-try-it.yaml` is already up to date (previously tried to commit an empty diff and aborted); the command now regenerates the Helm chart's `values.yaml`/`Chart.yaml`/`questions.yaml` via `devguard-helm-chart/schema`'s `bun run generate` instead of hand-rolled regex edits, and also verifies a matching `devguard-ci-components` release exists before proceeding
+
 ## [v1.10.0] - 2026-07-20
 
 Thanks to @nicksan222 for their first contribution to DevGuard! 🎉
