@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.10.2] - 2026-07-20
+
+- Just linter fixes
 
 ## [v1.10.1] - 2026-07-20
 
