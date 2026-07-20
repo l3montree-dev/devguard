@@ -42,7 +42,7 @@ func TestUpdateDockerCompose(t *testing.T) {
 	defer func() { _ = os.Chdir(orig) }()
 
 	cl := &i.Changelog{}
-	if err := updateDockerCompose("v2.0.1", "v2.0.3", cl); err != nil {
+	if _, err := updateDockerCompose("v2.0.1", "v2.0.3", cl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,4 +66,3 @@ func TestUpdateDockerCompose(t *testing.T) {
 		t.Error("unexpected errors in changelog")
 	}
 }
-
