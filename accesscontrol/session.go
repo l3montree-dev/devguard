@@ -40,9 +40,10 @@ func (a session) GetScopes() []string {
 	return a.scopes
 }
 
-func NewSession(userID string, scopes []string, isInstanceAdmin bool) session {
+func NewSession(ownerID string, ownerType dtos.OwnerType, scopes []string, isInstanceAdmin bool) session {
 	return session{
-		ownerID:         userID,
+		ownerID:         ownerID,
+		ownerType:       ownerType,
 		scopes:          scopes,
 		isInstanceAdmin: isInstanceAdmin,
 	}

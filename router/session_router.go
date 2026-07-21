@@ -72,8 +72,8 @@ func NewSessionRouter(
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository, patVerifier)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patVerifier)
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	fastAccessRoutes := sessionRouter.Group("",
 		middlewares.NeededScope([]string{"scan"}),

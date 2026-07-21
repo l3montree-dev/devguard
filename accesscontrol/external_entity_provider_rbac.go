@@ -30,8 +30,8 @@ func (e *externalEntityProviderRBAC) GetExternalEntityProviderID() *string {
 	return &e.externalEntityProviderID
 }
 
-func (e *externalEntityProviderRBAC) GetAllAssetsForUser(user string) ([]string, error) {
-	return e.rootAccessControl.GetAllAssetsForUser(user)
+func (e *externalEntityProviderRBAC) GetAllAssetsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	return e.rootAccessControl.GetAllAssetsForSession(ctx, session)
 }
 
 func (e *externalEntityProviderRBAC) RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error {
@@ -128,8 +128,8 @@ func (e *externalEntityProviderRBAC) AllowRoleInProject(ctx context.Context, pro
 	return e.rootAccessControl.AllowRoleInProject(ctx, project, role, object, action)
 }
 
-func (e *externalEntityProviderRBAC) GetAllProjectsForUser(user string) ([]string, error) {
-	return e.rootAccessControl.GetAllProjectsForUser(user)
+func (e *externalEntityProviderRBAC) GetAllProjectsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	return e.rootAccessControl.GetAllProjectsForSession(ctx, session)
 }
 
 func (e *externalEntityProviderRBAC) GetOwnerOfOrganization() (string, error) {

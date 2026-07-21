@@ -313,64 +313,70 @@ func (_c *AccessControl_GetAdminsOfOrganization_Call) RunAndReturn(run func() ([
 	return _c
 }
 
-// GetAllAssetsForUser provides a mock function for the type AccessControl
-func (_mock *AccessControl) GetAllAssetsForUser(user string) ([]string, error) {
-	ret := _mock.Called(user)
+// GetAllAssetsForSession provides a mock function for the type AccessControl
+func (_mock *AccessControl) GetAllAssetsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	ret := _mock.Called(ctx, session)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllAssetsForUser")
+		panic("no return value specified for GetAllAssetsForSession")
 	}
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession) ([]string, error)); ok {
+		return returnFunc(ctx, session)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession) []string); ok {
+		r0 = returnFunc(ctx, session)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(user)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession) error); ok {
+		r1 = returnFunc(ctx, session)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// AccessControl_GetAllAssetsForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAssetsForUser'
-type AccessControl_GetAllAssetsForUser_Call struct {
+// AccessControl_GetAllAssetsForSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAssetsForSession'
+type AccessControl_GetAllAssetsForSession_Call struct {
 	*mock.Call
 }
 
-// GetAllAssetsForUser is a helper method to define mock.On call
-//   - user string
-func (_e *AccessControl_Expecter) GetAllAssetsForUser(user interface{}) *AccessControl_GetAllAssetsForUser_Call {
-	return &AccessControl_GetAllAssetsForUser_Call{Call: _e.mock.On("GetAllAssetsForUser", user)}
+// GetAllAssetsForSession is a helper method to define mock.On call
+//   - ctx context.Context
+//   - session shared.AuthSession
+func (_e *AccessControl_Expecter) GetAllAssetsForSession(ctx interface{}, session interface{}) *AccessControl_GetAllAssetsForSession_Call {
+	return &AccessControl_GetAllAssetsForSession_Call{Call: _e.mock.On("GetAllAssetsForSession", ctx, session)}
 }
 
-func (_c *AccessControl_GetAllAssetsForUser_Call) Run(run func(user string)) *AccessControl_GetAllAssetsForUser_Call {
+func (_c *AccessControl_GetAllAssetsForSession_Call) Run(run func(ctx context.Context, session shared.AuthSession)) *AccessControl_GetAllAssetsForSession_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
 }
 
-func (_c *AccessControl_GetAllAssetsForUser_Call) Return(strings []string, err error) *AccessControl_GetAllAssetsForUser_Call {
+func (_c *AccessControl_GetAllAssetsForSession_Call) Return(strings []string, err error) *AccessControl_GetAllAssetsForSession_Call {
 	_c.Call.Return(strings, err)
 	return _c
 }
 
-func (_c *AccessControl_GetAllAssetsForUser_Call) RunAndReturn(run func(user string) ([]string, error)) *AccessControl_GetAllAssetsForUser_Call {
+func (_c *AccessControl_GetAllAssetsForSession_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession) ([]string, error)) *AccessControl_GetAllAssetsForSession_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -554,64 +560,70 @@ func (_c *AccessControl_GetAllMembersOfProject_Call) RunAndReturn(run func(proje
 	return _c
 }
 
-// GetAllProjectsForUser provides a mock function for the type AccessControl
-func (_mock *AccessControl) GetAllProjectsForUser(user string) ([]string, error) {
-	ret := _mock.Called(user)
+// GetAllProjectsForSession provides a mock function for the type AccessControl
+func (_mock *AccessControl) GetAllProjectsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	ret := _mock.Called(ctx, session)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllProjectsForUser")
+		panic("no return value specified for GetAllProjectsForSession")
 	}
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession) ([]string, error)); ok {
+		return returnFunc(ctx, session)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession) []string); ok {
+		r0 = returnFunc(ctx, session)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(user)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession) error); ok {
+		r1 = returnFunc(ctx, session)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// AccessControl_GetAllProjectsForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllProjectsForUser'
-type AccessControl_GetAllProjectsForUser_Call struct {
+// AccessControl_GetAllProjectsForSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllProjectsForSession'
+type AccessControl_GetAllProjectsForSession_Call struct {
 	*mock.Call
 }
 
-// GetAllProjectsForUser is a helper method to define mock.On call
-//   - user string
-func (_e *AccessControl_Expecter) GetAllProjectsForUser(user interface{}) *AccessControl_GetAllProjectsForUser_Call {
-	return &AccessControl_GetAllProjectsForUser_Call{Call: _e.mock.On("GetAllProjectsForUser", user)}
+// GetAllProjectsForSession is a helper method to define mock.On call
+//   - ctx context.Context
+//   - session shared.AuthSession
+func (_e *AccessControl_Expecter) GetAllProjectsForSession(ctx interface{}, session interface{}) *AccessControl_GetAllProjectsForSession_Call {
+	return &AccessControl_GetAllProjectsForSession_Call{Call: _e.mock.On("GetAllProjectsForSession", ctx, session)}
 }
 
-func (_c *AccessControl_GetAllProjectsForUser_Call) Run(run func(user string)) *AccessControl_GetAllProjectsForUser_Call {
+func (_c *AccessControl_GetAllProjectsForSession_Call) Run(run func(ctx context.Context, session shared.AuthSession)) *AccessControl_GetAllProjectsForSession_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
 		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
 }
 
-func (_c *AccessControl_GetAllProjectsForUser_Call) Return(strings []string, err error) *AccessControl_GetAllProjectsForUser_Call {
+func (_c *AccessControl_GetAllProjectsForSession_Call) Return(strings []string, err error) *AccessControl_GetAllProjectsForSession_Call {
 	_c.Call.Return(strings, err)
 	return _c
 }
 
-func (_c *AccessControl_GetAllProjectsForUser_Call) RunAndReturn(run func(user string) ([]string, error)) *AccessControl_GetAllProjectsForUser_Call {
+func (_c *AccessControl_GetAllProjectsForSession_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession) ([]string, error)) *AccessControl_GetAllProjectsForSession_Call {
 	_c.Call.Return(run)
 	return _c
 }

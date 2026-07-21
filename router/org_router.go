@@ -46,7 +46,6 @@ func NewOrgRouter(
 	casbinRBACProvider shared.RBACProvider,
 	statisticsController *controllers.StatisticsController,
 	patController *controllers.PatController,
-	patVerifier shared.PersonalAccessTokenService,
 ) OrgRouter {
 	/**
 	Organization router
@@ -61,18 +60,18 @@ func NewOrgRouter(
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
 		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
-		middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionRead),
+		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
-	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionDelete))
+	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
-	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
+	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetDependencyProxyURLs)
-	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionUpdate))
+	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync)
-	organizationRouter.GET("/settings/", orgController.AdminSettings, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionUpdate))
+	organizationRouter.GET("/settings/", orgController.AdminSettings, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/", orgController.Read)
 	organizationRouter.GET("/metrics/", orgController.Metrics)
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
@@ -92,7 +91,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 	organizationRouter.GET("/pats/", patController.ListByOrg)
 
-	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(patVerifier, shared.ObjectOrganization, shared.ActionUpdate))
+	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)

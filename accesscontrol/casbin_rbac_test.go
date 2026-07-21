@@ -113,7 +113,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 			defer wg.Done()
 			user := fmt.Sprintf("user-%d", i%5)
 			_ = rbac.GetAllRoles(user)
-			_, _ = rbac.GetAllProjectsForUser(user)
+			_, _ = rbac.GetAllProjectsForSession(user)
 		}()
 	}
 	wg.Wait()
@@ -136,7 +136,7 @@ func TestCasbinRBAC_ConcurrentReadsAndWrites(t *testing.T) {
 				_ = rbac.GrantRoleInProject(context.Background(), user, shared.RoleMember, project)
 			} else {
 				_ = rbac.GetAllRoles(user)
-				_, _ = rbac.GetAllProjectsForUser(user)
+				_, _ = rbac.GetAllProjectsForSession(user)
 			}
 		}()
 	}
@@ -177,7 +177,7 @@ func TestRevokeAllRolesInProjectRemovesRolesButKeepsSiblings(t *testing.T) {
 	if _, err := rbac.GetProjectRole("bob", "proj"); err == nil {
 		t.Error("bob still has a role in proj")
 	}
-	if projects, _ := rbac.GetAllProjectsForUser("alice"); len(projects) != 0 {
+	if projects, _ := rbac.GetAllProjectsForSession("alice"); len(projects) != 0 {
 		t.Errorf("alice still mapped to projects: %v", projects)
 	}
 

@@ -274,35 +274,31 @@ func (_c *Authorizer_IsAllowedInProject_Call) RunAndReturn(run func(ctx shared.C
 }
 
 // VerifyAPIToken provides a mock function for the type Authorizer
-func (_mock *Authorizer) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+func (_mock *Authorizer) VerifyAPIToken(ctx context.Context, token string) (shared.AuthSession, error) {
 	ret := _mock.Called(ctx, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyAPIToken")
 	}
 
-	var r0 string
-	var r1 string
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, string, error)); ok {
+	var r0 shared.AuthSession
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (shared.AuthSession, error)); ok {
 		return returnFunc(ctx, token)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) shared.AuthSession); ok {
 		r0 = returnFunc(ctx, token)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.AuthSession)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) string); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, token)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
-		r2 = returnFunc(ctx, token)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // Authorizer_VerifyAPIToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAPIToken'
@@ -335,12 +331,12 @@ func (_c *Authorizer_VerifyAPIToken_Call) Run(run func(ctx context.Context, toke
 	return _c
 }
 
-func (_c *Authorizer_VerifyAPIToken_Call) Return(s string, s1 string, err error) *Authorizer_VerifyAPIToken_Call {
-	_c.Call.Return(s, s1, err)
+func (_c *Authorizer_VerifyAPIToken_Call) Return(authSession shared.AuthSession, err error) *Authorizer_VerifyAPIToken_Call {
+	_c.Call.Return(authSession, err)
 	return _c
 }
 
-func (_c *Authorizer_VerifyAPIToken_Call) RunAndReturn(run func(ctx context.Context, token string) (string, string, error)) *Authorizer_VerifyAPIToken_Call {
+func (_c *Authorizer_VerifyAPIToken_Call) RunAndReturn(run func(ctx context.Context, token string) (shared.AuthSession, error)) *Authorizer_VerifyAPIToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

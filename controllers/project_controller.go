@@ -342,7 +342,7 @@ func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetOwnerID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}
@@ -492,7 +492,7 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 	}
 	// get rbac
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetOwnerID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}

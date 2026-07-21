@@ -73,7 +73,7 @@ type ReleaseService interface {
 type Authorizer interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
 	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 	IsAllowedInOrg(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
@@ -391,7 +391,7 @@ type ExternalReferenceRepository interface {
 }
 
 type ExternalEntityProviderService interface {
-	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, session AuthSession) error
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
 	TriggerSync(c Context) error
@@ -409,6 +409,11 @@ type ProjectService interface {
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
 	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
 	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)
+}
+
+type Verifier interface {
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
 }
 
 type InTotoVerifierService interface {
@@ -763,8 +768,8 @@ type AccessControl interface {
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) ([]string, error)
-	GetAllAssetsForUser(user string) ([]string, error)
+	GetAllProjectsForSession(ctx context.Context, session AuthSession) ([]string, error)
+	GetAllAssetsForSession(ctx context.Context, session AuthSession) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
 	GetAdminsOfOrganization() ([]string, error)

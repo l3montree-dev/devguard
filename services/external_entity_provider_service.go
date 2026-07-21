@@ -52,7 +52,7 @@ func (s externalEntityProviderService) TriggerSync(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	if org.IsExternalEntity() {
 		// Trigger the sync for the external entity provider projects
-		err := s.RefreshExternalEntityProviderProjects(ctx, org, shared.GetSession(ctx).GetOwnerID())
+		err := s.RefreshExternalEntityProviderProjects(ctx, org, shared.GetSession(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not trigger sync").WithInternal(err)
 		}
@@ -108,25 +108,28 @@ func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.O
 	return orgs.([]*models.Org), nil
 }
 
-func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, user string) error {
-
-	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
+func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, session shared.AuthSession) error {
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
+	if ownerType != dtos.OwnerUser {
+		return fmt.Errorf("only users can trigger a sync for external entity provider projects")
+	}
+	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+ownerID, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
 			return nil, fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())
 		}
 
 		domainRBAC := s.rbacProvider.GetDomainRBAC(org.GetID().String())
-		allowedProjects, err := domainRBAC.GetAllProjectsForUser(user)
+		allowedProjects, err := domainRBAC.GetAllProjectsForSession(ctx.Request().Context(), session)
 		if err != nil {
-			return nil, fmt.Errorf("could not get allowed projects for user %s: %w", user, err)
+			return nil, fmt.Errorf("could not get allowed projects for user %s: %w", ownerID, err)
 		}
 
-		allowedAssets, err := domainRBAC.GetAllAssetsForUser(user)
+		allowedAssets, err := domainRBAC.GetAllAssetsForSession(ctx.Request().Context(), session)
 		if err != nil {
-			return nil, fmt.Errorf("could not get allowed assets for user %s: %w", user, err)
+			return nil, fmt.Errorf("could not get allowed assets for user %s: %w", ownerID, err)
 		}
 
-		projects, roles, err := s.fetchExternalProjects(ctx, user, *org.ExternalEntityProviderID)
+		projects, roles, err := s.fetchExternalProjects(ctx, ownerID, *org.ExternalEntityProviderID)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +145,7 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 
 		projectsMap := s.createProjectsMap(ctx.Request().Context(), created, updated)
 
-		assets, err := s.syncProjectsAndAssets(ctx, domainRBAC, user, projects, roles, append(created, updated...))
+		assets, err := s.syncProjectsAndAssets(ctx, domainRBAC, ownerID, projects, roles, append(created, updated...))
 		if err != nil {
 			return nil, err
 		}
@@ -152,13 +155,13 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 			assetsMap[asset.ID.String()] = struct{}{}
 		}
 
-		s.revokeAccessForRemovedProjects(ctx.Request().Context(), domainRBAC, user, allowedProjects, projectsMap)
-		s.revokeAccessForRemovedAssets(ctx.Request().Context(), domainRBAC, user, allowedAssets, assetsMap)
+		s.revokeAccessForRemovedProjects(ctx.Request().Context(), domainRBAC, ownerID, allowedProjects, projectsMap)
+		s.revokeAccessForRemovedAssets(ctx.Request().Context(), domainRBAC, ownerID, allowedAssets, assetsMap)
 
 		return nil, nil
 	})
 
-	slog.Info("external entity provider projects sync completed", "orgID", org.GetID(), "user", user, "shared", shared)
+	slog.Info("external entity provider projects sync completed", "orgID", org.GetID(), "user", ownerID, "shared", shared)
 	return err
 }
 

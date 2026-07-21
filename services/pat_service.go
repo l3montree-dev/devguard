@@ -435,23 +435,39 @@ func signRequest(hexPrivKey string, req *http.Request) error {
 	return nil
 }
 
-func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (shared.AuthSession, error) {
 	if token == "" {
-		return "", "", fmt.Errorf("invalid token format")
+		return nil, fmt.Errorf("invalid token format")
 	}
 
 	pat, err := p.patRepository.GetByBearerTokenHash(ctx, nil, utils.HashString(token))
 	if err != nil {
-		return "", "", fmt.Errorf("could not verify bearer token: %w", err)
+		return nil, fmt.Errorf("could not verify bearer token: %w", err)
 	}
 	if pat.IsExpired() {
-		return "", "", fmt.Errorf("bearer token has expired")
+		return nil, fmt.Errorf("bearer token has expired")
 	}
 
 	if err := p.patRepository.MarkAsLastUsedNowByID(ctx, nil, pat.ID); err != nil {
 		slog.Warn("could not mark pat as last used", "err", err)
 	}
-	return pat.UserID.String(), pat.Scopes, nil
+
+	return patToSession(pat)
+}
+
+func patToSession(pat models.PAT) (shared.AuthSession, error) {
+	switch true {
+	case pat.UserID != nil:
+		return accesscontrol.NewSession(pat.UserID.String(), dtos.OwnerUser, strings.Fields(pat.Scopes), false), nil
+	case pat.OrgID != nil:
+		return accesscontrol.NewSession(pat.OrgID.String(), dtos.OwnerOrg, strings.Fields(pat.Scopes), false), nil
+	case pat.ProjectID != nil:
+		return accesscontrol.NewSession(pat.ProjectID.String(), dtos.OwnerProject, strings.Fields(pat.Scopes), false), nil
+	case pat.AssetID != nil:
+		return accesscontrol.NewSession(pat.AssetID.String(), dtos.OwnerAsset, strings.Fields(pat.Scopes), false), nil
+	default:
+		return nil, fmt.Errorf("invalid token owner type")
+	}
 }
 
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, models.PAT, error) {
@@ -537,7 +553,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		}
 		if isAdmin {
 			// add all scopes
-			return accesscontrol.NewSession("admin", dtos.AllowedScopes, true), nil
+			return accesscontrol.NewSession("admin", dtos.OwnerUser, dtos.AllowedScopes, true), nil
 		}
 		return nil, fmt.Errorf("no fingerprint provided")
 	}
@@ -554,8 +570,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		slog.Warn("could not mark pat as last used", "err", err)
 	}
 
-	scopesArray := strings.Fields(pat.Scopes)
-	return accesscontrol.NewSession(pat.UserID.String(), scopesArray, false), nil
+	return patToSession(pat)
 }
 
 func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) error {

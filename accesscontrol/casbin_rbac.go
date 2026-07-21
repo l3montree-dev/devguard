@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -55,18 +56,24 @@ func withRLock[T any](fn func() (T, error)) (T, error) {
 }
 
 type casbinRBAC struct {
-	domain   string // scopes this to a specific domain - or organization
-	enforcer *casbin.ContextEnforcer
+	domain            string // scopes this to a specific domain - or organization
+	enforcer          *casbin.ContextEnforcer
+	projectRepository shared.ProjectRepository
+	assetRepository   shared.AssetRepository
 }
 
 type casbinRBACProvider struct {
-	enforcer *casbin.ContextEnforcer
+	enforcer          *casbin.ContextEnforcer
+	projectRepository shared.ProjectRepository
+	assetRepository   shared.AssetRepository
 }
 
 func (c casbinRBACProvider) GetDomainRBAC(domain string) shared.AccessControl {
 	return &casbinRBAC{
-		domain:   domain,
-		enforcer: c.enforcer,
+		domain:            domain,
+		enforcer:          c.enforcer,
+		projectRepository: c.projectRepository,
+		assetRepository:   c.assetRepository,
 	}
 }
 
@@ -152,32 +159,88 @@ func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) 
 	})
 }
 
-func (c *casbinRBAC) GetAllProjectsForUser(user string) ([]string, error) {
-	projectIDs := []string{}
-	roles, _ := withRLock(func() ([]string, error) {
-		return c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
-	})
-	for _, role := range roles {
-		if !strings.HasPrefix(role, "project::") || !strings.Contains(role, "role::") {
-			continue
+func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	ownerID := session.GetOwnerID()
+	ownerType := session.GetOwnerType()
+	switch ownerType {
+	case dtos.OwnerUser:
+		projectIDs := []string{}
+		roles, _ := withRLock(func() ([]string, error) {
+			return c.enforcer.GetImplicitRolesForUser("user::"+ownerID, "domain::"+c.domain)
+		})
+		for _, role := range roles {
+			if !strings.HasPrefix(role, "project::") || !strings.Contains(role, "role::") {
+				continue
+			}
+			projectIDs = append(projectIDs, strings.Split(strings.TrimPrefix(role, "project::"), "|")[0])
 		}
-		projectIDs = append(projectIDs, strings.Split(strings.TrimPrefix(role, "project::"), "|")[0])
+		return projectIDs, nil
+	case dtos.OwnerOrg:
+		// retrieve ALL projects for the organization, since the session is an org session
+		ownerUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		projects, err := c.projectRepository.GetByOrgID(ctx, nil, ownerUUID)
+		if err != nil {
+			return nil, err
+		}
+		return utils.Map(projects, func(p models.Project) string {
+			return p.ID.String()
+		}), nil
+	case dtos.OwnerProject:
+		return []string{ownerID}, nil
+	case dtos.OwnerAsset:
+		return []string{}, nil
 	}
-	return projectIDs, nil
+	return []string{}, fmt.Errorf("unknown owner type: %s", ownerType)
 }
 
-func (c *casbinRBAC) GetAllAssetsForUser(user string) ([]string, error) {
-	assetIDs := []string{}
-	roles, _ := withRLock(func() ([]string, error) {
-		return c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
-	})
-	for _, role := range roles {
-		if !strings.HasPrefix(role, "asset::") || !strings.Contains(role, "role::") {
-			continue
+func (c *casbinRBAC) GetAllAssetsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
+	switch ownerType {
+	case dtos.OwnerUser:
+		assetIDs := []string{}
+		roles, _ := withRLock(func() ([]string, error) {
+			return c.enforcer.GetImplicitRolesForUser("user::"+ownerID, "domain::"+c.domain)
+		})
+		for _, role := range roles {
+			if !strings.HasPrefix(role, "asset::") || !strings.Contains(role, "role::") {
+				continue
+			}
+			assetIDs = append(assetIDs, strings.Split(strings.TrimPrefix(role, "asset::"), "|")[0])
 		}
-		assetIDs = append(assetIDs, strings.Split(strings.TrimPrefix(role, "asset::"), "|")[0])
+		return assetIDs, nil
+	case dtos.OwnerOrg:
+		// retrieve ALL assets for the organization, since the session is an org session
+		ownerUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		assets, err := c.assetRepository.GetByOrgID(ctx, nil, ownerUUID)
+		if err != nil {
+			return nil, err
+		}
+		return utils.Map(assets, func(a models.Asset) string {
+			return a.ID.String()
+		}), nil
+	case dtos.OwnerProject:
+		// retrieve ALL assets for the project, since the session is a project session
+		projectUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		assets, err := c.assetRepository.GetByProjectID(ctx, nil, projectUUID)
+		if err != nil {
+			return nil, err
+		}
+		return utils.Map(assets, func(a models.Asset) string {
+			return a.ID.String()
+		}), nil
+	case dtos.OwnerAsset:
+		return []string{ownerID}, nil
 	}
-	return assetIDs, nil
+	return []string{}, fmt.Errorf("unknown owner type: %s", ownerType)
 }
 
 func (c *casbinRBAC) GetAllRoles(user string) []string {
@@ -552,13 +615,18 @@ func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error)
 }
 
 // the provider can be used to create domain specific RBAC instances
-func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker) (casbinRBACProvider, error) {
+func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) (casbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db, broker)
 	if err != nil {
-		return casbinRBACProvider{}, err
+		return casbinRBACProvider{
+			projectRepository: projectRepository,
+			assetRepository:   assetRepository,
+		}, err
 	}
 	return casbinRBACProvider{
-		enforcer: enforcer,
+		enforcer:          enforcer,
+		projectRepository: projectRepository,
+		assetRepository:   assetRepository,
 	}, nil
 }
 

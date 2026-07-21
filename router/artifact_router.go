@@ -33,10 +33,9 @@ func NewArtifactRouter(
 	externalReferenceController *controllers.ExternalReferenceController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
-	patService shared.PersonalAccessTokenService,
 ) ArtifactRouter {
 	artifactRouter := assetVersionGroup.Group.Group("/artifacts/:artifactName", middlewares.ArtifactMiddleware(artifactRepository))
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patService)
+	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	artifactRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	artifactRouter.GET("/sbom.xml/", artifactController.SBOMXML)

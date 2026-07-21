@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -50,15 +51,14 @@ func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratos
 	return session.Id, nil
 }
 
-func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.ConfigService, authorizer shared.Authorizer) echo.MiddlewareFunc {
+func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.ConfigService, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx shared.Context) error {
+		return func(ctx echo.Context) error {
+			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
 			instanceSettings, err := configService.GetInstanceSettings(ctx.Request().Context())
 			if err != nil {
 				return err
 			}
-
-			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
 			authHeader := ctx.Request().Header.Get("Authorization")
 
 			var userID string
@@ -68,18 +68,17 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.Co
 				if userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
 					scopes = "scan manage"
 					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
+					ctx.Set("session", accesscontrol.NewSession(userID, dtos.OwnerUser, scopesArray, false))
 					return next(ctx)
 				}
 			}
 			if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok && !instanceSettings.BearerTokenAuthDisabled {
-				if userID, scopes, err = authorizer.VerifyAPIToken(ctx.Request().Context(), token); err == nil {
-					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", accesscontrol.NewSession(userID, scopesArray, false))
+				if session, err := verifier.VerifyAPIToken(ctx.Request().Context(), token); err == nil {
+					ctx.Set("session", session)
 					return next(ctx)
 				}
 			} else {
-				if session, err := authorizer.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
+				if session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
 					ctx.Set("session", session)
 					return next(ctx)
 				}

@@ -113,7 +113,7 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	rbac := shared.GetRBAC(ctx)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(ctx).GetOwnerID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(ctx.Request().Context(), shared.GetSession(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}

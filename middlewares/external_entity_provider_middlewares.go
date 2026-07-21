@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -69,6 +70,11 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) error {
 			org := shared.GetOrg(ctx)
+			session := shared.GetSession(ctx)
+			// check if user session
+			if session.GetOwnerType() != dtos.OwnerUser {
+				return next(ctx)
+			}
 
 			if org.IsExternalEntity() {
 				key := org.GetID().String() + "/" + shared.GetSession(ctx).GetOwnerID()
@@ -78,19 +84,18 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 					limiter.Store(key, now.Add(15*time.Minute))
 
 					safeCtx := GoroutineSafeContext(ctx)
-					userID := shared.GetSession(ctx).GetOwnerID()
 					orgID := org.GetID()
 
 					go func() {
 						tracedCtx, span := otel.Tracer("devguard").Start(context.Background(), "refresh-external-entity-provider")
 						defer span.End()
 						safeCtx.SetRequest(safeCtx.Request().WithContext(tracedCtx))
-						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
+						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, session)
 						if err != nil {
 							span.RecordError(err)
-							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID, "traceID", span.SpanContext().TraceID())
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
 						} else {
-							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", userID, "traceID", span.SpanContext().TraceID())
+							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
 						}
 					}()
 				}

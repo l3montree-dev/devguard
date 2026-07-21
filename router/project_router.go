@@ -43,13 +43,12 @@ func NewProjectRouter(
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 	patController *controllers.PatController,
-	patVerifier shared.PersonalAccessTokenService,
 ) ProjectRouter {
 	/**
 	Project scoped router
 	All routes below this line are scoped to a specific project.
 	*/
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository, patVerifier)
+	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
 
 	projectRouter := organizationGroup.Group.Group("/projects/:projectSlug", projectScopedRBAC(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/", projectController.Read)

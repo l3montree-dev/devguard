@@ -89,11 +89,11 @@ func TestTriggerSync(t *testing.T) {
 				// Mock the refresh method call
 				domainRBAC := mocks.NewAccessControl(t)
 				rbacProvider.On("GetDomainRBAC", org.GetID().String()).Return(domainRBAC)
-				domainRBAC.On("GetAllProjectsForUser", "user123").Return([]string{}, tt.refreshError)
+				domainRBAC.On("GetAllProjectsForSession", "user123").Return([]string{}, tt.refreshError)
 
 				if tt.refreshError == nil {
-					// RefreshExternalEntityProviderProjects also calls GetAllAssetsForUser
-					domainRBAC.On("GetAllAssetsForUser", "user123").Return([]string{}, nil)
+					// RefreshExternalEntityProviderProjects also calls GetAllAssetsForSession
+					domainRBAC.On("GetAllAssetsForSession", "user123").Return([]string{}, nil)
 					thirdPartyIntegration.On("ListGroups", mock.Anything, "user123", "gitlab").Return([]models.Project{}, []shared.Role{}, nil)
 					projectRepo.On("UpsertSplit", mock.Anything, mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{}, []*models.Project{}, nil)
 				}
