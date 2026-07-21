@@ -153,10 +153,46 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 }
 
 func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
-	return withRLock(func() (bool, error) {
-		roles := c.enforcer.GetRolesForUserInDomain("user::"+session.GetOwnerID(), "domain::"+c.domain)
-		return len(roles) > 0, nil
-	})
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
+	switch ownerType {
+	case dtos.OwnerUser:
+		return withRLock(func() (bool, error) {
+			roles := c.enforcer.GetRolesForUserInDomain("user::"+ownerID, "domain::"+c.domain)
+			return len(roles) > 0, nil
+		})
+	case dtos.OwnerOrg:
+		return ownerID == c.domain, nil
+	case dtos.OwnerProject:
+		// if the project belongs to the organization, then the session has access
+		projectUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		project, err := c.projectRepository.Read(ctx, nil, projectUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return project.OrganizationID.String() == c.domain, nil
+	case dtos.OwnerAsset:
+		// if the asset belongs to the organization, then the session has access
+		assetUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return asset.Project.OrganizationID.String() == c.domain, nil
+	default:
+		return false, fmt.Errorf("unknown owner type: %s", ownerType)
+	}
 }
 
 func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
@@ -518,51 +554,150 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 }
 
 func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
-	})
-	if err != nil {
-		return false, err
-	}
-	for _, p := range permissions {
-		if p[2] == "obj::"+string(object) && p[3] == "act::"+string(action) {
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
+
+	switch ownerType {
+	case dtos.OwnerUser:
+		permissions, err := withRLock(func() ([][]string, error) {
+			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
+		})
+		if err != nil {
+			return false, err
+		}
+		for _, p := range permissions {
+			if p[2] == "obj::"+string(object) && p[3] == "act::"+string(action) {
+				return true, nil
+			}
+		}
+		return false, nil
+	case dtos.OwnerOrg:
+		// if the session is an organization session, then we allow all actions except deleting or updating the organization itself
+		return object != shared.ObjectOrganization && action != shared.ActionDelete && action != shared.ActionUpdate, nil
+	case dtos.OwnerProject:
+		// we allow read, if the project is part of the organization, but we don't allow any other actions
+		projectUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		project, err := c.projectRepository.Read(ctx, nil, projectUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		if project.OrganizationID.String() != c.domain {
+			return false, nil
+		}
+		if action == shared.ActionRead {
 			return true, nil
 		}
+		return false, nil
+	case dtos.OwnerAsset:
+		// we allow read, if the asset is part of the organization, but we don't allow any other actions
+		assetUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		if asset.Project.OrganizationID.String() != c.domain {
+			return false, nil
+		}
+		if action == shared.ActionRead {
+			return true, nil
+		}
+		return false, nil
+	default:
+		return false, fmt.Errorf("unknown owner type: %s", ownerType)
 	}
-	return false, nil
 }
 
 func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
-	})
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
 
-	if err != nil {
-		return false, err
-	}
-	projectID := project.ID.String()
-	for _, p := range permissions {
-		if p[2] == "project::"+projectID+"|obj::"+string(object) && p[3] == "act::"+string(action) {
+	switch ownerType {
+	case dtos.OwnerUser:
+		permissions, err := withRLock(func() ([][]string, error) {
+			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
+		})
+
+		if err != nil {
+			return false, err
+		}
+
+		projectID := project.ID.String()
+		for _, p := range permissions {
+			if p[2] == "project::"+projectID+"|obj::"+string(object) && p[3] == "act::"+string(action) {
+				return true, nil
+			}
+		}
+		return false, nil
+	case dtos.OwnerOrg:
+		// if the session is an organization session, we just check if the project belongs to the organization, and if so, we allow all actions
+		return project.OrganizationID.String() == ownerID, nil
+	case dtos.OwnerProject:
+		// if the session is a project session, then we allow all actions except deleting or updating the project itself
+		return project.ID.String() == ownerID && object != shared.ObjectProject && action != shared.ActionDelete && action != shared.ActionUpdate, nil
+	case dtos.OwnerAsset:
+		// if asset, we allow read
+		assetUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		if asset.ProjectID.String() != project.ID.String() {
+			return false, nil
+		}
+		if action == shared.ActionRead {
 			return true, nil
 		}
+		return false, nil
+	default:
+		return false, fmt.Errorf("unknown owner type: %s", ownerType)
 	}
-	return false, nil
 }
 
 func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
-	permissions, err := withRLock(func() ([][]string, error) {
-		return c.enforcer.GetImplicitPermissionsForUser("user::"+session.GetOwnerID(), "domain::"+c.domain)
-	})
-	if err != nil {
-		return false, err
-	}
-	assetID := asset.ID.String()
-	for _, p := range permissions {
-		if p[2] == "asset::"+assetID+"|obj::"+string(object) && p[3] == "act::"+string(action) {
-			return true, nil
+	ownerID, ownerType := session.GetOwnerID(), session.GetOwnerType()
+	switch ownerType {
+	case dtos.OwnerUser:
+		permissions, err := withRLock(func() ([][]string, error) {
+			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
+		})
+		if err != nil {
+			return false, err
 		}
+		assetID := asset.ID.String()
+		for _, p := range permissions {
+			if p[2] == "asset::"+assetID+"|obj::"+string(object) && p[3] == "act::"+string(action) {
+				return true, nil
+			}
+		}
+		return false, nil
+	case dtos.OwnerOrg:
+		// if the session is an organization session, we just check if the asset belongs to the organization, and if so, we allow all actions
+		return asset.Project.OrganizationID.String() == ownerID, nil
+	case dtos.OwnerProject:
+		// if the session is a project session, then we allow all actions
+		return asset.ProjectID.String() == ownerID, nil
+	case dtos.OwnerAsset:
+		// if asset, we allow read only READ and update
+		return asset.ID.String() == ownerID && (action == shared.ActionRead || action == shared.ActionUpdate), nil
+	default:
+		return false, fmt.Errorf("unknown owner type: %s", ownerType)
 	}
-	return false, nil
 }
 
 func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {

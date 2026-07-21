@@ -12,7 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
+	"gorm.io/gorm"
 )
 
 // noopAdapter is a minimal adapter for tests. Policy rules are kept
@@ -256,6 +258,134 @@ func TestRevokeAllRolesInAssetRemovesRolesButKeepsSiblings(t *testing.T) {
 	if role != shared.RoleAdmin {
 		t.Errorf("expected carol to keep admin in asset-2, got %q", role)
 	}
+}
+
+// TestGetAllProjectsForSession_OwnerTypes covers the access-token-type dispatch
+// in GetAllProjectsForSession: a user session resolves projects via casbin roles,
+// an org session lists every project of the org (repository lookup), a project
+// session is scoped to itself, and an asset session has no projects.
+func TestGetAllProjectsForSessionOwnerTypes(t *testing.T) {
+	ctx := context.Background()
+	orgID := uuid.New()
+	projectID := uuid.New()
+
+	t.Run("user owner resolves projects from granted roles", func(t *testing.T) {
+		rbac := newTestCasbinRBAC(t, "org-1")
+		if err := rbac.GrantRoleInProject(ctx, "alice", shared.RoleMember, projectID.String()); err != nil {
+			t.Fatal(err)
+		}
+
+		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(projects) != 1 || projects[0] != projectID.String() {
+			t.Errorf("expected [%s], got %v", projectID, projects)
+		}
+	})
+
+	t.Run("org owner lists all projects of the organization", func(t *testing.T) {
+		projectRepo := mocks.NewProjectRepository(t)
+		projectRepo.EXPECT().GetByOrgID(ctx, (*gorm.DB)(nil), orgID).Return([]models.Project{{Model: models.Model{ID: projectID}}}, nil)
+		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), projectRepository: projectRepo}
+
+		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(orgID.String(), dtos.OwnerOrg, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(projects) != 1 || projects[0] != projectID.String() {
+			t.Errorf("expected [%s], got %v", projectID, projects)
+		}
+	})
+
+	t.Run("project owner is scoped to itself", func(t *testing.T) {
+		rbac := newTestCasbinRBAC(t, "org-1")
+
+		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(projectID.String(), dtos.OwnerProject, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(projects) != 1 || projects[0] != projectID.String() {
+			t.Errorf("expected [%s], got %v", projectID, projects)
+		}
+	})
+
+	t.Run("asset owner has no projects", func(t *testing.T) {
+		rbac := newTestCasbinRBAC(t, "org-1")
+
+		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(uuid.New().String(), dtos.OwnerAsset, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(projects) != 0 {
+			t.Errorf("expected no projects, got %v", projects)
+		}
+	})
+}
+
+// TestGetAllAssetsForSession_OwnerTypes mirrors TestGetAllProjectsForSession_OwnerTypes
+// for GetAllAssetsForSession: user->roles, org->all assets of org, project->all assets
+// of the project, asset->itself.
+func TestGetAllAssetsForSessionOwnerTypes(t *testing.T) {
+	ctx := context.Background()
+	orgID := uuid.New()
+	projectID := uuid.New()
+	assetID := uuid.New()
+
+	t.Run("user owner resolves assets from granted roles", func(t *testing.T) {
+		rbac := newTestCasbinRBAC(t, "org-1")
+		if err := rbac.GrantRoleInAsset(ctx, "alice", shared.RoleMember, assetID.String()); err != nil {
+			t.Fatal(err)
+		}
+
+		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(assets) != 1 || assets[0] != assetID.String() {
+			t.Errorf("expected [%s], got %v", assetID, assets)
+		}
+	})
+
+	t.Run("org owner lists all assets of the organization", func(t *testing.T) {
+		assetRepo := mocks.NewAssetRepository(t)
+		assetRepo.EXPECT().GetByOrgID(ctx, (*gorm.DB)(nil), orgID).Return([]models.Asset{{Model: models.Model{ID: assetID}}}, nil)
+		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), assetRepository: assetRepo}
+
+		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(orgID.String(), dtos.OwnerOrg, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(assets) != 1 || assets[0] != assetID.String() {
+			t.Errorf("expected [%s], got %v", assetID, assets)
+		}
+	})
+
+	t.Run("project owner lists all assets of the project", func(t *testing.T) {
+		assetRepo := mocks.NewAssetRepository(t)
+		assetRepo.EXPECT().GetByProjectID(ctx, (*gorm.DB)(nil), projectID).Return([]models.Asset{{Model: models.Model{ID: assetID}}}, nil)
+		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), assetRepository: assetRepo}
+
+		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(projectID.String(), dtos.OwnerProject, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(assets) != 1 || assets[0] != assetID.String() {
+			t.Errorf("expected [%s], got %v", assetID, assets)
+		}
+	})
+
+	t.Run("asset owner is scoped to itself", func(t *testing.T) {
+		rbac := newTestCasbinRBAC(t, "org-1")
+
+		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(assetID.String(), dtos.OwnerAsset, nil, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(assets) != 1 || assets[0] != assetID.String() {
+			t.Errorf("expected [%s], got %v", assetID, assets)
+		}
+	})
 }
 
 // TestCasbinRBAC_TwoUsersConcurrentOrgSync mirrors the exact scenario from the panic:
