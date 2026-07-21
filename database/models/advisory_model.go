@@ -4,10 +4,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
 )
 
 type Advisory struct {
-	ID               int64             `json:"id" gorm:"primaryKey;column:id"`
+	ID               uuid.UUID         `json:"id" gorm:"primaryKey;column:id"`
 	CreatedAt        time.Time         `json:"createdAt"`
 	UpdatedAt        time.Time         `json:"updatedAt"`
 	Title            string            `json:"title" gorm:"type:text;column:title"`
@@ -17,6 +18,7 @@ type Advisory struct {
 	VectorString     string            `json:"vectorString" gorm:"type:text;column:vector_string"`
 	AssetID          uuid.UUID         `json:"assetID" gorm:"type:uuid;column:asset_id"`
 	Visibility       string            `json:"visibility" gorm:"type:text;column:visibility;default:draft"`
+	Events           []VulnEvent       `json:"events" gorm:"foreignKey:SecurityAdvisoryID;constraint:OnDelete:CASCADE;"`
 }
 type AffectedPackage struct {
 	Model
@@ -33,4 +35,8 @@ func (m Advisory) TableName() string {
 
 func (m AffectedPackage) TableName() string {
 	return "affected_packages"
+}
+
+func (m Advisory) GetType() dtos.VulnType {
+	return dtos.VulnTypeSecurityAdvisory
 }

@@ -30,11 +30,11 @@ func (s *AdvisoryService) ReadAll(ctx context.Context, tx shared.DB, assetID uui
 	return s.advisoryRepository.ReadAll(ctx, tx, assetID, filter, pagnation)
 }
 
-func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error) {
+func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Advisory, error) {
 	return s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 }
 
-func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory, currentVisibility string) error {
+func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory, currentVisibility string) error {
 	if currentVisibility != advisory.Visibility {
 		if err := statemachine.CheckStateTransition(currentVisibility, advisory.Visibility); err != nil {
 			return fmt.Errorf("invalid state change from %q to %q: %w", currentVisibility, advisory.Visibility, err)
@@ -43,7 +43,7 @@ func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, ad
 	return s.advisoryRepository.Update(ctx, tx, id, advisory)
 }
 
-func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id int64) error {
+func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	advisory, err := s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 	if err != nil {
 		return err

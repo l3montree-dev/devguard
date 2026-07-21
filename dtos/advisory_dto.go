@@ -36,7 +36,7 @@ type AdvisoryUpdate struct {
 }
 
 type AdvisoryDTO struct {
-	ID               int64             `json:"id"`
+	ID               uuid.UUID         `json:"id"`
 	Title            string            `json:"title" validate:"required"`
 	Description      string            `json:"description" validate:"required"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`

@@ -12,7 +12,7 @@ type AdvisoryEvent struct {
 	CreatedAt    time.Time              `json:"createdAt"`
 	Type         dtos.AdvisoryEventType `json:"type" gorm:"type:text"`
 	UserID       string                 `json:"userId"`
-	AdvisoryID   int64                  `json:"advisoryId"`
+	AdvisoryID   uuid.UUID              `json:"advisoryId"`
 	Title        *string                `json:"title" gorm:"type:text"`
 	Description  *string                `json:"description" gorm:"type:text"`
 	Severity     *string                `json:"severity" gorm:"type:text"`

@@ -15,6 +15,7 @@ const (
 	VulnTypeFirstPartyVuln    VulnType = "firstPartyVuln"
 	VulnTypeLicenseRisk       VulnType = "licenseRisk"
 	VulnTypeCompliancePosture VulnType = "compliancePosture"
+	VulnTypeSecurityAdvisory  VulnType = "securityAdvisory"
 )
 
 const (
@@ -28,6 +29,9 @@ const (
 	EventTypeFalsePositive     VulnEventType = "falsePositive"
 	EventTypeMarkedForTransfer VulnEventType = "markedForTransfer"
 	EventTypeComment           VulnEventType = "comment"
+
+	EventTypePublish  VulnEventType = "published"
+	EventTypeWithdraw VulnEventType = "withdrawn"
 
 	EventTypeImplemented   VulnEventType = "implemented"
 	EventTypeNotApplicable VulnEventType = "notApplicable"

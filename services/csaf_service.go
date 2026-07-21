@@ -1193,7 +1193,7 @@ func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, ad
 		return csafDoc, fmt.Errorf("no affected packages found for asset %s", advisory.AssetID)
 	}
 
-	cveID := fmt.Sprintf("DGSA-%d-%d", advisory.CreatedAt.Year(), advisory.ID)
+	cveID := fmt.Sprintf("DGSA-%s", advisory.ID)
 
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: new(gocsaf.CSAFVersion20),

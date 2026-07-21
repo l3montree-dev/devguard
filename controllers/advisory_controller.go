@@ -18,8 +18,8 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -70,7 +70,7 @@ func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 
 func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
-	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
+	parsedID, err := uuid.Parse(advisoryID)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid id provided")
 	}
@@ -98,7 +98,7 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	}
 
 	advisoryID := ctx.Param("id")
-	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
+	parsedID, err := uuid.Parse(advisoryID)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid id provided")
 	}
@@ -131,7 +131,7 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 
 func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
-	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
+	parsedID, err := uuid.Parse(advisoryID)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid id provided")
 	}

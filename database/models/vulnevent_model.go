@@ -18,6 +18,7 @@ type VulnEvent struct {
 	LicenseRiskID            *uuid.UUID                       `json:"licenseRiskId" gorm:"type:uuid;column:license_risk_id"`
 	FirstPartyVulnID         *uuid.UUID                       `json:"firstPartyVulnId" gorm:"type:uuid;column:first_party_vuln_id"`
 	CompliancePostureID      *uuid.UUID                       `json:"compliancePostureId" gorm:"type:uuid;column:compliance_posture_id"`
+	SecurityAdvisoryID       *uuid.UUID                       `json:"securityAdvisoryId" gorm:"type:uuid;column:security_advisory_id"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
@@ -49,6 +50,9 @@ func (event VulnEvent) GetVulnID() uuid.UUID {
 	if event.CompliancePostureID != nil {
 		return *event.CompliancePostureID
 	}
+	if event.SecurityAdvisoryID != nil {
+		return *event.SecurityAdvisoryID
+	}
 	return uuid.Nil
 }
 
@@ -65,6 +69,9 @@ func (event VulnEvent) GetVulnType() dtos.VulnType {
 	}
 	if event.CompliancePostureID != nil {
 		return dtos.VulnTypeCompliancePosture
+	}
+	if event.SecurityAdvisoryID != nil {
+		return dtos.VulnTypeSecurityAdvisory
 	}
 	return ""
 }
@@ -287,6 +294,30 @@ func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, compone
 	}
 	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
 	ev.SetArbitraryJSONData(map[string]any{"componentTitle": componentTitle})
+	return ev
+}
+
+func NewPublishedSecurityAdvisoryEvent(advisoryID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, createdByRule bool, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:             dtos.EventTypePublish,
+		UserID:           userID,
+		Justification:    &justification,
+		CreatedByVexRule: createdByRule,
+		UserAgent:        userAgent,
+	}
+	SetVulnIDOnEvent(&ev, advisoryID, vulnType)
+	return ev
+}
+
+func NewWithdrawnSecurityAdvisoryEvent(advisoryID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, createdByRule bool, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:             dtos.EventTypePublish,
+		UserID:           userID,
+		Justification:    &justification,
+		CreatedByVexRule: createdByRule,
+		UserAgent:        userAgent,
+	}
+	SetVulnIDOnEvent(&ev, advisoryID, vulnType)
 	return ev
 }
 
