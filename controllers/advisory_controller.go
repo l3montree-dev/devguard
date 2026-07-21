@@ -16,10 +16,12 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -155,4 +157,48 @@ func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 	}
 
 	return ctx.NoContent(200)
+}
+
+func (controller *AdvisoryController) CreateEvent(ctx shared.Context) error {
+	advisoryID := ctx.Param("id")
+	parsedID, err := uuid.Parse(advisoryID)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid id provided")
+	}
+
+	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
+		}
+		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
+	}
+
+	if advisory.AssetID != shared.GetAsset(ctx).ID {
+		return echo.NewHTTPError(404, "advisory not found")
+	}
+
+	userID := shared.GetSession(ctx).GetUserID()
+
+	var status dtos.DependencyVulnStatus
+	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	statusType := status.StatusType
+	if err := models.CheckStatusType(statusType); err != nil {
+		return echo.NewHTTPError(400, "invalid status type")
+	}
+
+	userAgent := ctx.Request().UserAgent()
+	_, err = controller.advisoryService.CreateVulnEventAndApply(ctx.Request().Context(), nil, userID, &advisory, dtos.VulnEventType(statusType), status.Justification, status.MechanicalJustification, &userAgent)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not create event").WithInternal(err)
+	}
+
+	return ctx.JSON(200, advisory)
 }

@@ -68,6 +68,8 @@ const (
 	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
 	VulnStateImplemented       VulnState = "implemented"   // for compliance posture
 	VulnStateNotApplicable     VulnState = "notApplicable" // for compliance posture
+	VulnStatePublished         VulnState = "published"     // for advisory
+	VulnStateWithdrawn         VulnState = "withdrawn"     // for advisory
 )
 
 type ExploitDTO struct {

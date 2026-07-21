@@ -313,6 +313,10 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		vuln.SetState(dtos.VulnStateImplemented)
 	case dtos.EventTypeNotApplicable:
 		vuln.SetState(dtos.VulnStateNotApplicable)
+	case dtos.EventTypePublish:
+		vuln.SetState(dtos.VulnStatePublished)
+	case dtos.EventTypeWithdraw:
+		vuln.SetState(dtos.VulnStateWithdrawn)
 	case dtos.EventTypeComment:
 		// Comments do not change the state of the vulnerability
 		return

@@ -8,6 +8,7 @@ import (
 )
 
 type Advisory struct {
+	Vulnerability    `gorm:"-"`
 	ID               uuid.UUID         `json:"id" gorm:"primaryKey;column:id"`
 	CreatedAt        time.Time         `json:"createdAt"`
 	UpdatedAt        time.Time         `json:"updatedAt"`
@@ -39,4 +40,40 @@ func (m AffectedPackage) TableName() string {
 
 func (m Advisory) GetType() dtos.VulnType {
 	return dtos.VulnTypeSecurityAdvisory
+}
+
+func (m *Advisory) SetState(state dtos.VulnState) {
+	switch state {
+	case dtos.VulnStatePublished:
+		m.Visibility = "public"
+	case dtos.VulnStateWithdrawn:
+		m.Visibility = "withdrawn"
+	}
+}
+
+func (m *Advisory) GetState() dtos.VulnState {
+	switch m.Visibility {
+	case "public":
+		return dtos.VulnStatePublished
+	case "withdrawn":
+		return dtos.VulnStateWithdrawn
+	default:
+		return dtos.VulnState(m.Visibility)
+	}
+}
+
+func (m Advisory) GetEvents() []VulnEvent {
+	return m.Events
+}
+
+func (m Advisory) GetArtifacts() []Artifact {
+	return nil
+}
+
+func (m Advisory) AssetVersionIndependentHash() string {
+	return ""
+}
+
+func (m Advisory) CalculateHash() uuid.UUID {
+	return uuid.Nil
 }
