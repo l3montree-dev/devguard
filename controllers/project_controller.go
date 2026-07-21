@@ -626,7 +626,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
-	userID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 
 	if probe.Verb == "delete" {
 		proExternalEntityID := probe.ProjectExternalEntityID
@@ -665,7 +665,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	rbac := shared.GetRBAC(ctx)
-	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, userID, probe.AssetDescription)
+	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, ownerID, probe.AssetDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
@@ -720,7 +720,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	defer tx.Rollback()
 
 	userAgent := ctx.Request().UserAgent()
-	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("trivy operator: scan failed", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})

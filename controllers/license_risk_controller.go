@@ -203,7 +203,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find licenseRisk")
 	}
-	userID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 
 	var status LicenseRiskStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -224,7 +224,7 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	mechanicalJustification := status.MechanicalJustification
 
 	userAgent := ctx.Request().UserAgent()
-	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, userID, &licenseRisk, statusType, justification, mechanicalJustification, &userAgent)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(ctx.Request().Context(), nil, ownerID, &licenseRisk, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -258,9 +258,9 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 		return echo.NewHTTPError(500, "could not get vulnID")
 	}
 
-	userID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 	userAgent := ctx.Request().UserAgent()
-	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, userID, &userAgent)
+	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, ownerID, &userAgent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not make final license decision").WithInternal(err)
 	}

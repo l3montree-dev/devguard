@@ -137,11 +137,11 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	})
 }
 
-func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent string) error {
+func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, ownerID string, userAgent string) error {
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, userID, &userAgent)
+	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -185,7 +185,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	userID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 	userAgent := ctx.Request().UserAgent()
 
 	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
@@ -195,7 +195,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	}
 
 	for _, artifact := range artifacts {
-		if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
+		if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, ownerID, userAgent); err != nil {
 			return err
 		}
 	}

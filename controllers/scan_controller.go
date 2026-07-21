@@ -248,7 +248,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 
-	userID := shared.GetSession(c).GetOwnerID()
+	ownerID := shared.GetSession(c).GetOwnerID()
 	userAgent := c.Request().UserAgent()
 
 	tag := c.Request().Header.Get("X-Tag")
@@ -337,7 +337,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		return nil, nil, nil, empty, err
 	}
 
-	opened, closed, newState, err = s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	opened, closed, newState, err = s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("could not scan normalized sbom", "err", err)
 		span.RecordError(err)
@@ -457,7 +457,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	asset := shared.GetAsset(ctx)
-	userID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 
 	tag := ctx.Request().Header.Get("X-Tag")
 
@@ -497,7 +497,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	userAgent := ctx.Request().UserAgent()
 
 	// handle the scan result
-	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
+	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		span.RecordError(err)
@@ -873,7 +873,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 	asset := shared.GetAsset(c)
-	userID := shared.GetSession(c).GetOwnerID()
+	ownerID := shared.GetSession(c).GetOwnerID()
 
 	tag := c.Request().Header.Get("X-Tag")
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -913,7 +913,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 		}
 		newState = utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 	} else {
-		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
+		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, ownerID, &userAgent)
 		if err != nil {
 			slog.Error("could not handle scan result", "err", err)
 			span.RecordError(err)

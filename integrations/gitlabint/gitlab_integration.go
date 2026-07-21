@@ -222,8 +222,9 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 }
 
 func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, shared.GetSession(ctx).GetOwnerID(), externalEntityProviderID)
+	// get the oauth2 tokens for this session owner
+	ownerID := shared.GetSession(ctx).GetOwnerID()
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, externalEntityProviderID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
@@ -268,7 +269,8 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models
 }
 
 func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Context) ([]models.GitLabOauth2Token, error) {
-	// check if the user has a gitlab login
+	// this only works for user-owned sessions, since it looks up the kratos identity
+	// by the session's owner id (which must be a user id here).
 	// we can even improve the response by checking if the user has a gitlab login
 	// todo this, fetch the kratos user and check if the user has a gitlab login
 	adminClient := shared.GetAuthAdminClient(ctx)
@@ -276,7 +278,9 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 	ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 10*time.Second)
 	defer cancel()
 
-	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, shared.GetSession(ctx).GetOwnerID())
+	ownerID := shared.GetSession(ctx).GetOwnerID()
+
+	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, ownerID)
 	if err != nil {
 		slog.Error("failed to get identity", "err", err)
 		return nil, err
@@ -296,13 +300,13 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 			RefreshToken: token.RefreshToken,
 			BaseURL:      token.BaseURL,
 			GitLabUserID: token.GitLabUserID,
-			UserID:       shared.GetSession(ctx).GetOwnerID(),
+			UserID:       ownerID,
 			ProviderID:   providerID,
 			Expiry:       token.Expiry,
 		})
 	}
 
-	// save the oauth2 tokens if the user doesnt have any tokens yet
+	// save the oauth2 tokens if the owner doesn't have any tokens yet
 	if len(tokenSlice) > 0 {
 		err := g.gitlabOauth2TokenRepository.CreateIfNotExists(ctx.Request().Context(), nil, utils.SlicePtr(tokenSlice))
 		if err != nil {
@@ -314,8 +318,8 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 }
 
 func (g *GitlabIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
-	// get the oauth2 tokens for this user only from the auth server
-	// if the user revoked is sign in, we do not want to show him the org anymore.
+	// get the oauth2 tokens for this session owner only from the auth server
+	// if the owner revoked their sign in, we do not want to show them the org anymore.
 	tokens, err := g.getAndSaveOauth2TokenFromAuthServer(ctx)
 	if err != nil {
 		slog.Debug("failed to find gitlab oauth2 tokens")
@@ -906,9 +910,11 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.New("providerID query parameter is required")
 		}
 
+		ownerID := shared.GetSession(ctx).GetOwnerID()
+
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetOwnerID(), *asset.ExternalEntityProviderID+"autosetup")
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, ownerID, *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
@@ -919,8 +925,8 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.Wrap(err, "could not convert project id to int")
 		}
 
-		// check if the user has a gitlab oauth2 token
-		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetOwnerID(), providerID)
+		// check if the session owner has a gitlab oauth2 token
+		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, ownerID, providerID)
 		if err != nil {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}

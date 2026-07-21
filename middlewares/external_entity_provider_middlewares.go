@@ -35,7 +35,7 @@ func ProviderIDMiddleware(gitlabIntegrations map[string]*gitlabint.GitlabOauth2C
 }
 
 // ExternalEntityProviderOrgSyncMiddleware returns a middleware that triggers a background org sync
-// for external entity providers. It rate-limits per user so the sync runs at most once every 15 minutes.
+// for external entity providers. It rate-limits per session owner so the sync runs at most once every 15 minutes.
 func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService shared.ExternalEntityProviderService) shared.MiddlewareFunc {
 	limiter := &sync.Map{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -44,7 +44,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 			now := time.Now()
 
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
-				slog.Info("syncing external entity provider orgs", "userID", key)
+				slog.Info("syncing external entity provider orgs", "ownerID", key)
 				limiter.Store(key, now.Add(15*time.Minute))
 				safeCtx := GoroutineSafeContext(ctx)
 				go func() {
@@ -53,7 +53,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 					safeCtx.SetRequest(safeCtx.Request().WithContext(tracedCtx))
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						span.RecordError(err)
-						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
+						slog.Error("could not sync external entity provider orgs", "err", err, "ownerID", key)
 					}
 				}()
 			}
@@ -93,9 +93,9 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, session)
 						if err != nil {
 							span.RecordError(err)
-							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "ownerID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
 						} else {
-							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
+							slog.Info("refreshed external entity provider projects", "orgID", orgID, "ownerID", session.GetOwnerID(), "traceID", span.SpanContext().TraceID())
 						}
 					}()
 				}

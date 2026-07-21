@@ -75,8 +75,13 @@ func (s externalEntityProviderService) TriggerOrgSync(ctx shared.Context) error 
 func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.Org, error) {
 	// return the enabled git providers as well
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	userID := shared.GetSession(ctx).GetOwnerID()
-	orgs, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
+	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerType := shared.GetSession(ctx).GetOwnerType()
+	if ownerType != dtos.OwnerUser {
+		return nil, fmt.Errorf("only users can trigger a sync for external entity provider organizations")
+	}
+
+	orgs, err, _ := s.singleFlightGroup.Do("syncOrgs/"+ownerID, func() (any, error) {
 		orgs, err := thirdPartyIntegration.ListOrgs(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not list organizations: %w", err)
@@ -93,7 +98,7 @@ func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.O
 
 		// make sure the user is a member of the organizations
 		for _, org := range orgsPtr {
-			if err := shared.BootstrapOrg(ctx.Request().Context(), s.rbacProvider.GetDomainRBAC(org.GetID().String()), userID, shared.RoleMember); err != nil {
+			if err := shared.BootstrapOrg(ctx.Request().Context(), s.rbacProvider.GetDomainRBAC(org.GetID().String()), ownerID, shared.RoleMember); err != nil {
 				slog.Warn("could not bootstrap organization", "orgID", org.GetID(), "err", err)
 			}
 		}

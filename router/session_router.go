@@ -30,11 +30,11 @@ type SessionRouter struct {
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {object} object{userID=string}
+// @Success 200 {object} object{ownerID=string}
 // @Router /whoami [get]
 func whoami(ctx echo.Context) error {
 	return ctx.JSON(200, map[string]string{
-		"userID": shared.GetSession(ctx).GetOwnerID(),
+		"ownerID": shared.GetSession(ctx).GetOwnerID(),
 	})
 }
 

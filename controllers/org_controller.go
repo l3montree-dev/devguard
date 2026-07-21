@@ -223,13 +223,13 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invitation expired")
 	}
 
-	// get the user id from the session
-	userID := shared.GetSession(ctx).GetOwnerID()
+	// get the owner id from the session
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 	// get the email of that user
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, err := authAdminClient.GetIdentity(reqCtx, userID)
+	m, err := authAdminClient.GetIdentity(reqCtx, ownerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
@@ -242,7 +242,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the rbac from the context
 	rbac := controller.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
 	// grant the user the role of member
-	err = rbac.GrantRole(reqCtx, userID, "member")
+	err = rbac.GrantRole(reqCtx, ownerID, "member")
 	if err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
@@ -316,8 +316,8 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	if userID == "" {
 		return echo.NewHTTPError(400, "userID is required")
 	}
-	currentUserID := shared.GetSession(ctx).GetOwnerID()
-	if userID == currentUserID {
+	currentOwnerID := shared.GetSession(ctx).GetOwnerID()
+	if userID == currentOwnerID {
 		return echo.NewHTTPError(400, "you cannot change your own role")
 	}
 
@@ -568,10 +568,10 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 // @Success 200 {array} models.Org
 // @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {
-	// get all organizations the user has access to
-	userID := shared.GetSession(ctx).GetOwnerID()
+	// get all organizations the owner has access to
+	ownerID := shared.GetSession(ctx).GetOwnerID()
 
-	domains, err := controller.rbacProvider.DomainsOfUser(userID)
+	domains, err := controller.rbacProvider.DomainsOfUser(ownerID)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)

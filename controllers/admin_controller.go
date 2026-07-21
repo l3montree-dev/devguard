@@ -498,7 +498,7 @@ func (controller *AdminController) runDaemonSSE(
 	fn func(sse *sseWriter) error,
 ) error {
 	session := shared.GetSession(ctx)
-	userID := session.GetOwnerID()
+	ownerID := session.GetOwnerID()
 
 	// ---- cooldown check (multi-instance safe via config DB) ----
 	ok, retryAfter := controller.checkCooldown(ctx.Request().Context(), configKey)
@@ -513,7 +513,7 @@ func (controller *AdminController) runDaemonSSE(
 	// instances see the cooldown immediately.
 	controller.markTriggered(ctx.Request().Context(), configKey)
 
-	slog.Info("admin: triggering daemon via SSE", "key", configKey, "user", userID)
+	slog.Info("admin: triggering daemon via SSE", "key", configKey, "owner", ownerID)
 
 	// ---- open SSE stream ----
 	sse := newSSEWriter(ctx.Response().Writer)
@@ -523,11 +523,11 @@ func (controller *AdminController) runDaemonSSE(
 	func() {
 		defer monitoring.RecoverPanic("admin: panic in " + configKey)
 		if err := fn(sse); err != nil {
-			slog.Error("admin: daemon failed", "key", configKey, "user", userID, "err", err)
+			slog.Error("admin: daemon failed", "key", configKey, "owner", ownerID, "err", err)
 			sse.sendError(err.Error())
 			return
 		}
-		slog.Info("admin: daemon completed", "key", configKey, "user", userID)
+		slog.Info("admin: daemon completed", "key", configKey, "owner", ownerID)
 		sse.sendDone()
 	}()
 

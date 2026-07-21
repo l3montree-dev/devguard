@@ -153,9 +153,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
-	currentUserID := shared.GetSession(ctx).GetOwnerID()
+	currentOwnerID := shared.GetSession(ctx).GetOwnerID()
 
-	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentUserID, &userAgent)
+	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentOwnerID, &userAgent)
 
 	if err != nil {
 		tx.Rollback()
