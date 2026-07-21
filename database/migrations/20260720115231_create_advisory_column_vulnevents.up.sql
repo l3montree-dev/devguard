@@ -53,8 +53,6 @@ ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
   (security_advisory_id  IS NOT NULL)::int = 1
 );
 
--- Allow more than just strict semver in affected_packages ranges by
--- converting the semver-typed columns to plain text.
 ALTER TABLE public.affected_packages
     ALTER COLUMN semver_introduced TYPE text USING semver_introduced::text,
     ALTER COLUMN semver_fixed      TYPE text USING semver_fixed::text;
