@@ -32,7 +32,7 @@ type PatService struct {
 	adminKeyLoaded    bool
 }
 
-var _ shared.Verifier = (*PatService)(nil) // Ensure PatService implements shared.PatService interface
+var _ shared.PersonalAccessTokenService = (*PatService)(nil) // Ensure PatService implements shared.PersonalAccessTokenService interface
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
 	// read the admin public key from the environment variable and convert it to ecdsa.PublicKey

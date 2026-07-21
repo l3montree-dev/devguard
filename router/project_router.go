@@ -43,7 +43,7 @@ func NewProjectRouter(
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 	patController *controllers.PatController,
-	patVerifier shared.Verifier,
+	patVerifier shared.PersonalAccessTokenService,
 ) ProjectRouter {
 	/**
 	Project scoped router

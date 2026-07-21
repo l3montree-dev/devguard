@@ -617,7 +617,7 @@ type PersonalAccessTokenRepository_DeleteUnscoped_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteUnscoped(ctx any, tx any, id any) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
 	return &PersonalAccessTokenRepository_DeleteUnscoped_Call{Call: _e.mock.On("DeleteUnscoped", ctx, tx, id)}
 }
 
@@ -1042,7 +1042,7 @@ type PersonalAccessTokenRepository_ListByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByAssetID(ctx any, tx any, assetID any) *PersonalAccessTokenRepository_ListByAssetID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *PersonalAccessTokenRepository_ListByAssetID_Call {
 	return &PersonalAccessTokenRepository_ListByAssetID_Call{Call: _e.mock.On("ListByAssetID", ctx, tx, assetID)}
 }
 
@@ -1116,7 +1116,7 @@ type PersonalAccessTokenRepository_ListByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByOrgID(ctx any, tx any, orgID any) *PersonalAccessTokenRepository_ListByOrgID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *PersonalAccessTokenRepository_ListByOrgID_Call {
 	return &PersonalAccessTokenRepository_ListByOrgID_Call{Call: _e.mock.On("ListByOrgID", ctx, tx, orgID)}
 }
 
@@ -1190,7 +1190,7 @@ type PersonalAccessTokenRepository_ListByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByProjectID(ctx any, tx any, projectID any) *PersonalAccessTokenRepository_ListByProjectID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *PersonalAccessTokenRepository_ListByProjectID_Call {
 	return &PersonalAccessTokenRepository_ListByProjectID_Call{Call: _e.mock.On("ListByProjectID", ctx, tx, projectID)}
 }
 
@@ -1471,7 +1471,7 @@ type PersonalAccessTokenRepository_ReadUnscoped_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ReadUnscoped(ctx any, tx any, id any) *PersonalAccessTokenRepository_ReadUnscoped_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ReadUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_ReadUnscoped_Call {
 	return &PersonalAccessTokenRepository_ReadUnscoped_Call{Call: _e.mock.On("ReadUnscoped", ctx, tx, id)}
 }
 

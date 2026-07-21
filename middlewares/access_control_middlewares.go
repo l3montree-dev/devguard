@@ -30,7 +30,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.MiddlewareFunc {
+func InstanceAdminMiddleware(pat shared.Authorizer) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			isAdmin, err := pat.VerifyAdminRequest(ctx.Request())
@@ -63,14 +63,14 @@ func InstanceSettings(configService shared.ConfigService, disabled func(shared.I
 	}
 }
 
-func OrganizationAccessControlMiddleware(patService shared.Verifier, obj shared.Object, act shared.Action) echo.MiddlewareFunc {
+func OrganizationAccessControlMiddleware(authorizer shared.Authorizer, obj shared.Object, act shared.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			org := shared.GetOrg(ctx)
 			// get the user
 			session := shared.GetSession(ctx)
 
-			allowed, err := patService.IsAllowedInOrg(ctx, session, obj, act)
+			allowed, err := authorizer.IsAllowedInOrg(ctx, session, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -119,7 +119,7 @@ func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func AssetAccessControlFactory(assetRepository shared.AssetRepository, patService shared.Verifier) shared.RBACMiddleware {
+func AssetAccessControlFactory(assetRepository shared.AssetRepository, authorizer shared.Authorizer) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
@@ -145,7 +145,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository, patServic
 				}
 
 				shared.SetAsset(ctx, asset)
-				allowed, err := patService.IsAllowedInAsset(ctx, session, obj, act)
+				allowed, err := authorizer.IsAllowedInAsset(ctx, session, obj, act)
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
 				}
@@ -169,7 +169,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository, patServic
 	}
 }
 
-func ProjectAccessControlFactory(projectRepository shared.ProjectRepository, patService shared.Verifier) shared.RBACMiddleware {
+func ProjectAccessControlFactory(projectRepository shared.ProjectRepository, authorizer shared.Authorizer) shared.RBACMiddleware {
 	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx shared.Context) error {
@@ -197,7 +197,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository, pat
 
 				shared.SetProject(ctx, project)
 
-				allowed, err := patService.IsAllowedInProject(ctx, session, obj, act)
+				allowed, err := authorizer.IsAllowedInProject(ctx, session, obj, act)
 
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")

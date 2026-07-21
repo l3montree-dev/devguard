@@ -118,7 +118,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
@@ -147,7 +147,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
@@ -176,7 +176,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
@@ -208,7 +208,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -247,7 +247,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -285,7 +285,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -325,7 +325,7 @@ func TestProjectAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -368,7 +368,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -407,7 +407,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -448,7 +448,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -488,7 +488,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -528,7 +528,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -562,7 +562,7 @@ func TestAssetAccessControl(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
@@ -682,7 +682,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockProjectRepo := mocks.ProjectRepository{}
 		mockSession := accesscontrol.NewSession("org-admin", []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
@@ -719,7 +719,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockAssetRepo := mocks.AssetRepository{}
 		mockSession := accesscontrol.NewSession("project-admin", []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}

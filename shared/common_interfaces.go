@@ -70,13 +70,16 @@ type ReleaseService interface {
 	FindOrCreate(ctx context.Context, projectID uuid.UUID, name string) (models.Release, error)
 }
 
-type PersonalAccessTokenService interface {
+type Authorizer interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
 	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
-	IsAllowed(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+	IsAllowedInOrg(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
+}
+type PersonalAccessTokenService interface {
+	Authorizer
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
@@ -122,14 +125,6 @@ type ProjectRepository interface {
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
 	CleanupExternalProjectAssetVersion(ctx context.Context, tx DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
-}
-
-type Verifier interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
-	IsAllowedInOrg(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
-	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
-	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 }
 
 type PolicyRepository interface {

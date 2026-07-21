@@ -75,7 +75,7 @@ type PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call struct {
 // CheckForValidTokenByFingerprint is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fingerprint string
-func (_e *PersonalAccessTokenService_Expecter) CheckForValidTokenByFingerprint(ctx any, fingerprint any) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+func (_e *PersonalAccessTokenService_Expecter) CheckForValidTokenByFingerprint(ctx interface{}, fingerprint interface{}) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
 	return &PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call{Call: _e.mock.On("CheckForValidTokenByFingerprint", ctx, fingerprint)}
 }
 
@@ -103,84 +103,6 @@ func (_c *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call) Retur
 }
 
 func (_c *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call) RunAndReturn(run func(ctx context.Context, fingerprint string) (models.PAT, bool)) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// IsAllowed provides a mock function for the type PersonalAccessTokenService
-func (_mock *PersonalAccessTokenService) IsAllowed(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
-	ret := _mock.Called(ctx, session, obj, act)
-
-	if len(ret) == 0 {
-		panic("no return value specified for IsAllowed")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
-		return returnFunc(ctx, session, obj, act)
-	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) bool); ok {
-		r0 = returnFunc(ctx, session, obj, act)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) error); ok {
-		r1 = returnFunc(ctx, session, obj, act)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// PersonalAccessTokenService_IsAllowed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowed'
-type PersonalAccessTokenService_IsAllowed_Call struct {
-	*mock.Call
-}
-
-// IsAllowed is a helper method to define mock.On call
-//   - ctx shared.Context
-//   - session shared.AuthSession
-//   - obj shared.Object
-//   - act shared.Action
-func (_e *PersonalAccessTokenService_Expecter) IsAllowed(ctx any, session any, obj any, act any) *PersonalAccessTokenService_IsAllowed_Call {
-	return &PersonalAccessTokenService_IsAllowed_Call{Call: _e.mock.On("IsAllowed", ctx, session, obj, act)}
-}
-
-func (_c *PersonalAccessTokenService_IsAllowed_Call) Run(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action)) *PersonalAccessTokenService_IsAllowed_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 shared.Context
-		if args[0] != nil {
-			arg0 = args[0].(shared.Context)
-		}
-		var arg1 shared.AuthSession
-		if args[1] != nil {
-			arg1 = args[1].(shared.AuthSession)
-		}
-		var arg2 shared.Object
-		if args[2] != nil {
-			arg2 = args[2].(shared.Object)
-		}
-		var arg3 shared.Action
-		if args[3] != nil {
-			arg3 = args[3].(shared.Action)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *PersonalAccessTokenService_IsAllowed_Call) Return(b bool, err error) *PersonalAccessTokenService_IsAllowed_Call {
-	_c.Call.Return(b, err)
-	return _c
-}
-
-func (_c *PersonalAccessTokenService_IsAllowed_Call) RunAndReturn(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error)) *PersonalAccessTokenService_IsAllowed_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -221,7 +143,7 @@ type PersonalAccessTokenService_IsAllowedInAsset_Call struct {
 //   - session shared.AuthSession
 //   - obj shared.Object
 //   - act shared.Action
-func (_e *PersonalAccessTokenService_Expecter) IsAllowedInAsset(ctx any, session any, obj any, act any) *PersonalAccessTokenService_IsAllowedInAsset_Call {
+func (_e *PersonalAccessTokenService_Expecter) IsAllowedInAsset(ctx interface{}, session interface{}, obj interface{}, act interface{}) *PersonalAccessTokenService_IsAllowedInAsset_Call {
 	return &PersonalAccessTokenService_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", ctx, session, obj, act)}
 }
 
@@ -263,6 +185,84 @@ func (_c *PersonalAccessTokenService_IsAllowedInAsset_Call) RunAndReturn(run fun
 	return _c
 }
 
+// IsAllowedInOrg provides a mock function for the type PersonalAccessTokenService
+func (_mock *PersonalAccessTokenService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
+	ret := _mock.Called(ctx, session, obj, act)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAllowedInOrg")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) (bool, error)); ok {
+		return returnFunc(ctx, session, obj, act)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) bool); ok {
+		r0 = returnFunc(ctx, session, obj, act)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.AuthSession, shared.Object, shared.Action) error); ok {
+		r1 = returnFunc(ctx, session, obj, act)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenService_IsAllowedInOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAllowedInOrg'
+type PersonalAccessTokenService_IsAllowedInOrg_Call struct {
+	*mock.Call
+}
+
+// IsAllowedInOrg is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - session shared.AuthSession
+//   - obj shared.Object
+//   - act shared.Action
+func (_e *PersonalAccessTokenService_Expecter) IsAllowedInOrg(ctx interface{}, session interface{}, obj interface{}, act interface{}) *PersonalAccessTokenService_IsAllowedInOrg_Call {
+	return &PersonalAccessTokenService_IsAllowedInOrg_Call{Call: _e.mock.On("IsAllowedInOrg", ctx, session, obj, act)}
+}
+
+func (_c *PersonalAccessTokenService_IsAllowedInOrg_Call) Run(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action)) *PersonalAccessTokenService_IsAllowedInOrg_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.AuthSession
+		if args[1] != nil {
+			arg1 = args[1].(shared.AuthSession)
+		}
+		var arg2 shared.Object
+		if args[2] != nil {
+			arg2 = args[2].(shared.Object)
+		}
+		var arg3 shared.Action
+		if args[3] != nil {
+			arg3 = args[3].(shared.Action)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_IsAllowedInOrg_Call) Return(b bool, err error) *PersonalAccessTokenService_IsAllowedInOrg_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenService_IsAllowedInOrg_Call) RunAndReturn(run func(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error)) *PersonalAccessTokenService_IsAllowedInOrg_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsAllowedInProject provides a mock function for the type PersonalAccessTokenService
 func (_mock *PersonalAccessTokenService) IsAllowedInProject(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
 	ret := _mock.Called(ctx, session, obj, act)
@@ -299,7 +299,7 @@ type PersonalAccessTokenService_IsAllowedInProject_Call struct {
 //   - session shared.AuthSession
 //   - obj shared.Object
 //   - act shared.Action
-func (_e *PersonalAccessTokenService_Expecter) IsAllowedInProject(ctx any, session any, obj any, act any) *PersonalAccessTokenService_IsAllowedInProject_Call {
+func (_e *PersonalAccessTokenService_Expecter) IsAllowedInProject(ctx interface{}, session interface{}, obj interface{}, act interface{}) *PersonalAccessTokenService_IsAllowedInProject_Call {
 	return &PersonalAccessTokenService_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", ctx, session, obj, act)}
 }
 
@@ -366,7 +366,7 @@ type PersonalAccessTokenService_RevokeByPrivateKey_Call struct {
 // RevokeByPrivateKey is a helper method to define mock.On call
 //   - ctx context.Context
 //   - privKey string
-func (_e *PersonalAccessTokenService_Expecter) RevokeByPrivateKey(ctx any, privKey any) *PersonalAccessTokenService_RevokeByPrivateKey_Call {
+func (_e *PersonalAccessTokenService_Expecter) RevokeByPrivateKey(ctx interface{}, privKey interface{}) *PersonalAccessTokenService_RevokeByPrivateKey_Call {
 	return &PersonalAccessTokenService_RevokeByPrivateKey_Call{Call: _e.mock.On("RevokeByPrivateKey", ctx, privKey)}
 }
 
@@ -439,7 +439,7 @@ type PersonalAccessTokenService_ToModel_Call struct {
 //   - ctx context.Context
 //   - request dtos.PatCreateRequest
 //   - owner dtos.TokenOwner
-func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx any, request any, owner any) *PersonalAccessTokenService_ToModel_Call {
+func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx interface{}, request interface{}, owner interface{}) *PersonalAccessTokenService_ToModel_Call {
 	return &PersonalAccessTokenService_ToModel_Call{Call: _e.mock.On("ToModel", ctx, request, owner)}
 }
 
@@ -516,7 +516,7 @@ type PersonalAccessTokenService_VerifyAPIToken_Call struct {
 // VerifyAPIToken is a helper method to define mock.On call
 //   - ctx context.Context
 //   - token string
-func (_e *PersonalAccessTokenService_Expecter) VerifyAPIToken(ctx any, token any) *PersonalAccessTokenService_VerifyAPIToken_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *PersonalAccessTokenService_VerifyAPIToken_Call {
 	return &PersonalAccessTokenService_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
 }
 
@@ -581,7 +581,7 @@ type PersonalAccessTokenService_VerifyAdminRequest_Call struct {
 
 // VerifyAdminRequest is a helper method to define mock.On call
 //   - req *http.Request
-func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req any) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req interface{}) *PersonalAccessTokenService_VerifyAdminRequest_Call {
 	return &PersonalAccessTokenService_VerifyAdminRequest_Call{Call: _e.mock.On("VerifyAdminRequest", req)}
 }
 
@@ -644,7 +644,7 @@ type PersonalAccessTokenService_VerifyRequestSignature_Call struct {
 // VerifyRequestSignature is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *http.Request
-func (_e *PersonalAccessTokenService_Expecter) VerifyRequestSignature(ctx any, req any) *PersonalAccessTokenService_VerifyRequestSignature_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *PersonalAccessTokenService_VerifyRequestSignature_Call {
 	return &PersonalAccessTokenService_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 

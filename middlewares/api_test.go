@@ -151,7 +151,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
@@ -183,7 +183,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
@@ -215,7 +215,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{
 			IsPublic: true,
@@ -249,7 +249,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Verifier{}
+		mockPAT := mocks.Authorizer{}
 		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 

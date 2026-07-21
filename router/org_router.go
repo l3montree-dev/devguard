@@ -46,7 +46,7 @@ func NewOrgRouter(
 	casbinRBACProvider shared.RBACProvider,
 	statisticsController *controllers.StatisticsController,
 	patController *controllers.PatController,
-	patVerifier shared.Verifier,
+	patVerifier shared.PersonalAccessTokenService,
 ) OrgRouter {
 	/**
 	Organization router

@@ -29,7 +29,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user1", []string{"read", "write"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
@@ -54,7 +54,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(nil, errors.New("could not verify request"))
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
@@ -79,7 +79,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyAPIToken", mock.Anything, "mytoken123").Return("user3", "scan", nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
@@ -105,7 +105,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyAPIToken", mock.Anything, "badtoken").Return("", "", errors.New("invalid token"))
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
@@ -130,7 +130,7 @@ func TestSessionMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user5", []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{BearerTokenAuthDisabled: true}), verifier)
@@ -161,7 +161,7 @@ func TestSessionMiddleware(t *testing.T) {
 		mockAdminClient := mocks.NewPublicClient(t)
 		mockAdminClient.On("GetIdentityFromCookie", mock.Anything, "ory_kratos_session=bad_cookie").Return(client.Identity{}, errors.New("invalid cookie"))
 
-		verifier := new(mocks.Verifier)
+		verifier := new(mocks.Authorizer)
 		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user4", []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(mockAdminClient, newConfigMock(t, shared.InstanceSettings{}), verifier)

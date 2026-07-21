@@ -30,7 +30,7 @@ func NewExternalReferenceRouter(
 	assetVersionRouter AssetVersionRouter,
 	externalReferenceController *controllers.ExternalReferenceController,
 	assetRepository shared.AssetRepository,
-	patVerifier shared.Verifier,
+	patVerifier shared.PersonalAccessTokenService,
 ) ExternalReferenceRouter {
 	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository, patVerifier)
 	// External references are scoped to asset versions
@@ -40,8 +40,8 @@ func NewExternalReferenceRouter(
 
 	// Write access - requires asset update permission
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))       // Create reference
-	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))    // Sync external sources
+	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))        // Create reference
+	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))     // Sync external sources
 	refWriteGroup.DELETE("/:url/", externalReferenceController.Delete, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate)) // Delete reference by URL-encoded URL
 
 	return ExternalReferenceRouter{Group: refGroup}

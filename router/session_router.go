@@ -54,7 +54,7 @@ func NewSessionRouter(
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
 	assetVersionRepository shared.AssetVersionRepository,
-	patVerifier shared.Verifier,
+	patVerifier shared.PersonalAccessTokenService,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
 		middlewares.SessionMiddleware(adminClient, configService, patVerifier),
