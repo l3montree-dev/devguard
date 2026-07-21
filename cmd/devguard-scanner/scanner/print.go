@@ -132,6 +132,18 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
 	tw.SetColumnConfigs([]table.ColumnConfig{{Number: 1, AutoMerge: true}})
 
+	vulnCVSS := func(v cdx.Vulnerability) float64 {
+		cvss := 0.0
+		if v.Ratings != nil {
+			for _, r := range *v.Ratings {
+				if r.Score != nil && (r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31) {
+					cvss = *r.Score
+				}
+			}
+		}
+		return cvss
+	}
+
 	sortedVulns := *vulns
 	sort.Slice(sortedVulns, func(i, j int) bool {
 		refI, refJ := "", ""
@@ -141,7 +153,10 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		if sortedVulns[j].Affects != nil && len(*sortedVulns[j].Affects) > 0 {
 			refJ = (*sortedVulns[j].Affects)[0].Ref
 		}
-		return refI < refJ
+		if refI != refJ {
+			return refI < refJ
+		}
+		return vulnCVSS(sortedVulns[i]) > vulnCVSS(sortedVulns[j])
 	})
 
 	thresholdViolations := 0
@@ -229,7 +244,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		tw.AppendRow(table.Row{
-			colorRow(libraryName),
+			libraryName,
 			colorRow(v.ID),
 			colorRow(fmt.Sprintf("%.2f", risk)),
 			colorRow(fmt.Sprintf("%.1f", cvss)),
