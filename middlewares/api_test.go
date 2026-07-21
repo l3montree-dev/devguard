@@ -11,6 +11,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,7 +41,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
-		ctx.Set("session", accesscontrol.NoSession)
+		shared.SetSession(ctx, accesscontrol.NoSession)
 
 		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
 
@@ -69,7 +70,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
-		session := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
+		session := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
@@ -77,7 +78,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
-		ctx.Set("session", session)
+		shared.SetSession(ctx, session)
 
 		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
 
@@ -151,8 +152,9 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Authorizer{}
-		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -160,10 +162,10 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(true, nil)
 
-		ctx.Set("session", mockSession)
-		ctx.Set("organization", mockOrganization)
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -183,8 +185,9 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Authorizer{}
-		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -192,10 +195,10 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
 
-		ctx.Set("session", mockSession)
-		ctx.Set("organization", mockOrganization)
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -215,8 +218,9 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Authorizer{}
-		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{
 			IsPublic: true,
 		}
@@ -226,10 +230,10 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
 
-		ctx.Set("session", mockSession)
-		ctx.Set("organization", mockOrganization)
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -249,8 +253,9 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockPAT := mocks.Authorizer{}
-		mockSession := accesscontrol.NewSession("user-id", []string{"test-role"}, false)
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -258,10 +263,10 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, errors.New("error"))
 
-		ctx.Set("session", mockSession)
-		ctx.Set("organization", mockOrganization)
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, mockOrganization)
 
-		middleware := middlewares.OrganizationAccessControlMiddleware(&mockPAT, obj, act)
+		middleware := middlewares.OrganizationAccessControlMiddleware(obj, act)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -282,8 +287,8 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", []string{"scope1", "scope2", "scope3"}, false)
-		ctx.Set("session", mockSession)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1", "scope2", "scope3"}, false)
+		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
 
@@ -307,8 +312,8 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", []string{"scope1"}, false)
-		ctx.Set("session", mockSession)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1"}, false)
+		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
 
@@ -333,8 +338,8 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", []string{}, false)
-		ctx.Set("session", mockSession)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{}, false)
+		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1"})
 
@@ -359,8 +364,8 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", []string{"scope1"}, false)
-		ctx.Set("session", mockSession)
+		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1"}, false)
+		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{})
 

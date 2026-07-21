@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 )
@@ -74,7 +75,8 @@ func TestTriggerSync(t *testing.T) {
 			// Setup session
 			session := mocks.NewAuthSession(t)
 			if tt.isExternalOrg {
-				session.On("GetUserID").Return("user123")
+				session.On("GetOwnerID").Return("user123")
+				session.On("GetOwnerType").Return(dtos.OwnerUser)
 			}
 
 			// Setup context
@@ -89,11 +91,11 @@ func TestTriggerSync(t *testing.T) {
 				// Mock the refresh method call
 				domainRBAC := mocks.NewAccessControl(t)
 				rbacProvider.On("GetDomainRBAC", org.GetID().String()).Return(domainRBAC)
-				domainRBAC.On("GetAllProjectsForSession", "user123").Return([]string{}, tt.refreshError)
+				domainRBAC.On("GetAllProjectsForSession", mock.Anything, session).Return([]string{}, tt.refreshError)
 
 				if tt.refreshError == nil {
 					// RefreshExternalEntityProviderProjects also calls GetAllAssetsForSession
-					domainRBAC.On("GetAllAssetsForSession", "user123").Return([]string{}, nil)
+					domainRBAC.On("GetAllAssetsForSession", mock.Anything, session).Return([]string{}, nil)
 					thirdPartyIntegration.On("ListGroups", mock.Anything, "user123", "gitlab").Return([]models.Project{}, []shared.Role{}, nil)
 					projectRepo.On("UpsertSplit", mock.Anything, mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{}, []*models.Project{}, nil)
 				}
@@ -231,7 +233,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user123")
+		session.On("GetOwnerID").Return("user123")
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -313,7 +315,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user123")
+		session.On("GetOwnerID").Return("user123")
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration with error
@@ -334,7 +336,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user123")
+		session.On("GetOwnerID").Return("user123")
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -378,7 +380,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user123")
+		session.On("GetOwnerID").Return("user123")
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -429,7 +431,7 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user123")
+		session.On("GetOwnerID").Return("user123")
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration with empty list

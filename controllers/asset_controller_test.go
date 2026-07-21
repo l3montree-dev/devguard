@@ -211,7 +211,7 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user-123")
+		session.On("GetOwnerID").Return("user-123")
 		shared.SetSession(ctx, session)
 		controller := &AssetController{}
 		err := controller.InviteMembers(ctx)
@@ -307,7 +307,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleMember, assetID.String()).Return(nil)
 
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user-123")
+		session.On("GetOwnerID").Return("user-123")
 		shared.SetSession(ctx, session)
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
@@ -360,7 +360,7 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleMember, assetID.String()).Return(errors.New("not a member"))
 
 		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return("user-123")
+		session.On("GetOwnerID").Return("user-123")
 		shared.SetSession(ctx, session)
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)

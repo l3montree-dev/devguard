@@ -99,15 +99,15 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, patID).Return(nil)
 		patService := NewPatService(patMock)
 
-		gotUserID, gotScopes, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		gotSession, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if gotUserID != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotUserID)
+		if gotSession.GetOwnerID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetOwnerID())
 		}
-		if gotScopes != "read write" {
-			t.Fatalf("expected scopes 'read write', got %s", gotScopes)
+		if strings.Join(gotSession.GetScopes(), " ") != "read write" {
+			t.Fatalf("expected scopes 'read write', got %s", gotSession.GetScopes())
 		}
 		patMock.AssertExpectations(t)
 	})
@@ -117,7 +117,7 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("GetByBearerTokenHash", mock.Anything, mock.Anything, mock.Anything).Return(models.PAT{}, errors.New("not found"))
 		patService := NewPatService(patMock)
 
-		_, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		_, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -133,7 +133,7 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("GetByBearerTokenHash", mock.Anything, mock.Anything, tokenHash).Return(pat, nil)
 		patService := NewPatService(patMock)
 
-		_, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		_, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err == nil {
 			t.Fatal("expected error for expired token, got nil")
 		}
@@ -150,12 +150,12 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, patID).Return(errors.New("db error"))
 		patService := NewPatService(patMock)
 
-		gotUserID, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		gotSession, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err != nil {
 			t.Fatalf("expected success despite MarkAsLastUsedNowByID failure, got %v", err)
 		}
-		if gotUserID != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotUserID)
+		if gotSession.GetOwnerID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetOwnerID())
 		}
 	})
 }
@@ -233,10 +233,12 @@ func TestToModel(t *testing.T) {
 func TestAuthenticateRequestWithToken(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
+		userID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 		var pat = models.PAT{
 			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
 			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
+		pat.UserID = &userID
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
 		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)

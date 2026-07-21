@@ -62,6 +62,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -135,7 +136,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	// come from DisallowPublicRequests or a write-action RBAC check.
 	patService := &mocks.PersonalAccessTokenService{}
 	patService.On("VerifyRequestSignature", mock.Anything, mock.Anything).
-		Maybe().Return(accesscontrol.NewSession("test-user", []string{"manage", "scan"}, false), nil)
+		Maybe().Return(accesscontrol.NewSession("test-user", dtos.OwnerUser, []string{"manage", "scan"}, false), nil)
 
 	rbacProvider := &mocks.RBACProvider{}
 	rbacProvider.On("GetDomainRBAC", mock.Anything).Maybe().Return(ac)
@@ -211,6 +212,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		rbacProvider,
 		orgService,
 		assetVersionRepo,
+		patService,
 	)
 
 	orgRouter := NewOrgRouter(
@@ -231,7 +233,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		rbacProvider,
 		new(controllers.StatisticsController),
 		new(controllers.PatController),
-		patService,
 	)
 
 	projectRouter := NewProjectRouter(
@@ -249,7 +250,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.ComponentController),
 		map[string]*gitlabint.GitlabOauth2Config{},
 		new(controllers.PatController),
-		patService,
 	)
 
 	assetRouter := NewAssetRouter(
@@ -265,7 +265,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.ScanController),
 		assetRepo,
 		new(controllers.PatController),
-		patService,
 	)
 
 	assetVersionRouter := NewAssetVersionRouter(
@@ -283,7 +282,6 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		assetVersionRepo,
 		assetRepo,
 		vulnEventRepo,
-		patService,
 	)
 
 	// Sub-routers under /refs/:assetVersionSlug — all non-GET routes in these
@@ -292,8 +290,8 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
 	NewVEXRuleRouter(assetVersionRouter, new(controllers.VEXRuleController))
-	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo, patService)
-	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo, patService)
+	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
+	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo)
 
 	return e
 }

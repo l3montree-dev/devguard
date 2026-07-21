@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestIsAllowed(t *testing.T) {
 
 			// Only mock rootAccessControl if we expect it to be called
 			if tc.object != shared.ObjectOrganization {
-				rootAccessControl.On("IsAllowed", mock.Anything, NewSession(tc.userID, nil, false), tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
+				rootAccessControl.On("IsAllowed", mock.Anything, NewSession(tc.userID, dtos.OwnerUser, nil, false), tc.object, tc.action).Return(tc.mockResult, tc.mockErr)
 			}
 
 			rbac := NewExternalEntityProviderRBAC(
@@ -60,7 +61,7 @@ func TestIsAllowed(t *testing.T) {
 				"external-entity-provider-id",
 			)
 
-			result, err := rbac.IsAllowed(context.Background(), NewSession(tc.userID, nil, false), tc.object, tc.action)
+			result, err := rbac.IsAllowed(context.Background(), NewSession(tc.userID, dtos.OwnerUser, nil, false), tc.object, tc.action)
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {

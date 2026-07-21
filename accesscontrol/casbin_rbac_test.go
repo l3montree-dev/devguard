@@ -11,6 +11,7 @@ import (
 	"github.com/casbin/casbin/v3/persist"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -113,7 +114,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 			defer wg.Done()
 			user := fmt.Sprintf("user-%d", i%5)
 			_ = rbac.GetAllRoles(user)
-			_, _ = rbac.GetAllProjectsForSession(user)
+			_, _ = rbac.GetAllProjectsForSession(context.Background(), NewSession(user, dtos.OwnerUser, nil, false))
 		}()
 	}
 	wg.Wait()
@@ -136,7 +137,7 @@ func TestCasbinRBAC_ConcurrentReadsAndWrites(t *testing.T) {
 				_ = rbac.GrantRoleInProject(context.Background(), user, shared.RoleMember, project)
 			} else {
 				_ = rbac.GetAllRoles(user)
-				_, _ = rbac.GetAllProjectsForSession(user)
+				_, _ = rbac.GetAllProjectsForSession(context.Background(), NewSession(user, dtos.OwnerUser, nil, false))
 			}
 		}()
 	}
@@ -177,7 +178,7 @@ func TestRevokeAllRolesInProjectRemovesRolesButKeepsSiblings(t *testing.T) {
 	if _, err := rbac.GetProjectRole("bob", "proj"); err == nil {
 		t.Error("bob still has a role in proj")
 	}
-	if projects, _ := rbac.GetAllProjectsForSession("alice"); len(projects) != 0 {
+	if projects, _ := rbac.GetAllProjectsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false)); len(projects) != 0 {
 		t.Errorf("alice still mapped to projects: %v", projects)
 	}
 
@@ -207,7 +208,7 @@ func TestRevokeAllRolesInProjectRemovesPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	alice := NewSession("alice", nil, false)
+	alice := NewSession("alice", dtos.OwnerUser, nil, false)
 	allowed, err := rbac.IsAllowedInProject(ctx, project, alice, shared.ObjectProject, shared.ActionRead)
 	if err != nil {
 		t.Fatal(err)

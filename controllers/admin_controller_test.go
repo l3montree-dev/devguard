@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -47,7 +48,7 @@ func newAdminTestContext(method, path, body string) (echo.Context, *httptest.Res
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := accesscontrol.NewSession("admin-user-123", []string{"admin"}, true)
+	session := accesscontrol.NewSession("admin-user-123", dtos.OwnerUser, []string{"admin"}, true)
 	shared.SetSession(ctx, session)
 
 	return ctx, rec
