@@ -25,8 +25,8 @@ type AffectedPackage struct {
 	Model
 	Ecosystem        string     `json:"ecosystem" gorm:"type:text;column:ecosystem"`
 	PackageName      string     `json:"packageName" gorm:"type:text;column:package_name"`
-	SemverIntroduced *string    `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed      *string    `json:"semverEnd" gorm:"type:semver;index"`
+	SemverIntroduced *string    `json:"semverStart" gorm:"type:text;index"`
+	SemverFixed      *string    `json:"semverEnd" gorm:"type:text;index"`
 	Advisory         []Advisory `json:"-" gorm:"many2many:advisories_affected_packages;constraint:OnDelete:CASCADE"`
 }
 
