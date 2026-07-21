@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.10.3] - 2026-07-21
+
+### Changed
+
+- **SCA result table** — vulnerabilities are now sorted by CVSS score (descending) within each library, and the library column no longer breaks row merging when only some of its vulnerabilities exceed the fail-on threshold
+
+### Fixed
+
+- **Affected components with no version constraints** (#5829) — `CheckVersion` now treats a component with no introduced/fixed/exact version as matching any looked-up version, instead of erroring out
+- **`purl-inspect`** — the PURL is now percent-encoded before being sent to the API, so qualifiers (e.g. `?arch=amd64`) are no longer dropped or misparsed as an HTTP query string
+- **`purl-inspect` affected components table** — the CVEs column is now wrapped at a fixed width instead of stretching the table across the full terminal width
+
 ## [v1.10.2] - 2026-07-20
 
 - Just linter fixes
