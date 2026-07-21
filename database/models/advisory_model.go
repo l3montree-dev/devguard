@@ -9,7 +9,7 @@ import (
 
 type Advisory struct {
 	Vulnerability    `gorm:"-"`
-	ID               uuid.UUID         `json:"id" gorm:"primaryKey;column:id"`
+	ID               uuid.UUID         `json:"id" gorm:"primaryKey;type:uuid;column:id;default:gen_random_uuid()"`
 	CreatedAt        time.Time         `json:"createdAt"`
 	UpdatedAt        time.Time         `json:"updatedAt"`
 	Title            string            `json:"title" gorm:"type:text;column:title"`

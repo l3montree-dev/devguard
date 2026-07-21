@@ -62,6 +62,8 @@ func (s *AdvisoryService) CreateVulnEventAndApply(ctx context.Context, tx shared
 func (s *AdvisoryService) createVulnEventAndApply(ctx context.Context, tx shared.DB, userID string, advisory *models.Advisory, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch vulnEventType {
+	case dtos.EventTypeCreated:
+		ev = models.NewCreatedSecurityAdvisoryEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, false, userAgent)
 	case dtos.EventTypeComment:
 		ev = models.NewCommentEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, justification, false, userAgent)
 	case dtos.EventTypePublish:

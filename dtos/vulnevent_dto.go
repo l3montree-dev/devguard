@@ -32,6 +32,7 @@ const (
 
 	EventTypePublish  VulnEventType = "published"
 	EventTypeWithdraw VulnEventType = "withdrawn"
+	EventTypeCreated  VulnEventType = "created"
 
 	EventTypeImplemented   VulnEventType = "implemented"
 	EventTypeNotApplicable VulnEventType = "notApplicable"

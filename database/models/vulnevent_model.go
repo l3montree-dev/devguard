@@ -299,6 +299,17 @@ func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, compone
 	return ev
 }
 
+func NewCreatedSecurityAdvisoryEvent(advisoryID uuid.UUID, vulnType dtos.VulnType, userID string, createdByRule bool, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:             dtos.EventTypeCreated,
+		UserID:           userID,
+		CreatedByVexRule: createdByRule,
+		UserAgent:        userAgent,
+	}
+	SetVulnIDOnEvent(&ev, advisoryID, vulnType)
+	return ev
+}
+
 func NewPublishedSecurityAdvisoryEvent(advisoryID uuid.UUID, vulnType dtos.VulnType, userID string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypePublish,
@@ -350,6 +361,8 @@ func CheckStatusType(statusType string) error {
 	case "published":
 		return nil
 	case "withdrawn":
+		return nil
+	case "created":
 		return nil
 	default:
 		return fmt.Errorf("invalid status type")
