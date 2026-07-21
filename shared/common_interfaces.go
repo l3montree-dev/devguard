@@ -222,6 +222,7 @@ type CveRepository interface {
 	CreateCVEAffectedComponentsEntries(ctx context.Context, tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(ctx context.Context, tx DB, batch []models.CVE) error
 	FindAdvisoriesForCVE(ctx context.Context, tx DB, cveID string) ([]models.CVE, error)
+	GetAllRelatedCVEsForCVE(ctx context.Context, tx DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error)
 }
 
 type EPSService interface {

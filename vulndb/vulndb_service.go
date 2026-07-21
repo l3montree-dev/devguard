@@ -1413,10 +1413,10 @@ func convertCSAFReportToModelsWorker(ctx context.Context, jobs chan *minimalCSAF
 				if vuln == nil || vuln.CVE == nil {
 					continue
 				}
-				// the advisory is the source_cve (it carries the fk on cves.cve), the referenced official cve is the target_cve
+				// the referenced official cve is the source_cve (it carries the fk on cves.cve), the advisory is the target_cve
 				cve.Relationships = append(cve.Relationships, models.CVERelationship{
-					SourceCVE:        cve.CVE,
-					TargetCVE:        string(*vuln.CVE),
+					SourceCVE:        string(*vuln.CVE),
+					TargetCVE:        cve.CVE,
 					RelationshipType: dtos.RelationshipTypeAdvisory, // use custom relationship type to distinguish them easily
 				})
 			}
@@ -1513,7 +1513,8 @@ func filterSurvivingAdvisories(advisories []models.CVE, survivingCVEs map[string
 		}
 		relationships := advisory.Relationships[:0]
 		for _, relationship := range advisory.Relationships {
-			if _, ok := survivingCVEs[relationship.TargetCVE]; ok {
+			// the referenced official cve is the source and carries the fk, so it has to survive
+			if _, ok := survivingCVEs[relationship.SourceCVE]; ok {
 				relationships = append(relationships, relationship)
 			}
 		}

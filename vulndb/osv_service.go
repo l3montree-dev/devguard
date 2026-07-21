@@ -987,7 +987,6 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
     CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
 
 	CREATE INDEX idx_cve_relationships_source_cve ON public.cve_relationships USING btree (source_cve);
-	CREATE INDEX IF NOT EXISTS idx_cve_relationships_target_cve ON public.cve_relationships USING hash (target_cve);
 	
 	CREATE INDEX idx_affected_component_purl_version
   		ON affected_components (purl, version);
@@ -1037,11 +1036,18 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
     	JOIN cves temp_cves ON temp_cves.cve = cr.target_cve
     	JOIN cve_affected_component temp_cac ON temp_cac.cve_id = temp_cves.id
 	) ON cr.source_cve = cves.cve
-	WHERE 
-		cac.cve_id IS NULL 		
-  	AND 
-		cr.source_cve IS NULL 
-	);`)
+	WHERE
+		cac.cve_id IS NULL
+  	AND
+		cr.source_cve IS NULL
+	-- special case for advisories since here the source_cve is checked for affected components
+	AND NOT EXISTS (
+		SELECT FROM
+			cve_relationships advisory
+		JOIN cves source_cves ON source_cves.cve = advisory.source_cve
+		JOIN cve_affected_component source_cac ON source_cac.cve_id = source_cves.id
+		WHERE advisory.target_cve = cves.cve AND advisory.relationship_type = $1)
+	);`, dtos.RelationshipTypeAdvisory)
 	if err != nil {
 		return fmt.Errorf("could not clean up orphan cves: %w", err)
 	}
@@ -1072,8 +1078,8 @@ func runCleanUpJobs(ctx context.Context, tx pgx.Tx) error {
 	}
 	slog.Info("successfully cleaned up orphan affected components", "took", time.Since(start))
 
-	// since advisory type cves can only be found via their target_cve relations
-	// we can delete every relations where target_cve does not exist
+	// the advisory itself is the target_cve, so a relation pointing at an advisory
+	// that got dropped by the orphan clean up above is dangling and can be deleted
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	DELETE FROM 

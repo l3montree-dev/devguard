@@ -279,7 +279,7 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	advisories, err := controller.cveRepository.FindAdvisoriesForCVE(ctx.Request().Context(), nil, dependencyVuln.CVE.CVE)
+	related, err := controller.cveRepository.GetAllRelatedCVEsForCVE(ctx.Request().Context(), nil, dependencyVuln.CVEID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
 	}
@@ -290,14 +290,14 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	type vulnWithAdvisories struct {
+	type vulnWithRelated struct {
 		dtos.DetailedDependencyVulnDTO
-		Advisories []models.CVE `json:"advisories"`
+		Related map[dtos.RelationshipType][]models.CVE `json:"related"`
 	}
 
-	return ctx.JSON(200, vulnWithAdvisories{
+	return ctx.JSON(200, vulnWithRelated{
 		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
-		Advisories:                advisories,
+		Related:                   related,
 	})
 }
 

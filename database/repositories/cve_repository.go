@@ -284,3 +284,55 @@ func (g *cveRepository) FindAdvisoriesForCVE(ctx context.Context, tx *gorm.DB, c
 	ORDER BY cves.cve DESC -- bsi advisories (wid...) appear before other advisories ;`, dtos.RelationshipTypeAdvisory, cveID, cveID, cveID).Find(&advisories).Error
 	return advisories, err
 }
+
+// fetches all related cves recursively via their relationships
+// and return them grouped by their relationship type
+// fetched cves do not have any affected components or relationships
+func (g *cveRepository) GetAllRelatedCVEsForCVE(ctx context.Context, tx *gorm.DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error) {
+	type cveWithRelationType struct {
+		models.CVE
+		TargetCVE        string                `gorm:"column:target_cve"`
+		RelationshipType dtos.RelationshipType `gorm:"column:relationship_type"`
+	}
+	results := make([]cveWithRelationType, 0, 64)
+
+	err := g.GetDB(ctx, tx).Raw(`
+	SELECT 
+		sub.*, cves.* 
+	FROM(
+		WITH RECURSIVE related_cves
+	AS(
+		SELECT 
+			cr.target_cve, 0 as depth, cr.relationship_type 
+		FROM 
+			cve_relationships cr 
+		WHERE 
+			cr.source_cve = ?
+		UNION 
+		SELECT 
+			cr2.target_cve, rc.depth + 1, cr2.relationship_type 
+		FROM 
+			cve_relationships cr2 
+		INNER JOIN 
+			related_cves rc ON rc.target_cve = cr2.source_cve
+		WHERE 
+			rc.depth + 1 < 5
+	)
+	SELECT 
+		DISTINCT target_cve, relationship_type 
+	FROM 
+		related_cves) as sub 
+	LEFT JOIN 
+		cves ON cves.cve = sub.target_cve;`, cveID).Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// map each cve to its relationship
+	relationshipTypeToCVEs := make(map[dtos.RelationshipType][]models.CVE, 5)
+	for i := range results {
+		relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], results[i].CVE)
+	}
+
+	return relationshipTypeToCVEs, err
+}
