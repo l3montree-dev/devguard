@@ -17,7 +17,7 @@ type AdvisoryEvent struct {
 	Description  *string                `json:"description" gorm:"type:text"`
 	Severity     *string                `json:"severity" gorm:"type:text"`
 	VectorString *string                `json:"vectorString" gorm:"type:text"`
-	Visibility   *string                `json:"visibility" gorm:"type:text"`
+	State        *string                `json:"state" gorm:"type:text"`
 }
 
 func (AdvisoryEvent) TableName() string {

@@ -18,16 +18,16 @@ type Advisory struct {
 	Severity         string            `json:"severity" gorm:"type:text;column:severity"`
 	VectorString     string            `json:"vectorString" gorm:"type:text;column:vector_string"`
 	AssetID          uuid.UUID         `json:"assetID" gorm:"type:uuid;column:asset_id"`
-	Visibility       string            `json:"visibility" gorm:"type:text;column:visibility;default:draft"`
+	State            string            `json:"state" gorm:"type:text;column:state;default:draft"`
 	Events           []VulnEvent       `json:"events" gorm:"foreignKey:SecurityAdvisoryID;constraint:OnDelete:CASCADE;"`
 }
 type AffectedPackage struct {
 	Model
-	Ecosystem        string     `json:"ecosystem" gorm:"type:text;column:ecosystem"`
-	PackageName      string     `json:"packageName" gorm:"type:text;column:package_name"`
-	SemverIntroduced *string    `json:"semverStart" gorm:"type:text;index"`
-	SemverFixed      *string    `json:"semverEnd" gorm:"type:text;index"`
-	Advisory         []Advisory `json:"-" gorm:"many2many:advisories_affected_packages;constraint:OnDelete:CASCADE"`
+	Ecosystem         string     `json:"ecosystem" gorm:"type:text;column:ecosystem"`
+	PackageName       string     `json:"packageName" gorm:"type:text;column:package_name"`
+	VersionIntroduced *string    `json:"versionStart" gorm:"type:text;index"`
+	VersionFixed      *string    `json:"versionEnd" gorm:"type:text;index"`
+	Advisory          []Advisory `json:"-" gorm:"many2many:advisories_affected_packages;constraint:OnDelete:CASCADE"`
 }
 
 func (m Advisory) TableName() string {
@@ -45,20 +45,20 @@ func (m Advisory) GetType() dtos.VulnType {
 func (m *Advisory) SetState(state dtos.VulnState) {
 	switch state {
 	case dtos.VulnStatePublished:
-		m.Visibility = "public"
+		m.State = "public"
 	case dtos.VulnStateWithdrawn:
-		m.Visibility = "withdrawn"
+		m.State = "withdrawn"
 	}
 }
 
 func (m *Advisory) GetState() dtos.VulnState {
-	switch m.Visibility {
+	switch m.State {
 	case "public":
 		return dtos.VulnStatePublished
 	case "withdrawn":
 		return dtos.VulnStateWithdrawn
 	default:
-		return dtos.VulnState(m.Visibility)
+		return dtos.VulnState(m.State)
 	}
 }
 

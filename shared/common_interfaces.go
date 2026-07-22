@@ -823,7 +823,7 @@ type AdvisoryService interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
 	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
 	ReadAdvisory(ctx context.Context, tx DB, id uuid.UUID) (models.Advisory, error)
-	Update(ctx context.Context, tx DB, id uuid.UUID, advisory *models.Advisory, currentVisibility string) error
+	Update(ctx context.Context, tx DB, id uuid.UUID, advisory *models.Advisory, currentState string) error
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
 	CreateVulnEventAndApply(ctx context.Context, tx DB, userID string, advisory *models.Advisory, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 }

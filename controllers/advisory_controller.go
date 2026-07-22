@@ -123,12 +123,12 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "advisory not found")
 	}
 
-	currentVisibility := advisory.Visibility
+	currentState := advisory.State
 
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
 	advisory.AssetID = shared.GetAsset(ctx).ID
 
-	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory, currentVisibility)
+	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory, currentState)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update advisory").WithInternal(err)
@@ -186,7 +186,7 @@ func (controller *AdvisoryController) CreateEvent(ctx shared.Context) error {
 
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status dtos.DependencyVulnStatus
+	var status dtos.CreateEventRequest
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}

@@ -128,7 +128,7 @@ type DetailedDependencyVulnDTO struct {
 	Events []VulnEventDTO `json:"events"`
 }
 
-type DependencyVulnStatus struct {
+type CreateEventRequest struct {
 	StatusType              string                      `json:"status"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`

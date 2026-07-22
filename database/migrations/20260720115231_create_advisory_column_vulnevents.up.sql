@@ -56,3 +56,8 @@ ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
 ALTER TABLE public.affected_packages
     ALTER COLUMN semver_introduced TYPE text USING semver_introduced::text,
     ALTER COLUMN semver_fixed      TYPE text USING semver_fixed::text;
+    
+ALTER TABLE public.affected_packages RENAME COLUMN semver_introduced to version_introduced;
+ALTER TABLE public.affected_packages RENAME COLUMN semver_fixed to version_fixed;
+
+ALTER TABLE public.advisories RENAME COLUMN visibility to state;

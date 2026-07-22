@@ -383,7 +383,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	}
 	userID := shared.GetSession(ctx).GetUserID()
 
-	var status dtos.DependencyVulnStatus
+	var status dtos.CreateEventRequest
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)

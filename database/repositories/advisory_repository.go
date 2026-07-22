@@ -81,7 +81,7 @@ func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx cont
 	err := advisoryRepository.GetDB(ctx, tx).
 		Preload("AffectedPackages").
 		Where("asset_id = ?", assetID).
-		Where("visibility IN ?", []string{statemachine.VisibilityPublic, statemachine.VisibilityWithdrawn}).
+		Where("state IN ?", []string{statemachine.StatePublic, statemachine.StateWithdrawn}).
 		Find(&advisories).Error
 	return advisories, err
 
