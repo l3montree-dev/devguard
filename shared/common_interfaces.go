@@ -859,7 +859,7 @@ type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 type Role string
 
 const (
-	RoleOwner  Role = "actor"
+	RoleOwner  Role = "owner"
 	RoleAdmin  Role = "admin"
 	RoleMember Role = "member"
 	RoleGuest  Role = "guest"
