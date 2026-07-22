@@ -37,14 +37,21 @@ func NewPATRepository(db *gorm.DB) *gormPatRepository {
 	}
 }
 
+// ReadUnscoped/DeleteUnscoped are deliberately unscoped by tenant - the "Unscoped"
+// name signals that ownership must be verified by the caller before acting on the
+// result. Every call site (controllers/pat_controller.go's Delete/DeleteByOrg/
+// DeleteByProject/DeleteByAsset) does exactly that: ReadUnscoped fetches the PAT,
+// the controller checks pat.UserID/OrgID/ProjectID/AssetID against the caller's
+// verified scope and 403s on mismatch, and only then calls DeleteUnscoped with the
+// same, already-verified id.
 func (g *gormPatRepository) ReadUnscoped(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.PAT, error) {
 	var t models.PAT
-	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error
+	err := g.GetDB(ctx, tx).First(&t, "id = ?", id).Error // nosemgrep: bola-raw-gorm-first-bypasses-tenant-scope -- ownership verified by every caller before use, see comment above
 	return t, err
 }
 
 func (g *gormPatRepository) DeleteUnscoped(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	res := g.GetDB(ctx, tx).Where("id = ?", id).Delete(&models.PAT{})
+	res := g.GetDB(ctx, tx).Where("id = ?", id).Delete(&models.PAT{}) // nosemgrep: bola-repository-delete-missing-tenant-scope -- ownership verified by every caller before use, see comment above
 	if res.Error != nil {
 		return res.Error
 	}

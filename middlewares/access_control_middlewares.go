@@ -260,7 +260,8 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 			shared.SetOrg(ctx, *org)
 			shared.SetRBAC(ctx, domainRBAC)
 			shared.SetOrgSlug(ctx, organization)
-			ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), shared.OwnershipScopeFromOrg(ctx, *org))))
+
+			ownershipScope := models.OwnershipScope{OrgID: org.ID}
 
 			var resolvedProject *models.Project
 			var resolvedAsset *models.Asset
@@ -272,7 +273,7 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 				}
 				resolvedProject = &project
 				shared.SetProject(ctx, project)
-				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), shared.OwnershipScopeFromProject(ctx, project))))
+				ownershipScope.ProjectID = project.ID
 
 				if assetSlug, aErr := shared.GetAssetSlug(ctx); aErr == nil {
 					asset, err := assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
@@ -284,9 +285,14 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 					asset.Project = project
 					resolvedAsset = &asset
 					shared.SetAsset(ctx, asset)
-					ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), shared.OwnershipScopeFromAsset(ctx, asset))))
+					ownershipScope.AssetID = asset.ID
 				}
 			}
+
+			// Set the ownership scope once, fully resolved - avoids the extra
+			// context.WithValue allocations and read-merge-write round trips a
+			// per-level Set would otherwise cost on every request.
+			ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), ownershipScope)))
 
 			actorScope, err := resolveActorScope(ctx.Request().Context(), shared.GetSession(ctx), resolvedProject, resolvedAsset, projectRepository, assetRepository)
 			if err != nil {
