@@ -19,6 +19,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// chainResourceFetchAndOrgAccess mirrors the real router wiring: ResourceFetchMiddleware
+// resolves the org (and RBAC/actor scope) first, then MultiOrganizationMiddlewareRBAC
+// checks access against what was resolved.
+func chainResourceFetchAndOrgAccess(rbacProvider shared.RBACProvider, orgService shared.OrgService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return middlewares.ResourceFetchMiddleware(rbacProvider, orgService, projectRepository, assetRepository)(
+			middlewares.MultiOrganizationMiddlewareRBAC()(next),
+		)
+	}
+}
+
 func TestMultiOrganizationMiddleware(t *testing.T) {
 	t.Run("it should allow read requests, if the organization is public", func(t *testing.T) {
 		// arrange
@@ -30,18 +41,20 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 		mockRBAC := mocks.AccessControl{}
+		mockProjectRepo := mocks.ProjectRepository{}
+		mockAssetRepo := mocks.AssetRepository{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", mock.Anything, shared.NoSession).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, shared.NoSession, mock.Anything).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 		shared.SetSession(ctx, shared.NoSession)
 
-		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
+		middleware := chainResourceFetchAndOrgAccess(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -66,19 +79,21 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 		mockRBAC := mocks.AccessControl{}
+		mockProjectRepo := mocks.ProjectRepository{}
+		mockAssetRepo := mocks.AssetRepository{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := shared.NewSession("user-id", shared.SessionActorUser, []string{"test-role"}, false)
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", mock.Anything, session).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, session, mock.Anything).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 		shared.SetSession(ctx, session)
 
-		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
+		middleware := chainResourceFetchAndOrgAccess(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -101,8 +116,10 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
+		mockProjectRepo := mocks.ProjectRepository{}
+		mockAssetRepo := mocks.AssetRepository{}
 
-		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
+		middleware := chainResourceFetchAndOrgAccess(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -123,13 +140,15 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
+		mockProjectRepo := mocks.ProjectRepository{}
+		mockAssetRepo := mocks.AssetRepository{}
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&models.Org{}, errors.New("not found"))
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 
-		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
+		middleware := chainResourceFetchAndOrgAccess(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -158,7 +177,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(true, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -191,7 +210,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -226,7 +245,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -259,7 +278,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act).Return(false, errors.New("error"))
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, errors.New("error"))
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)

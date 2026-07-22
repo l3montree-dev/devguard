@@ -151,7 +151,7 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
+func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession, actorScope shared.ActorScope) (bool, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
 	case shared.SessionActorUser:
@@ -163,32 +163,16 @@ func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) 
 		return ownerID == c.domain, nil
 	case shared.SessionActorProject:
 		// if the project belongs to the organization, then the session has access
-		projectUUID, err := uuid.Parse(ownerID)
-		if err != nil {
-			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		if actorScope.Project == nil {
+			return false, fmt.Errorf("actor scope is missing the project for a project-scoped session")
 		}
-		project, err := c.projectRepository.Read(ctx, nil, projectUUID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		return project.OrganizationID.String() == c.domain, nil
+		return actorScope.Project.OrganizationID.String() == c.domain, nil
 	case shared.SessionActorAsset:
 		// if the asset belongs to the organization, then the session has access
-		assetUUID, err := uuid.Parse(ownerID)
-		if err != nil {
-			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		if actorScope.Asset == nil {
+			return false, fmt.Errorf("actor scope is missing the asset for an asset-scoped session")
 		}
-		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		return asset.Project.OrganizationID.String() == c.domain, nil
+		return actorScope.Asset.Project.OrganizationID.String() == c.domain, nil
 	default:
 		return false, fmt.Errorf("unknown owner type: %s", ownerType)
 	}
@@ -577,7 +561,7 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
@@ -602,18 +586,10 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 		return true, nil
 	case shared.SessionActorProject:
 		// we allow read, if the project is part of the organization, but we don't allow any other actions
-		projectUUID, err := uuid.Parse(ownerID)
-		if err != nil {
-			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		if actorScope.Project == nil {
+			return false, fmt.Errorf("actor scope is missing the project for a project-scoped session")
 		}
-		project, err := c.projectRepository.Read(ctx, nil, projectUUID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		if project.OrganizationID.String() != c.domain {
+		if actorScope.Project.OrganizationID.String() != c.domain {
 			return false, nil
 		}
 		if action == shared.ActionRead {
@@ -622,18 +598,10 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 		return false, nil
 	case shared.SessionActorAsset:
 		// we allow read, if the asset is part of the organization, but we don't allow any other actions
-		assetUUID, err := uuid.Parse(ownerID)
-		if err != nil {
-			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		if actorScope.Asset == nil {
+			return false, fmt.Errorf("actor scope is missing the asset for an asset-scoped session")
 		}
-		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		if asset.Project.OrganizationID.String() != c.domain {
+		if actorScope.Asset.Project.OrganizationID.String() != c.domain {
 			return false, nil
 		}
 		if action == shared.ActionRead {
@@ -645,7 +613,7 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 	}
 }
 
-func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
@@ -673,18 +641,10 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 		return project.ID.String() == ownerID && object != shared.ObjectProject && action != shared.ActionDelete && action != shared.ActionUpdate, nil
 	case shared.SessionActorAsset:
 		// if asset, we allow read
-		assetUUID, err := uuid.Parse(ownerID)
-		if err != nil {
-			return false, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		if actorScope.Asset == nil {
+			return false, fmt.Errorf("actor scope is missing the asset for an asset-scoped session")
 		}
-		asset, err := c.assetRepository.ReadWithProject(ctx, nil, assetUUID)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		if asset.ProjectID.String() != project.ID.String() {
+		if actorScope.Asset.ProjectID.String() != project.ID.String() {
 			return false, nil
 		}
 		if action == shared.ActionRead {

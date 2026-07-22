@@ -47,6 +47,8 @@ func NewOrgRouter(
 	casbinRBACProvider shared.RBACProvider,
 	statisticsController *controllers.StatisticsController,
 	patController *controllers.PatController,
+	projectRepository shared.ProjectRepository,
+	assetRepository shared.AssetRepository,
 ) OrgRouter {
 	/**
 	Organization router
@@ -60,7 +62,7 @@ func NewOrgRouter(
 	All routes below this line are scoped to a specific organization.
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
+		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 

@@ -91,12 +91,12 @@ func TestSecurityOrgTokenCannotActOnForeignOrgProject(t *testing.T) {
 	ctx := context.Background()
 	session := orgSession(f.orgA)
 
-	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, shared.ActionRead)
+	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, shared.ActionRead, shared.ActorScope{})
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
 	for _, action := range []shared.Action{shared.ActionRead, shared.ActionCreate, shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projB1, session, shared.ObjectProject, action)
+		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projB1, session, shared.ObjectProject, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on foreign org's project", action)
 	}
@@ -123,12 +123,12 @@ func TestSecurityOrgTokenCannotDeleteOrUpdateItsOwnOrganization(t *testing.T) {
 	ctx := context.Background()
 	session := orgSession(f.orgA)
 
-	allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead)
+	allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{})
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
 	for _, action := range []shared.Action{shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, action)
+		allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on own organization", action)
 	}
@@ -153,12 +153,12 @@ func TestSecurityProjectTokenCannotActOnSiblingProject(t *testing.T) {
 	ctx := context.Background()
 	session := projectSession(f.projA1.ID)
 
-	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectAsset, shared.ActionCreate)
+	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectAsset, shared.ActionCreate, shared.ActorScope{})
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
 	for _, action := range []shared.Action{shared.ActionRead, shared.ActionCreate, shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA2, session, shared.ObjectAsset, action)
+		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA2, session, shared.ObjectAsset, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on sibling project", action)
 	}
@@ -169,7 +169,7 @@ func TestSecurityProjectTokenCannotActOnForeignOrgProject(t *testing.T) {
 	ctx := context.Background()
 	session := projectSession(f.projA1.ID)
 
-	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projB1, session, shared.ObjectAsset, shared.ActionRead)
+	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projB1, session, shared.ObjectAsset, shared.ActionRead, shared.ActorScope{})
 	require.NoError(t, err)
 	assert.False(t, allowed)
 }
@@ -180,7 +180,7 @@ func TestSecurityProjectTokenCannotDeleteOrUpdateItsOwnProject(t *testing.T) {
 	session := projectSession(f.projA1.ID)
 
 	for _, action := range []shared.Action{shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, action)
+		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on own project", action)
 	}
@@ -239,20 +239,20 @@ func TestSecurityAssetTokenCannotActOnItsOwnProjectOrOrganization(t *testing.T) 
 	ctx := context.Background()
 	session := assetSession(f.assetA1a.ID)
 
-	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, shared.ActionRead)
+	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, shared.ActionRead, shared.ActorScope{Asset: &f.assetA1a})
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
 	for _, action := range []shared.Action{shared.ActionCreate, shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, action)
+		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, action, shared.ActorScope{Asset: &f.assetA1a})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on own project", action)
 	}
 
-	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead)
+	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{Asset: &f.assetA1a})
 	require.NoError(t, err)
 	assert.True(t, allowed)
-	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionDelete)
+	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionDelete, shared.ActorScope{Asset: &f.assetA1a})
 	require.NoError(t, err)
 	assert.False(t, allowed)
 }
@@ -296,11 +296,11 @@ func TestSecurityMalformedActorIDDoesNotPanicOrGrantAccess(t *testing.T) {
 	for _, actorType := range []shared.SessionActor{shared.SessionActorProject, shared.SessionActorAsset} {
 		session := shared.NewSession("not-a-uuid", actorType, nil, false)
 
-		allowed, err := f.rbacOrgA.HasAccess(ctx, session)
+		allowed, err := f.rbacOrgA.HasAccess(ctx, session, shared.ActorScope{})
 		assert.Error(t, err)
 		assert.False(t, allowed)
 
-		allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectAsset, shared.ActionRead)
+		allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectAsset, shared.ActionRead, shared.ActorScope{})
 		assert.Error(t, err)
 		assert.False(t, allowed)
 	}

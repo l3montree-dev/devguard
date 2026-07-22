@@ -46,17 +46,3 @@ type IntegrationAggregate interface {
 }
 
 type ExternalEntitySlug string
-
-func MaybeGetArtifact(ctx Context) (models.Artifact, error) {
-	val := ctx.Get("artifact")
-	if val == nil {
-		return models.Artifact{}, fmt.Errorf("artifact not found in context")
-	}
-	if artifact, ok := val.(*models.Artifact); ok {
-		return *artifact, nil
-	}
-	if artifact, ok := val.(models.Artifact); ok {
-		return artifact, nil
-	}
-	return models.Artifact{}, fmt.Errorf("artifact context value has unexpected type %T", val)
-}

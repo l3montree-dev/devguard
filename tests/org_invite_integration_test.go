@@ -201,7 +201,7 @@ func (f *TestFixture) RemoveMember(t testing.TB, e *echo.Echo, org models.Org, c
 
 	callerSession := NewUserSession(t, callerUserID)
 
-	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate)
+	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate, shared.ActorScope{})
 	require.NoError(t, err)
 	if !allowed {
 		return echo.NewHTTPError(403, "forbidden")

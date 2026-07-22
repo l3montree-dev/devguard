@@ -74,9 +74,6 @@ type Authorizer interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
 	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
-	IsAllowedInProject(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
-	IsAllowedInAsset(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
-	IsAllowedInOrg(ctx Context, session AuthSession, obj Object, act Action) (bool, error)
 }
 type PersonalAccessTokenService interface {
 	Authorizer
@@ -731,8 +728,17 @@ type AdminRepository interface {
 	GetAllExternalEntityOrganizations(ctx context.Context, tx DB) ([]models.Org, error)
 }
 
+// ActorScope carries the session's own scoped entity, pre-resolved by
+// ResourceFetchMiddleware from the session's owner ID. AccessControl
+// implementations must never fetch entities themselves - all resolution
+// (by URL slug or by session owner ID) happens once, in the middleware layer.
+type ActorScope struct {
+	Project *models.Project // set when session.GetSessionActorType() == SessionActorProject
+	Asset   *models.Asset   // set when session.GetSessionActorType() == SessionActorAsset (Project preloaded)
+}
+
 type AccessControl interface {
-	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -762,9 +768,9 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 
-	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error

@@ -442,6 +442,31 @@ rules:
             ...
           }
 
+  - id: project-asset-route-group-param-name-mismatch
+    severity: ERROR
+    message: |
+      A project- or asset-scoped route group must use the exact path param names
+      :projectSlug / :assetSlug.
+
+      middlewares.ResourceFetchMiddleware is the single place that resolves the
+      organization/project/asset for every request - it does so by reading these
+      exact param names (shared.GetProjectSlug/GetAssetSlug), once, before any
+      RBAC check or handler runs. A route group that scopes to a project or asset
+      using a differently-named param (:projectId, :project, :assetID, ...)
+      silently breaks resolution: ResourceFetchMiddleware treats the route as if
+      it carried no project/asset at all, IsAllowedInProject/IsAllowedInAsset
+      never run for it, and shared.GetProject(ctx)/GetAsset(ctx) will panic in
+      whatever handler expects them to be set.
+
+      Fix: name the param exactly :projectSlug or :assetSlug.
+    languages: [go]
+    paths:
+      include:
+        - "router/**"
+      exclude:
+        - "**/*_test.go"
+    pattern-regex: '\.Group\("/(projects/:(?!projectSlug\b)\w+|assets/:(?!assetSlug\b)\w+)'
+
   - id: bola-repository-update-missing-tenant-scope
     severity: ERROR
     message: |

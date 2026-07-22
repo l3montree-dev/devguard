@@ -74,15 +74,13 @@ func NewSessionRouter(
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	fastAccessRoutes := sessionRouter.Group("",
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
-		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
-		assetScopedRBAC(shared.ObjectAsset, shared.ActionRead),
+		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
+		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 

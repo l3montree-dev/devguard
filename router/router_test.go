@@ -232,6 +232,8 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		rbacProvider,
 		new(controllers.StatisticsController),
 		new(controllers.PatController),
+		projectRepo,
+		assetRepo,
 	)
 
 	projectRouter := NewProjectRouter(
@@ -301,9 +303,9 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 // IsPublicRequest=true, so DisallowPublicRequests blocks the request.
 func publicVisitorAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	return ac
 }
@@ -313,15 +315,15 @@ func publicVisitorAC() *mocks.AccessControl {
 // will pass (IsPublicRequest stays false), but write-level RBAC checks deny.
 func readOnlyMemberAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
 
 	// Org-level: allow read, deny everything else.
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead).Maybe().Return(true, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Project-level: allow read, deny write.
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Asset-level: allow read, deny write/delete.
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
