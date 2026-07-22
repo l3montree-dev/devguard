@@ -42,12 +42,14 @@
           ociImagesAmd64.craneFromSource.package
           ociImagesAmd64.gitleaksFromSource.package
           ociImagesAmd64.trivyFromSource.package
+          ociImagesAmd64.devguardBinaries.devguardScanner
         ];
 
         arm64Dependencies = [
           ociImagesArm64.craneFromSource.package
           ociImagesArm64.gitleaksFromSource.package
           ociImagesArm64.trivyFromSource.package
+          ociImagesArm64.devguardBinaries.devguardScanner
         ];
 
         commonBuildOutputs = {
