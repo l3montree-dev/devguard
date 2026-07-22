@@ -87,29 +87,29 @@ func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx cont
 
 }
 
-func (repository *AdvisoryRepository) ApplyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent) error {
+func (advisoryRepository *AdvisoryRepository) ApplyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return repository.Transaction(ctx, func(d *gorm.DB) error {
-			_, err := repository.applyAndSave(ctx, d, advisory, vulnEvent)
+		return advisoryRepository.Transaction(ctx, func(d *gorm.DB) error {
+			_, err := advisoryRepository.applyAndSave(ctx, d, advisory, vulnEvent)
 			return err
 		})
 	}
 
-	_, err := repository.applyAndSave(ctx, tx, advisory, vulnEvent)
+	_, err := advisoryRepository.applyAndSave(ctx, tx, advisory, vulnEvent)
 	return err
 }
 
-func (repository *AdvisoryRepository) applyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, ev *models.VulnEvent) (models.VulnEvent, error) {
+func (advisoryRepository *AdvisoryRepository) applyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
 	statemachine.Apply(advisory, *ev)
 
 	// run the updates in the transaction to keep a valid state
-	err := repository.Save(ctx, tx, advisory)
+	err := advisoryRepository.Save(ctx, tx, advisory)
 	if err != nil {
 		return models.VulnEvent{}, err
 	}
-	if err := repository.GetDB(ctx, tx).Save(ev).Error; err != nil {
+	if err := advisoryRepository.GetDB(ctx, tx).Save(ev).Error; err != nil {
 		return models.VulnEvent{}, err
 	}
 	advisory.Events = append(advisory.Events, *ev)
