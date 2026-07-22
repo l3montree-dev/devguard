@@ -151,10 +151,6 @@ func (githubIntegration *GithubIntegration) ListOrgs(ctx shared.Context) ([]mode
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	return false, nil
-}
-
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
 	// currently not supported.
 	return shared.RoleGuest, fmt.Errorf("not implemented")

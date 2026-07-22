@@ -82,7 +82,6 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, projectScopedRBAC(shared.ObjectAsset, shared.ActionCreate))
-	projectRouter.GET("/pats/", patController.ListByProject)
 
 	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
@@ -97,6 +96,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/releases/", releaseController.Create)
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
+	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
 	projectUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject)

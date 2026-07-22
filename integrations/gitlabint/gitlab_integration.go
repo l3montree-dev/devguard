@@ -221,57 +221,6 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 	}
 }
 
-func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// get the oauth2 tokens for this session owner
-	session := shared.GetSession(ctx)
-	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != shared.SessionActorUser {
-		return false, fmt.Errorf("only users can have gitlab oauth2 tokens")
-	}
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, externalEntityProviderID)
-	if err != nil {
-		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
-	}
-
-	// check that the token is valid
-	if !g.checkIfTokenIsValid(ctx, *token, 0) {
-		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
-		return false, shared.ErrOauth2TokenNotValidRedirectionRequired
-	}
-
-	return true, nil
-}
-
-func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models.GitLabOauth2Token, iteration int) bool {
-	reqCtx, span := gitlabTracer.Start(ctx.Request().Context(), "gitlab.checkIfTokenIsValid")
-	defer span.End()
-	span.SetAttributes(attribute.Int("iteration", iteration))
-
-	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(reqCtx, token, true)
-	if err != nil {
-		slog.Error("failed to create gitlab batch client", "err", err)
-		return false
-	}
-
-	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.GetVersion(reqCtx)
-	if err != nil {
-		if iteration >= 3 {
-			// we tried 3 times to check if the token is valid, but it is still not valid
-			slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
-			return false
-		}
-		slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
-		// wait 1 second before trying again
-		time.Sleep(1 * time.Second)
-		return g.checkIfTokenIsValid(ctx, token, iteration+1)
-	}
-
-	return true
-}
-
 func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Context) ([]models.GitLabOauth2Token, error) {
 	// this only works for user-owned sessions, since it looks up the kratos identity
 	// by the session's owner id (which must be a user id here).

@@ -404,11 +404,6 @@ func (w *WebhookController) ListRepositories(ctx shared.Context) ([]dtos.GitRepo
 	return nil, nil
 }
 
-func (w *WebhookController) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// Logic to check access to external entity provider
-	return false, nil
-}
-
 func (w *WebhookController) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Logic to get role in group
 	return "", nil

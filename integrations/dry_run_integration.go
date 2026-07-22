@@ -98,10 +98,6 @@ func (d *dryRunIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepo
 	return d.real.ListRepositories(ctx)
 }
 
-func (d *dryRunIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	return d.real.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
-}
-
 func (d *dryRunIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	return d.real.HandleEvent(ctx, event, userAgent)
 }

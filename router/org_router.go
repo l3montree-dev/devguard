@@ -93,10 +93,10 @@ func NewOrgRouter(
 	organizationRouter.GET("/projects/", projectController.List)
 	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
-	organizationRouter.GET("/pats/", patController.ListByOrg)
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
+	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)

@@ -265,10 +265,7 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	return adfComment
 
 }
-func (i *JiraIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// Jira integration does not have access control in the same way as GitLab or GitHub
-	return false, nil
-}
+
 func (i *JiraIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Jira integration does not have groups in the same way as GitLab or GitHub
 	return "", fmt.Errorf("Jira integration does not support getting role in group")
