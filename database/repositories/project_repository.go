@@ -509,8 +509,9 @@ func (g *projectRepository) Create(ctx context.Context, tx *gorm.DB, project *mo
 
 func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
+	externalEntityIDs := utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID })
 	var existingProjects []models.Project
-	err := g.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error
+	err := g.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", externalEntityIDs, externalProviderID).Find(&existingProjects).Error
 	if err != nil {
 		return nil, nil, err
 	}
@@ -527,6 +528,21 @@ func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, extern
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// PostgreSQL does not reliably return IDs for rows handled by the conflict-update
+	// branch. Re-read the persisted projects so callers never receive a zero UUID.
+	var persistedProjects []models.Project
+	err = g.GetDB(ctx, tx).
+		Select("id", "external_entity_id").
+		Where("external_entity_id IN (?) AND external_entity_provider_id = ?", externalEntityIDs, externalProviderID).
+		Find(&persistedProjects).Error
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to reload upserted projects: %w", err)
+	}
+	if err := assignPersistedProjectIDs(projects, persistedProjects); err != nil {
+		return nil, nil, err
+	}
+
 	// return the splitted results
 	newProjects := make([]*models.Project, 0)
 	updatedProjects := make([]*models.Project, 0)
@@ -551,6 +567,28 @@ func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, extern
 	}
 	// return the new and updated projects
 	return newProjects, updatedProjects, nil
+}
+
+func assignPersistedProjectIDs(projects []*models.Project, persistedProjects []models.Project) error {
+	idsByExternalEntityID := make(map[string]uuid.UUID, len(persistedProjects))
+	for _, project := range persistedProjects {
+		if project.ExternalEntityID != nil {
+			idsByExternalEntityID[*project.ExternalEntityID] = project.ID
+		}
+	}
+
+	for _, project := range projects {
+		if project.ExternalEntityID == nil {
+			return fmt.Errorf("cannot resolve database ID for project without an external entity ID")
+		}
+
+		id, ok := idsByExternalEntityID[*project.ExternalEntityID]
+		if !ok || id == uuid.Nil {
+			return fmt.Errorf("could not resolve database ID for external project %q", *project.ExternalEntityID)
+		}
+		project.ID = id
+	}
+	return nil
 }
 
 func (g *projectRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectSlug string) (string, error) {
