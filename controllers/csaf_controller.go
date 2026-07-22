@@ -15,6 +15,7 @@ import (
 	"time"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
+	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -83,7 +84,7 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	}
 	for _, advisories := range allAdvisories {
 		year := advisories.CreatedAt.Year()
-		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisories.ID)
+		cveID := fmt.Sprintf("dgsa-%s", advisories.ID)
 		fileName := fmt.Sprintf("%s.json", cveID)
 		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
 	}
@@ -128,7 +129,7 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	// advisories don't have events yet, so use their creation as the initial change entry.
 	for _, advisory := range allAdvisories {
 		year := advisory.CreatedAt.Year()
-		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisory.ID)
+		cveID := fmt.Sprintf("dgsa-%s", advisory.ID)
 		fileName := fmt.Sprintf("%s.json", cveID)
 		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, advisory.CreatedAt.Format(time.RFC3339))
 	}
@@ -318,7 +319,7 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 	}
 
 	for _, adv := range advisoriesOfThatYear {
-		cveID := fmt.Sprintf("DGSA-%d-%d", adv.CreatedAt.Year(), adv.ID)
+		cveID := fmt.Sprintf("DGSA-%s", adv.ID)
 		data.Filenames = append(data.Filenames, entryData{
 			Href:  fmt.Sprintf("%s.json", strings.ToLower(cveID)),
 			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, cveID)),
@@ -553,8 +554,8 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	var err error
 
 	if strings.Contains(strings.ToLower(cveID), "dgsa") {
-		parsedID := cveID[strings.LastIndex(cveID, "-")+1:]
-		id, parseErr := strconv.ParseInt(parsedID, 10, 64)
+		parsedID := cveID[strings.Index(cveID, "-")+1:]
+		id, parseErr := uuid.Parse(parsedID)
 		if parseErr != nil {
 			return echo.NewHTTPError(400, fmt.Sprintf("invalid advisory ID %q in %q", parsedID, cveID))
 		}

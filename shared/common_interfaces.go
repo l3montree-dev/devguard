@@ -822,18 +822,20 @@ type RBACProvider interface {
 type AdvisoryService interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
 	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
-	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
-	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory, currentVisibility string) error
-	Delete(ctx context.Context, tx DB, id int64) error
+	ReadAdvisory(ctx context.Context, tx DB, id uuid.UUID) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id uuid.UUID, advisory *models.Advisory, currentState string) error
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	CreateVulnEventAndApply(ctx context.Context, tx DB, userID string, advisory *models.Advisory, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 }
 
 type AdvisoryRepository interface {
 	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
 	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
-	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
-	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
-	Delete(ctx context.Context, tx DB, id int64) error
+	ReadAdvisory(ctx context.Context, tx DB, id uuid.UUID) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id uuid.UUID, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
 	GetAllAdvisoriesByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Advisory, error)
+	ApplyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent) error
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

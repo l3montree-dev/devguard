@@ -38,6 +38,7 @@ func NewAdvisoryRouter(
 	advisoryRouter.GET("/:id/", advisoryController.ReadAdvisory)
 
 	advisoryRouter.POST("/", advisoryController.Create, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.POST("/:id/events/", advisoryController.CreateEvent, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	advisoryRouter.PATCH("/:id/", advisoryController.Update, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 	advisoryRouter.DELETE("/:id/", advisoryController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
 

@@ -45,8 +45,8 @@ func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisor
 	if c.AssetID != nil {
 		advisory.AssetID = *c.AssetID
 	}
-	if c.Visibility != nil {
-		advisory.Visibility = *c.Visibility
+	if c.State != nil {
+		advisory.State = *c.State
 	}
 
 	return advisory
@@ -54,10 +54,10 @@ func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisor
 
 func AffectedPackageToModel(c dtos.AffectedPackage) models.AffectedPackage {
 	return models.AffectedPackage{
-		Model:            models.Model{ID: c.ID},
-		Ecosystem:        c.Ecosystem,
-		PackageName:      c.PackageName,
-		SemverIntroduced: c.SemverIntroduced,
-		SemverFixed:      c.SemverFixed,
+		Model:             models.Model{ID: c.ID},
+		Ecosystem:         c.Ecosystem,
+		PackageName:       c.PackageName,
+		VersionIntroduced: c.VersionIntroduced,
+		VersionFixed:      c.VersionFixed,
 	}
 }
