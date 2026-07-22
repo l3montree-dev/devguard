@@ -441,6 +441,38 @@ rules:
             }
             ...
           }
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
 
   - id: project-asset-route-group-param-name-mismatch
     severity: ERROR
@@ -462,7 +494,7 @@ rules:
     languages: [go]
     paths:
       include:
-        - "router/**"
+        - "**/router/**"
       exclude:
         - "**/*_test.go"
     pattern-regex: '\.Group\("/(projects/:(?!projectSlug\b)\w+|assets/:(?!assetSlug\b)\w+)'
