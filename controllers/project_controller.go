@@ -186,7 +186,7 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(c.Request().Context(), shared.NewSession(newMemberID, dtos.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(c.Request().Context(), shared.NewSession(newMemberID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -216,8 +216,8 @@ func (projectController *ProjectController) RemoveMember(c shared.Context) error
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -268,11 +268,11 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.Role(req.Role), project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role), project.ID.String()); err != nil {
 		return err
 	}
 

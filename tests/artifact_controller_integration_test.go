@@ -237,7 +237,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			req.Header.Set("X-Origin", "trivy")
 			scanCtx := app.NewContext(req, recorder)
 			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession.On("GetActorName").Return("test-user")
 			shared.SetAsset(scanCtx, asset)
 			shared.SetProject(scanCtx, project)
 			shared.SetOrg(scanCtx, org)

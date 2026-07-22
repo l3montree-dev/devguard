@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -47,7 +46,7 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	ownerID := shared.GetSession(ctx).GetActorID()
 	ownerType := shared.GetSession(ctx).GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can create organizations").WithInternal(fmt.Errorf("only users can create organizations"))
 	}
 	if err = shared.BootstrapOrg(ctx.Request().Context(), rbac, ownerID, shared.RoleOwner); err != nil {

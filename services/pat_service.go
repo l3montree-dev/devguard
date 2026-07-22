@@ -73,13 +73,13 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 	ownerID := session.GetActorID()
 	requestGoesToOrg := shared.GetOrg(ctx)
 	switch sessionOwnerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
@@ -87,7 +87,7 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
 
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -108,7 +108,7 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 		shared.SetProject(ctx, project)
 		return true, nil
 
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -138,26 +138,26 @@ func (p *PatService) IsAllowedInProject(ctx shared.Context, session shared.AuthS
 	requestGoesToOrg := shared.GetOrg(ctx)
 	requestGoesToProject := shared.GetProject(ctx)
 	switch sessionOwnerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
 
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		if act == shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToProject.ID.String(), nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -183,14 +183,14 @@ func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSes
 	requestGoesToProject := shared.GetProject(ctx)
 	requestGoesToAsset := shared.GetAsset(ctx)
 	switch sessionOwnerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
 
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
@@ -198,13 +198,13 @@ func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSes
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
 
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		if act != shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToProject.ID.String(), nil
 
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		if act != shared.ActionUpdate {
 			return false, nil
 		}
@@ -214,14 +214,14 @@ func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSes
 }
 
 func ownerToFields(o dtos.TokenOwner) (userID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) {
-	switch o.Type {
-	case dtos.SessionActorUser:
+	switch shared.SessionActor(o.Type) {
+	case shared.SessionActorUser:
 		return &o.ID, nil, nil, nil
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		return nil, &o.ID, nil, nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		return nil, nil, &o.ID, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		return nil, nil, nil, &o.ID
 	}
 	return nil, nil, nil, nil
@@ -457,13 +457,13 @@ func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (shared.A
 func patToSession(pat models.PAT) (shared.AuthSession, error) {
 	switch true {
 	case pat.UserID != nil:
-		return shared.NewSession(pat.UserID.String(), dtos.SessionActorUser, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.UserID.String(), shared.SessionActorUser, strings.Fields(pat.Scopes), false), nil
 	case pat.OrgID != nil:
-		return shared.NewSession(pat.OrgID.String(), dtos.SessionActorOrg, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.OrgID.String(), shared.SessionActorOrg, strings.Fields(pat.Scopes), false), nil
 	case pat.ProjectID != nil:
-		return shared.NewSession(pat.ProjectID.String(), dtos.SessionActorProject, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.ProjectID.String(), shared.SessionActorProject, strings.Fields(pat.Scopes), false), nil
 	case pat.AssetID != nil:
-		return shared.NewSession(pat.AssetID.String(), dtos.SessionActorAsset, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.AssetID.String(), shared.SessionActorAsset, strings.Fields(pat.Scopes), false), nil
 	default:
 		return nil, fmt.Errorf("invalid token owner type")
 	}
@@ -552,7 +552,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		}
 		if isAdmin {
 			// add all scopes
-			return shared.NewSession("admin", dtos.SessionActorUser, dtos.AllowedScopes, true), nil
+			return shared.NewSession("admin", shared.SessionActorUser, dtos.AllowedScopes, true), nil
 		}
 		return nil, fmt.Errorf("no fingerprint provided")
 	}

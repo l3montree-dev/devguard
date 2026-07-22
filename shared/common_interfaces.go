@@ -814,7 +814,7 @@ type CompliancePostureService interface {
 
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
-	DomainsOfUser(user string) ([]string, error)
+	DomainsOfSession(session AuthSession) ([]string, error)
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)

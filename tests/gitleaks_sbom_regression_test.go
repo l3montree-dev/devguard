@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -97,8 +96,7 @@ func TestGitleaksVulnPathThroughRealBackend(t *testing.T) {
 		req.Header.Set("X-Origin", "test")
 		ctx := app.NewContext(req, recorder)
 
-		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
+		authSession := NewUserSession(t, "abc")
 		shared.SetAsset(ctx, asset)
 		shared.SetProject(ctx, project)
 		shared.SetOrg(ctx, org)

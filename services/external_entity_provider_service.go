@@ -77,7 +77,7 @@ func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.O
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorID()
 	ownerType := shared.GetSession(ctx).GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return nil, fmt.Errorf("only users can trigger a sync for external entity provider organizations")
 	}
 
@@ -115,7 +115,7 @@ func (s externalEntityProviderService) SyncOrgs(ctx shared.Context) ([]*models.O
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, session shared.AuthSession) error {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return fmt.Errorf("only users can trigger a sync for external entity provider projects")
 	}
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+ownerID, func() (any, error) {
@@ -267,12 +267,12 @@ func (s externalEntityProviderService) updateUserRole(ctx context.Context, domai
 		return nil // user already has the correct role
 	}
 
-	if err := domainRBAC.RevokeRoleInProject(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), currentRole, projectID); err != nil {
+	if err := domainRBAC.RevokeRoleInProject(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), currentRole, projectID); err != nil {
 		slog.Warn("could not revoke role for user", "user", user, "role", currentRole, "projectID", projectID, "err", err)
 		// we don't care if the user does not have the role
 	}
 
-	if err := domainRBAC.GrantRoleInProject(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), userRole, projectID); err != nil {
+	if err := domainRBAC.GrantRoleInProject(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), userRole, projectID); err != nil {
 		slog.Warn("could not grant role for user", "user", user, "role", userRole, "projectID", projectID, "err", err)
 		// we don't care if the user already has the role
 	}
@@ -286,12 +286,12 @@ func (s externalEntityProviderService) updateUserRoleInAsset(ctx context.Context
 	if currentRole == userRole || userRole == "" {
 		return nil // user already has the correct role
 	}
-	if err := domainRBAC.RevokeRoleInAsset(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), currentRole, assetID); err != nil {
+	if err := domainRBAC.RevokeRoleInAsset(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), currentRole, assetID); err != nil {
 		slog.Warn("could not revoke role for user", "user", user, "role", currentRole, "assetID", assetID, "err", err)
 		// we don't care if the user does not have the role
 	}
 
-	if err := domainRBAC.GrantRoleInAsset(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), userRole, assetID); err != nil {
+	if err := domainRBAC.GrantRoleInAsset(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), userRole, assetID); err != nil {
 		slog.Warn("could not grant role for user", "user", user, "role", userRole, "assetID", assetID, "err", err)
 		// we don't care if the user already has the role
 	}

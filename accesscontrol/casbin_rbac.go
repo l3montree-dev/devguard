@@ -28,7 +28,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -155,14 +154,14 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) (bool, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		return withRLock(func() (bool, error) {
 			roles := c.enforcer.GetRolesForUserInDomain("user::"+ownerID, "domain::"+c.domain)
 			return len(roles) > 0, nil
 		})
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		return ownerID == c.domain, nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		// if the project belongs to the organization, then the session has access
 		projectUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -176,7 +175,7 @@ func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession) 
 			return false, err
 		}
 		return project.OrganizationID.String() == c.domain, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		// if the asset belongs to the organization, then the session has access
 		assetUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -199,7 +198,7 @@ func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session share
 	ownerID := session.GetActorID()
 	ownerType := session.GetSessionActorType()
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		projectIDs := []string{}
 		roles, _ := withRLock(func() ([]string, error) {
 			return c.enforcer.GetImplicitRolesForUser("user::"+ownerID, "domain::"+c.domain)
@@ -211,7 +210,7 @@ func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session share
 			projectIDs = append(projectIDs, strings.Split(strings.TrimPrefix(role, "project::"), "|")[0])
 		}
 		return projectIDs, nil
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// retrieve ALL projects for the organization, since the session is an org session
 		ownerUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -224,9 +223,9 @@ func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session share
 		return utils.Map(projects, func(p models.Project) string {
 			return p.ID.String()
 		}), nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		return []string{ownerID}, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		return []string{}, nil
 	}
 	return []string{}, fmt.Errorf("unknown owner type: %s", ownerType)
@@ -235,7 +234,7 @@ func (c *casbinRBAC) GetAllProjectsForSession(ctx context.Context, session share
 func (c *casbinRBAC) GetAllAssetsForSession(ctx context.Context, session shared.AuthSession) ([]string, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		assetIDs := []string{}
 		roles, _ := withRLock(func() ([]string, error) {
 			return c.enforcer.GetImplicitRolesForUser("user::"+ownerID, "domain::"+c.domain)
@@ -247,7 +246,7 @@ func (c *casbinRBAC) GetAllAssetsForSession(ctx context.Context, session shared.
 			assetIDs = append(assetIDs, strings.Split(strings.TrimPrefix(role, "asset::"), "|")[0])
 		}
 		return assetIDs, nil
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// retrieve ALL assets for the organization, since the session is an org session
 		ownerUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -260,7 +259,7 @@ func (c *casbinRBAC) GetAllAssetsForSession(ctx context.Context, session shared.
 		return utils.Map(assets, func(a models.Asset) string {
 			return a.ID.String()
 		}), nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		// retrieve ALL assets for the project, since the session is a project session
 		projectUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -273,7 +272,7 @@ func (c *casbinRBAC) GetAllAssetsForSession(ctx context.Context, session shared.
 		return utils.Map(assets, func(a models.Asset) string {
 			return a.ID.String()
 		}), nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		return []string{ownerID}, nil
 	}
 	return []string{}, fmt.Errorf("unknown owner type: %s", ownerType)
@@ -355,7 +354,7 @@ func (c *casbinRBAC) getAssetRoleName(role shared.Role, asset string) string {
 }
 
 func (c *casbinRBAC) GrantRole(ctx context.Context, session shared.AuthSession, role shared.Role) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be granted roles")
 	}
 	user := session.GetActorID()
@@ -367,7 +366,7 @@ func (c *casbinRBAC) GrantRole(ctx context.Context, session shared.AuthSession, 
 }
 
 func (c *casbinRBAC) RevokeRole(ctx context.Context, session shared.AuthSession, role shared.Role) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be revoked roles")
 	}
 	user := session.GetActorID()
@@ -379,7 +378,7 @@ func (c *casbinRBAC) RevokeRole(ctx context.Context, session shared.AuthSession,
 }
 
 func (c *casbinRBAC) GrantRoleInProject(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be granted roles")
 	}
 	user := session.GetActorID()
@@ -392,7 +391,7 @@ func (c *casbinRBAC) GrantRoleInProject(ctx context.Context, session shared.Auth
 }
 
 func (c *casbinRBAC) GrantRoleInAsset(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be granted roles")
 	}
 	user := session.GetActorID()
@@ -404,7 +403,7 @@ func (c *casbinRBAC) GrantRoleInAsset(ctx context.Context, session shared.AuthSe
 }
 
 func (c *casbinRBAC) RevokeRoleInProject(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be revoked roles")
 	}
 	user := session.GetActorID()
@@ -416,7 +415,7 @@ func (c *casbinRBAC) RevokeRoleInProject(ctx context.Context, session shared.Aut
 }
 
 func (c *casbinRBAC) RevokeRoleInAsset(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error {
-	if session.GetSessionActorType() != dtos.SessionActorUser {
+	if session.GetSessionActorType() != shared.SessionActorUser {
 		return fmt.Errorf("only user sessions can be revoked roles")
 	}
 	user := session.GetActorID()
@@ -429,7 +428,7 @@ func (c *casbinRBAC) RevokeRoleInAsset(ctx context.Context, session shared.AuthS
 
 func (c *casbinRBAC) RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error {
 	for _, role := range []shared.Role{shared.RoleOwner, shared.RoleAdmin, shared.RoleMember} {
-		if err := c.RevokeRoleInProject(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), role, project); err != nil {
+		if err := c.RevokeRoleInProject(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), role, project); err != nil {
 			return fmt.Errorf("could not revoke role %s for user %s in project %s: %w", role, user, project, err)
 		}
 	}
@@ -438,7 +437,7 @@ func (c *casbinRBAC) RevokeAllRolesInProjectForUser(ctx context.Context, user st
 
 func (c *casbinRBAC) RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error {
 	for _, role := range []shared.Role{shared.RoleOwner, shared.RoleAdmin, shared.RoleMember} {
-		if err := c.RevokeRoleInAsset(ctx, shared.NewSession(user, dtos.SessionActorUser, nil, false), role, asset); err != nil {
+		if err := c.RevokeRoleInAsset(ctx, shared.NewSession(user, shared.SessionActorUser, nil, false), role, asset); err != nil {
 			return fmt.Errorf("could not revoke role %s for user %s in asset %s: %w", role, user, asset, err)
 		}
 	}
@@ -582,7 +581,7 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		permissions, err := withRLock(func() ([][]string, error) {
 			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
 		})
@@ -595,10 +594,13 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 			}
 		}
 		return false, nil
-	case dtos.SessionActorOrg:
-		// if the session is an organization session, then we allow all actions except deleting or updating the organization itself
-		return object != shared.ObjectOrganization && action != shared.ActionDelete && action != shared.ActionUpdate, nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorOrg:
+		// an org token can do anything except delete or update the organization itself
+		if object == shared.ObjectOrganization {
+			return action != shared.ActionDelete && action != shared.ActionUpdate, nil
+		}
+		return true, nil
+	case shared.SessionActorProject:
 		// we allow read, if the project is part of the organization, but we don't allow any other actions
 		projectUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -618,7 +620,7 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 			return true, nil
 		}
 		return false, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		// we allow read, if the asset is part of the organization, but we don't allow any other actions
 		assetUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -647,7 +649,7 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		permissions, err := withRLock(func() ([][]string, error) {
 			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
 		})
@@ -663,13 +665,13 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 			}
 		}
 		return false, nil
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// if the session is an organization session, we just check if the project belongs to the organization, and if so, we allow all actions
 		return project.OrganizationID.String() == ownerID, nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		// if the session is a project session, then we allow all actions except deleting or updating the project itself
 		return project.ID.String() == ownerID && object != shared.ObjectProject && action != shared.ActionDelete && action != shared.ActionUpdate, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		// if asset, we allow read
 		assetUUID, err := uuid.Parse(ownerID)
 		if err != nil {
@@ -697,7 +699,7 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
-	case dtos.SessionActorUser:
+	case shared.SessionActorUser:
 		permissions, err := withRLock(func() ([][]string, error) {
 			return c.enforcer.GetImplicitPermissionsForUser("user::"+ownerID, "domain::"+c.domain)
 		})
@@ -711,13 +713,13 @@ func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, 
 			}
 		}
 		return false, nil
-	case dtos.SessionActorOrg:
+	case shared.SessionActorOrg:
 		// if the session is an organization session, we just check if the asset belongs to the organization, and if so, we allow all actions
 		return asset.Project.OrganizationID.String() == ownerID, nil
-	case dtos.SessionActorProject:
+	case shared.SessionActorProject:
 		// if the session is a project session, then we allow all actions
 		return asset.ProjectID.String() == ownerID, nil
-	case dtos.SessionActorAsset:
+	case shared.SessionActorAsset:
 		// if asset, we allow read only READ and update
 		return asset.ID.String() == ownerID && (action == shared.ActionRead || action == shared.ActionUpdate), nil
 	default:
@@ -725,18 +727,52 @@ func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, 
 	}
 }
 
-func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
-	domains, err := withRLock(func() ([]string, error) {
-		return c.enforcer.GetDomainsForUser("user::" + user)
-	})
-	if err != nil {
-		return nil, err
-	}
-	for i, d := range domains {
-		domains[i] = d[8:]
-	}
+func (c casbinRBACProvider) DomainsOfSession(session shared.AuthSession) ([]string, error) {
+	switch session.GetSessionActorType() {
+	case shared.SessionActorUser:
+		user := session.GetActorID()
+		domains, err := withRLock(func() ([]string, error) {
+			return c.enforcer.GetDomainsForUser("user::" + user)
+		})
+		if err != nil {
+			return nil, err
+		}
+		for i, d := range domains {
+			domains[i] = d[8:]
+		}
 
-	return domains, nil
+		return domains, nil
+	case shared.SessionActorOrg:
+		return []string{session.GetActorID()}, nil
+	case shared.SessionActorProject:
+		projectUUID, err := uuid.Parse(session.GetActorID())
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		project, err := c.projectRepository.Read(context.Background(), nil, projectUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return []string{}, nil
+			}
+			return nil, err
+		}
+		return []string{project.OrganizationID.String()}, nil
+	case shared.SessionActorAsset:
+		assetUUID, err := uuid.Parse(session.GetActorID())
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		asset, err := c.assetRepository.ReadWithProject(context.Background(), nil, assetUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return []string{}, nil
+			}
+			return nil, err
+		}
+		return []string{asset.Project.OrganizationID.String()}, nil
+	default:
+		return nil, fmt.Errorf("unknown owner type: %s", session.GetSessionActorType())
+	}
 }
 
 // delete all roles associated with an organization

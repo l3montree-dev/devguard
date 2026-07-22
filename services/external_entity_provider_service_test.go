@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 )
@@ -75,8 +74,8 @@ func TestTriggerSync(t *testing.T) {
 			// Setup session
 			session := mocks.NewAuthSession(t)
 			if tt.isExternalOrg {
-				session.On("GetOwnerID").Return("user123")
-				session.On("GetOwnerType").Return(dtos.SessionActorUser)
+				session.On("GetActorID").Return("user123")
+				session.On("GetSessionActorType").Return(shared.SessionActorUser)
 			}
 
 			// Setup context
@@ -233,8 +232,8 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetOwnerID").Return("user123")
-		session.On("GetOwnerType").Return(dtos.SessionActorUser)
+		session.On("GetActorID").Return("user123")
+		session.On("GetSessionActorType").Return(shared.SessionActorUser)
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -269,8 +268,8 @@ func TestSyncOrgs(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", orgs[0].GetID().String()).Return(domainRBAC1)
 		rbacProvider.On("GetDomainRBAC", orgs[1].GetID().String()).Return(domainRBAC2)
 
-		domainRBAC1.On("GrantRole", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember).Return(nil)
-		domainRBAC2.On("GrantRole", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember).Return(nil)
+		domainRBAC1.On("GrantRole", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember).Return(nil)
+		domainRBAC2.On("GrantRole", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember).Return(nil)
 
 		// those orgs have to get bootstrapped - thus mock those function
 		domainRBAC1.On("InheritRole", mock.Anything, shared.RoleOwner, shared.RoleAdmin).Return(nil)
@@ -316,8 +315,8 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetOwnerID").Return("user123")
-		session.On("GetOwnerType").Return(dtos.SessionActorUser)
+		session.On("GetActorID").Return("user123")
+		session.On("GetSessionActorType").Return(shared.SessionActorUser)
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration with error
@@ -338,8 +337,8 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetOwnerID").Return("user123")
-		session.On("GetOwnerType").Return(dtos.SessionActorUser)
+		session.On("GetActorID").Return("user123")
+		session.On("GetSessionActorType").Return(shared.SessionActorUser)
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -383,8 +382,8 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetOwnerID").Return("user123")
-		session.On("GetOwnerType").Return(dtos.SessionActorUser)
+		session.On("GetActorID").Return("user123")
+		session.On("GetSessionActorType").Return(shared.SessionActorUser)
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration
@@ -408,7 +407,7 @@ func TestSyncOrgs(t *testing.T) {
 		rbacProvider := mocks.NewRBACProvider(t)
 		domainRBAC := mocks.NewAccessControl(t)
 		rbacProvider.On("GetDomainRBAC", mock.AnythingOfType("string")).Return(domainRBAC)
-		domainRBAC.On("GrantRole", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember).Return(errors.New("rbac error"))
+		domainRBAC.On("GrantRole", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember).Return(errors.New("rbac error"))
 
 		// Create service with mocked dependencies
 		serviceWithMocks := NewExternalEntityProviderService(
@@ -435,8 +434,8 @@ func TestSyncOrgs(t *testing.T) {
 
 		// Mock session with user
 		session := mocks.NewAuthSession(t)
-		session.On("GetOwnerID").Return("user123")
-		session.On("GetOwnerType").Return(dtos.SessionActorUser)
+		session.On("GetActorID").Return("user123")
+		session.On("GetSessionActorType").Return(shared.SessionActorUser)
 		shared.SetSession(ctx, session)
 
 		// Mock third party integration with empty list
@@ -504,8 +503,8 @@ func TestUpdateUserRole(t *testing.T) {
 	t.Run("role change needed", func(t *testing.T) {
 		domainRBAC := mocks.NewAccessControl(t)
 		domainRBAC.On("GetProjectRole", "user123", "project1").Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInProject", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, "project1").Return(nil)
-		domainRBAC.On("GrantRoleInProject", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "project1").Return(nil)
+		domainRBAC.On("RevokeRoleInProject", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, "project1").Return(nil)
+		domainRBAC.On("GrantRoleInProject", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, "project1").Return(nil)
 
 		err := service.updateUserRole(context.Background(), domainRBAC, "user123", shared.RoleAdmin, "project1")
 
@@ -516,8 +515,8 @@ func TestUpdateUserRole(t *testing.T) {
 	t.Run("revoke fails but continues", func(t *testing.T) {
 		domainRBAC := mocks.NewAccessControl(t)
 		domainRBAC.On("GetProjectRole", "user123", "project1").Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInProject", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, "project1").Return(errors.New("revoke failed"))
-		domainRBAC.On("GrantRoleInProject", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "project1").Return(nil)
+		domainRBAC.On("RevokeRoleInProject", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, "project1").Return(errors.New("revoke failed"))
+		domainRBAC.On("GrantRoleInProject", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, "project1").Return(nil)
 
 		err := service.updateUserRole(context.Background(), domainRBAC, "user123", shared.RoleAdmin, "project1")
 
@@ -573,12 +572,12 @@ func TestSyncProjectAssets(t *testing.T) {
 
 		// Mock asset role updates for each asset
 		domainRBAC.On("GetAssetRole", "user123", asset1ID.String()).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleUnknown, asset1ID.String()).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, asset1ID.String()).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleUnknown, asset1ID.String()).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, asset1ID.String()).Return(nil)
 
 		domainRBAC.On("GetAssetRole", "user123", asset2ID.String()).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleUnknown, asset2ID.String()).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, asset2ID.String()).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleUnknown, asset2ID.String()).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, asset2ID.String()).Return(nil)
 
 		result, err := service.syncProjectAssets(ctx, "user123", project)
 
@@ -691,8 +690,8 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 
 		// User has no current role (returns RoleUnknown with error)
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleUnknown, errors.New("not found"))
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleUnknown, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleUnknown, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
 
 		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleMember, assetID)
 
@@ -706,8 +705,8 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 
 		// User currently has RoleMember, should be upgraded to RoleAdmin
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(nil)
 
 		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 
@@ -752,8 +751,8 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		assetID := uuid.New().String()
 
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(errors.New("revoke failed"))
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(nil)
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(errors.New("revoke failed"))
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(nil)
 
 		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 
@@ -766,8 +765,8 @@ func TestUpdateUserRoleInAsset(t *testing.T) {
 		assetID := uuid.New().String()
 
 		domainRBAC.On("GetAssetRole", "user123", assetID).Return(shared.RoleMember, nil)
-		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
-		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(errors.New("grant failed"))
+		domainRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleMember, assetID).Return(nil)
+		domainRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user123", shared.SessionActorUser, nil, false), shared.RoleAdmin, assetID).Return(errors.New("grant failed"))
 
 		err := service.updateUserRoleInAsset(context.Background(), domainRBAC, "user123", shared.RoleAdmin, assetID)
 

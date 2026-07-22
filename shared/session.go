@@ -15,13 +15,20 @@
 
 package shared
 
-import "github.com/l3montree-dev/devguard/dtos"
+type SessionActor string
+
+const (
+	SessionActorUser    SessionActor = "user"
+	SessionActorOrg     SessionActor = "org"
+	SessionActorProject SessionActor = "project"
+	SessionActorAsset   SessionActor = "asset"
+)
 
 type AuthSession interface {
 	GetActorID() string
 	GetScopes() []string
 	IsInstanceAdmin() bool
-	GetSessionActorType() dtos.SessionActor
+	GetSessionActorType() SessionActor
 	// GetActorName returns a human-readable, type-disambiguated identifier for
 	// audit trails / actor stamps
 	GetActorName() string
@@ -31,7 +38,7 @@ type session struct {
 	ownerID         string
 	scopes          []string
 	isInstanceAdmin bool
-	ownerType       dtos.SessionActor
+	ownerType       SessionActor
 }
 
 func (a session) IsInstanceAdmin() bool {
@@ -42,7 +49,7 @@ func (a session) GetActorID() string {
 	return a.ownerID
 }
 
-func (a session) GetSessionActorType() dtos.SessionActor {
+func (a session) GetSessionActorType() SessionActor {
 	return a.ownerType
 }
 
@@ -52,20 +59,20 @@ func (a session) GetScopes() []string {
 
 func (a session) GetActorName() string {
 	switch a.ownerType {
-	case dtos.SessionActorUser:
+	case SessionActorUser:
 		return a.ownerID
-	case dtos.SessionActorOrg:
+	case SessionActorOrg:
 		return "Organization Access Token"
-	case dtos.SessionActorProject:
+	case SessionActorProject:
 		return "Project Access Token"
-	case dtos.SessionActorAsset:
+	case SessionActorAsset:
 		return "Asset Access Token"
 	default:
 		return "Unknown Actor"
 	}
 }
 
-func NewSession(ownerID string, ownerType dtos.SessionActor, scopes []string, isInstanceAdmin bool) session {
+func NewSession(ownerID string, ownerType SessionActor, scopes []string, isInstanceAdmin bool) session {
 	return session{
 		ownerID:         ownerID,
 		ownerType:       ownerType,

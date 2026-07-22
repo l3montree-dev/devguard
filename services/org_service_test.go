@@ -66,8 +66,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -96,8 +96,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -129,8 +129,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -158,8 +158,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -189,8 +189,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -218,8 +218,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -248,8 +248,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -279,8 +279,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 
@@ -311,8 +311,8 @@ func TestServiceCreate(t *testing.T) {
 
 		accesscontrol := mocks.NewAccessControl(t)
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetOwnerID").Return("")
-		authSession.On("GetOwnerType").Return(dtos.SessionActorUser)
+		authSession.On("GetActorID").Return("")
+		authSession.On("GetSessionActorType").Return(shared.SessionActorUser)
 
 		shared.SetSession(ctx, authSession)
 

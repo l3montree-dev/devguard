@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/mock"
 )
@@ -161,7 +162,7 @@ func TestVerifyAPIToken(t *testing.T) {
 }
 
 func TestToModel(t *testing.T) {
-	owner := dtos.TokenOwner{Type: dtos.SessionActorUser, ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorUser), ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
 
 	t.Run("symmetric: generates bearer token, stores hash, returns cleartext", func(t *testing.T) {
 		patService := NewPatService(nil)

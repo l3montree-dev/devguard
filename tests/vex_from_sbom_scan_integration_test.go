@@ -23,7 +23,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -107,8 +106,7 @@ func TestSBOMScanIngestsVEXFromExternalReferences(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		ctx := app.NewContext(req, recorder)
 
-		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
+		authSession := NewUserSession(t, "abc")
 		shared.SetAsset(ctx, asset)
 		shared.SetProject(ctx, project)
 		shared.SetOrg(ctx, org)

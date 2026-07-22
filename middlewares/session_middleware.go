@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -67,7 +66,7 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.Co
 				if userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
 					scopes = "scan manage"
 					scopesArray := strings.Fields(scopes)
-					ctx.Set("session", shared.NewSession(userID, dtos.SessionActorUser, scopesArray, false))
+					ctx.Set("session", shared.NewSession(userID, shared.SessionActorUser, scopesArray, false))
 					return next(ctx)
 				}
 			}

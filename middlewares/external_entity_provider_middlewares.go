@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -44,7 +43,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 			key := session.GetActorID()
 			ownerType := session.GetSessionActorType()
 
-			if ownerType != dtos.SessionActorUser {
+			if ownerType != shared.SessionActorUser {
 				return next(ctx)
 			}
 
@@ -79,7 +78,7 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 			org := shared.GetOrg(ctx)
 			session := shared.GetSession(ctx)
 			// check if user session
-			if session.GetSessionActorType() != dtos.SessionActorUser {
+			if session.GetSessionActorType() != shared.SessionActorUser {
 				return next(ctx)
 			}
 

@@ -15,7 +15,9 @@
 
 package dtos
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 var AllowedScopes = []string{"manage", "scan"}
 
@@ -57,16 +59,7 @@ type PATCreateResponseDTO struct {
 	BearerToken string `json:"bearerToken,omitempty"`
 }
 
-type SessionActor string
-
-const (
-	SessionActorUser    SessionActor = "user"
-	SessionActorOrg     SessionActor = "org"
-	SessionActorProject SessionActor = "project"
-	SessionActorAsset   SessionActor = "asset"
-)
-
 type TokenOwner struct {
-	Type SessionActor
+	Type string
 	ID   uuid.UUID
 }

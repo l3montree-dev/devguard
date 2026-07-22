@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -242,7 +241,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	// get the session owner id
 	session := shared.GetSession(ctx)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return ctx.JSON(400, map[string]any{
 			"message": "only users can complete the gitlab oauth2 flow",
 		})
@@ -342,7 +341,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// get the session owner id
 	session := shared.GetSession(ctx)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return ctx.JSON(400, map[string]any{
 			"message": "only users can start the gitlab oauth2 flow",
 		})

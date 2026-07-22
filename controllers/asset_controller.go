@@ -569,7 +569,7 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 			"addedUser", newMemberID,
 			"assetID", asset.ID.String())
 
-		if err := rbac.GrantRoleInAsset(c.Request().Context(), shared.NewSession(newMemberID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()); err != nil {
+		if err := rbac.GrantRoleInAsset(c.Request().Context(), shared.NewSession(newMemberID, shared.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -596,8 +596,8 @@ func (a *AssetController) RemoveMember(c shared.Context) error {
 		"assetID", asset.ID.String())
 
 	// revoke admin and member role
-	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -651,10 +651,10 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		"assetID", asset.ID.String(),
 		"newRole", req.Role)
 
-	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.Role(req.Role), asset.ID.String()); err != nil {
+	if err := rbac.GrantRoleInAsset(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role), asset.ID.String()); err != nil {
 		return err
 	}
 

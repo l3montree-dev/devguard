@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -30,7 +29,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user1", dtos.SessionActorUser, []string{"read", "write"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user1", shared.SessionActorUser, []string{"read", "write"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
 
@@ -80,7 +79,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyAPIToken", mock.Anything, "mytoken123").Return(shared.NewSession("user3", dtos.SessionActorUser, []string{"scan"}, false), nil)
+		verifier.On("VerifyAPIToken", mock.Anything, "mytoken123").Return(shared.NewSession("user3", shared.SessionActorUser, []string{"scan"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
 
@@ -131,7 +130,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user5", dtos.SessionActorUser, []string{"read"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user5", shared.SessionActorUser, []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{BearerTokenAuthDisabled: true}), verifier)
 
@@ -162,7 +161,7 @@ func TestSessionMiddleware(t *testing.T) {
 		mockAdminClient.On("GetIdentityFromCookie", mock.Anything, "ory_kratos_session=bad_cookie").Return(client.Identity{}, errors.New("invalid cookie"))
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user4", dtos.SessionActorUser, []string{"read"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user4", shared.SessionActorUser, []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(mockAdminClient, newConfigMock(t, shared.InstanceSettings{}), verifier)
 

@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -171,18 +171,18 @@ func (_c *AuthSession_GetScopes_Call) RunAndReturn(run func() []string) *AuthSes
 }
 
 // GetSessionActorType provides a mock function for the type AuthSession
-func (_mock *AuthSession) GetSessionActorType() dtos.SessionActor {
+func (_mock *AuthSession) GetSessionActorType() shared.SessionActor {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSessionActorType")
 	}
 
-	var r0 dtos.SessionActor
-	if returnFunc, ok := ret.Get(0).(func() dtos.SessionActor); ok {
+	var r0 shared.SessionActor
+	if returnFunc, ok := ret.Get(0).(func() shared.SessionActor); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(dtos.SessionActor)
+		r0 = ret.Get(0).(shared.SessionActor)
 	}
 	return r0
 }
@@ -204,12 +204,12 @@ func (_c *AuthSession_GetSessionActorType_Call) Run(run func()) *AuthSession_Get
 	return _c
 }
 
-func (_c *AuthSession_GetSessionActorType_Call) Return(sessionActor dtos.SessionActor) *AuthSession_GetSessionActorType_Call {
+func (_c *AuthSession_GetSessionActorType_Call) Return(sessionActor shared.SessionActor) *AuthSession_GetSessionActorType_Call {
 	_c.Call.Return(sessionActor)
 	return _c
 }
 
-func (_c *AuthSession_GetSessionActorType_Call) RunAndReturn(run func() dtos.SessionActor) *AuthSession_GetSessionActorType_Call {
+func (_c *AuthSession_GetSessionActorType_Call) RunAndReturn(run func() shared.SessionActor) *AuthSession_GetSessionActorType_Call {
 	_c.Call.Return(run)
 	return _c
 }

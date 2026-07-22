@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -19,8 +18,7 @@ func TestSyncExternalReferences(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupScanContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -28,8 +26,7 @@ func TestSyncExternalReferences(t *testing.T) {
 		}
 
 		setupSyncContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -89,8 +86,7 @@ func TestSyncExternalReferences(t *testing.T) {
 			req := httptest.NewRequest("POST", "/external-references/sync/", nil)
 			ctx := app.NewContext(req, recorder)
 
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)

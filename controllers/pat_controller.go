@@ -49,10 +49,10 @@ func (p *PatController) Create(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
 	userID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can create personal access tokens").WithInternal(fmt.Errorf("only users can create personal access tokens"))
 	}
-	owner := dtos.TokenOwner{Type: dtos.SessionActorUser, ID: uuid.MustParse(userID)}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorUser), ID: uuid.MustParse(userID)}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -83,7 +83,7 @@ func (p *PatController) Create(c shared.Context) error {
 
 func (p *PatController) CreateForOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorOrg, ID: org.ID}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorOrg), ID: org.ID}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -114,7 +114,7 @@ func (p *PatController) CreateForOrg(c shared.Context) error {
 
 func (p *PatController) CreateForProject(c shared.Context) error {
 	project := shared.GetProject(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorProject, ID: project.ID}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorProject), ID: project.ID}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -145,7 +145,7 @@ func (p *PatController) CreateForProject(c shared.Context) error {
 
 func (p *PatController) CreateForAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorAsset, ID: asset.ID}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorAsset), ID: asset.ID}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -219,7 +219,7 @@ func (p *PatController) Delete(c shared.Context) error {
 	// check the owner of the token
 	session := shared.GetSession(c)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can delete their personal access token via this endpoint").WithInternal(fmt.Errorf("only users can delete their personal access token via this endpoint"))
 	}
 	if pat.UserID.String() != ownerID {
@@ -307,7 +307,7 @@ func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
 	userID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can list their personal access tokens via this endpoint").WithInternal(fmt.Errorf("only users can list their personal access tokens via this endpoint"))
 	}
 
@@ -321,9 +321,8 @@ func (p *PatController) List(c shared.Context) error {
 
 func (p *PatController) ListByOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorOrg, ID: org.ID}
 
-	pats, err := p.patRepository.ListByOrgID(c.Request().Context(), nil, owner.ID)
+	pats, err := p.patRepository.ListByOrgID(c.Request().Context(), nil, org.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list organization access tokens").WithInternal(err)
 	}
@@ -333,9 +332,8 @@ func (p *PatController) ListByOrg(c shared.Context) error {
 
 func (p *PatController) ListByProject(c shared.Context) error {
 	project := shared.GetProject(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorProject, ID: project.ID}
 
-	pats, err := p.patRepository.ListByProjectID(c.Request().Context(), nil, owner.ID)
+	pats, err := p.patRepository.ListByProjectID(c.Request().Context(), nil, project.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list project access tokens").WithInternal(err)
 	}
@@ -345,9 +343,8 @@ func (p *PatController) ListByProject(c shared.Context) error {
 
 func (p *PatController) ListByAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
-	owner := dtos.TokenOwner{Type: dtos.SessionActorAsset, ID: asset.ID}
 
-	pats, err := p.patRepository.ListByAssetID(c.Request().Context(), nil, owner.ID)
+	pats, err := p.patRepository.ListByAssetID(c.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list asset access tokens").WithInternal(err)
 	}

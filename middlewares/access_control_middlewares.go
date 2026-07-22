@@ -35,7 +35,7 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 			isAdmin, err := pat.VerifyAdminRequest(ctx.Request())
 			if err == nil {
 				if isAdmin {
-					ctx.Set("session", shared.NewSession("admin", dtos.SessionActorUser, dtos.AllowedScopes, true))
+					ctx.Set("session", shared.NewSession("admin", shared.SessionActorUser, dtos.AllowedScopes, true))
 					return next(ctx)
 				}
 			}

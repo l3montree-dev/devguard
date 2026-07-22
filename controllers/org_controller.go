@@ -226,7 +226,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the owner id from the session
 	session := shared.GetSession(ctx)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can accept invitations").WithInternal(fmt.Errorf("only users can accept invitations"))
 	}
 	// get the email of that user
@@ -346,10 +346,10 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	}
 
 	//
-	rbac.RevokeRole(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not a member
 
-	if err := rbac.GrantRole(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.Role(req.Role)); err != nil {
+	if err := rbac.GrantRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role)); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -374,8 +374,8 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	rbac := shared.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not an admin
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
 	projects, err := controller.projectService.ListProjectsByOrganizationID(reqCtx, shared.GetOrg(ctx).GetID())
@@ -384,8 +384,8 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	}
 
 	for _, project := range projects {
-		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
-		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
+		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
+		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
 	}
 
 	return ctx.NoContent(200)
@@ -572,14 +572,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 // @Success 200 {array} models.Org
 // @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {
-	// get all organizations the owner has access to
-	// FIXME (flagged for review): DomainsOfUser hardcodes a "user::" casbin subject prefix, so
-	// this silently returns an empty list for org/project/asset-scoped PAT sessions instead of
-	// their own organization. Needs an owner-type dispatch like
-	// accesscontrol.GetAllProjectsForSession/GetAllAssetsForSession, not just a nosemgrep suppression.
-	ownerID := shared.GetSession(ctx).GetActorID() // known limitation for non-user sessions, see FIXME above; left unchanged to avoid guessing at the correct dispatch behavior
-
-	domains, err := controller.rbacProvider.DomainsOfUser(ownerID)
+	domains, err := controller.rbacProvider.DomainsOfSession(shared.GetSession(ctx))
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)

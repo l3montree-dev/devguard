@@ -225,7 +225,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context
 	// get the oauth2 tokens for this session owner
 	session := shared.GetSession(ctx)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return false, fmt.Errorf("only users can have gitlab oauth2 tokens")
 	}
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, externalEntityProviderID)
@@ -284,7 +284,7 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 
 	session := shared.GetSession(ctx)
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-	if ownerType != dtos.SessionActorUser {
+	if ownerType != shared.SessionActorUser {
 		return nil, fmt.Errorf("only users can fetch oauth2 tokens from the auth server")
 	}
 
@@ -920,7 +920,7 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 
 		session := shared.GetSession(ctx)
 		ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
-		if ownerType != dtos.SessionActorUser {
+		if ownerType != shared.SessionActorUser {
 			return errors.New("only users can auto-setup gitlab external entity providers")
 		}
 

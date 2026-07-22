@@ -37,50 +37,50 @@ func (_m *RBACProvider) EXPECT() *RBACProvider_Expecter {
 	return &RBACProvider_Expecter{mock: &_m.Mock}
 }
 
-// DomainsOfUser provides a mock function for the type RBACProvider
-func (_mock *RBACProvider) DomainsOfUser(user string) ([]string, error) {
-	ret := _mock.Called(user)
+// DomainsOfSession provides a mock function for the type RBACProvider
+func (_mock *RBACProvider) DomainsOfSession(session shared.AuthSession) ([]string, error) {
+	ret := _mock.Called(session)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DomainsOfUser")
+		panic("no return value specified for DomainsOfSession")
 	}
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession) ([]string, error)); ok {
+		return returnFunc(session)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = returnFunc(user)
+	if returnFunc, ok := ret.Get(0).(func(shared.AuthSession) []string); ok {
+		r0 = returnFunc(session)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(user)
+	if returnFunc, ok := ret.Get(1).(func(shared.AuthSession) error); ok {
+		r1 = returnFunc(session)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// RBACProvider_DomainsOfUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DomainsOfUser'
-type RBACProvider_DomainsOfUser_Call struct {
+// RBACProvider_DomainsOfSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DomainsOfSession'
+type RBACProvider_DomainsOfSession_Call struct {
 	*mock.Call
 }
 
-// DomainsOfUser is a helper method to define mock.On call
-//   - user string
-func (_e *RBACProvider_Expecter) DomainsOfUser(user interface{}) *RBACProvider_DomainsOfUser_Call {
-	return &RBACProvider_DomainsOfUser_Call{Call: _e.mock.On("DomainsOfUser", user)}
+// DomainsOfSession is a helper method to define mock.On call
+//   - session shared.AuthSession
+func (_e *RBACProvider_Expecter) DomainsOfSession(session interface{}) *RBACProvider_DomainsOfSession_Call {
+	return &RBACProvider_DomainsOfSession_Call{Call: _e.mock.On("DomainsOfSession", session)}
 }
 
-func (_c *RBACProvider_DomainsOfUser_Call) Run(run func(user string)) *RBACProvider_DomainsOfUser_Call {
+func (_c *RBACProvider_DomainsOfSession_Call) Run(run func(session shared.AuthSession)) *RBACProvider_DomainsOfSession_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 shared.AuthSession
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(shared.AuthSession)
 		}
 		run(
 			arg0,
@@ -89,12 +89,12 @@ func (_c *RBACProvider_DomainsOfUser_Call) Run(run func(user string)) *RBACProvi
 	return _c
 }
 
-func (_c *RBACProvider_DomainsOfUser_Call) Return(strings []string, err error) *RBACProvider_DomainsOfUser_Call {
+func (_c *RBACProvider_DomainsOfSession_Call) Return(strings []string, err error) *RBACProvider_DomainsOfSession_Call {
 	_c.Call.Return(strings, err)
 	return _c
 }
 
-func (_c *RBACProvider_DomainsOfUser_Call) RunAndReturn(run func(user string) ([]string, error)) *RBACProvider_DomainsOfUser_Call {
+func (_c *RBACProvider_DomainsOfSession_Call) RunAndReturn(run func(session shared.AuthSession) ([]string, error)) *RBACProvider_DomainsOfSession_Call {
 	_c.Call.Return(run)
 	return _c
 }

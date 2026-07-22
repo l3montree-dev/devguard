@@ -89,13 +89,13 @@ func (service AdminService) GetMailFromUserID(ctx context.Context, authClient sh
 
 func (service AdminService) AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
 	// create a fake session for the user to grant the role in the org domain
-	fakeSession := shared.NewSession(userID.String(), dtos.SessionActorUser, []string{}, false)
+	fakeSession := shared.NewSession(userID.String(), shared.SessionActorUser, []string{}, false)
 	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).GrantRole(ctx, fakeSession, "admin")
 }
 
 func (service AdminService) RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error {
 	// create a fake session for the user to grant the role in the org domain
-	fakeSession := shared.NewSession(userID.String(), dtos.SessionActorUser, []string{}, false)
+	fakeSession := shared.NewSession(userID.String(), shared.SessionActorUser, []string{}, false)
 	return service.casbinRBACProvider.GetDomainRBAC(orgID.String()).RevokeRole(ctx, fakeSession, "admin")
 }
 
