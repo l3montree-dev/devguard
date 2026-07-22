@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -237,10 +238,19 @@ func LoadImageFromTarball(path string) (img v1.Image, cleanup func(), err error)
 // LoadRemoteImage pulls an image reference from a registry for filesystem
 // inspection, using the default keychain (assumes MaybeLoginIntoOciRegistry
 // has already been called if credentials are needed).
+// LoadRemoteImage returns image, preferring an already-pulled copy from the
+// local Docker daemon so a scan of an image the user just `docker pull`ed
+// doesn't re-fetch it a second time over the network. Falls back to a
+// registry pull if the image isn't present locally.
 func LoadRemoteImage(ctx context.Context, image string) (v1.Image, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse image reference")
 	}
+
+	if img, err := daemon.Image(ref, daemon.WithContext(ctx)); err == nil {
+		return img, nil
+	}
+
 	return remote.Image(ref, remote.WithContext(ctx), remote.WithAuthFromKeychain(authn.DefaultKeychain))
 }
