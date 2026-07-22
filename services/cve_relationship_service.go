@@ -17,6 +17,16 @@ func NewCVERelationshipService(cveRelationshipRepository shared.CVERelationshipR
 	}
 }
 
+/*
+Create a map where each CVE points to its alias.
+Using empty structs to validate existence without using up too much space
+
+	CVE1: {
+		CVE2: struct{}
+		CVE3: struct{}
+		CVE4: struct{}
+	}
+*/
 func (s *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Context, tx shared.DB, cveIDs []string) (map[string]map[string]struct{}, error) {
 	cveRelationships, err := s.cveRelationshipRepository.FindCrossRelationshipsBatch(ctx, tx, cveIDs)
 	if err != nil {

@@ -29,6 +29,13 @@ func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(ct
 	return relations, nil
 }
 
+/*
+Given a CVEID this function finds all Relationships regardless of the direction
+Example: Given CVEID "CVE1"
+CVE1 -> CVE2
+CVE1 -> CVE3
+CVE4 -> CVE1
+*/
 func (repository *cveRelationshipRepository) FindCrossRelationshipsBatch(
 	ctx context.Context,
 	tx *gorm.DB,
