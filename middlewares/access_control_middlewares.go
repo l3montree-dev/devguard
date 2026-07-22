@@ -81,7 +81,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				if org.IsPublic && act == shared.ActionRead {
 					shared.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied in accessControlMiddleware", "ownerID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
 					return echo.NewHTTPError(404, "could not find organization")
 				}

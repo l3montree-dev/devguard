@@ -35,7 +35,7 @@ type SessionRouter struct {
 func whoami(ctx echo.Context) error {
 	session := shared.GetSession(ctx)
 	return ctx.JSON(200, map[string]string{
-		"ownerID":   session.GetActorID(),
+		"actorId":   session.GetActorID(),
 		"actorType": string(session.GetSessionActorType()),
 	})
 }

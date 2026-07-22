@@ -50,7 +50,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 			now := time.Now()
 
 			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
-				slog.Info("syncing external entity provider orgs", "ownerID", key, "actorType", string(ownerType))
+				slog.Info("syncing external entity provider orgs", "actorID", key, "actorType", string(ownerType))
 				limiter.Store(key, now.Add(15*time.Minute))
 				safeCtx := GoroutineSafeContext(ctx)
 				go func() {
@@ -59,7 +59,7 @@ func ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService share
 					safeCtx.SetRequest(safeCtx.Request().WithContext(tracedCtx))
 					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						span.RecordError(err)
-						slog.Error("could not sync external entity provider orgs", "err", err, "ownerID", key, "actorType", string(ownerType))
+						slog.Error("could not sync external entity provider orgs", "err", err, "actorID", key, "actorType", string(ownerType))
 					}
 				}()
 			}
@@ -99,9 +99,9 @@ func ExternalEntityProviderRefreshMiddleware(externalEntityProviderService share
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, session)
 						if err != nil {
 							span.RecordError(err)
-							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "ownerID", session.GetActorID(), "traceID", span.SpanContext().TraceID())
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "actorID", session.GetActorID(), "traceID", span.SpanContext().TraceID())
 						} else {
-							slog.Info("refreshed external entity provider projects", "orgID", orgID, "ownerID", session.GetActorID(), "traceID", span.SpanContext().TraceID())
+							slog.Info("refreshed external entity provider projects", "orgID", orgID, "actorID", session.GetActorID(), "traceID", span.SpanContext().TraceID())
 						}
 					}()
 				}

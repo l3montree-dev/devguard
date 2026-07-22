@@ -404,7 +404,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}
-	return ctx.JSON(200, map[string]string{"ownerId": owner})
+	return ctx.JSON(200, map[string]string{"actorID": owner})
 }
 
 // @Summary Get organization config file
