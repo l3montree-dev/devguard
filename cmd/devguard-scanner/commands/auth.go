@@ -56,14 +56,7 @@ Once stored, all devguard-scanner commands will automatically pick up the token 
 				return err
 			}
 			if printToken {
-				tokenPrint := config.RuntimeBaseConfig.Token
-				if tokenPrint == "" {
-					tokenPrint, err = config.GetTokenFromKeyring(apiURL, assetName)
-					if err != nil {
-						return fmt.Errorf("could not read token from keyring: %w", err)
-					}
-				}
-				fmt.Print(tokenPrint)
+				fmt.Print(config.RuntimeBaseConfig.Token)
 				return nil
 			}
 
