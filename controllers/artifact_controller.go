@@ -153,9 +153,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		slog.Error("could not update sbom", "err", err)
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
-	currentUserID := shared.GetSession(ctx).GetUserID()
+	currentOwnerID := shared.GetSession(ctx).GetActorName()
 
-	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentUserID, &userAgent)
+	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentOwnerID, &userAgent)
 
 	if err != nil {
 		tx.Rollback()
@@ -370,7 +370,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 	}
 
-	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetUserID(), &userAgent)
+	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetActorName(), &userAgent)
 	if err != nil {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)

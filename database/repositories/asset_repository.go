@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
@@ -65,6 +66,16 @@ func (repository *assetRepository) prepareUniqueSlugs(ctx context.Context, tx *g
 	}
 
 	return nil
+}
+
+func (repository *assetRepository) ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	db := repository.GetDB(ctx, tx).Preload("Project").Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(asset, ids))
+	}
+	err := db.First(&asset).Error
+	return asset, err
 }
 
 func (repository *assetRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {

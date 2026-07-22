@@ -14,7 +14,6 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -44,8 +43,7 @@ func TestMultipleOrigins(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -171,8 +169,7 @@ func TestKeepExistingVulnsClosed(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -466,8 +463,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -507,8 +503,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -544,8 +539,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -578,8 +572,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -609,8 +602,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -641,8 +633,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -683,8 +674,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -716,8 +706,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -748,8 +737,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -795,8 +783,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -836,8 +823,7 @@ func TestScanning(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1073,8 +1059,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1157,8 +1142,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1265,8 +1249,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1499,8 +1482,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		app := echo.New()
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1621,8 +1603,7 @@ func TestTicketHandling(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2010,13 +1991,11 @@ func TestIdempotency(t *testing.T) {
 		artifactController := f.App.ArtifactController
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.AuthSession{}
-
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, &authSession)
+			shared.SetSession(ctx, authSession)
 			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
@@ -2143,13 +2122,11 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.AuthSession{}
-
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, &authSession)
+			shared.SetSession(ctx, authSession)
 			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
@@ -2186,8 +2163,7 @@ func TestScanWithMultiplePaths(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2236,8 +2212,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2322,8 +2297,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2432,8 +2406,7 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2489,8 +2462,7 @@ func TestNoWriteHeader(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2602,8 +2574,7 @@ func TestScanScopedToArtifact(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)

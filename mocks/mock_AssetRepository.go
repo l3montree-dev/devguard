@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -1785,6 +1786,78 @@ func (_c *AssetRepository_ReadWithAssetVersions_Call) Return(asset models.Asset,
 }
 
 func (_c *AssetRepository_ReadWithAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) (models.Asset, error)) *AssetRepository_ReadWithAssetVersions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReadWithProject provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadWithProject")
+	}
+
+	var r0 models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) (models.Asset, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) models.Asset); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.Asset)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_ReadWithProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadWithProject'
+type AssetRepository_ReadWithProject_Call struct {
+	*mock.Call
+}
+
+// ReadWithProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - id uuid.UUID
+func (_e *AssetRepository_Expecter) ReadWithProject(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_ReadWithProject_Call {
+	return &AssetRepository_ReadWithProject_Call{Call: _e.mock.On("ReadWithProject", ctx, tx, id)}
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) Run(run func(ctx context.Context, tx *gorm.DB, id uuid.UUID)) *AssetRepository_ReadWithProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) Return(asset models.Asset, err error) *AssetRepository_ReadWithProject_Call {
+	_c.Call.Return(asset, err)
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)) *AssetRepository_ReadWithProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

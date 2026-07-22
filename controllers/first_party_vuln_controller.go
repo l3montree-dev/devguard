@@ -173,7 +173,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.FirstPartyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -196,7 +196,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	mechanicalJustification := status.MechanicalJustification
 
 	userAgent := ctx.Request().UserAgent()
-	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification, &userAgent)
+	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, ownerID, &firstPartyVuln, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -385,7 +385,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 
 func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.BatchFirstPartyVulnStatus
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
@@ -411,7 +411,7 @@ func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 		}
 
 		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(
-			ctx.Request().Context(), nil, userID, &fpv,
+			ctx.Request().Context(), nil, ownerID, &fpv,
 			status.StatusType, status.Justification, status.MechanicalJustification, &userAgent)
 		if err != nil {
 			slog.Error("could not update firstPartyVuln state", "err", err, "vulnID", vulnID)
@@ -423,4 +423,3 @@ func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	}
 	return ctx.JSON(200, updated)
 }
-
