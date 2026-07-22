@@ -1,2 +1,2 @@
-DROP INDEX IF EXISTS idx_cve_relationships_target_cve; -- target_cve already is handled via the primary key index, source cve is missing a crucial index
+DROP INDEX IF EXISTS public.idx_cve_relationships_target_cve; -- target_cve already is handled via the primary key index, source cve is missing a crucial index
 CREATE INDEX idx_cve_relationships_source_cve ON public.cve_relationships USING btree (source_cve);
