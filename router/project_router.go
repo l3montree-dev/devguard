@@ -35,6 +35,7 @@ func NewProjectRouter(
 	dependencyProxyController *dependencyfirewall.DependencyProxyController,
 	dependencyVulnController *controllers.DependencyVulnController,
 	compliancePostureController *controllers.CompliancePostureController,
+	complianceComponentController *controllers.ComplianceComponentController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
@@ -60,6 +61,9 @@ func NewProjectRouter(
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
 	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
 	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)

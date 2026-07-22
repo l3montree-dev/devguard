@@ -94,6 +94,8 @@ type CSAFService interface {
 	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
 	GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error)
 	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
+	GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {
@@ -797,6 +799,15 @@ type CompliancePostureRepository interface {
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
+type ComplianceComponentRepository interface {
+	ListAll(ctx context.Context, tx DB, filter []FilterQuery) ([]models.ComplianceComponent, error)
+	GetDetails(ctx context.Context, tx DB, id uuid.UUID) (*models.ComplianceComponent, error)
+
+	CreateStatement(ctx context.Context, tx DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error)
+	UpdateStatement(ctx context.Context, tx DB, statementID uuid.UUID, implementationStatus string, description string) (*models.ComplianceComponentImplementsControlStatement, error)
+	DeleteStatement(ctx context.Context, tx DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error)
+}
+
 type FrameworkControlRepository interface {
 	utils.Repository[uuid.UUID, models.FrameworkControl, DB]
 	GetAll(ctx context.Context, tx DB, framework *string) ([]models.FrameworkControl, error)
@@ -818,6 +829,23 @@ type RBACProvider interface {
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)
+}
+
+type AdvisoryService interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory, currentVisibility string) error
+	Delete(ctx context.Context, tx DB, id int64) error
+}
+
+type AdvisoryRepository interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
+	GetAllAdvisoriesByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Advisory, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

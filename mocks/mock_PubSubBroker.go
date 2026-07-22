@@ -38,6 +38,50 @@ func (_m *PubSubBroker) EXPECT() *PubSubBroker_Expecter {
 	return &PubSubBroker_Expecter{mock: &_m.Mock}
 }
 
+// IsHealthy provides a mock function for the type PubSubBroker
+func (_mock *PubSubBroker) IsHealthy() bool {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsHealthy")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func() bool); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// PubSubBroker_IsHealthy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsHealthy'
+type PubSubBroker_IsHealthy_Call struct {
+	*mock.Call
+}
+
+// IsHealthy is a helper method to define mock.On call
+func (_e *PubSubBroker_Expecter) IsHealthy() *PubSubBroker_IsHealthy_Call {
+	return &PubSubBroker_IsHealthy_Call{Call: _e.mock.On("IsHealthy")}
+}
+
+func (_c *PubSubBroker_IsHealthy_Call) Run(run func()) *PubSubBroker_IsHealthy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *PubSubBroker_IsHealthy_Call) Return(b bool) *PubSubBroker_IsHealthy_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *PubSubBroker_IsHealthy_Call) RunAndReturn(run func() bool) *PubSubBroker_IsHealthy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Publish provides a mock function for the type PubSubBroker
 func (_mock *PubSubBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
 	ret := _mock.Called(ctx, message)

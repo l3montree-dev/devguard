@@ -358,7 +358,7 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, "gitleaks.toml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
+				slog.Debug("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
 			} else {
 				// set the config file path in the runtime config so that it can be used in the secret scanner
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
@@ -371,7 +371,7 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".semgrep.yaml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
+				slog.Debug("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
 			} else {
 				slog.Info("using semgrep config from DevGuard", "file", configFilePath)
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
@@ -386,7 +386,7 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".checkov.yml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
+				slog.Debug("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
 			} else {
 				// set the config file path in the runtime config so that it can be used in the iac scanner
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath

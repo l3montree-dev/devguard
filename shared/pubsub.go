@@ -30,6 +30,7 @@ type PubSubMessage interface {
 type PubSubBroker interface {
 	Publish(ctx context.Context, message PubSubMessage) error
 	Subscribe(topic PubSubChannel) (<-chan map[string]any, error)
+	IsHealthy() bool
 }
 
 type SimpleMessage struct {

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	netURL "net/url"
 	"os"
 	"strings"
 	"time"
@@ -77,7 +78,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
-	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, purlString)
+	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, netURL.PathEscape(purlString))
 	fmt.Println("Inspecting PURL via API:", url)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -341,6 +342,9 @@ func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.Purl
 		acTable := table.NewWriter()
 		acTable.SetStyle(table.StyleLight)
 		acTable.AppendHeader(table.Row{"#", "PURL", "Source", "Version Range", "CVEs"})
+		acTable.SetColumnConfigs([]table.ColumnConfig{
+			{Number: 5, WidthMax: 60, WidthMaxEnforcer: text.WrapSoft},
+		})
 
 		for i, ac := range affectedComponents {
 			versionRange := "-"
