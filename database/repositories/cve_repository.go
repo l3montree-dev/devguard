@@ -303,27 +303,27 @@ func (g *cveRepository) GetAllRelatedCVEsForCVE(ctx context.Context, tx *gorm.DB
 		WITH RECURSIVE related_cves
 	AS(
 		SELECT 
-			cr.target_cve, 0 as depth, cr.relationship_type 
+			cr.target_cve, cr.relationship_type 
 		FROM 
 			cve_relationships cr 
 		WHERE 
 			cr.source_cve = ?
-		UNION 
+		UNION 	--union remove duplicates natively; the query terminates after no new rows can be found
 		SELECT 
-			cr2.target_cve, rc.depth + 1, cr2.relationship_type 
+			cr2.target_cve, cr2.relationship_type 
 		FROM 
 			cve_relationships cr2 
 		INNER JOIN 
 			related_cves rc ON rc.target_cve = cr2.source_cve
-		WHERE 
-			rc.depth + 1 < 5
 	)
 	SELECT 
-		DISTINCT target_cve, relationship_type 
+		 target_cve, relationship_type 
 	FROM 
 		related_cves) as sub 
 	LEFT JOIN 
-		cves ON cves.cve = sub.target_cve;`, cveID).Find(&results).Error
+		cves ON cves.cve = sub.target_cve
+	WHERE 
+		target_cve != ?;`, cveID, cveID).Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,14 @@ func (g *cveRepository) GetAllRelatedCVEsForCVE(ctx context.Context, tx *gorm.DB
 	// map each cve to its relationship
 	relationshipTypeToCVEs := make(map[dtos.RelationshipType][]models.CVE, 5)
 	for i := range results {
-		relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], results[i].CVE)
+		if results[i].CVE.CVE != "" {
+			// we use a left join so we don't want to add null cves rows
+			relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], results[i].CVE)
+		} else {
+			// if we have a null row at least make sure to add the cveID (via targetCVE)
+			// this way the relationships information does not get lost
+			relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], models.CVE{CVE: results[i].TargetCVE})
+		}
 	}
 
 	return relationshipTypeToCVEs, err
