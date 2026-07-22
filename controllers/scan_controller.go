@@ -692,7 +692,11 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 				components = append(components, comp)
 				compByPURL[v.ComponentPurl] = bomRef
 			}
-			vuln.Affects = &[]cdx.Affects{{Ref: bomRef}}
+			affects := cdx.Affects{Ref: bomRef}
+			if v.ComponentFixedVersion != nil {
+				affects.Range = &[]cdx.AffectedVersions{{Version: *v.ComponentFixedVersion, Status: cdx.VulnerabilityStatusNotAffected}}
+			}
+			vuln.Affects = &[]cdx.Affects{affects}
 		}
 		vulns = append(vulns, vuln)
 	}
