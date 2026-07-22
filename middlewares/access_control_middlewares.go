@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -36,7 +35,7 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 			isAdmin, err := pat.VerifyAdminRequest(ctx.Request())
 			if err == nil {
 				if isAdmin {
-					ctx.Set("session", accesscontrol.NewSession("admin", dtos.OwnerUser, dtos.AllowedScopes, true))
+					ctx.Set("session", shared.NewSession("admin", dtos.SessionActorUser, dtos.AllowedScopes, true))
 					return next(ctx)
 				}
 			}
@@ -82,7 +81,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				if org.IsPublic && act == shared.ActionRead {
 					shared.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied in accessControlMiddleware", "ownerID", session.GetOwnerID(), "ownerType", session.GetOwnerType(), "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "ownerID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
 					return echo.NewHTTPError(404, "could not find organization")
 				}
@@ -157,7 +156,7 @@ func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RB
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in AssetAccess", "owner", session.GetOwnerID(), "ownerType", session.GetOwnerType(), "object", obj, "action", act, "assetSlug", assetSlug)
+						slog.Warn("access denied in AssetAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "assetSlug", assetSlug)
 						return echo.NewHTTPError(404, "could not find asset")
 					}
 				}
@@ -213,7 +212,7 @@ func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) sha
 						// allow READ on all objects in the project - if access is public
 						shared.SetIsPublicRequest(ctx)
 					} else {
-						slog.Warn("access denied in ProjectAccess", "owner", session.GetOwnerID(), "ownerType", session.GetOwnerType(), "object", obj, "action", act, "projectSlug", projectSlug)
+						slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(404, "could not find project")
 					}
 				}
@@ -251,17 +250,13 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 
 			// check what kind of RBAC we need
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
-			if org.IsExternalEntity() {
-				// check if there is an admin token defined
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
-			}
 
 			// check if the user is allowed to access the organization
 			session := shared.GetSession(ctx)
 			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session)
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
-					slog.Info("oauth2 token not valid, asking user to reauthorize", "owner", session.GetOwnerID(), "ownerType", session.GetOwnerType(), "organization", organization)
+					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", organization)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
 				if org.IsPublic {
@@ -281,7 +276,7 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 					shared.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
-					slog.Error("access denied in multiOrganizationMiddleware", "owner", session.GetOwnerID(), "ownerType", session.GetOwnerType(), "organization", organization)
+					slog.Error("access denied in multiOrganizationMiddleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", organization)
 					return ctx.JSON(404, map[string]string{"error": "could not find organization"})
 				}
 			}

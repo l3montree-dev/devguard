@@ -173,7 +173,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.FirstPartyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -385,7 +385,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 
 func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.BatchFirstPartyVulnStatus
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {

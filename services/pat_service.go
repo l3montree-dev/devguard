@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -70,17 +69,17 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 }
 
 func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
-	sessionOwnerType := session.GetOwnerType()
-	ownerID := session.GetOwnerID()
+	sessionOwnerType := session.GetSessionActorType()
+	ownerID := session.GetActorID()
 	requestGoesToOrg := shared.GetOrg(ctx)
 	switch sessionOwnerType {
-	case dtos.OwnerUser:
+	case dtos.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
-	case dtos.OwnerOrg:
+	case dtos.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
@@ -88,7 +87,7 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
 
-	case dtos.OwnerProject:
+	case dtos.SessionActorProject:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -109,7 +108,7 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 		shared.SetProject(ctx, project)
 		return true, nil
 
-	case dtos.OwnerAsset:
+	case dtos.SessionActorAsset:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -134,31 +133,31 @@ func (p *PatService) IsAllowedInOrg(ctx shared.Context, session shared.AuthSessi
 }
 
 func (p *PatService) IsAllowedInProject(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
-	sessionOwnerType := session.GetOwnerType()
-	ownerID := session.GetOwnerID()
+	sessionOwnerType := session.GetSessionActorType()
+	ownerID := session.GetActorID()
 	requestGoesToOrg := shared.GetOrg(ctx)
 	requestGoesToProject := shared.GetProject(ctx)
 	switch sessionOwnerType {
-	case dtos.OwnerUser:
+	case dtos.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
 
-	case dtos.OwnerOrg:
+	case dtos.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
-	case dtos.OwnerProject:
+	case dtos.SessionActorProject:
 		if act == shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToProject.ID.String(), nil
-	case dtos.OwnerAsset:
+	case dtos.SessionActorAsset:
 		if act != shared.ActionRead {
 			return false, nil
 		}
@@ -178,20 +177,20 @@ func (p *PatService) IsAllowedInProject(ctx shared.Context, session shared.AuthS
 }
 
 func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSession, obj shared.Object, act shared.Action) (bool, error) {
-	sessionOwnerType := session.GetOwnerType()
-	ownerID := session.GetOwnerID()
+	sessionOwnerType := session.GetSessionActorType()
+	ownerID := session.GetActorID()
 	requestGoesToOrg := shared.GetOrg(ctx)
 	requestGoesToProject := shared.GetProject(ctx)
 	requestGoesToAsset := shared.GetAsset(ctx)
 	switch sessionOwnerType {
-	case dtos.OwnerUser:
+	case dtos.SessionActorUser:
 		// get the rbac
 		rbac := shared.GetRBAC(ctx)
 
 		// continue with RBAC system
 		return rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
 
-	case dtos.OwnerOrg:
+	case dtos.SessionActorOrg:
 		// owner id is an org id
 		// an org access token should have access to EVERYTHING inside an organization
 		if act == shared.ActionUpdate {
@@ -199,13 +198,13 @@ func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSes
 		}
 		return ownerID == requestGoesToOrg.ID.String(), nil
 
-	case dtos.OwnerProject:
+	case dtos.SessionActorProject:
 		if act != shared.ActionUpdate {
 			return false, nil
 		}
 		return ownerID == requestGoesToProject.ID.String(), nil
 
-	case dtos.OwnerAsset:
+	case dtos.SessionActorAsset:
 		if act != shared.ActionUpdate {
 			return false, nil
 		}
@@ -216,13 +215,13 @@ func (p *PatService) IsAllowedInAsset(ctx shared.Context, session shared.AuthSes
 
 func ownerToFields(o dtos.TokenOwner) (userID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) {
 	switch o.Type {
-	case dtos.OwnerUser:
+	case dtos.SessionActorUser:
 		return &o.ID, nil, nil, nil
-	case dtos.OwnerOrg:
+	case dtos.SessionActorOrg:
 		return nil, &o.ID, nil, nil
-	case dtos.OwnerProject:
+	case dtos.SessionActorProject:
 		return nil, nil, &o.ID, nil
-	case dtos.OwnerAsset:
+	case dtos.SessionActorAsset:
 		return nil, nil, nil, &o.ID
 	}
 	return nil, nil, nil, nil
@@ -458,13 +457,13 @@ func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (shared.A
 func patToSession(pat models.PAT) (shared.AuthSession, error) {
 	switch true {
 	case pat.UserID != nil:
-		return accesscontrol.NewSession(pat.UserID.String(), dtos.OwnerUser, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.UserID.String(), dtos.SessionActorUser, strings.Fields(pat.Scopes), false), nil
 	case pat.OrgID != nil:
-		return accesscontrol.NewSession(pat.OrgID.String(), dtos.OwnerOrg, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.OrgID.String(), dtos.SessionActorOrg, strings.Fields(pat.Scopes), false), nil
 	case pat.ProjectID != nil:
-		return accesscontrol.NewSession(pat.ProjectID.String(), dtos.OwnerProject, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.ProjectID.String(), dtos.SessionActorProject, strings.Fields(pat.Scopes), false), nil
 	case pat.AssetID != nil:
-		return accesscontrol.NewSession(pat.AssetID.String(), dtos.OwnerAsset, strings.Fields(pat.Scopes), false), nil
+		return shared.NewSession(pat.AssetID.String(), dtos.SessionActorAsset, strings.Fields(pat.Scopes), false), nil
 	default:
 		return nil, fmt.Errorf("invalid token owner type")
 	}
@@ -553,7 +552,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		}
 		if isAdmin {
 			// add all scopes
-			return accesscontrol.NewSession("admin", dtos.OwnerUser, dtos.AllowedScopes, true), nil
+			return shared.NewSession("admin", dtos.SessionActorUser, dtos.AllowedScopes, true), nil
 		}
 		return nil, fmt.Errorf("no fingerprint provided")
 	}

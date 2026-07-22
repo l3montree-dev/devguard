@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
@@ -31,7 +30,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user1", dtos.OwnerUser, []string{"read", "write"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user1", dtos.SessionActorUser, []string{"read", "write"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
 
@@ -39,7 +38,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user1", sess.GetOwnerID())
+			assert.Equal(t, "user1", sess.GetActorID())
 			assert.ElementsMatch(t, []string{"read", "write"}, sess.GetScopes())
 			return nil
 		})
@@ -64,7 +63,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, accesscontrol.NoSession, sess)
+			assert.Equal(t, shared.NoSession, sess)
 			return nil
 		})
 
@@ -81,7 +80,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyAPIToken", mock.Anything, "mytoken123").Return(accesscontrol.NewSession("user3", dtos.OwnerUser, []string{"scan"}, false), nil)
+		verifier.On("VerifyAPIToken", mock.Anything, "mytoken123").Return(shared.NewSession("user3", dtos.SessionActorUser, []string{"scan"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{}), verifier)
 
@@ -89,7 +88,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user3", sess.GetOwnerID())
+			assert.Equal(t, "user3", sess.GetActorID())
 			assert.ElementsMatch(t, []string{"scan"}, sess.GetScopes())
 			return nil
 		})
@@ -115,7 +114,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, accesscontrol.NoSession, sess)
+			assert.Equal(t, shared.NoSession, sess)
 			return nil
 		})
 
@@ -132,7 +131,7 @@ func TestSessionMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user5", dtos.OwnerUser, []string{"read"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user5", dtos.SessionActorUser, []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(nil, newConfigMock(t, shared.InstanceSettings{BearerTokenAuthDisabled: true}), verifier)
 
@@ -140,7 +139,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user5", sess.GetOwnerID())
+			assert.Equal(t, "user5", sess.GetActorID())
 			return nil
 		})
 
@@ -163,7 +162,7 @@ func TestSessionMiddleware(t *testing.T) {
 		mockAdminClient.On("GetIdentityFromCookie", mock.Anything, "ory_kratos_session=bad_cookie").Return(client.Identity{}, errors.New("invalid cookie"))
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(accesscontrol.NewSession("user4", dtos.OwnerUser, []string{"read"}, false), nil)
+		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user4", dtos.SessionActorUser, []string{"read"}, false), nil)
 
 		mw := SessionMiddleware(mockAdminClient, newConfigMock(t, shared.InstanceSettings{}), verifier)
 
@@ -171,7 +170,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user4", sess.GetOwnerID())
+			assert.Equal(t, "user4", sess.GetActorID())
 			return nil
 		})
 
@@ -202,7 +201,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user2", sess.GetOwnerID())
+			assert.Equal(t, "user2", sess.GetActorID())
 			assert.ElementsMatch(t, []string{"scan", "manage"}, sess.GetScopes())
 			return nil
 		})

@@ -91,8 +91,8 @@ func TestCasbinRBAC_ConcurrentWrites(t *testing.T) {
 			defer wg.Done()
 			user := fmt.Sprintf("user-%d", i)
 			project := fmt.Sprintf("project-%d", i%5)
-			_ = rbac.GrantRoleInProject(context.Background(), user, shared.RoleMember, project)
-			_ = rbac.RevokeRoleInProject(context.Background(), user, shared.RoleMember, project)
+			_ = rbac.GrantRoleInProject(context.Background(), shared.NewSession(user, dtos.SessionActorUser, nil, false), shared.RoleMember, project)
+			_ = rbac.RevokeRoleInProject(context.Background(), shared.NewSession(user, dtos.SessionActorUser, nil, false), shared.RoleMember, project)
 		}()
 	}
 	wg.Wait()
@@ -103,7 +103,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 
 	// Seed some data first.
 	for i := range 5 {
-		_ = rbac.GrantRoleInProject(context.Background(), fmt.Sprintf("user-%d", i), shared.RoleMember, "project-0")
+		_ = rbac.GrantRoleInProject(context.Background(), shared.NewSession(fmt.Sprintf("user-%d", i), dtos.SessionActorUser, nil, false), shared.RoleMember, "project-0")
 	}
 
 	const goroutines = 30
@@ -116,7 +116,7 @@ func TestCasbinRBAC_ConcurrentReads(t *testing.T) {
 			defer wg.Done()
 			user := fmt.Sprintf("user-%d", i%5)
 			_ = rbac.GetAllRoles(user)
-			_, _ = rbac.GetAllProjectsForSession(context.Background(), NewSession(user, dtos.OwnerUser, nil, false))
+			_, _ = rbac.GetAllProjectsForSession(context.Background(), shared.NewSession(user, dtos.SessionActorUser, nil, false))
 		}()
 	}
 	wg.Wait()
@@ -136,10 +136,10 @@ func TestCasbinRBAC_ConcurrentReadsAndWrites(t *testing.T) {
 			user := fmt.Sprintf("user-%d", i%10)
 			project := fmt.Sprintf("project-%d", i%3)
 			if i%2 == 0 {
-				_ = rbac.GrantRoleInProject(context.Background(), user, shared.RoleMember, project)
+				_ = rbac.GrantRoleInProject(context.Background(), shared.NewSession(user, dtos.SessionActorUser, nil, false), shared.RoleMember, project)
 			} else {
 				_ = rbac.GetAllRoles(user)
-				_, _ = rbac.GetAllProjectsForSession(context.Background(), NewSession(user, dtos.OwnerUser, nil, false))
+				_, _ = rbac.GetAllProjectsForSession(context.Background(), shared.NewSession(user, dtos.SessionActorUser, nil, false))
 			}
 		}()
 	}
@@ -154,14 +154,14 @@ func TestRevokeAllRolesInProjectRemovesRolesButKeepsSiblings(t *testing.T) {
 	ctx := context.Background()
 	rbac := newTestCasbinRBAC(t, "org-1")
 
-	if err := rbac.GrantRoleInProject(ctx, "alice", shared.RoleAdmin, "proj"); err != nil {
+	if err := rbac.GrantRoleInProject(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "proj"); err != nil {
 		t.Fatal(err)
 	}
-	if err := rbac.GrantRoleInProject(ctx, "bob", shared.RoleMember, "proj"); err != nil {
+	if err := rbac.GrantRoleInProject(ctx, shared.NewSession("bob", dtos.SessionActorUser, nil, false), shared.RoleMember, "proj"); err != nil {
 		t.Fatal(err)
 	}
 	// carol lives in a sibling project that shares the "proj" prefix
-	if err := rbac.GrantRoleInProject(ctx, "carol", shared.RoleAdmin, "proj-2"); err != nil {
+	if err := rbac.GrantRoleInProject(ctx, shared.NewSession("carol", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "proj-2"); err != nil {
 		t.Fatal(err)
 	}
 	// role-to-role grouping inside "proj" (admin inherits member) must be removed too
@@ -180,7 +180,7 @@ func TestRevokeAllRolesInProjectRemovesRolesButKeepsSiblings(t *testing.T) {
 	if _, err := rbac.GetProjectRole("bob", "proj"); err == nil {
 		t.Error("bob still has a role in proj")
 	}
-	if projects, _ := rbac.GetAllProjectsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false)); len(projects) != 0 {
+	if projects, _ := rbac.GetAllProjectsForSession(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false)); len(projects) != 0 {
 		t.Errorf("alice still mapped to projects: %v", projects)
 	}
 
@@ -203,14 +203,14 @@ func TestRevokeAllRolesInProjectRemovesPolicies(t *testing.T) {
 	project := &models.Project{Model: models.Model{ID: uuid.New()}}
 	projectID := project.ID.String()
 
-	if err := rbac.GrantRoleInProject(ctx, "alice", shared.RoleAdmin, projectID); err != nil {
+	if err := rbac.GrantRoleInProject(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false), shared.RoleAdmin, projectID); err != nil {
 		t.Fatal(err)
 	}
 	if err := rbac.AllowRoleInProject(ctx, projectID, shared.RoleAdmin, shared.ObjectProject, []shared.Action{shared.ActionRead}); err != nil {
 		t.Fatal(err)
 	}
 
-	alice := NewSession("alice", dtos.OwnerUser, nil, false)
+	alice := shared.NewSession("alice", dtos.SessionActorUser, nil, false)
 	allowed, err := rbac.IsAllowedInProject(ctx, project, alice, shared.ObjectProject, shared.ActionRead)
 	if err != nil {
 		t.Fatal(err)
@@ -237,10 +237,10 @@ func TestRevokeAllRolesInAssetRemovesRolesButKeepsSiblings(t *testing.T) {
 	ctx := context.Background()
 	rbac := newTestCasbinRBAC(t, "org-1")
 
-	if err := rbac.GrantRoleInAsset(ctx, "alice", shared.RoleAdmin, "asset"); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "asset"); err != nil {
 		t.Fatal(err)
 	}
-	if err := rbac.GrantRoleInAsset(ctx, "carol", shared.RoleAdmin, "asset-2"); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, shared.NewSession("carol", dtos.SessionActorUser, nil, false), shared.RoleAdmin, "asset-2"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -271,11 +271,11 @@ func TestGetAllProjectsForSessionOwnerTypes(t *testing.T) {
 
 	t.Run("user owner resolves projects from granted roles", func(t *testing.T) {
 		rbac := newTestCasbinRBAC(t, "org-1")
-		if err := rbac.GrantRoleInProject(ctx, "alice", shared.RoleMember, projectID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false), shared.RoleMember, projectID.String()); err != nil {
 			t.Fatal(err)
 		}
 
-		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false))
+		projects, err := rbac.GetAllProjectsForSession(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -289,7 +289,7 @@ func TestGetAllProjectsForSessionOwnerTypes(t *testing.T) {
 		projectRepo.EXPECT().GetByOrgID(ctx, (*gorm.DB)(nil), orgID).Return([]models.Project{{Model: models.Model{ID: projectID}}}, nil)
 		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), projectRepository: projectRepo}
 
-		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(orgID.String(), dtos.OwnerOrg, nil, false))
+		projects, err := rbac.GetAllProjectsForSession(ctx, shared.NewSession(orgID.String(), dtos.SessionActorOrg, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -301,7 +301,7 @@ func TestGetAllProjectsForSessionOwnerTypes(t *testing.T) {
 	t.Run("project owner is scoped to itself", func(t *testing.T) {
 		rbac := newTestCasbinRBAC(t, "org-1")
 
-		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(projectID.String(), dtos.OwnerProject, nil, false))
+		projects, err := rbac.GetAllProjectsForSession(ctx, shared.NewSession(projectID.String(), dtos.SessionActorProject, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,7 +313,7 @@ func TestGetAllProjectsForSessionOwnerTypes(t *testing.T) {
 	t.Run("asset owner has no projects", func(t *testing.T) {
 		rbac := newTestCasbinRBAC(t, "org-1")
 
-		projects, err := rbac.GetAllProjectsForSession(ctx, NewSession(uuid.New().String(), dtos.OwnerAsset, nil, false))
+		projects, err := rbac.GetAllProjectsForSession(ctx, shared.NewSession(uuid.New().String(), dtos.SessionActorAsset, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -334,11 +334,11 @@ func TestGetAllAssetsForSessionOwnerTypes(t *testing.T) {
 
 	t.Run("user owner resolves assets from granted roles", func(t *testing.T) {
 		rbac := newTestCasbinRBAC(t, "org-1")
-		if err := rbac.GrantRoleInAsset(ctx, "alice", shared.RoleMember, assetID.String()); err != nil {
+		if err := rbac.GrantRoleInAsset(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID.String()); err != nil {
 			t.Fatal(err)
 		}
 
-		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession("alice", dtos.OwnerUser, nil, false))
+		assets, err := rbac.GetAllAssetsForSession(ctx, shared.NewSession("alice", dtos.SessionActorUser, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -352,7 +352,7 @@ func TestGetAllAssetsForSessionOwnerTypes(t *testing.T) {
 		assetRepo.EXPECT().GetByOrgID(ctx, (*gorm.DB)(nil), orgID).Return([]models.Asset{{Model: models.Model{ID: assetID}}}, nil)
 		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), assetRepository: assetRepo}
 
-		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(orgID.String(), dtos.OwnerOrg, nil, false))
+		assets, err := rbac.GetAllAssetsForSession(ctx, shared.NewSession(orgID.String(), dtos.SessionActorOrg, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -366,7 +366,7 @@ func TestGetAllAssetsForSessionOwnerTypes(t *testing.T) {
 		assetRepo.EXPECT().GetByProjectID(ctx, (*gorm.DB)(nil), projectID).Return([]models.Asset{{Model: models.Model{ID: assetID}}}, nil)
 		rbac := &casbinRBAC{domain: "org-1", enforcer: newTestEnforcer(t), assetRepository: assetRepo}
 
-		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(projectID.String(), dtos.OwnerProject, nil, false))
+		assets, err := rbac.GetAllAssetsForSession(ctx, shared.NewSession(projectID.String(), dtos.SessionActorProject, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -378,7 +378,7 @@ func TestGetAllAssetsForSessionOwnerTypes(t *testing.T) {
 	t.Run("asset owner is scoped to itself", func(t *testing.T) {
 		rbac := newTestCasbinRBAC(t, "org-1")
 
-		assets, err := rbac.GetAllAssetsForSession(ctx, NewSession(assetID.String(), dtos.OwnerAsset, nil, false))
+		assets, err := rbac.GetAllAssetsForSession(ctx, shared.NewSession(assetID.String(), dtos.SessionActorAsset, nil, false))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -406,7 +406,7 @@ func TestCasbinRBACTwoUsersConcurrentOrgSync(t *testing.T) {
 		wg.Go(func() {
 			// Simulate what syncProjectsAndAssets does: grant + read roles per project.
 			for _, project := range projects {
-				_ = rbac.GrantRoleInProject(context.Background(), "user", shared.RoleMember, project)
+				_ = rbac.GrantRoleInProject(context.Background(), shared.NewSession("user", dtos.SessionActorUser, nil, false), shared.RoleMember, project)
 				_ = rbac.GetAllRoles("user")
 				_ = rbac.RevokeAllRolesInProjectForUser(context.Background(), "user", project)
 			}

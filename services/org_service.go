@@ -45,9 +45,9 @@ func (o *OrgService) CreateOrganization(ctx shared.Context, organization *models
 	}
 
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	ownerID := shared.GetSession(ctx).GetOwnerID()
-	ownerType := shared.GetSession(ctx).GetOwnerType()
-	if ownerType != dtos.OwnerUser {
+	ownerID := shared.GetSession(ctx).GetActorID()
+	ownerType := shared.GetSession(ctx).GetSessionActorType()
+	if ownerType != dtos.SessionActorUser {
 		return echo.NewHTTPError(400, "only users can create organizations").WithInternal(fmt.Errorf("only users can create organizations"))
 	}
 	if err = shared.BootstrapOrg(ctx.Request().Context(), rbac, ownerID, shared.RoleOwner); err != nil {

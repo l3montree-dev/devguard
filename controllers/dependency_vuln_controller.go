@@ -381,7 +381,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -439,7 +439,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.BatchDependencyVulnStatus
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)

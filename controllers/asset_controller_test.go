@@ -205,13 +205,14 @@ func TestHTTPControllerInviteMembers(t *testing.T) {
 		mockRBAC.On("GetAllMembersOfProject", projectID.String()).Return([]string{"user-123", "user-456", "user-789"}, nil)
 
 		// Mock granting roles
-		mockRBAC.On("GrantRoleInAsset", mock.Anything, "user-123", shared.RoleMember, assetID.String()).Return(nil)
-		mockRBAC.On("GrantRoleInAsset", mock.Anything, "user-456", shared.RoleMember, assetID.String()).Return(nil)
+		mockRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user-123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID.String()).Return(nil)
+		mockRBAC.On("GrantRoleInAsset", mock.Anything, shared.NewSession("user-456", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID.String()).Return(nil)
 
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
 		session := mocks.NewAuthSession(t)
 		session.On("GetOwnerID").Return("user-123")
+		session.On("GetOwnerType").Return(dtos.SessionActorUser)
 		shared.SetSession(ctx, session)
 		controller := &AssetController{}
 		err := controller.InviteMembers(ctx)
@@ -303,11 +304,12 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 		}
 
 		mockRBAC := mocks.NewAccessControl(t)
-		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleAdmin, assetID.String()).Return(nil)
-		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleMember, assetID.String()).Return(nil)
+		mockRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user-123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, assetID.String()).Return(nil)
+		mockRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user-123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID.String()).Return(nil)
 
 		session := mocks.NewAuthSession(t)
 		session.On("GetOwnerID").Return("user-123")
+		session.On("GetOwnerType").Return(dtos.SessionActorUser)
 		shared.SetSession(ctx, session)
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)
@@ -356,11 +358,12 @@ func TestHTTPControllerRemoveMember(t *testing.T) {
 
 		mockRBAC := mocks.NewAccessControl(t)
 		// Even if revoke fails, the function should succeed (as per nolint comment)
-		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleAdmin, assetID.String()).Return(errors.New("not an admin"))
-		mockRBAC.On("RevokeRoleInAsset", mock.Anything, "user-123", shared.RoleMember, assetID.String()).Return(errors.New("not a member"))
+		mockRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user-123", dtos.SessionActorUser, nil, false), shared.RoleAdmin, assetID.String()).Return(errors.New("not an admin"))
+		mockRBAC.On("RevokeRoleInAsset", mock.Anything, shared.NewSession("user-123", dtos.SessionActorUser, nil, false), shared.RoleMember, assetID.String()).Return(errors.New("not a member"))
 
 		session := mocks.NewAuthSession(t)
 		session.On("GetOwnerID").Return("user-123")
+		session.On("GetOwnerType").Return(dtos.SessionActorUser)
 		shared.SetSession(ctx, session)
 		shared.SetAsset(ctx, asset)
 		shared.SetRBAC(ctx, mockRBAC)

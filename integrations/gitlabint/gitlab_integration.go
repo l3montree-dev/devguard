@@ -223,7 +223,11 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 
 func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
 	// get the oauth2 tokens for this session owner
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != dtos.SessionActorUser {
+		return false, fmt.Errorf("only users can have gitlab oauth2 tokens")
+	}
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, externalEntityProviderID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
@@ -278,7 +282,11 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 	ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 10*time.Second)
 	defer cancel()
 
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != dtos.SessionActorUser {
+		return nil, fmt.Errorf("only users can fetch oauth2 tokens from the auth server")
+	}
 
 	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, ownerID)
 	if err != nil {
@@ -910,7 +918,11 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.New("providerID query parameter is required")
 		}
 
-		ownerID := shared.GetSession(ctx).GetOwnerID()
+		session := shared.GetSession(ctx)
+		ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+		if ownerType != dtos.SessionActorUser {
+			return errors.New("only users can auto-setup gitlab external entity providers")
+		}
 
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes

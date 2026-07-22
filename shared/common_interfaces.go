@@ -426,7 +426,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
-	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
+	CreateAsset(ctx context.Context, rbac AccessControl, session AuthSession, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 	UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error
 	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error)
@@ -736,14 +736,14 @@ type AccessControl interface {
 
 	GetAllRoles(user string) []string
 
-	GrantRole(ctx context.Context, subject string, role Role) error
-	RevokeRole(ctx context.Context, subject string, role Role) error
+	GrantRole(ctx context.Context, session AuthSession, role Role) error
+	RevokeRole(ctx context.Context, session AuthSession, role Role) error
 
-	GrantRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	GrantRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	GrantRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	GrantRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
-	RevokeRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	RevokeRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	RevokeRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	RevokeRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
 	RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error
 	RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error
@@ -825,7 +825,7 @@ type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 type Role string
 
 const (
-	RoleOwner  Role = "owner"
+	RoleOwner  Role = "actor"
 	RoleAdmin  Role = "admin"
 	RoleMember Role = "member"
 	RoleGuest  Role = "guest"

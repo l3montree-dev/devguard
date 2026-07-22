@@ -103,8 +103,8 @@ func TestVerifyAPIToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if gotSession.GetOwnerID() != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetOwnerID())
+		if gotSession.GetActorID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetActorID())
 		}
 		if strings.Join(gotSession.GetScopes(), " ") != "read write" {
 			t.Fatalf("expected scopes 'read write', got %s", gotSession.GetScopes())
@@ -154,14 +154,14 @@ func TestVerifyAPIToken(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected success despite MarkAsLastUsedNowByID failure, got %v", err)
 		}
-		if gotSession.GetOwnerID() != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetOwnerID())
+		if gotSession.GetActorID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetActorID())
 		}
 	})
 }
 
 func TestToModel(t *testing.T) {
-	owner := dtos.TokenOwner{Type: dtos.OwnerUser, ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
+	owner := dtos.TokenOwner{Type: dtos.SessionActorUser, ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
 
 	t.Run("symmetric: generates bearer token, stores hash, returns cleartext", func(t *testing.T) {
 		patService := NewPatService(nil)

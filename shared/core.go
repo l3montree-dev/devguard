@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 
 	"github.com/labstack/echo/v4"
 	"github.com/lmittmann/tint"
@@ -56,7 +57,7 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 }
 
 func BootstrapOrg(ctx context.Context, rbac AccessControl, userID string, userRole Role) error {
-	if err := rbac.GrantRole(ctx, userID, userRole); err != nil {
+	if err := rbac.GrantRole(ctx, NewSession(userID, dtos.SessionActorUser, nil, false), userRole); err != nil {
 		return err
 	}
 

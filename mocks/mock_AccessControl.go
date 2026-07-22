@@ -973,16 +973,16 @@ func (_c *AccessControl_GetProjectRole_Call) RunAndReturn(run func(user string, 
 }
 
 // GrantRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRole(ctx context.Context, subject string, role shared.Role) error {
-	ret := _mock.Called(ctx, subject, role)
+func (_mock *AccessControl) GrantRole(ctx context.Context, session shared.AuthSession, role shared.Role) error {
+	ret := _mock.Called(ctx, session, role)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GrantRole")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role) error); ok {
-		r0 = returnFunc(ctx, subject, role)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role) error); ok {
+		r0 = returnFunc(ctx, session, role)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -996,21 +996,21 @@ type AccessControl_GrantRole_Call struct {
 
 // GrantRole is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
-func (_e *AccessControl_Expecter) GrantRole(ctx interface{}, subject interface{}, role interface{}) *AccessControl_GrantRole_Call {
-	return &AccessControl_GrantRole_Call{Call: _e.mock.On("GrantRole", ctx, subject, role)}
+func (_e *AccessControl_Expecter) GrantRole(ctx interface{}, session interface{}, role interface{}) *AccessControl_GrantRole_Call {
+	return &AccessControl_GrantRole_Call{Call: _e.mock.On("GrantRole", ctx, session, role)}
 }
 
-func (_c *AccessControl_GrantRole_Call) Run(run func(ctx context.Context, subject string, role shared.Role)) *AccessControl_GrantRole_Call {
+func (_c *AccessControl_GrantRole_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role)) *AccessControl_GrantRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -1030,22 +1030,22 @@ func (_c *AccessControl_GrantRole_Call) Return(err error) *AccessControl_GrantRo
 	return _c
 }
 
-func (_c *AccessControl_GrantRole_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role) error) *AccessControl_GrantRole_Call {
+func (_c *AccessControl_GrantRole_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role) error) *AccessControl_GrantRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GrantRoleInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRoleInAsset(ctx context.Context, subject string, role shared.Role, asset string) error {
-	ret := _mock.Called(ctx, subject, role, asset)
+func (_mock *AccessControl) GrantRoleInAsset(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error {
+	ret := _mock.Called(ctx, session, role, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GrantRoleInAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role, string) error); ok {
-		r0 = returnFunc(ctx, subject, role, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role, string) error); ok {
+		r0 = returnFunc(ctx, session, role, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1059,22 +1059,22 @@ type AccessControl_GrantRoleInAsset_Call struct {
 
 // GrantRoleInAsset is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
 //   - asset string
-func (_e *AccessControl_Expecter) GrantRoleInAsset(ctx interface{}, subject interface{}, role interface{}, asset interface{}) *AccessControl_GrantRoleInAsset_Call {
-	return &AccessControl_GrantRoleInAsset_Call{Call: _e.mock.On("GrantRoleInAsset", ctx, subject, role, asset)}
+func (_e *AccessControl_Expecter) GrantRoleInAsset(ctx interface{}, session interface{}, role interface{}, asset interface{}) *AccessControl_GrantRoleInAsset_Call {
+	return &AccessControl_GrantRoleInAsset_Call{Call: _e.mock.On("GrantRoleInAsset", ctx, session, role, asset)}
 }
 
-func (_c *AccessControl_GrantRoleInAsset_Call) Run(run func(ctx context.Context, subject string, role shared.Role, asset string)) *AccessControl_GrantRoleInAsset_Call {
+func (_c *AccessControl_GrantRoleInAsset_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role, asset string)) *AccessControl_GrantRoleInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -1099,22 +1099,22 @@ func (_c *AccessControl_GrantRoleInAsset_Call) Return(err error) *AccessControl_
 	return _c
 }
 
-func (_c *AccessControl_GrantRoleInAsset_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role, asset string) error) *AccessControl_GrantRoleInAsset_Call {
+func (_c *AccessControl_GrantRoleInAsset_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error) *AccessControl_GrantRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GrantRoleInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) GrantRoleInProject(ctx context.Context, subject string, role shared.Role, project string) error {
-	ret := _mock.Called(ctx, subject, role, project)
+func (_mock *AccessControl) GrantRoleInProject(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error {
+	ret := _mock.Called(ctx, session, role, project)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GrantRoleInProject")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role, string) error); ok {
-		r0 = returnFunc(ctx, subject, role, project)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role, string) error); ok {
+		r0 = returnFunc(ctx, session, role, project)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1128,22 +1128,22 @@ type AccessControl_GrantRoleInProject_Call struct {
 
 // GrantRoleInProject is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) GrantRoleInProject(ctx interface{}, subject interface{}, role interface{}, project interface{}) *AccessControl_GrantRoleInProject_Call {
-	return &AccessControl_GrantRoleInProject_Call{Call: _e.mock.On("GrantRoleInProject", ctx, subject, role, project)}
+func (_e *AccessControl_Expecter) GrantRoleInProject(ctx interface{}, session interface{}, role interface{}, project interface{}) *AccessControl_GrantRoleInProject_Call {
+	return &AccessControl_GrantRoleInProject_Call{Call: _e.mock.On("GrantRoleInProject", ctx, session, role, project)}
 }
 
-func (_c *AccessControl_GrantRoleInProject_Call) Run(run func(ctx context.Context, subject string, role shared.Role, project string)) *AccessControl_GrantRoleInProject_Call {
+func (_c *AccessControl_GrantRoleInProject_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role, project string)) *AccessControl_GrantRoleInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -1168,7 +1168,7 @@ func (_c *AccessControl_GrantRoleInProject_Call) Return(err error) *AccessContro
 	return _c
 }
 
-func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role, project string) error) *AccessControl_GrantRoleInProject_Call {
+func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error) *AccessControl_GrantRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2134,16 +2134,16 @@ func (_c *AccessControl_RevokeAllRolesInProjectForUser_Call) RunAndReturn(run fu
 }
 
 // RevokeRole provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRole(ctx context.Context, subject string, role shared.Role) error {
-	ret := _mock.Called(ctx, subject, role)
+func (_mock *AccessControl) RevokeRole(ctx context.Context, session shared.AuthSession, role shared.Role) error {
+	ret := _mock.Called(ctx, session, role)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RevokeRole")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role) error); ok {
-		r0 = returnFunc(ctx, subject, role)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role) error); ok {
+		r0 = returnFunc(ctx, session, role)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2157,21 +2157,21 @@ type AccessControl_RevokeRole_Call struct {
 
 // RevokeRole is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
-func (_e *AccessControl_Expecter) RevokeRole(ctx interface{}, subject interface{}, role interface{}) *AccessControl_RevokeRole_Call {
-	return &AccessControl_RevokeRole_Call{Call: _e.mock.On("RevokeRole", ctx, subject, role)}
+func (_e *AccessControl_Expecter) RevokeRole(ctx interface{}, session interface{}, role interface{}) *AccessControl_RevokeRole_Call {
+	return &AccessControl_RevokeRole_Call{Call: _e.mock.On("RevokeRole", ctx, session, role)}
 }
 
-func (_c *AccessControl_RevokeRole_Call) Run(run func(ctx context.Context, subject string, role shared.Role)) *AccessControl_RevokeRole_Call {
+func (_c *AccessControl_RevokeRole_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role)) *AccessControl_RevokeRole_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -2191,22 +2191,22 @@ func (_c *AccessControl_RevokeRole_Call) Return(err error) *AccessControl_Revoke
 	return _c
 }
 
-func (_c *AccessControl_RevokeRole_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role) error) *AccessControl_RevokeRole_Call {
+func (_c *AccessControl_RevokeRole_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role) error) *AccessControl_RevokeRole_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RevokeRoleInAsset provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRoleInAsset(ctx context.Context, subject string, role shared.Role, asset string) error {
-	ret := _mock.Called(ctx, subject, role, asset)
+func (_mock *AccessControl) RevokeRoleInAsset(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error {
+	ret := _mock.Called(ctx, session, role, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RevokeRoleInAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role, string) error); ok {
-		r0 = returnFunc(ctx, subject, role, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role, string) error); ok {
+		r0 = returnFunc(ctx, session, role, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2220,22 +2220,22 @@ type AccessControl_RevokeRoleInAsset_Call struct {
 
 // RevokeRoleInAsset is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
 //   - asset string
-func (_e *AccessControl_Expecter) RevokeRoleInAsset(ctx interface{}, subject interface{}, role interface{}, asset interface{}) *AccessControl_RevokeRoleInAsset_Call {
-	return &AccessControl_RevokeRoleInAsset_Call{Call: _e.mock.On("RevokeRoleInAsset", ctx, subject, role, asset)}
+func (_e *AccessControl_Expecter) RevokeRoleInAsset(ctx interface{}, session interface{}, role interface{}, asset interface{}) *AccessControl_RevokeRoleInAsset_Call {
+	return &AccessControl_RevokeRoleInAsset_Call{Call: _e.mock.On("RevokeRoleInAsset", ctx, session, role, asset)}
 }
 
-func (_c *AccessControl_RevokeRoleInAsset_Call) Run(run func(ctx context.Context, subject string, role shared.Role, asset string)) *AccessControl_RevokeRoleInAsset_Call {
+func (_c *AccessControl_RevokeRoleInAsset_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role, asset string)) *AccessControl_RevokeRoleInAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -2260,22 +2260,22 @@ func (_c *AccessControl_RevokeRoleInAsset_Call) Return(err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_RevokeRoleInAsset_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role, asset string) error) *AccessControl_RevokeRoleInAsset_Call {
+func (_c *AccessControl_RevokeRoleInAsset_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role, asset string) error) *AccessControl_RevokeRoleInAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // RevokeRoleInProject provides a mock function for the type AccessControl
-func (_mock *AccessControl) RevokeRoleInProject(ctx context.Context, subject string, role shared.Role, project string) error {
-	ret := _mock.Called(ctx, subject, role, project)
+func (_mock *AccessControl) RevokeRoleInProject(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error {
+	ret := _mock.Called(ctx, session, role, project)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RevokeRoleInProject")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, shared.Role, string) error); ok {
-		r0 = returnFunc(ctx, subject, role, project)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Role, string) error); ok {
+		r0 = returnFunc(ctx, session, role, project)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2289,22 +2289,22 @@ type AccessControl_RevokeRoleInProject_Call struct {
 
 // RevokeRoleInProject is a helper method to define mock.On call
 //   - ctx context.Context
-//   - subject string
+//   - session shared.AuthSession
 //   - role shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) RevokeRoleInProject(ctx interface{}, subject interface{}, role interface{}, project interface{}) *AccessControl_RevokeRoleInProject_Call {
-	return &AccessControl_RevokeRoleInProject_Call{Call: _e.mock.On("RevokeRoleInProject", ctx, subject, role, project)}
+func (_e *AccessControl_Expecter) RevokeRoleInProject(ctx interface{}, session interface{}, role interface{}, project interface{}) *AccessControl_RevokeRoleInProject_Call {
+	return &AccessControl_RevokeRoleInProject_Call{Call: _e.mock.On("RevokeRoleInProject", ctx, session, role, project)}
 }
 
-func (_c *AccessControl_RevokeRoleInProject_Call) Run(run func(ctx context.Context, subject string, role shared.Role, project string)) *AccessControl_RevokeRoleInProject_Call {
+func (_c *AccessControl_RevokeRoleInProject_Call) Run(run func(ctx context.Context, session shared.AuthSession, role shared.Role, project string)) *AccessControl_RevokeRoleInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.AuthSession
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.AuthSession)
 		}
 		var arg2 shared.Role
 		if args[2] != nil {
@@ -2329,7 +2329,7 @@ func (_c *AccessControl_RevokeRoleInProject_Call) Return(err error) *AccessContr
 	return _c
 }
 
-func (_c *AccessControl_RevokeRoleInProject_Call) RunAndReturn(run func(ctx context.Context, subject string, role shared.Role, project string) error) *AccessControl_RevokeRoleInProject_Call {
+func (_c *AccessControl_RevokeRoleInProject_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, role shared.Role, project string) error) *AccessControl_RevokeRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

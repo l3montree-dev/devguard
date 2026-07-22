@@ -33,13 +33,6 @@ import (
 	"github.com/ory/client-go"
 )
 
-type AuthSession interface {
-	GetOwnerID() string
-	GetScopes() []string
-	IsInstanceAdmin() bool
-	GetOwnerType() dtos.OwnerType
-}
-
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {
 	return ctx.Get("thirdPartyIntegration").(IntegrationAggregate)
 }

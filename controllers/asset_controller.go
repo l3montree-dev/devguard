@@ -210,7 +210,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
 	newAsset.ProjectID = project.GetID()
 
-	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx).GetOwnerID(), newAsset)
+	asset, err := a.assetService.CreateAsset(ctx.Request().Context(), shared.GetRBAC(ctx), shared.GetSession(ctx), newAsset)
 	if err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	}
 
 	if justification != "" {
-		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetOwnerID(), justification)
+		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetActorName(), justification)
 		if err != nil {
 			return fmt.Errorf("error updating requirements: %v", err)
 		}
@@ -562,12 +562,14 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 		}
 
 		// log the invitation for audit
+		session := shared.GetSession(c)
 		slog.Info("adding member to asset",
-			"addedBy", shared.GetSession(c).GetOwnerID(),
+			"addedBy", session.GetActorID(),
+			"addedByType", string(session.GetSessionActorType()),
 			"addedUser", newMemberID,
 			"assetID", asset.ID.String())
 
-		if err := rbac.GrantRoleInAsset(c.Request().Context(), newMemberID, shared.RoleMember, asset.ID.String()); err != nil {
+		if err := rbac.GrantRoleInAsset(c.Request().Context(), shared.NewSession(newMemberID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -586,14 +588,16 @@ func (a *AssetController) RemoveMember(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 	// Log the removal for audit
+	session := shared.GetSession(c)
 	slog.Info("removing member from asset",
-		"removedBy", shared.GetSession(c).GetOwnerID(),
+		"removedBy", session.GetActorID(),
+		"removedByType", string(session.GetSessionActorType()),
 		"removedUser", userID,
 		"assetID", asset.ID.String())
 
 	// revoke admin and member role
-	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -612,7 +616,8 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
-	if userID == shared.GetSession(c).GetOwnerID() {
+	session := shared.GetSession(c)
+	if userID == session.GetActorID() {
 		return echo.NewHTTPError(400, "cannot change your own role")
 	}
 
@@ -640,15 +645,16 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 
 	// log for audit
 	slog.Info("changing role of member in asset",
-		"changedBy", shared.GetSession(c).GetOwnerID(),
+		"changedBy", session.GetActorID(),
+		"changedByType", string(session.GetSessionActorType()),
 		"changedUser", userID,
 		"assetID", asset.ID.String(),
 		"newRole", req.Role)
 
-	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInAsset(reqCtx, userID, shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleAdmin, asset.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.RoleMember, asset.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInAsset(reqCtx, userID, shared.Role(req.Role), asset.ID.String()); err != nil {
+	if err := rbac.GrantRoleInAsset(reqCtx, shared.NewSession(userID, dtos.SessionActorUser, nil, false), shared.Role(req.Role), asset.ID.String()); err != nil {
 		return err
 	}
 

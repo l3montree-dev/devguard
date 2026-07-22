@@ -720,7 +720,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 
 		session := shared.GetSession(event.Ctx)
 
-		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetOwnerID(), userAgent)
+		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetActorName(), userAgent)
 	case shared.VulnEvent:
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event

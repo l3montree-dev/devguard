@@ -26,15 +26,17 @@ type SessionRouter struct {
 	*echo.Group
 }
 
-// @Summary Get current user info
+// @Summary Get current session info
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {object} object{ownerID=string}
+// @Success 200 {object} object{ownerID=string,ownerType=string}
 // @Router /whoami [get]
 func whoami(ctx echo.Context) error {
+	session := shared.GetSession(ctx)
 	return ctx.JSON(200, map[string]string{
-		"ownerID": shared.GetSession(ctx).GetOwnerID(),
+		"ownerID":   session.GetActorID(),
+		"actorType": string(session.GetSessionActorType()),
 	})
 }
 

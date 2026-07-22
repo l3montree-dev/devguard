@@ -57,16 +57,16 @@ type PATCreateResponseDTO struct {
 	BearerToken string `json:"bearerToken,omitempty"`
 }
 
-type OwnerType string
+type SessionActor string
 
 const (
-	OwnerUser    OwnerType = "user"
-	OwnerOrg     OwnerType = "org"
-	OwnerProject OwnerType = "project"
-	OwnerAsset   OwnerType = "asset"
+	SessionActorUser    SessionActor = "user"
+	SessionActorOrg     SessionActor = "org"
+	SessionActorProject SessionActor = "project"
+	SessionActorAsset   SessionActor = "asset"
 )
 
 type TokenOwner struct {
-	Type OwnerType
+	Type SessionActor
 	ID   uuid.UUID
 }

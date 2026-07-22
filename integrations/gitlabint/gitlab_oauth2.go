@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -239,7 +240,13 @@ func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository share
 
 func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	// get the session owner id
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != dtos.SessionActorUser {
+		return ctx.JSON(400, map[string]any{
+			"message": "only users can complete the gitlab oauth2 flow",
+		})
+	}
 	code := ctx.QueryParam("code")
 	if code == "" {
 		return ctx.JSON(400, map[string]any{
@@ -333,7 +340,13 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 	verifier := oauth2.GenerateVerifier()
 	// get the session owner id
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != dtos.SessionActorUser {
+		return ctx.JSON(400, map[string]any{
+			"message": "only users can start the gitlab oauth2 flow",
+		})
+	}
 
 	redirectTo := ctx.QueryParam("redirectTo")
 

@@ -58,7 +58,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -136,7 +135,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	// come from DisallowPublicRequests or a write-action RBAC check.
 	patService := &mocks.PersonalAccessTokenService{}
 	patService.On("VerifyRequestSignature", mock.Anything, mock.Anything).
-		Maybe().Return(accesscontrol.NewSession("test-user", dtos.OwnerUser, []string{"manage", "scan"}, false), nil)
+		Maybe().Return(shared.NewSession("test-user", dtos.SessionActorUser, []string{"manage", "scan"}, false), nil)
 
 	rbacProvider := &mocks.RBACProvider{}
 	rbacProvider.On("GetDomainRBAC", mock.Anything).Maybe().Return(ac)

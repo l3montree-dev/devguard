@@ -185,7 +185,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	ownerID := shared.GetSession(ctx).GetOwnerID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 	userAgent := ctx.Request().UserAgent()
 
 	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
@@ -216,7 +216,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/ [post]
 func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
-	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetOwnerID(), ctx.Request().UserAgent()); err != nil {
+	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetActorName(), ctx.Request().UserAgent()); err != nil {
 		return err
 	}
 	return ctx.NoContent(200)

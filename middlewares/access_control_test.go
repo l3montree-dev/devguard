@@ -21,7 +21,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -58,7 +57,7 @@ func TestInstanceAdminMiddleware(t *testing.T) {
 		// the whole point of the middleware: elevate to an admin session
 		assert.NotNil(t, gotSession)
 		assert.True(t, gotSession.IsInstanceAdmin())
-		assert.Equal(t, "admin", gotSession.GetOwnerID())
+		assert.Equal(t, "admin", gotSession.GetActorID())
 	})
 
 	t.Run("denies access when PAT is valid but not an admin", func(t *testing.T) {
@@ -121,7 +120,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(true, nil)
@@ -151,7 +150,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionUpdate).Return(false, nil)
@@ -181,7 +180,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
 		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead).Return(false, nil)
@@ -215,7 +214,7 @@ func TestProjectAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -255,7 +254,7 @@ func TestProjectAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -294,7 +293,7 @@ func TestProjectAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -335,7 +334,7 @@ func TestProjectAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -379,7 +378,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -419,7 +418,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -461,7 +460,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -502,7 +501,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -543,7 +542,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 
 		mockAssetRepo.On("ReadBySlug", mock.Anything, mock.Anything, project.ID, "nonexistent-asset").Return(models.Asset{}, errors.New("not found"))
@@ -578,7 +577,7 @@ func TestAssetAccessControl(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -627,7 +626,7 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 		mockAccessControl := mocks.AccessControl{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{}, false)
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "test-org").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", orgID.String()).Return(&mockAccessControl)
@@ -662,7 +661,7 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 		mockAccessControl := mocks.AccessControl{}
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{}, false)
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "test-org").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", orgID.String()).Return(&mockAccessControl)
@@ -699,7 +698,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockProjectRepo := mocks.ProjectRepository{}
-		mockSession := accesscontrol.NewSession("org-admin", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("org-admin", dtos.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -737,7 +736,7 @@ func TestAccessControlHierarchy(t *testing.T) {
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
 		mockAssetRepo := mocks.AssetRepository{}
-		mockSession := accesscontrol.NewSession("project-admin", dtos.OwnerUser, []string{"manage"}, false)
+		mockSession := shared.NewSession("project-admin", dtos.SessionActorUser, []string{"manage"}, false)
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},

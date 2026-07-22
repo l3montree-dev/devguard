@@ -36,12 +36,12 @@ func (_m *AuthSession) EXPECT() *AuthSession_Expecter {
 	return &AuthSession_Expecter{mock: &_m.Mock}
 }
 
-// GetOwnerID provides a mock function for the type AuthSession
-func (_mock *AuthSession) GetOwnerID() string {
+// GetActorID provides a mock function for the type AuthSession
+func (_mock *AuthSession) GetActorID() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOwnerID")
+		panic("no return value specified for GetActorID")
 	}
 
 	var r0 string
@@ -53,73 +53,73 @@ func (_mock *AuthSession) GetOwnerID() string {
 	return r0
 }
 
-// AuthSession_GetOwnerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOwnerID'
-type AuthSession_GetOwnerID_Call struct {
+// AuthSession_GetActorID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetActorID'
+type AuthSession_GetActorID_Call struct {
 	*mock.Call
 }
 
-// GetOwnerID is a helper method to define mock.On call
-func (_e *AuthSession_Expecter) GetOwnerID() *AuthSession_GetOwnerID_Call {
-	return &AuthSession_GetOwnerID_Call{Call: _e.mock.On("GetOwnerID")}
+// GetActorID is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) GetActorID() *AuthSession_GetActorID_Call {
+	return &AuthSession_GetActorID_Call{Call: _e.mock.On("GetActorID")}
 }
 
-func (_c *AuthSession_GetOwnerID_Call) Run(run func()) *AuthSession_GetOwnerID_Call {
+func (_c *AuthSession_GetActorID_Call) Run(run func()) *AuthSession_GetActorID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *AuthSession_GetOwnerID_Call) Return(s string) *AuthSession_GetOwnerID_Call {
+func (_c *AuthSession_GetActorID_Call) Return(s string) *AuthSession_GetActorID_Call {
 	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *AuthSession_GetOwnerID_Call) RunAndReturn(run func() string) *AuthSession_GetOwnerID_Call {
+func (_c *AuthSession_GetActorID_Call) RunAndReturn(run func() string) *AuthSession_GetActorID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetOwnerType provides a mock function for the type AuthSession
-func (_mock *AuthSession) GetOwnerType() dtos.OwnerType {
+// GetActorName provides a mock function for the type AuthSession
+func (_mock *AuthSession) GetActorName() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOwnerType")
+		panic("no return value specified for GetActorName")
 	}
 
-	var r0 dtos.OwnerType
-	if returnFunc, ok := ret.Get(0).(func() dtos.OwnerType); ok {
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
 		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(dtos.OwnerType)
+		r0 = ret.Get(0).(string)
 	}
 	return r0
 }
 
-// AuthSession_GetOwnerType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOwnerType'
-type AuthSession_GetOwnerType_Call struct {
+// AuthSession_GetActorName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetActorName'
+type AuthSession_GetActorName_Call struct {
 	*mock.Call
 }
 
-// GetOwnerType is a helper method to define mock.On call
-func (_e *AuthSession_Expecter) GetOwnerType() *AuthSession_GetOwnerType_Call {
-	return &AuthSession_GetOwnerType_Call{Call: _e.mock.On("GetOwnerType")}
+// GetActorName is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) GetActorName() *AuthSession_GetActorName_Call {
+	return &AuthSession_GetActorName_Call{Call: _e.mock.On("GetActorName")}
 }
 
-func (_c *AuthSession_GetOwnerType_Call) Run(run func()) *AuthSession_GetOwnerType_Call {
+func (_c *AuthSession_GetActorName_Call) Run(run func()) *AuthSession_GetActorName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *AuthSession_GetOwnerType_Call) Return(ownerType dtos.OwnerType) *AuthSession_GetOwnerType_Call {
-	_c.Call.Return(ownerType)
+func (_c *AuthSession_GetActorName_Call) Return(s string) *AuthSession_GetActorName_Call {
+	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *AuthSession_GetOwnerType_Call) RunAndReturn(run func() dtos.OwnerType) *AuthSession_GetOwnerType_Call {
+func (_c *AuthSession_GetActorName_Call) RunAndReturn(run func() string) *AuthSession_GetActorName_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -166,6 +166,50 @@ func (_c *AuthSession_GetScopes_Call) Return(strings []string) *AuthSession_GetS
 }
 
 func (_c *AuthSession_GetScopes_Call) RunAndReturn(run func() []string) *AuthSession_GetScopes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetSessionActorType provides a mock function for the type AuthSession
+func (_mock *AuthSession) GetSessionActorType() dtos.SessionActor {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSessionActorType")
+	}
+
+	var r0 dtos.SessionActor
+	if returnFunc, ok := ret.Get(0).(func() dtos.SessionActor); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(dtos.SessionActor)
+	}
+	return r0
+}
+
+// AuthSession_GetSessionActorType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSessionActorType'
+type AuthSession_GetSessionActorType_Call struct {
+	*mock.Call
+}
+
+// GetSessionActorType is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) GetSessionActorType() *AuthSession_GetSessionActorType_Call {
+	return &AuthSession_GetSessionActorType_Call{Call: _e.mock.On("GetSessionActorType")}
+}
+
+func (_c *AuthSession_GetSessionActorType_Call) Run(run func()) *AuthSession_GetSessionActorType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AuthSession_GetSessionActorType_Call) Return(sessionActor dtos.SessionActor) *AuthSession_GetSessionActorType_Call {
+	_c.Call.Return(sessionActor)
+	return _c
+}
+
+func (_c *AuthSession_GetSessionActorType_Call) RunAndReturn(run func() dtos.SessionActor) *AuthSession_GetSessionActorType_Call {
 	_c.Call.Return(run)
 	return _c
 }

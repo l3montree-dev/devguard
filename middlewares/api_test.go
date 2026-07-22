@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/middlewares"
@@ -37,11 +36,11 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", mock.Anything, accesscontrol.NoSession).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, shared.NoSession).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
-		shared.SetSession(ctx, accesscontrol.NoSession)
+		shared.SetSession(ctx, shared.NoSession)
 
 		middleware := middlewares.MultiOrganizationMiddlewareRBAC(&mockRBACProvider, &mockOrgService)
 
@@ -70,7 +69,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
-		session := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
+		session := shared.NewSession("user-id", dtos.SessionActorUser, []string{"test-role"}, false)
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
@@ -154,7 +153,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -187,7 +186,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -220,7 +219,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{
 			IsPublic: true,
 		}
@@ -255,7 +254,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"test-role"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"test-role"}, false)
 		mockOrganization := models.Org{}
 
 		obj := shared.Object("test-object")
@@ -287,7 +286,7 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1", "scope2", "scope3"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"scope1", "scope2", "scope3"}, false)
 		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
@@ -312,7 +311,7 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"scope1"}, false)
 		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1", "scope2"})
@@ -338,7 +337,7 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{}, false)
 		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{"scope1"})
@@ -364,7 +363,7 @@ func TestMiddlewareNeededScope(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockSession := accesscontrol.NewSession("user-id", dtos.OwnerUser, []string{"scope1"}, false)
+		mockSession := shared.NewSession("user-id", dtos.SessionActorUser, []string{"scope1"}, false)
 		shared.SetSession(ctx, mockSession)
 
 		middleware := middlewares.NeededScope([]string{})
