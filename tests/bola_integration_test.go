@@ -68,8 +68,7 @@ func bolaCtx(t *testing.T, paramName, vulnID string, orgB models.Org, projB mode
 	ctx := NewContext(req, rec)
 
 	// Authenticate as tenant B
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(uuid.New().String()).Maybe()
+	session := NewUserSession(t, uuid.New().String())
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, orgB)
 	shared.SetProject(ctx, projB)
@@ -236,8 +235,7 @@ func TestBOLADependencyVulnCreateEventCrossAssetBlocked(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
-		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return(uuid.New().String()).Maybe()
+		session := NewUserSession(t, uuid.New().String())
 		shared.SetSession(ctx, session)
 		shared.SetOrg(ctx, orgB)
 		shared.SetProject(ctx, projB)
@@ -294,8 +292,7 @@ func TestBOLAReleaseReadCrossProjectBlocked(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := NewContext(req, rec)
 
-		session := mocks.NewAuthSession(t)
-		session.On("GetUserID").Return(uuid.New().String()).Maybe()
+		session := NewUserSession(t, uuid.New().String())
 		shared.SetSession(ctx, session)
 		shared.SetOrg(ctx, orgB)
 		shared.SetProject(ctx, projB)

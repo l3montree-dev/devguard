@@ -186,7 +186,7 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(c.Request().Context(), newMemberID, shared.RoleMember, project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(c.Request().Context(), shared.NewSession(newMemberID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()); err != nil {
 			return err
 		}
 	}
@@ -216,8 +216,8 @@ func (projectController *ProjectController) RemoveMember(c shared.Context) error
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -247,7 +247,7 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
-	if userID == shared.GetSession(c).GetUserID() {
+	if userID == shared.GetSession(c).GetActorName() {
 		return echo.NewHTTPError(400, "cannot change your own role")
 	}
 
@@ -268,11 +268,11 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(reqCtx, userID, shared.Role(req.Role), project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role), project.ID.String()); err != nil {
 		return err
 	}
 
@@ -342,7 +342,7 @@ func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}
@@ -492,7 +492,7 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 	}
 	// get rbac
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	providerID := shared.GetProviderID(ctx)
 	organization := shared.GetOrg(ctx)
 	parentProject := shared.GetProject(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	if probe.Verb == "delete" {
 		proExternalEntityID := probe.ProjectExternalEntityID
@@ -665,7 +665,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	rbac := shared.GetRBAC(ctx)
-	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, userID, probe.AssetDescription)
+	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, ownerID, probe.AssetDescription)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
@@ -720,7 +720,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	defer tx.Rollback()
 
 	userAgent := ctx.Request().UserAgent()
-	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("trivy operator: scan failed", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})

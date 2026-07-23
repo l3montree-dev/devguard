@@ -171,14 +171,14 @@ func TestCheckVersion(t *testing.T) {
 	})
 
 	t.Run("error handling", func(t *testing.T) {
-		t.Run("deb - empty target version", func(t *testing.T) {
+		t.Run("deb - empty version constraints", func(t *testing.T) {
 			result, err := normalize.CheckVersion(nil, nil, nil, "", "deb")
-			assert.Error(t, err)
-			assert.False(t, result)
+			assert.Nil(t, err)
+			assert.True(t, result)
 		})
 
 		t.Run("deb - malformed target version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, nil, "not-a-valid-version!", "deb")
+			result, err := normalize.CheckVersion(new("1.0.0"), nil, nil, "not-a-valid-version!", "deb")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})

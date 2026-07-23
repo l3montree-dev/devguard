@@ -92,7 +92,6 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 
 	orgID := shared.GetOrg(ctx).ID
 	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
 	userAgent := ctx.Request().UserAgent()
 
 	posture := models.CompliancePosture{
@@ -129,7 +128,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 			return err
 		}
 
-		ev := models.NewAttachedComplianceComponentEvent(compliancePosture.ID, userID, component.Title, &userAgent)
+		ev := models.NewAttachedComplianceComponentEvent(compliancePosture.ID, shared.GetSession(ctx).GetActorName(), component.Title, &userAgent)
 		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, compliancePosture, &ev)
 	})
 	if err != nil {
@@ -164,7 +163,6 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 		return echo.NewHTTPError(400, "invalid statementID")
 	}
 
-	userID := shared.GetSession(ctx).GetUserID()
 	userAgent := ctx.Request().UserAgent()
 
 	err = c.compliancePostureRepository.Transaction(ctx.Request().Context(), func(tx *gorm.DB) error {
@@ -178,7 +176,7 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 			return err
 		}
 
-		ev := models.NewRemovedComplianceComponentEvent(deleted.CompliancePostureID, userID, deleted.ComplianceComponentImplementsControl.ComplianceComponent.Title, &userAgent)
+		ev := models.NewRemovedComplianceComponentEvent(deleted.CompliancePostureID, shared.GetSession(ctx).GetActorName(), deleted.ComplianceComponentImplementsControl.ComplianceComponent.Title, &userAgent)
 		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, &posture, &ev)
 	})
 	if err != nil {

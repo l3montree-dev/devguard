@@ -70,14 +70,17 @@ type ReleaseService interface {
 	FindOrCreate(ctx context.Context, projectID uuid.UUID, name string) (models.Release, error)
 }
 
-type PersonalAccessTokenService interface {
+type Authorizer interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
+}
+type PersonalAccessTokenService interface {
+	Authorizer
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
-	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
+	ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error)
 	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
@@ -121,11 +124,6 @@ type ProjectRepository interface {
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
 	CleanupExternalProjectAssetVersion(ctx context.Context, tx DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
-}
-
-type Verifier interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
 }
 
 type PolicyRepository interface {
@@ -177,6 +175,7 @@ type AssetRepository interface {
 	GetAssetsWithVulnSharingEnabled(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.Asset, error)
 	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
+	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -322,10 +321,15 @@ type InTotoLinkRepository interface {
 
 type PersonalAccessTokenRepository interface {
 	utils.Repository[uuid.UUID, models.PAT, DB]
+	ReadUnscoped(ctx context.Context, tx DB, id uuid.UUID) (models.PAT, error)
+	DeleteUnscoped(ctx context.Context, tx DB, id uuid.UUID) error
 	GetByFingerprint(ctx context.Context, tx DB, fingerprint string) (models.PAT, error)
 	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(ctx context.Context, tx DB, userID string) ([]models.PAT, error)
+	ListByOrgID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.PAT, error)
+	ListByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.PAT, error)
+	ListByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.PAT, error)
 	DeleteByFingerprint(ctx context.Context, tx DB, fingerprint string) error
 	MarkAsLastUsedNowByID(ctx context.Context, tx DB, id uuid.UUID) error
 }
@@ -387,7 +391,7 @@ type ExternalReferenceRepository interface {
 }
 
 type ExternalEntityProviderService interface {
-	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, session AuthSession) error
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
 	TriggerSync(c Context) error
@@ -407,6 +411,11 @@ type ProjectService interface {
 	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)
 }
 
+type Verifier interface {
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
+}
+
 type InTotoVerifierService interface {
 	VerifySupplyChainWithOutputDigest(ctx context.Context, supplyChainID string, digest string) (bool, error)
 	VerifySupplyChain(ctx context.Context, supplyChainID string) (bool, error)
@@ -417,7 +426,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
-	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
+	CreateAsset(ctx context.Context, rbac AccessControl, session AuthSession, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 	UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error
 	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error)
@@ -721,21 +730,30 @@ type AdminRepository interface {
 	GetAllExternalEntityOrganizations(ctx context.Context, tx DB) ([]models.Org, error)
 }
 
+// ActorScope carries the session's own scoped entity, pre-resolved by
+// ResourceFetchMiddleware from the session's owner ID. AccessControl
+// implementations must never fetch entities themselves - all resolution
+// (by URL slug or by session owner ID) happens once, in the middleware layer.
+type ActorScope struct {
+	Project *models.Project // set when session.GetSessionActorType() == SessionActorProject
+	Asset   *models.Asset   // set when session.GetSessionActorType() == SessionActorAsset (Project preloaded)
+}
+
 type AccessControl interface {
-	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(ctx context.Context, subject string, role Role) error
-	RevokeRole(ctx context.Context, subject string, role Role) error
+	GrantRole(ctx context.Context, session AuthSession, role Role) error
+	RevokeRole(ctx context.Context, session AuthSession, role Role) error
 
-	GrantRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	GrantRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	GrantRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	GrantRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
-	RevokeRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	RevokeRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	RevokeRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	RevokeRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
 	RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error
 	RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error
@@ -752,16 +770,16 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 
-	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) ([]string, error)
-	GetAllAssetsForUser(user string) ([]string, error)
+	GetAllProjectsForSession(ctx context.Context, session AuthSession) ([]string, error)
+	GetAllAssetsForSession(ctx context.Context, session AuthSession) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
 	GetAdminsOfOrganization() ([]string, error)
@@ -815,7 +833,7 @@ type CompliancePostureService interface {
 
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
-	DomainsOfUser(user string) ([]string, error)
+	DomainsOfSession(session AuthSession) ([]string, error)
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)

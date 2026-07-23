@@ -202,7 +202,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		MechanicalJustification: req.MechanicalJustification,
 		EventType:               dtos.EventTypeFalsePositive,
 		PathPattern:             req.PathPattern,
-		CreatedByID:             session.GetUserID(),
+		CreatedByID:             session.GetActorName(),
 		Enabled:                 true, // Manual rules are always enabled
 	}
 

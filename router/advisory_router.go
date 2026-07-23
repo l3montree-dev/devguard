@@ -31,15 +31,14 @@ func NewAdvisoryRouter(
 	advisoryController *controllers.AdvisoryController,
 	assetRepository shared.AssetRepository,
 ) AdvisoryRouter {
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 	advisoryRouter := assetVersionGroup.Group.Group("/advisory")
 
 	advisoryRouter.GET("/", advisoryController.ReadAll)
 	advisoryRouter.GET("/:id/", advisoryController.ReadAdvisory)
 
-	advisoryRouter.POST("/", advisoryController.Create, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	advisoryRouter.PATCH("/:id/", advisoryController.Update, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	advisoryRouter.DELETE("/:id/", advisoryController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.POST("/", advisoryController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.PATCH("/:id/", advisoryController.Update, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	advisoryRouter.DELETE("/:id/", advisoryController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	return AdvisoryRouter{Group: advisoryRouter}
 }

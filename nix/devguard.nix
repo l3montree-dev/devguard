@@ -45,7 +45,7 @@
     # a `go mod download`-style module cache has each dependency's own
     # go.mod, which is what's actually needed.
     proxyVendor = true;
-    vendorHash = "sha256-SkOEUxAtoVYUFUyWzwpAWCS0yEvtQGFGEA/83R1VN5o=";
+    vendorHash = "sha256-vDzYhi/O5JirZ92a2ByXL2+O27wdwr4ygQmmJrsCpEU=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS

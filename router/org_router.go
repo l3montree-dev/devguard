@@ -46,6 +46,9 @@ func NewOrgRouter(
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 	casbinRBACProvider shared.RBACProvider,
 	statisticsController *controllers.StatisticsController,
+	patController *controllers.PatController,
+	projectRepository shared.ProjectRepository,
+	assetRepository shared.AssetRepository,
 ) OrgRouter {
 	/**
 	Organization router
@@ -59,7 +62,7 @@ func NewOrgRouter(
 	All routes below this line are scoped to a specific organization.
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
+		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
@@ -81,10 +84,10 @@ func NewOrgRouter(
 	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
 	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)
 	organizationRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.Read)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
 	organizationRouter.GET("/members/", orgController.Members)
@@ -95,6 +98,7 @@ func NewOrgRouter(
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
+	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save)
@@ -102,6 +106,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
 	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
 	organizationUpdateAccessControlRequired.POST("/projects/", projectController.Create)
+	organizationUpdateAccessControlRequired.POST("/pats/", patController.CreateForOrg)
 
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
@@ -109,6 +114,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete)
+	organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
 	organizationUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.UpdatePolicy)

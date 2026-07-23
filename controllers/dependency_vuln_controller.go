@@ -397,7 +397,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -418,7 +418,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	mechanicalJustification := status.MechanicalJustification
 
 	userAgent := ctx.Request().UserAgent()
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, &userAgent)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, ownerID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -455,7 +455,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.BatchDependencyVulnStatus
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
@@ -487,7 +487,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 		}
 
 		userAgent := ctx.Request().UserAgent()
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, &userAgent)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, ownerID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, &userAgent)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue
