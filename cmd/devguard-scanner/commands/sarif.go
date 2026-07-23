@@ -25,6 +25,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -80,7 +81,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	if config.RuntimeBaseConfig.NoWrite {
 		req.Header.Set("X-No-Write", "1")
 	}
-
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
@@ -108,9 +109,16 @@ func NewSarifCommand() *cobra.Command {
 		Use:               "sarif <sarif.json>",
 		Short:             "Scan a SARIF report and upload results to DevGuard",
 		DisableAutoGenTag: true,
-		Long: `Upload a SARIF-formatted static analysis report to DevGuard for processing and result comparison.
+		Long: `Upload a SARIF report to DevGuard. DevGuard reads the report and stores the findings —
+it does NOT re-scan the files.
 
-The command signs the request using the configured token and returns scan results.`,
+Use this if you already run your own static analysis scanner (e.g. CodeQL, Semgrep, Trivy, or
+any other SARIF-producing tool) and just want to feed the results into DevGuard without using
+the built-in 'sast' or 'iac' commands.
+
+DevGuard compares the uploaded report against previous runs to detect new or resolved findings
+and makes them visible in the DevGuard UI. The command returns the processed SARIF report on
+stdout so you can chain it into other tools (e.g. 'sarif2markdown').`,
 		Example: `  # Upload a SARIF report
   devguard-scanner sarif results.sarif.json
 
@@ -302,7 +310,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		if config.RuntimeBaseConfig.NoWrite {
 			req.Header.Set("X-No-Write", "1")
 		}
-
+		// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "context deadline exceeded") {
@@ -350,7 +358,7 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, "gitleaks.toml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
+				slog.Debug("could not get config file, using default gitleaks config", "file", "gitleaks.toml", "err", err)
 			} else {
 				// set the config file path in the runtime config so that it can be used in the secret scanner
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
@@ -363,11 +371,14 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".semgrep.yaml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
+				slog.Debug("could not get config file, using default semgrep config", "file", ".semgrep.yaml", "err", err)
 			} else {
-				// set the config file path in the runtime config so that it can be used in the sast scanner
+				slog.Info("using semgrep config from DevGuard", "file", configFilePath)
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath
 			}
+		}
+		if _, err := os.Stat(filepath.Join(path, ".semgrep.yaml")); err == nil {
+			slog.Info("local .semgrep.yaml found", "path", filepath.Join(path, ".semgrep.yaml"))
 		}
 		return sastScan(path, outputPath)
 	case "iac":
@@ -375,7 +386,7 @@ func executeCodeScan(ctx context.Context, scannerID, path, outputPath string) (*
 			// download any config file if exists
 			configFilePath, err := config.GetAndWriteConfigFile(ctx, ".checkov.yml", config.RuntimeBaseConfig.AssetName)
 			if err != nil {
-				slog.Warn("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
+				slog.Debug("could not get config file, using default checkov config", "file", ".checkov.yml", "err", err)
 			} else {
 				// set the config file path in the runtime config so that it can be used in the iac scanner
 				config.RuntimeBaseConfig.ConfigFilePath = configFilePath

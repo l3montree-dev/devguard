@@ -107,7 +107,8 @@ type OrgDTO struct {
 
 type OrgDetailsDTO struct {
 	OrgDTO
-	Members []UserDTO `json:"members"`
+	Members        []UserDTO        `json:"members"`
+	InvitedMembers []InvitedUserDTO `json:"invitedMembers"`
 }
 
 type OrgSettingsDTO struct {

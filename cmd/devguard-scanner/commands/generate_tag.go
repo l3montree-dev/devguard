@@ -15,12 +15,37 @@ func NewGenerateTagCommand() *cobra.Command {
 		Use:               "generate-tag",
 		Short:             "Generate a tag for an image based on its contents",
 		DisableAutoGenTag: true,
-		Long:              "This command generates a tag, artifact name, and URL-encoded artifact name for a given image based on its contents and the provided parameters such as upstream version, architecture, and image type.",
-		Example: `  # Generate tag with upstream version and architecture
-  devguard-scanner generate-tag --upstreamVersion 1.2.3 --architecture amd64 --imagePath registry.io/my-image
+		Long: `Generate a container image tag, artifact name, and URL-encoded artifact name.
 
-  # Generate tag with variant
-  devguard-scanner generate-tag --upstreamVersion 2.0.0 --architecture arm64 --imageVariant alpine --imagePath registry.io/app`,
+The tag is assembled from the provided parameters in the following order:
+  [<upstreamVersion>-][<ref>-][<imageVariant>-][<architecture>]
+
+All parts are optional. Omit --architecture to get a plain version tag (e.g. "21" instead of "21-amd64").
+Use --imageSuffix to produce multiple images from a single build (e.g. java-base and java-debian).
+The ref flag is typically set from $CI_COMMIT_REF_SLUG; forward slashes are replaced with hyphens.
+
+The command prints three lines to stdout:
+  IMAGE_TAG=<full image reference including tag>
+  ARTIFACT_NAME=<purl>
+  ARTIFACT_URL_ENCODED=<url-encoded purl>`,
+		Example: `  # If you want to tag an image with its upstream version and the target architecture:
+  devguard-scanner generate-tag --upstreamVersion 1.2.3 --architecture amd64 --imagePath registry.io/org/app
+  # → registry.io/org/app:1.2.3-amd64
+
+  # If you want the current branch or ref included in the tag (e.g. to distinguish nightly builds):
+  devguard-scanner generate-tag --upstreamVersion 1.2.3 --architecture amd64 --imagePath registry.io/org/app --ref main
+  # → registry.io/org/app:1.2.3-main-amd64
+
+  # If you are building multiple images in a single repository (e.g. different base OS flavours),
+  # call generate-tag once per image and vary --imageSuffix to give each image a unique name:
+  devguard-scanner generate-tag --upstreamVersion 21 --imagePath registry.io/org --imageSuffix java-base
+  devguard-scanner generate-tag --upstreamVersion 21 --imagePath registry.io/org --imageSuffix java-debian
+  # → registry.io/org/java-base:21
+  # → registry.io/org/java-debian:21
+
+  # If you want to distinguish image flavours within the same image (e.g. alpine vs. full):
+  devguard-scanner generate-tag --upstreamVersion 2.0.0 --architecture arm64 --imageVariant alpine --imagePath registry.io/org/app
+  # → registry.io/org/app:2.0.0-alpine-arm64`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generateTagRun(cmd, args)
 		},

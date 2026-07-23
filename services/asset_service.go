@@ -20,6 +20,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -45,7 +46,32 @@ func NewAssetService(assetRepository shared.AssetRepository, dependencyVulnRepos
 	}
 }
 
-func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
+func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error) {
+
+	asset := &models.Asset{
+		Name:                     name,
+		Slug:                     slug.Make(name),
+		ProjectID:                projectID,
+		ExternalEntityID:         &externalEntityID,
+		ExternalEntityProviderID: &providerID,
+		Description:              description,
+	}
+
+	newAssets, _, err := s.assetRepository.UpsertSplit(ctx, nil, providerID, []*models.Asset{asset})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(newAssets) > 0 {
+		if err := s.BootstrapAsset(ctx, rbac, asset); err != nil {
+			return nil, err
+		}
+	}
+
+	return asset, nil
+}
+
+func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, session shared.AuthSession, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
@@ -67,7 +93,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	}
 
 	// make the current user the admin of the asset
-	if err := rbac.GrantRoleInAsset(ctx, currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, session, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
 		slog.Error("error assigning current user as asset admin", "err", err)
 		return nil, err
 	}

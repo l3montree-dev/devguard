@@ -64,6 +64,6 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 
 func (r *MaliciousPackageRepository) GetMaliciousPackageByID(ctx context.Context, tx *gorm.DB, id string) (models.MaliciousPackage, error) {
 	var maliciousPackage models.MaliciousPackage
-	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&maliciousPackage).Error
+	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&maliciousPackage).Error // nosemgrep: bola-raw-gorm-first-bypasses-tenant-scope -- MaliciousPackage is public vulnerability intelligence data with no tenant column
 	return maliciousPackage, err
 }

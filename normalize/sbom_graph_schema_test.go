@@ -258,22 +258,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
-	t.Run("BOM with vulnerabilities produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
-
-		comp := cdx.Component{
-			BOMRef:     "pkg:npm/lodash@4.17.20",
-			Name:       "lodash",
-			Version:    "4.17.20",
-			PackageURL: "pkg:npm/lodash@4.17.20",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		// Add vulnerability
+	t.Run("VEX with vulnerabilities produces valid CycloneDX", func(t *testing.T) {
 		affects := []cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}}
 		vuln := cdx.Vulnerability{
 			ID: "CVE-2021-23337",
@@ -283,9 +268,8 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			},
 			Affects: &affects,
 		}
-		g.AddVulnerability(vuln)
 
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -293,22 +277,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
-	t.Run("BOM with multiple vulnerabilities and ratings produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
-
-		comp := cdx.Component{
-			BOMRef:     "pkg:npm/lodash@4.17.20",
-			Name:       "lodash",
-			Version:    "4.17.20",
-			PackageURL: "pkg:npm/lodash@4.17.20",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		// Add vulnerability with ratings
+	t.Run("VEX with multiple vulnerabilities and ratings produces valid CycloneDX", func(t *testing.T) {
 		affects := []cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}}
 		score := 7.5
 		ratings := []cdx.VulnerabilityRating{
@@ -328,9 +297,8 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Affects: &affects,
 			Ratings: &ratings,
 		}
-		g.AddVulnerability(vuln)
 
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})

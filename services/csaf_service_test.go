@@ -17,7 +17,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -30,48 +29,71 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
+// collectProductAndRelationshipIDs returns the set of base product ids and the set of
+// relationship (combined) product ids in a CSAF product tree.
+func collectProductAndRelationshipIDs(tree csaf.ProductTree) (products map[string]struct{}, relationships map[string]struct{}) {
+	products = map[string]struct{}{}
+	relationships = map[string]struct{}{}
+	if tree.FullProductNames != nil {
+		for _, product := range *tree.FullProductNames {
+			products[string(*product.ProductID)] = struct{}{}
+		}
+	}
+	if tree.RelationShips != nil {
+		for _, relationship := range *tree.RelationShips {
+			relationships[string(*relationship.FullProductName.ProductID)] = struct{}{}
+		}
+	}
+	return products, relationships
+}
+
 func TestGenerateProductTree(t *testing.T) {
-	asset1, _, artifact1, vulns := setUpVulns()
-	t.Run("test for trivial product tree consisting of 1 asset -> 1 assetVersion -> 1 artifact", func(t *testing.T) {
-		tree, err := generateProductTree(context.Background(), asset1.ID, vulns)
+	_, _, artifact1, vulns := setUpVulns()
+	artifact1Purl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+
+	// expectedBaseAndLeaves derives, from a set of vulns, the base products (every path
+	// component + each artifact) and the leaf product id of each vuln's path chain.
+	expectedBaseAndLeaves := func(vs []models.DependencyVuln) (base map[string]struct{}, leaves map[string]struct{}) {
+		base = map[string]struct{}{}
+		leaves = map[string]struct{}{}
+		for _, v := range vs {
+			path := vulnPath(v)
+			for _, c := range path {
+				base[c] = struct{}{}
+			}
+			for _, artifact := range v.Artifacts {
+				artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+				base[artifactPurl] = struct{}{}
+				leaves[leafProductID(artifactPurl, path)] = struct{}{}
+			}
+		}
+		return base, leaves
+	}
+
+	t.Run("each dependency path is encoded as a relationship chain with a distinct leaf product", func(t *testing.T) {
+		tree, err := generateProductTree(context.Background(), vulns)
 		assert.NoError(t, err)
 
-		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl}
+		expectedBase, expectedLeaves := expectedBaseAndLeaves(vulns)
+		products, relationships := collectProductAndRelationshipIDs(tree)
 
-		allProductIDs := []string{}
-		for _, product := range *tree.FullProductNames {
-			allProductIDs = append(allProductIDs, string(*product.ProductID))
+		// every path component and the artifact should be a base product
+		assert.Len(t, products, len(expectedBase))
+		for id := range expectedBase {
+			assert.Contains(t, products, id)
 		}
-
-		allRelationshipIDs := []csaf.ProductID{}
-		for _, relationship := range *tree.RelationShips {
-			allRelationshipIDs = append(allRelationshipIDs, *relationship.FullProductName.ProductID)
+		// every vuln path leaf product must be reachable as a relationship product
+		for leaf := range expectedLeaves {
+			assert.Contains(t, relationships, leaf)
 		}
-		// amount of components + the artifact itself should appear in the product tree
-		assert.Len(t, allProductIDs, len(expectedComponents)+1)
-		// each component should have a component_of relationship to the artifact
-		assert.Len(t, allRelationshipIDs, len(expectedComponents))
-
-		// check the product ids in detail
-
-		// check if all expected product IDs are present
-		for _, expectedID := range append(expectedComponents, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
-			assert.Contains(t, allProductIDs, expectedID)
-		}
-
-		// check if all relationships are present and correctly formatted
-
-		for _, component := range expectedComponents {
-			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
-			assert.Contains(t, allRelationshipIDs, id)
-		}
+		// the artifact itself is a base product, never a relationship leaf
+		assert.Contains(t, products, artifact1Purl)
 	})
+
 	t.Run("expand the product tree with an additional artifact containing a new vuln", func(t *testing.T) {
 		artifact2 := artifact1
 		artifact2.ArtifactName = "pkg:oci/scanner"
@@ -80,218 +102,113 @@ func TestGenerateProductTree(t *testing.T) {
 		newVuln.Artifacts = []models.Artifact{artifact2}
 		newVuln.ComponentPurl = "pkg:golang/github.com/sigstore/rekor@v1.3.10"
 
-		tree, err := generateProductTree(context.Background(), asset1.ID, append(vulns, newVuln))
+		all := append(append([]models.DependencyVuln{}, vulns...), newVuln)
+		tree, err := generateProductTree(context.Background(), all)
 		assert.NoError(t, err)
 
-		expectedComponents := []string{vulns[0].ComponentPurl, vulns[2].ComponentPurl, newVuln.ComponentPurl}
+		expectedBase, expectedLeaves := expectedBaseAndLeaves(all)
+		products, relationships := collectProductAndRelationshipIDs(tree)
 
-		allProductIDs := []string{}
-		for _, product := range *tree.FullProductNames {
-			allProductIDs = append(allProductIDs, string(*product.ProductID))
+		assert.Len(t, products, len(expectedBase))
+		for id := range expectedBase {
+			assert.Contains(t, products, id)
 		}
-
-		allRelationshipIDs := []csaf.ProductID{}
-		for _, relationship := range *tree.RelationShips {
-			allRelationshipIDs = append(allRelationshipIDs, *relationship.FullProductName.ProductID)
+		for leaf := range expectedLeaves {
+			assert.Contains(t, relationships, leaf)
 		}
-		// amount of components + the 2 artifacts itself should appear in the product tree
-		assert.Len(t, allProductIDs, len(expectedComponents)+1+1)
-		// each component should have a component_of relationship to their respective artifact
-		assert.Len(t, allRelationshipIDs, len(expectedComponents))
-
-		// check if all expected product IDs are present
-		for _, expectedID := range append(expectedComponents, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
-			assert.Contains(t, allProductIDs, expectedID)
-		}
-
-		// check if all relationships are present and correctly formatted
-		for _, component := range expectedComponents[:len(expectedComponents)-1] {
-			// first build the expected id of the relationship
-			id := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), component)
-			assert.Contains(t, allRelationshipIDs, id)
-		}
-		idNew := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), newVuln.ComponentPurl)
-		assert.Contains(t, allRelationshipIDs, idNew)
+		// both artifacts present as base products
+		assert.Contains(t, products, artifact1Purl)
+		assert.Contains(t, products, normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName))
 	})
 }
 
 func TestCalculateVulnStateInformation(t *testing.T) {
 	_, _, artifact1, vulns := setUpVulns()
+	artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
 	eventTime, err := time.Parse(time.RFC3339, "2028-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
 	}
-	t.Run("generate basic test with 1 dependency vuln for this CVE", func(t *testing.T) {
+
+	t.Run("a single unhandled path is classified as under investigation", func(t *testing.T) {
 		testVuln := vulns[0]
-		artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
-		productID := artifactNameAndComponentPurlToProductID(artifactPurl, testVuln.ComponentPurl)
-		// only pass first vuln
+		leaf := leafProductID(artifactPurl, vulnPath(testVuln))
+
 		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), []models.DependencyVuln{testVuln})
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
-		// TEST PRODUCT STATUS
-		// since the vuln is unhandled these should all be empty
-		emptySlices := [][]string{affected, notAffected, fixed}
-		for _, slice := range emptySlices {
-			assert.Len(t, slice, 0)
-		}
-		assert.Len(t, underInvestigation, 1)
-		assert.Equal(t, string(productID), underInvestigation[0])
+		assert.Empty(t, affected)
+		assert.Empty(t, notAffected)
+		assert.Empty(t, fixed)
+		assert.Equal(t, []string{leaf}, underInvestigation)
 
-		// TEST Distributions
 		assert.Len(t, distributions, 1)
-		assert.Equal(t, string(productID), distributions[0].productID)
+		assert.Equal(t, leaf, distributions[0].productID)
 		assert.Equal(t, 1, distributions[0].TotalAmountOfPaths)
 		assert.Equal(t, 1, distributions[0].AmountUnhandled)
 
-		// TEST remediations
-		// we expect 0 remediations if only unhandled vulns are passed
 		assert.Len(t, remediations, 0)
-
 		assert.Len(t, flags, 0, "since the vulnerability is not handled as falsePositive we expect no flags")
 	})
-	t.Run("multiple different paths inside a vuln which are all handled differently should result in a correct distribution and a correct classification as accepted", func(t *testing.T) {
-		baseVuln := vulns[len(vulns)-1]
-		testVulns := []models.DependencyVuln{}
 
-		// build vulns with different paths
-		for i := range 4 {
-			newVuln := baseVuln
-			// append one additional element to the path
-			for j := range i {
-				newVuln.VulnerabilityPath = append(newVuln.VulnerabilityPath, fmt.Sprintf("Component/v%d.0.0", j+1))
+	t.Run("each path of the same component is classified independently (per-path granularity)", func(t *testing.T) {
+		comp := "pkg:rpm/redhat/openssh-debugsource@v1.0.1"
+		base := vulns[len(vulns)-1]
+		base.ComponentPurl = comp
+
+		makeVuln := func(path []string, state dtos.VulnState, ev *models.VulnEvent) models.DependencyVuln {
+			v := base
+			v.VulnerabilityPath = path
+			v.State = state
+			v.Events = append([]models.VulnEvent{}, base.Events...)
+			if ev != nil {
+				v.Events = append(v.Events, *ev)
 			}
-			// also edit the vuln state and append the event
-			switch i {
-			case 1:
-				newVuln.State = dtos.VulnStateFixed
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Type: dtos.EventTypeFixed})
-			case 2:
-				newVuln.State = dtos.VulnStateAccepted
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Justification: new("This is accepted"), Type: dtos.EventTypeAccepted})
-			case 3:
-				newVuln.State = dtos.VulnStateFalsePositive
-				newVuln.Events = append(newVuln.Events, models.VulnEvent{CreatedAt: eventTime, Justification: new("This is a false positive"), Type: dtos.EventTypeFalsePositive})
-			}
-			testVulns = append(testVulns, newVuln)
+			return v
 		}
 
-		productID := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, testVulns[0].AssetVersionName), testVulns[0].ComponentPurl)
+		vUnhandled := makeVuln([]string{comp}, dtos.VulnStateOpen, nil)
+		vFixed := makeVuln([]string{"pkg:generic/a@1.0.0", comp}, dtos.VulnStateFixed,
+			&models.VulnEvent{CreatedAt: eventTime, Type: dtos.EventTypeFixed})
+		vAccepted := makeVuln([]string{"pkg:generic/b@1.0.0", comp}, dtos.VulnStateAccepted,
+			&models.VulnEvent{CreatedAt: eventTime, Justification: new("This is accepted"), Type: dtos.EventTypeAccepted})
+		vFalsePositive := makeVuln([]string{"pkg:generic/c@1.0.0", comp}, dtos.VulnStateFalsePositive,
+			&models.VulnEvent{CreatedAt: eventTime, Justification: new("This is a false positive"), MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Type: dtos.EventTypeFalsePositive})
+
+		testVulns := []models.DependencyVuln{vUnhandled, vFixed, vAccepted, vFalsePositive}
+
+		leafUnhandled := leafProductID(artifactPurl, vulnPath(vUnhandled))
+		leafFixed := leafProductID(artifactPurl, vulnPath(vFixed))
+		leafAccepted := leafProductID(artifactPurl, vulnPath(vAccepted))
+		leafFP := leafProductID(artifactPurl, vulnPath(vFalsePositive))
 
 		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), testVulns)
 		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
 
-		// since at least 1 path has been marked as accepted the risks is actually present and exploitable
+		// one product per path, each classified individually
+		assert.Equal(t, []string{leafAccepted}, affected)
+		assert.Equal(t, []string{leafFP}, notAffected)
+		assert.Equal(t, []string{leafFixed}, fixed)
+		assert.Equal(t, []string{leafUnhandled}, underInvestigation)
+
+		// 4 distinct products, each with exactly one path
+		assert.Len(t, distributions, 4)
+		for _, d := range distributions {
+			assert.Equal(t, 1, d.TotalAmountOfPaths)
+		}
+
+		// the accepted path yields a single no_fix_planned remediation
 		assert.Len(t, remediations, 1)
 		assert.Equal(t, csaf.CSAFRemediationCategoryNoFixPlanned, *remediations[0].Category)
-		assert.Equal(t, productID, *(*remediations[0].ProductIds)[0])
-		assert.True(t, strings.Contains(*remediations[0].Details, "accepted. Justification: This is accepted"))
+		assert.Equal(t, csaf.ProductID(leafAccepted), *(*remediations[0].ProductIds)[0])
+		assert.Contains(t, *remediations[0].Details, "accepted. Justification: This is accepted")
 
-		// check if the path distribution have been calculated correctly
-		assert.Len(t, distributions, 1)
-		assert.Equal(t, 4, distributions[0].TotalAmountOfPaths)
-		assert.Equal(t, string(productID), distributions[0].productID)
-
-		// all categories should have exactly 1 occurrence
-		assert.Equal(t, 1, distributions[0].AmountUnhandled)
-		assert.Equal(t, 1, distributions[0].AmountAccepted)
-		assert.Equal(t, 1, distributions[0].AmountFixed)
-		assert.Equal(t, 1, distributions[0].AmountFalsePositive)
-
-		emptyCategories := [][]string{fixed, notAffected, underInvestigation}
-		for _, slice := range emptyCategories {
-			assert.Len(t, slice, 0)
-		}
-		assert.Len(t, affected, 1)
-		assert.Equal(t, string(productID), affected[0])
-
-		assert.Len(t, flags, 0, "since the vuln should be classified as accepted we expect no false Positive flags")
-	})
-	t.Run("CVE in multiple different components each with multiple differently handled paths", func(t *testing.T) {
-		testVulnsArtifact1 := vulns              // end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
-		testVulnsArtifact2 := testVulnsArtifact1 // end state 4 vulns (comp1: 2 paths (unhandled, falsePositive), comp2: 2 paths (falsePositive, falsePositive))
-
-		vuln2Depth1 := vulns[len(vulns)-1]
-		vuln2Depth1.VulnerabilityPath = []string{"comp1"}
-		testVulnsArtifact2 = append(testVulnsArtifact2, vuln2Depth1)
-
-		artifact2 := artifact1
-		artifact2.ArtifactName = "pkg:oci/scanner"
-
-		artifact2.DependencyVuln = testVulnsArtifact2
-		for i := range testVulnsArtifact2 {
-			testVulnsArtifact2[i].Artifacts = []models.Artifact{artifact2}
-		}
-
-		// mark 3 vulns as false positives (2/2 for the purl2 in artifact2 and 1/2 for purl1 in artifact2)
-		falsePositiveVulns := []*models.DependencyVuln{&testVulnsArtifact2[3], &testVulnsArtifact2[2], &testVulnsArtifact2[1]}
-		for _, vulnPtr := range falsePositiveVulns {
-			vulnPtr.SetState(dtos.VulnStateFalsePositive)
-			vulnPtr.Events = append(vulnPtr.Events, models.VulnEvent{CreatedAt: eventTime, Justification: new("This is a false positive"), MechanicalJustification: dtos.VulnerableCodeNotInExecutePath, Type: dtos.EventTypeFalsePositive})
-		}
-
-		// mark last vuln from artifact 1 as fixed (since its a single path the whole vuln is therefore fixed)
-		testVulnsArtifact1[len(testVulnsArtifact1)-1].State = dtos.VulnStateFixed
-		testVulnsArtifact1[len(testVulnsArtifact1)-1].Events = append(testVulnsArtifact1[len(testVulnsArtifact1)-1].Events, models.VulnEvent{CreatedAt: eventTime, Type: dtos.EventTypeFixed})
-
-		artifact1ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[0].ComponentPurl)
-		artifact1ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName), testVulnsArtifact1[2].ComponentPurl)
-
-		artifact2ProductID1 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[0].ComponentPurl)
-		artifact2ProductID2 := artifactNameAndComponentPurlToProductID(normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName), testVulnsArtifact2[2].ComponentPurl)
-
-		productStatus, flags, distributions, remediations := calculateVulnStateInformation(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...))
-		affected, notAffected, fixed, underInvestigation := productStatusToSlices(*productStatus)
-
-		// first test the distributions
-		// we expect 1 distribution for each of the 4 products
-		assert.Len(t, distributions, 4)
-
-		// reminder: artifact1: end state 3 vulns (comp1: 2 paths (unhandled,unhandled), comp2: 1 path (fixed))
-		// reminder: artifact2: end state 4 vulns (comp1: 2 paths (unhandled, falsePositive), comp2: 2 paths (falsePositive, falsePositive))
-		for _, distribution := range distributions {
-			switch distribution.productID {
-			case string(artifact1ProductID1):
-				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
-				assert.Equal(t, 2, distribution.AmountUnhandled)
-				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountFixed, distribution.AmountFalsePositive)
-			case string(artifact1ProductID2):
-				assert.Equal(t, 1, distribution.TotalAmountOfPaths)
-				assert.Equal(t, 1, distribution.AmountFixed)
-				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountUnhandled, distribution.AmountFalsePositive)
-			case string(artifact2ProductID1):
-				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
-				assert.Equal(t, 1, distribution.AmountUnhandled, distribution.AmountFalsePositive)
-				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountFixed)
-			case string(artifact2ProductID2):
-				assert.Equal(t, 2, distribution.TotalAmountOfPaths)
-				assert.Equal(t, 2, distribution.AmountFalsePositive)
-				assert.Equal(t, 0, distribution.AmountAccepted, distribution.AmountUnhandled, distribution.AmountFixed)
-			default:
-				// unexpected product ID
-				t.Fail()
-			}
-		}
-
-		assert.Len(t, remediations, 0, "we do not have any vulns classified as accepted -> no remediations")
-
-		assert.Len(t, flags, 1, "since 1 vuln is classified as false Positive we expect 1 flag")
-		flag := flags[0]
-		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, *flag.MechanicalJustification)
-		assert.Len(t, flag.ProductIDs, 1)
-		assert.Equal(t, eventTime, *flag.Date)
-
-		product := flag.ProductIDs[0]
-		assert.Equal(t, artifact2ProductID2, *product)
-
-		// finally test the productStatus classifications
-		assert.Empty(t, affected)
-		assert.Equal(t, 1, len(fixed), len(notAffected))
-		assert.Equal(t, string(artifact1ProductID2), fixed[0])
-		assert.Equal(t, string(artifact2ProductID2), notAffected[0])
-
-		assert.Len(t, underInvestigation, 2)
-
+		// the false-positive path yields a single flag
+		assert.Len(t, flags, 1)
+		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, *flags[0].MechanicalJustification)
+		assert.Len(t, flags[0].ProductIDs, 1)
+		assert.Equal(t, csaf.ProductID(leafFP), *flags[0].ProductIDs[0])
+		assert.Equal(t, eventTime, *flags[0].Date)
 	})
 }
 
@@ -377,7 +294,7 @@ func TestGenerateTrackingObject(t *testing.T) {
 			testVulnsArtifact2[i].ID = testVulnsArtifact2[i].CalculateHash()
 		}
 
-		tracking, err := generateTrackingObject(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...), asset.Name, testVulnsArtifact1[0].CVEID)
+		tracking, err := generateTrackingObject(context.Background(), append(testVulnsArtifact1, testVulnsArtifact2...), GenerateDocumentTitle(asset.Name, testVulnsArtifact1[0].CVEID))
 		assert.NoError(t, err)
 
 		// the current release date should be the timestamp of the latest event
@@ -489,23 +406,6 @@ func productStatusToSlices(status csaf.ProductStatus) ([]string, []string, []str
 	return affected, notAffected, fixed, underInvestigation
 }
 
-func TestConvertAdvisoryToCdxVulnerability(t *testing.T) {
-	t.Run("should build the vulnerabilities correctly", func(t *testing.T) {
-		// read the advisory in the testdata folder
-		advisory, err := csaf.LoadAdvisory("testdata/csaf_report.json")
-		assert.Nil(t, err)
-
-		purl, _ := packageurl.FromString("pkg:npm/super-logging@v1.0.0")
-		vulns, err := convertAdvisoryToCdxVulnerability(advisory, purl)
-		assert.Nil(t, err)
-
-		assert.Equal(t, 1, len(vulns))
-		// expect the single vuln to have pkg:npm/debug@3.0.0 as affected package
-		assert.Equal(t, "pkg:npm/debug@3.0.0", (*vulns[0].Affects)[0].Ref)
-		assert.Equal(t, "Marked as false positive: This doesnt affect us, since we are not using the vulnerable function at all.", vulns[0].Analysis.Detail)
-	})
-}
-
 func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.DependencyVuln) {
 	time1, err := time.Parse(time.RFC3339, "2026-01-22T11:32:35+00:00")
 	if err != nil {
@@ -553,112 +453,6 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 	asset.AssetVersions = append(asset.AssetVersions, assetVersion)
 
 	return asset, assetVersion, artifact, []models.DependencyVuln{vuln1Depth0, vuln1Depth1, vuln2Depth0}
-}
-
-func TestBelongsToSamePackage(t *testing.T) {
-	t.Run("same type, namespace and name should match", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")
-		assert.True(t, belongsToSamePackage(purl1, purl2))
-	})
-	t.Run("different versions should still match", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:npm/lodash@4.17.20")
-		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
-		assert.True(t, belongsToSamePackage(purl1, purl2))
-	})
-	t.Run("different name should not match", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		purl2, _ := packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")
-		assert.False(t, belongsToSamePackage(purl1, purl2))
-	})
-	t.Run("different type should not match", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:npm/debug@3.0.0")
-		purl2, _ := packageurl.FromString("pkg:pypi/debug@3.0.0")
-		assert.False(t, belongsToSamePackage(purl1, purl2))
-	})
-	t.Run("different namespace should not match", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.0.0")
-		purl2, _ := packageurl.FromString("pkg:golang/github.com/other/testify@v1.0.0")
-		assert.False(t, belongsToSamePackage(purl1, purl2))
-	})
-	t.Run("case insensitive matching on type", func(t *testing.T) {
-		purl1, _ := packageurl.FromString("pkg:NPM/lodash@4.17.20")
-		purl2, _ := packageurl.FromString("pkg:npm/lodash@4.17.21")
-		assert.True(t, belongsToSamePackage(purl1, purl2))
-	})
-}
-
-func TestBelongsToSomeSamePackage(t *testing.T) {
-	target, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-	t.Run("should find match in list", func(t *testing.T) {
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
-			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
-		}
-		assert.True(t, belongsToSomeSamePackage(target, purls))
-	})
-	t.Run("should return false for empty list", func(t *testing.T) {
-		assert.False(t, belongsToSomeSamePackage(target, []packageurl.PackageURL{}))
-	})
-	t.Run("should return false when no package matches", func(t *testing.T) {
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:npm/lodash@4.17.21")),
-			must(packageurl.FromString("pkg:pypi/requests@2.28.0")),
-		}
-		assert.False(t, belongsToSomeSamePackage(target, purls))
-	})
-}
-
-func TestHasExactFit(t *testing.T) {
-	t.Run("exact same package and version should match", func(t *testing.T) {
-		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")),
-		}
-		assert.True(t, hasExactFit(vulnPurl, purls))
-	})
-	t.Run("same package but different version should not match", func(t *testing.T) {
-		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.9.0")),
-		}
-		assert.False(t, hasExactFit(vulnPurl, purls))
-	})
-	t.Run("different package should not match even with same version", func(t *testing.T) {
-		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:golang/github.com/stretchr/assert@v1.8.0")),
-		}
-		assert.False(t, hasExactFit(vulnPurl, purls))
-	})
-	t.Run("should return false for empty list", func(t *testing.T) {
-		vulnPurl, _ := packageurl.FromString("pkg:golang/github.com/stretchr/testify@v1.8.0")
-		assert.False(t, hasExactFit(vulnPurl, []packageurl.PackageURL{}))
-	})
-	t.Run("should find match among multiple purls", func(t *testing.T) {
-		vulnPurl, _ := packageurl.FromString("pkg:npm/debug@v3.1.0")
-		purls := []packageurl.PackageURL{
-			must(packageurl.FromString("pkg:npm/lodash@v4.17.21")),
-			must(packageurl.FromString("pkg:npm/debug@v3.1.0")),
-			must(packageurl.FromString("pkg:npm/express@v4.18.0")),
-		}
-		assert.True(t, hasExactFit(vulnPurl, purls))
-	})
-}
-
-func TestArtifactNameAndComponentPurlToProductID(t *testing.T) {
-	t.Run("should combine artifact name and component purl with pipe separator", func(t *testing.T) {
-		result := artifactNameAndComponentPurlToProductID("pkg:oci/myapp@v1.0.0", "pkg:npm/debug@3.0.0")
-		assert.Equal(t, csaf.ProductID("pkg:oci/myapp@v1.0.0|pkg:npm/debug@3.0.0"), result)
-	})
-	t.Run("should handle realistic devguard artifact names", func(t *testing.T) {
-		result := artifactNameAndComponentPurlToProductID(
-			normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main"),
-			"pkg:golang/github.com/stretchr/testify@v1.8.0",
-		)
-		expected := normalize.Purlify("pkg:devguard/testorg/testgroup/csaf-test", "main") + "|pkg:golang/github.com/stretchr/testify@v1.8.0"
-		assert.Equal(t, csaf.ProductID(expected), result)
-	})
 }
 
 func TestEmptySliceThenNil(t *testing.T) {
@@ -718,59 +512,6 @@ func TestGenerateSummaryForEvent(t *testing.T) {
 		result := generateSummaryForEvent(dtos.VulnEventType("unknown"), 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
 		assert.Equal(t, "", result)
 	})
-}
-
-func TestIsInVersionRange(t *testing.T) {
-	makePurl := func(version string) packageurl.PackageURL {
-		return packageurl.PackageURL{Type: "golang", Namespace: "github.com/stretchr", Name: "testify", Version: version}
-	}
-	t.Run("version equal to lower bound should match", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v1.5.0")}
-		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.NoError(t, err)
-		assert.Equal(t, "v1.5.0", result.Version)
-	})
-	t.Run("version between bounds should match", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v1.7.0")}
-		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.NoError(t, err)
-		assert.Equal(t, "v1.7.0", result.Version)
-	})
-	t.Run("version equal to upper bound should not match (exclusive)", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v2.0.0")}
-		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.Error(t, err)
-	})
-	t.Run("version above upper bound should not match", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v3.0.0")}
-		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.Error(t, err)
-	})
-	t.Run("version below lower bound should not match", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v1.0.0")}
-		_, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.Error(t, err)
-	})
-	t.Run("should find matching purl among multiple candidates", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("v0.9.0"), makePurl("v1.8.0"), makePurl("v3.0.0")}
-		result, err := isInVersionRange(purls, makePurl("v1.5.0"), makePurl("v2.0.0"))
-		assert.NoError(t, err)
-		assert.Equal(t, "v1.8.0", result.Version)
-	})
-	t.Run("non-semver versions should be skipped", func(t *testing.T) {
-		purls := []packageurl.PackageURL{makePurl("not-semver")}
-		_, err := isInVersionRange(purls, makePurl("v1.0.0"), makePurl("v2.0.0"))
-		assert.Error(t, err)
-	})
-	t.Run("empty purls list should return error", func(t *testing.T) {
-		_, err := isInVersionRange([]packageurl.PackageURL{}, makePurl("v1.0.0"), makePurl("v2.0.0"))
-		assert.Error(t, err)
-	})
-}
-
-// helper to unwrap packageurl.FromString in test data setup
-func must(p packageurl.PackageURL, _ error) packageurl.PackageURL {
-	return p
 }
 
 func TestGetOldestVulnPerUniqueCVE(t *testing.T) {

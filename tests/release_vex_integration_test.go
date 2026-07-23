@@ -64,6 +64,10 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&dv).Error; err != nil {
 			t.Fatal(err)
 		}
+		// CSAF tracking needs at least one lifecycle event
+		if err := f.DB.Create(&models.VulnEvent{DependencyVulnID: &dv.ID, Type: "detected", UserID: "system"}).Error; err != nil {
+			t.Fatal(err)
+		}
 
 		// create release with item referencing the artifact
 		rel := models.Release{Name: "vex-release", ProjectID: project.ID}
@@ -76,7 +80,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		}
 
 		// controller
-		releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository)
+		releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.CSAFService)
 
 		r := echo.New()
 		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)
@@ -89,8 +93,8 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		shared.SetOrg(ctx, org)
 		shared.SetProject(ctx, project)
 
-		if err := releaseController.VEXJSON(ctx); err != nil {
-			t.Fatalf("VEXJSON returned error: %v", err)
+		if err := releaseController.CycloneDXVexJSON(ctx); err != nil {
+			t.Fatalf("CycloneDXVexJSON returned error: %v", err)
 		}
 
 		var bom cdx.BOM
@@ -100,5 +104,30 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 
 		assert.NotNil(t, bom.Vulnerabilities)
 		assert.GreaterOrEqual(t, len(*bom.Vulnerabilities), 1)
+
+		// the same release is also available as CSAF and OpenVEX
+		newCtx := func() (shared.Context, *httptest.ResponseRecorder) {
+			rec := httptest.NewRecorder()
+			ctx := r.NewContext(httptest.NewRequest("GET", "/", nil), rec)
+			ctx.SetParamNames("projectSlug", "releaseID")
+			ctx.SetParamValues(project.Slug, rel.ID.String())
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			return ctx, rec
+		}
+
+		t.Run("release CSAF", func(t *testing.T) {
+			ctx, rec := newCtx()
+			assert.NoError(t, releaseController.CSAFJSON(ctx))
+			assert.Equal(t, 200, rec.Code)
+			assert.Contains(t, rec.Body.String(), cve.CVE)
+		})
+
+		t.Run("release OpenVEX", func(t *testing.T) {
+			ctx, rec := newCtx()
+			assert.NoError(t, releaseController.OpenCycloneDXVexJSON(ctx))
+			assert.Equal(t, 200, rec.Code)
+			assert.Contains(t, rec.Body.String(), "statements")
+		})
 	})
 }

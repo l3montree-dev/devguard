@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -42,19 +43,6 @@ type DependencyVulnController struct {
 	vulnEventRepository      shared.VulnEventRepository
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
-}
-
-type DependencyVulnStatus struct {
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-}
-
-type BatchDependencyVulnStatus struct {
-	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
@@ -393,12 +381,16 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status DependencyVulnStatus
+	var status dtos.DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	statusType := status.StatusType
@@ -410,7 +402,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	mechanicalJustification := status.MechanicalJustification
 
 	userAgent := ctx.Request().UserAgent()
-	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, &userAgent)
+	ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, ownerID, &dependencyVuln, dtos.VulnEventType(statusType), justification, mechanicalJustification, assetVersion.Name, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -447,12 +439,16 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status BatchDependencyVulnStatus
+	var status dtos.BatchDependencyVulnStatus
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	if len(status.VulnIDs) == 0 {
@@ -475,7 +471,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 		}
 
 		userAgent := ctx.Request().UserAgent()
-		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, userID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, &userAgent)
+		ev, err := controller.dependencyVulnService.CreateVulnEventAndApply(ctx.Request().Context(), nil, asset.ID, ownerID, &dependencyVuln, eventType, status.Justification, status.MechanicalJustification, assetVersion.Name, &userAgent)
 		if err != nil {
 			slog.Error("could not create event for dependencyVuln", "err", err, "vulnID", vulnID)
 			continue

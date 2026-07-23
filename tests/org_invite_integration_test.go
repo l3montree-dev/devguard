@@ -57,8 +57,7 @@ func (f *TestFixture) CreateOrgWithOwner(t testing.TB, e *echo.Echo, ownerUserID
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(ownerUserID)
+	session := NewUserSession(t, ownerUserID)
 	shared.SetSession(ctx, session)
 
 	require.NoError(t, f.App.OrgController.Create(ctx))
@@ -82,8 +81,7 @@ func (f *TestFixture) InviteMember(t testing.TB, e *echo.Echo, org models.Org, i
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Maybe().Return(inviterUserID)
+	session := NewUserSession(t, inviterUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
@@ -111,8 +109,7 @@ func (f *TestFixture) AcceptInvitation(t testing.TB, e *echo.Echo, code string, 
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(userID)
+	session := NewUserSession(t, userID)
 	shared.SetSession(ctx, session)
 
 	adminClient := mocks.NewAdminClient(t)
@@ -186,8 +183,7 @@ func (f *TestFixture) ChangeRole(t testing.TB, e *echo.Echo, org models.Org, cal
 	ctx.SetParamNames("userID")
 	ctx.SetParamValues(targetUserID)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
@@ -203,10 +199,9 @@ func (f *TestFixture) RemoveMember(t testing.TB, e *echo.Echo, org models.Org, c
 
 	rbac := f.App.RBACProvider.GetDomainRBAC(org.ID.String())
 
-	callerSession := mocks.NewAuthSession(t)
-	callerSession.On("GetUserID").Return(callerUserID)
+	callerSession := NewUserSession(t, callerUserID)
 
-	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate)
+	allowed, err := rbac.IsAllowed(context.Background(), callerSession, shared.ObjectOrganization, shared.ActionUpdate, shared.ActorScope{})
 	require.NoError(t, err)
 	if !allowed {
 		return echo.NewHTTPError(403, "forbidden")
@@ -277,8 +272,7 @@ func TestOrgInviteWorkflow(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			ctx := e.NewContext(req, httptest.NewRecorder())
 
-			session := mocks.NewAuthSession(t)
-			session.On("GetUserID").Maybe().Return("once-user-id")
+			session := NewUserSession(t, "once-user-id")
 			shared.SetSession(ctx, session)
 			shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
 
@@ -291,6 +285,33 @@ func TestOrgInviteWorkflow(t *testing.T) {
 			_, err := f.App.OrgRepository.Read(context.Background(), nil, org.ID)
 			assert.NoError(t, err)
 		})
+	})
+}
+
+// TestChangeRoleRejectsNonMember verifies GHSA-m62h-gqp7-9jrw: an admin cannot use ChangeRole to
+// grant a role to an arbitrary user who was never invited to, or a member of, the organization.
+func TestChangeRoleRejectsNonMember(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		const (
+			userAID    = "user-a-id"
+			outsiderID = "outsider-id"
+		)
+
+		e := echo.New()
+		org := f.CreateOrgWithOwner(t, e, userAID, "test-changerole-non-member")
+
+		err := f.ChangeRole(t, e, org, userAID, outsiderID, "admin")
+		require.Error(t, err)
+		assert.Equal(t, 400, err.(*echo.HTTPError).Code)
+
+		roles := rolesFromMembers(f.GetOrgMembers(t, e, org, []client.Identity{
+			{Id: userAID, Traits: map[string]any{"email": "user-a@example.com"}},
+			{Id: outsiderID, Traits: map[string]any{"email": "outsider@example.com"}},
+		}))
+
+		_, isMember := roles[outsiderID]
+		assert.False(t, isMember, "outsider must not have been granted any role in the organization")
 	})
 }
 

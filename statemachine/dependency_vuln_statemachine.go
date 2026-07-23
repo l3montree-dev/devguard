@@ -309,6 +309,13 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
+	case dtos.EventTypeImplemented:
+		vuln.SetState(dtos.VulnStateImplemented)
+	case dtos.EventTypeNotApplicable:
+		vuln.SetState(dtos.VulnStateNotApplicable)
+	case dtos.EventTypeComment:
+		// Comments do not change the state of the vulnerability
+		return
 	}
 
 }

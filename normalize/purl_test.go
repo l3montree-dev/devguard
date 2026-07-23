@@ -58,3 +58,32 @@ func TestParsePurlForMatching(t *testing.T) {
 		assert.Equal(t, "5.0.17-2.el8", ctx.NormalizedVersion)
 	})
 }
+
+func TestAssetName(t *testing.T) {
+	t.Run("should return the asset name as-is when it already has 3 parts", func(t *testing.T) {
+		name, err := AssetName("org/project/asset")
+		assert.NoError(t, err)
+		assert.Equal(t, "org/project/asset", name)
+	})
+
+	t.Run("should strip projects/assets segments from a full url-shaped name", func(t *testing.T) {
+		name, err := AssetName("org/projects/project/assets/asset")
+		assert.NoError(t, err)
+		assert.Equal(t, "org/project/asset", name)
+	})
+
+	t.Run("should error when the name has fewer than 3 parts", func(t *testing.T) {
+		_, err := AssetName("org/project")
+		assert.Error(t, err)
+	})
+
+	t.Run("should error when the name has more than 3 parts but does not match the projects/assets pattern", func(t *testing.T) {
+		_, err := AssetName("org/foo/project/bar/asset")
+		assert.Error(t, err)
+	})
+
+	t.Run("should error when there are too many parts even matching url shape", func(t *testing.T) {
+		_, err := AssetName("org/projects/project/assets/asset/extra")
+		assert.Error(t, err)
+	})
+}

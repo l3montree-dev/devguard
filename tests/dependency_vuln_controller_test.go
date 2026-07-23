@@ -284,7 +284,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			}
 			assert.Nil(t, f.DB.Create(&depVuln).Error)
 
-			msg := controllers.DependencyVulnStatus{
+			msg := dtos.DependencyVulnStatus{
 				StatusType:    "reopened",
 				Justification: "Reopening the ticket for further investigation",
 			}
@@ -295,8 +295,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			rec := httptest.NewRecorder()
 			ctx := NewContext(req, rec)
 
-			session := mocks.NewAuthSession(t)
-			session.On("GetUserID").Return("")
+			session := NewUserSession(t, "")
 			shared.SetSession(ctx, session)
 			// set the elements into the context
 			shared.SetAsset(ctx, asset)

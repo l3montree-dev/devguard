@@ -30,11 +30,13 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -66,23 +68,32 @@ type ReleaseService interface {
 	AddItem(ctx context.Context, item *models.ReleaseItem) error
 	RemoveItem(ctx context.Context, id uuid.UUID) error
 	ListCandidates(ctx context.Context, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+	FindOrCreate(ctx context.Context, projectID uuid.UUID, name string) (models.Release, error)
 }
 
-type PersonalAccessTokenService interface {
+type Authorizer interface {
 	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
 	VerifyAdminRequest(req *http.Request) (bool, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
+}
+type PersonalAccessTokenService interface {
+	Authorizer
 	RevokeByPrivateKey(ctx context.Context, privKey string) error
 	// ToModel builds a PAT from the request. For symmetric PATs the cleartext bearer token is
 	// returned as the second value — it must be shown to the user once and is never stored.
-	ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error)
+	ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error)
 	CheckForValidTokenByFingerprint(ctx context.Context, fingerprint string) (models.PAT, bool)
 }
 
 type CSAFService interface {
-	GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)
+	GetVexFromCsafProvider(ctx context.Context, url string) ([]csaf.Advisory, error)
+	GetVexFromCsafAdvisoryURL(ctx context.Context, url string) (csaf.Advisory, error)
+
 	GenerateCSAFReport(ctx context.Context, orgName string, assetID uuid.UUID, assetName string, cveID string) (csaf.Advisory, error)
+	GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error)
 	GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)
+	GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)
 }
 
 type SBOMScanner interface {
@@ -98,6 +109,8 @@ type ProjectRepository interface {
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
+	GetDirectChildProjectsWithProviderID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string) ([]models.Project, error)
+	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
@@ -111,11 +124,7 @@ type ProjectRepository interface {
 	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
 	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
-}
-
-type Verifier interface {
-	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
-	VerifyAPIToken(ctx context.Context, token string) (string, string, error)
+	CleanupExternalProjectAssetVersion(ctx context.Context, tx DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
 }
 
 type PolicyRepository interface {
@@ -153,6 +162,7 @@ type AssetRepository interface {
 	GetAllowedAssetsByProjectID(ctx context.Context, tx DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Asset, error)
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDsWithProviderID(ctx context.Context, tx DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(ctx context.Context, tx DB, name string) (models.Asset, error)
 	FindAssetByExternalProviderID(ctx context.Context, tx DB, externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
@@ -164,6 +174,9 @@ type AssetRepository interface {
 	GetAllAssetsFromDB(ctx context.Context, tx DB) ([]models.Asset, error)
 	ReadWithAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID) (models.Asset, error)
 	GetAssetsWithVulnSharingEnabled(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.Asset, error)
+	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
+	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
+	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -180,6 +193,8 @@ type ArtifactRepository interface {
 	GetAllArtifactAffectedByDependencyVuln(ctx context.Context, tx DB, vulnID uuid.UUID) ([]models.Artifact, error)
 	GetByAssetVersions(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error)
 	CleanupOrphanedRecords(ctx context.Context) error
+	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Artifact, error)
+	GetByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.Artifact, error)
 }
 
 type ReleaseRepository interface {
@@ -191,6 +206,7 @@ type ReleaseRepository interface {
 	CreateReleaseItem(ctx context.Context, tx DB, item *models.ReleaseItem) error
 	DeleteReleaseItem(ctx context.Context, tx DB, id uuid.UUID) error
 	GetCandidateItemsForRelease(ctx context.Context, tx DB, projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+	FindOrCreate(ctx context.Context, tx DB, projectID uuid.UUID, name string) (models.Release, error)
 }
 
 type CveRepository interface {
@@ -313,10 +329,15 @@ type InTotoLinkRepository interface {
 
 type PersonalAccessTokenRepository interface {
 	utils.Repository[uuid.UUID, models.PAT, DB]
+	ReadUnscoped(ctx context.Context, tx DB, id uuid.UUID) (models.PAT, error)
+	DeleteUnscoped(ctx context.Context, tx DB, id uuid.UUID) error
 	GetByFingerprint(ctx context.Context, tx DB, fingerprint string) (models.PAT, error)
 	GetByBearerTokenHash(ctx context.Context, tx DB, tokenHash string) (models.PAT, error)
 	FindByUserIDs(ctx context.Context, tx DB, userID []uuid.UUID) ([]models.PAT, error)
 	ListByUserID(ctx context.Context, tx DB, userID string) ([]models.PAT, error)
+	ListByOrgID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.PAT, error)
+	ListByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.PAT, error)
+	ListByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.PAT, error)
 	DeleteByFingerprint(ctx context.Context, tx DB, fingerprint string) error
 	MarkAsLastUsedNowByID(ctx context.Context, tx DB, id uuid.UUID) error
 }
@@ -375,15 +396,19 @@ type InvitationRepository interface {
 	Save(ctx context.Context, tx DB, invitation *models.Invitation) error
 	FindByCode(ctx context.Context, tx DB, code string) (models.Invitation, error)
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	FindByOrgID(ctx context.Context, tx *gorm.DB, orgID string) ([]models.Invitation, error)
 }
 
 type ExternalReferenceRepository interface {
-	utils.Repository[uuid.UUID, models.ExternalReference, DB]
+	Create(ctx context.Context, tx DB, t *models.ExternalReference) error
+	SaveBatch(ctx context.Context, tx DB, ts []models.ExternalReference) error
 	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)
+	DeleteByURL(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, url string) error
+	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
 }
 
 type ExternalEntityProviderService interface {
-	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, session AuthSession) error
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
 	TriggerSync(c Context) error
@@ -400,6 +425,12 @@ type ProjectService interface {
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
 	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
+	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)
+}
+
+type Verifier interface {
+	VerifyRequestSignature(ctx context.Context, req *http.Request) (AuthSession, error)
+	VerifyAPIToken(ctx context.Context, token string) (AuthSession, error)
 }
 
 type InTotoVerifierService interface {
@@ -412,9 +443,10 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(ctx context.Context, asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(ctx context.Context, latest *models.ArtifactRiskHistory) string
-	CreateAsset(ctx context.Context, rbac AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)
+	CreateAsset(ctx context.Context, rbac AccessControl, session AuthSession, asset models.Asset) (*models.Asset, error)
 	BootstrapAsset(ctx context.Context, rbac AccessControl, asset *models.Asset) error
 	UpdateAssetSlug(ctx context.Context, assetID uuid.UUID, newSlug string) error
+	FindOrCreateAsset(ctx context.Context, rbac AccessControl, providerID string, orgID uuid.UUID, projectID uuid.UUID, name string, externalEntityID string, currentUser string, description string) (*models.Asset, error)
 }
 type ArtifactService interface {
 	GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
@@ -439,7 +471,7 @@ type DependencyVulnService interface {
 }
 
 type AssetVersionService interface {
-	BuildVeX(ctx context.Context, tx DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph
+	BuildVeX(ctx context.Context, tx DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
@@ -454,6 +486,7 @@ type AssetVersionRepository interface {
 	Delete(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	Save(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
+	GetAssetVersionsByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error)
 	GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error)
@@ -478,15 +511,16 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
+	VexRulesFromDocument([]byte, uuid.UUID, string, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string, keepOriginalSbomRootComponent bool) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
-	FetchVexFromUpstream(ctx context.Context, upstreamURLs []models.ExternalReference) ([]*normalize.VexReport, []models.ExternalReference, []models.ExternalReference)
-	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []*normalize.VexReport, []models.DependencyVuln, error)
+	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
+	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
+	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
-	FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*normalize.VexReportOpenVEX, err error)
+	FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*transformer.VexReportOpenVEX, err error)
 }
 
 type ConfigRepository interface {
@@ -506,15 +540,14 @@ type VEXRuleService interface {
 	ApplyRulesToExistingVulnsForce(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
 	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
 	ApplyRulesToExistingForce(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReport *normalize.VexReport) error
-	IngestVexes(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, vexReports []*normalize.VexReport) error
+	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error
 	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
 	MatchRulesToVulns(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln
-	UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*normalize.VexReportOpenVEX) error
+	UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*transformer.VexReportOpenVEX) error
 }
 
 type CrowdSourcedVexingService interface {
@@ -723,21 +756,30 @@ type AdminRepository interface {
 	GetAllExternalEntityOrganizations(ctx context.Context, tx DB) ([]models.Org, error)
 }
 
+// ActorScope carries the session's own scoped entity, pre-resolved by
+// ResourceFetchMiddleware from the session's owner ID. AccessControl
+// implementations must never fetch entities themselves - all resolution
+// (by URL slug or by session owner ID) happens once, in the middleware layer.
+type ActorScope struct {
+	Project *models.Project // set when session.GetSessionActorType() == SessionActorProject
+	Asset   *models.Asset   // set when session.GetSessionActorType() == SessionActorAsset (Project preloaded)
+}
+
 type AccessControl interface {
-	HasAccess(ctx context.Context, session AuthSession) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(ctx context.Context, subject string, role Role) error
-	RevokeRole(ctx context.Context, subject string, role Role) error
+	GrantRole(ctx context.Context, session AuthSession, role Role) error
+	RevokeRole(ctx context.Context, session AuthSession, role Role) error
 
-	GrantRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	GrantRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	GrantRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	GrantRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
-	RevokeRoleInProject(ctx context.Context, subject string, role Role, project string) error
-	RevokeRoleInAsset(ctx context.Context, subject string, role Role, asset string) error
+	RevokeRoleInProject(ctx context.Context, session AuthSession, role Role, project string) error
+	RevokeRoleInAsset(ctx context.Context, session AuthSession, role Role, asset string) error
 
 	RevokeAllRolesInProjectForUser(ctx context.Context, user string, project string) error
 	RevokeAllRolesInAssetForUser(ctx context.Context, user string, asset string) error
@@ -754,16 +796,16 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 
-	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action) (bool, error)
+	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) ([]string, error)
-	GetAllAssetsForUser(user string) ([]string, error)
+	GetAllProjectsForSession(ctx context.Context, session AuthSession) ([]string, error)
+	GetAllAssetsForSession(ctx context.Context, session AuthSession) ([]string, error)
 
 	GetOwnerOfOrganization() (string, error)
 	GetAdminsOfOrganization() ([]string, error)
@@ -779,13 +821,65 @@ type AccessControl interface {
 
 	GetExternalEntityProviderID() *string
 }
+type CompliancePostureRepository interface {
+	utils.Repository[uuid.UUID, models.CompliancePosture, DB]
+	ApplyAndSave(ctx context.Context, tx DB, posture *models.CompliancePosture, ev *models.VulnEvent) error
+	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
+
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
+
+	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+}
+
+type ComplianceComponentRepository interface {
+	ListAll(ctx context.Context, tx DB, filter []FilterQuery) ([]models.ComplianceComponent, error)
+	GetDetails(ctx context.Context, tx DB, id uuid.UUID) (*models.ComplianceComponent, error)
+
+	CreateStatement(ctx context.Context, tx DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error)
+	UpdateStatement(ctx context.Context, tx DB, statementID uuid.UUID, implementationStatus string, description string) (*models.ComplianceComponentImplementsControlStatement, error)
+	DeleteStatement(ctx context.Context, tx DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error)
+}
+
+type FrameworkControlRepository interface {
+	utils.Repository[uuid.UUID, models.FrameworkControl, DB]
+	GetAll(ctx context.Context, tx DB, framework *string) ([]models.FrameworkControl, error)
+	ListFrameworkControls(ctx context.Context, tx DB) ([]string, error)
+}
+
+type CompliancePostureService interface {
+	UpdateCompliancePostureState(ctx context.Context, tx DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
+
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
+	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+}
 
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
-	DomainsOfUser(user string) ([]string, error)
+	DomainsOfSession(session AuthSession) ([]string, error)
 	RevokeAllRolesForDomain(domain uuid.UUID) error
 	GetOwnerDomainsOfUser(user string) ([]string, error)
 	GetAllUsers() ([]string, error)
+}
+
+type AdvisoryService interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory, currentVisibility string) error
+	Delete(ctx context.Context, tx DB, id int64) error
+}
+
+type AdvisoryRepository interface {
+	Create(ctx context.Context, tx DB, advisory *models.Advisory) error
+	ReadAll(ctx context.Context, tx DB, assetID uuid.UUID, filter []FilterQuery, pagination PageInfo) (Paged[models.Advisory], error)
+	ReadAdvisory(ctx context.Context, tx DB, id int64) (models.Advisory, error)
+	Update(ctx context.Context, tx DB, id int64, advisory *models.Advisory) error
+	Delete(ctx context.Context, tx DB, id int64) error
+	GetAllAdvisoriesByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.Advisory, error)
 }
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

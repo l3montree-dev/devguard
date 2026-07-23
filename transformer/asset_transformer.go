@@ -70,7 +70,6 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		IsPublic:                      asset.IsPublic,
 		ParanoidMode:                  asset.ParanoidMode,
 		SharesInformation:             asset.SharesInformation,
-		KeepOriginalSbomRootComponent: asset.KeepOriginalSbomRootComponent,
 		PipelineLastRun:               asset.PipelineLastRun,
 		PipelineError:                 asset.PipelineError,
 		State:                         string(asset.State),
@@ -126,11 +125,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.SharesInformation != nil {
 		updated = true
 		asset.SharesInformation = *assetPatch.SharesInformation
-	}
-
-	if assetPatch.KeepOriginalSbomRootComponent != nil {
-		updated = true
-		asset.KeepOriginalSbomRootComponent = *assetPatch.KeepOriginalSbomRootComponent
 	}
 
 	if assetPatch.Description != nil {

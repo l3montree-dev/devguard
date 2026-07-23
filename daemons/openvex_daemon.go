@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 )
 
 func (runner *DaemonRunner) UpdateSystemVEXRulesFromOpenVEXSources(ctx context.Context) error {
@@ -22,7 +22,7 @@ func (runner *DaemonRunner) UpdateSystemVEXRulesFromOpenVEXSources(ctx context.C
 	}
 
 	slog.Info("fetching OpenVEX from static sources")
-	var results []*normalize.VexReportOpenVEX
+	var results []*transformer.VexReportOpenVEX
 	for _, source := range staticOpenVEXSources {
 		reports, err := runner.scanService.FetchOpenVexFromGitHub(ctx, source, "main")
 		if err != nil {

@@ -28,12 +28,15 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/telemetry"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -57,8 +60,6 @@ import (
 
 	_ "github.com/lib/pq"
 )
-
-var release string // Will be filled at build time
 
 //	@title			DevGuard API
 //	@version		v1
@@ -155,6 +156,10 @@ func main() {
 		fx.Invoke(func(FalsePositiveRuleRouter router.VEXRuleRouter) {}),
 		fx.Invoke(func(ExternalReferenceRouter router.ExternalReferenceRouter) {}),
 		fx.Invoke(func(CrowdsourcedVexingRouter router.CrowdsourcedVexingRouter) {}),
+		fx.Invoke(func(AdvisoryRouter router.AdvisoryRouter) {}),
+		fx.Invoke(func(CompliancePostureRouter router.CompliancePostureRouter) {}),
+		fx.Invoke(func(ComplianceComponentRouter router.ComplianceComponentRouter) {}),
+		fx.Invoke(func(ComplianceComponentStatementRouter router.ComplianceComponentStatementRouter) {}),
 		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
@@ -179,9 +184,21 @@ func main() {
 				},
 			})
 		}),
+		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					go telemetry.SendAPIStartup(context.Background(), telemetry.ConfigFromEnv(), &utils.EgressClient, telemetry.NewGormAPIStatsCollector(db), apiVersion())
+					return nil
+				},
+			})
+		}),
 	)
 
 	app.Run()
+}
+
+func apiVersion() string {
+	return telemetry.RuntimeVersion(config.Version)
 }
 
 type fxErrorLogger struct{}
@@ -336,7 +353,7 @@ func initSentry() {
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
 		Environment: environment,
-		Release:     release,
+		Release:     config.Version,
 
 		// Configures whether SDK should generate and attach stack traces to pure
 		// capture message calls.

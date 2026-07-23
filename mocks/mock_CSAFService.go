@@ -7,11 +7,9 @@ package mocks
 import (
 	"context"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/package-url/packageurl-go"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -126,6 +124,236 @@ func (_c *CSAFService_GenerateCSAFReport_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// GenerateCSAFReportForAdvisory provides a mock function for the type CSAFService
+func (_mock *CSAFService) GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error) {
+	ret := _mock.Called(ctx, advisory, orgName, assetID, assetName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCSAFReportForAdvisory")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Advisory, string, uuid.UUID, string) (csaf.Advisory, error)); ok {
+		return returnFunc(ctx, advisory, orgName, assetID, assetName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Advisory, string, uuid.UUID, string) csaf.Advisory); ok {
+		r0 = returnFunc(ctx, advisory, orgName, assetID, assetName)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.Advisory, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, advisory, orgName, assetID, assetName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GenerateCSAFReportForAdvisory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCSAFReportForAdvisory'
+type CSAFService_GenerateCSAFReportForAdvisory_Call struct {
+	*mock.Call
+}
+
+// GenerateCSAFReportForAdvisory is a helper method to define mock.On call
+//   - ctx context.Context
+//   - advisory *models.Advisory
+//   - orgName string
+//   - assetID uuid.UUID
+//   - assetName string
+func (_e *CSAFService_Expecter) GenerateCSAFReportForAdvisory(ctx interface{}, advisory interface{}, orgName interface{}, assetID interface{}, assetName interface{}) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	return &CSAFService_GenerateCSAFReportForAdvisory_Call{Call: _e.mock.On("GenerateCSAFReportForAdvisory", ctx, advisory, orgName, assetID, assetName)}
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) Run(run func(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string)) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *models.Advisory
+		if args[1] != nil {
+			arg1 = args[1].(*models.Advisory)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) Return(advisory1 csaf.Advisory, err error) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Return(advisory1, err)
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) RunAndReturn(run func(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GenerateCSAFReportForVulns provides a mock function for the type CSAFService
+func (_mock *CSAFService) GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error) {
+	ret := _mock.Called(ctx, orgName, title, vulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCSAFReportForVulns")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *string, []models.DependencyVuln) (csaf.Advisory, error)); ok {
+		return returnFunc(ctx, orgName, title, vulns)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *string, []models.DependencyVuln) csaf.Advisory); ok {
+		r0 = returnFunc(ctx, orgName, title, vulns)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, *string, []models.DependencyVuln) error); ok {
+		r1 = returnFunc(ctx, orgName, title, vulns)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GenerateCSAFReportForVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCSAFReportForVulns'
+type CSAFService_GenerateCSAFReportForVulns_Call struct {
+	*mock.Call
+}
+
+// GenerateCSAFReportForVulns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orgName string
+//   - title *string
+//   - vulns []models.DependencyVuln
+func (_e *CSAFService_Expecter) GenerateCSAFReportForVulns(ctx interface{}, orgName interface{}, title interface{}, vulns interface{}) *CSAFService_GenerateCSAFReportForVulns_Call {
+	return &CSAFService_GenerateCSAFReportForVulns_Call{Call: _e.mock.On("GenerateCSAFReportForVulns", ctx, orgName, title, vulns)}
+}
+
+func (_c *CSAFService_GenerateCSAFReportForVulns_Call) Run(run func(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln)) *CSAFService_GenerateCSAFReportForVulns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 *string
+		if args[2] != nil {
+			arg2 = args[2].(*string)
+		}
+		var arg3 []models.DependencyVuln
+		if args[3] != nil {
+			arg3 = args[3].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForVulns_Call) Return(advisory csaf.Advisory, err error) *CSAFService_GenerateCSAFReportForVulns_Call {
+	_c.Call.Return(advisory, err)
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForVulns_Call) RunAndReturn(run func(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReportForVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllAdvisories provides a mock function for the type CSAFService
+func (_mock *CSAFService) GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	ret := _mock.Called(ctx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllAdvisories")
+	}
+
+	var r0 []models.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Advisory, error)); ok {
+		return returnFunc(ctx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Advisory); ok {
+		r0 = returnFunc(ctx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Advisory)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GetAllAdvisories_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAdvisories'
+type CSAFService_GetAllAdvisories_Call struct {
+	*mock.Call
+}
+
+// GetAllAdvisories is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetID uuid.UUID
+func (_e *CSAFService_Expecter) GetAllAdvisories(ctx interface{}, assetID interface{}) *CSAFService_GetAllAdvisories_Call {
+	return &CSAFService_GetAllAdvisories_Call{Call: _e.mock.On("GetAllAdvisories", ctx, assetID)}
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) Run(run func(ctx context.Context, assetID uuid.UUID)) *CSAFService_GetAllAdvisories_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) Return(advisorys []models.Advisory, err error) *CSAFService_GetAllAdvisories_Call {
+	_c.Call.Return(advisorys, err)
+	return _c
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)) *CSAFService_GetAllAdvisories_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetOldestVulnPerUniqueCVE provides a mock function for the type CSAFService
 func (_mock *CSAFService) GetOldestVulnPerUniqueCVE(ctx context.Context, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, assetID)
@@ -194,28 +422,94 @@ func (_c *CSAFService_GetOldestVulnPerUniqueCVE_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// GetVexFromCsafAdvisoryURL provides a mock function for the type CSAFService
+func (_mock *CSAFService) GetVexFromCsafAdvisoryURL(ctx context.Context, url string) (csaf.Advisory, error) {
+	ret := _mock.Called(ctx, url)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVexFromCsafAdvisoryURL")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (csaf.Advisory, error)); ok {
+		return returnFunc(ctx, url)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) csaf.Advisory); ok {
+		r0 = returnFunc(ctx, url)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, url)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GetVexFromCsafAdvisoryURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVexFromCsafAdvisoryURL'
+type CSAFService_GetVexFromCsafAdvisoryURL_Call struct {
+	*mock.Call
+}
+
+// GetVexFromCsafAdvisoryURL is a helper method to define mock.On call
+//   - ctx context.Context
+//   - url string
+func (_e *CSAFService_Expecter) GetVexFromCsafAdvisoryURL(ctx interface{}, url interface{}) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
+	return &CSAFService_GetVexFromCsafAdvisoryURL_Call{Call: _e.mock.On("GetVexFromCsafAdvisoryURL", ctx, url)}
+}
+
+func (_c *CSAFService_GetVexFromCsafAdvisoryURL_Call) Run(run func(ctx context.Context, url string)) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GetVexFromCsafAdvisoryURL_Call) Return(advisory csaf.Advisory, err error) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
+	_c.Call.Return(advisory, err)
+	return _c
+}
+
+func (_c *CSAFService_GetVexFromCsafAdvisoryURL_Call) RunAndReturn(run func(ctx context.Context, url string) (csaf.Advisory, error)) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetVexFromCsafProvider provides a mock function for the type CSAFService
-func (_mock *CSAFService) GetVexFromCsafProvider(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error) {
-	ret := _mock.Called(ctx, purl, domain)
+func (_mock *CSAFService) GetVexFromCsafProvider(ctx context.Context, url string) ([]csaf.Advisory, error) {
+	ret := _mock.Called(ctx, url)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVexFromCsafProvider")
 	}
 
-	var r0 *cyclonedx.BOM
+	var r0 []csaf.Advisory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL, string) (*cyclonedx.BOM, error)); ok {
-		return returnFunc(ctx, purl, domain)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]csaf.Advisory, error)); ok {
+		return returnFunc(ctx, url)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL, string) *cyclonedx.BOM); ok {
-		r0 = returnFunc(ctx, purl, domain)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []csaf.Advisory); ok {
+		r0 = returnFunc(ctx, url)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*cyclonedx.BOM)
+			r0 = ret.Get(0).([]csaf.Advisory)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, packageurl.PackageURL, string) error); ok {
-		r1 = returnFunc(ctx, purl, domain)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, url)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -229,41 +523,35 @@ type CSAFService_GetVexFromCsafProvider_Call struct {
 
 // GetVexFromCsafProvider is a helper method to define mock.On call
 //   - ctx context.Context
-//   - purl packageurl.PackageURL
-//   - domain string
-func (_e *CSAFService_Expecter) GetVexFromCsafProvider(ctx interface{}, purl interface{}, domain interface{}) *CSAFService_GetVexFromCsafProvider_Call {
-	return &CSAFService_GetVexFromCsafProvider_Call{Call: _e.mock.On("GetVexFromCsafProvider", ctx, purl, domain)}
+//   - url string
+func (_e *CSAFService_Expecter) GetVexFromCsafProvider(ctx interface{}, url interface{}) *CSAFService_GetVexFromCsafProvider_Call {
+	return &CSAFService_GetVexFromCsafProvider_Call{Call: _e.mock.On("GetVexFromCsafProvider", ctx, url)}
 }
 
-func (_c *CSAFService_GetVexFromCsafProvider_Call) Run(run func(ctx context.Context, purl packageurl.PackageURL, domain string)) *CSAFService_GetVexFromCsafProvider_Call {
+func (_c *CSAFService_GetVexFromCsafProvider_Call) Run(run func(ctx context.Context, url string)) *CSAFService_GetVexFromCsafProvider_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 packageurl.PackageURL
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(packageurl.PackageURL)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *CSAFService_GetVexFromCsafProvider_Call) Return(bOM *cyclonedx.BOM, err error) *CSAFService_GetVexFromCsafProvider_Call {
-	_c.Call.Return(bOM, err)
+func (_c *CSAFService_GetVexFromCsafProvider_Call) Return(advisorys []csaf.Advisory, err error) *CSAFService_GetVexFromCsafProvider_Call {
+	_c.Call.Return(advisorys, err)
 	return _c
 }
 
-func (_c *CSAFService_GetVexFromCsafProvider_Call) RunAndReturn(run func(ctx context.Context, purl packageurl.PackageURL, domain string) (*cyclonedx.BOM, error)) *CSAFService_GetVexFromCsafProvider_Call {
+func (_c *CSAFService_GetVexFromCsafProvider_Call) RunAndReturn(run func(ctx context.Context, url string) ([]csaf.Advisory, error)) *CSAFService_GetVexFromCsafProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }

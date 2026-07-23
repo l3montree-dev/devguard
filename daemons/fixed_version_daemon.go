@@ -18,7 +18,7 @@ func getFixedVersion(ctx context.Context, purlComparer *scan.PurlComparer, depen
 	// update the fixed version
 	parsed, err := packageurl.FromString(dependencyVuln.ComponentPurl)
 	if err != nil {
-		slog.Warn("could not parse purl", "purl", dependencyVuln.ComponentPurl, "err", err)
+		// slog.Warn("could not parse purl", "purl", dependencyVuln.ComponentPurl, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
 		return nil, err
 	}
 

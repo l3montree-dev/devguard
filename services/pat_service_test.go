@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/mock"
 )
@@ -91,7 +92,7 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("returns userID and scopes for a valid token", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000010")
 		pat := models.PAT{Scopes: "read write", Fingerprint: new("fp1")}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ID = patID
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
@@ -99,15 +100,15 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, patID).Return(nil)
 		patService := NewPatService(patMock)
 
-		gotUserID, gotScopes, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		gotSession, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if gotUserID != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotUserID)
+		if gotSession.GetActorID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetActorID())
 		}
-		if gotScopes != "read write" {
-			t.Fatalf("expected scopes 'read write', got %s", gotScopes)
+		if strings.Join(gotSession.GetScopes(), " ") != "read write" {
+			t.Fatalf("expected scopes 'read write', got %s", gotSession.GetScopes())
 		}
 		patMock.AssertExpectations(t)
 	})
@@ -117,7 +118,7 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("GetByBearerTokenHash", mock.Anything, mock.Anything, mock.Anything).Return(models.PAT{}, errors.New("not found"))
 		patService := NewPatService(patMock)
 
-		_, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		_, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -126,14 +127,14 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("returns error when token is expired", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		pat := models.PAT{Scopes: "scan"}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ExpiryDate = &past
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
 		patMock.On("GetByBearerTokenHash", mock.Anything, mock.Anything, tokenHash).Return(pat, nil)
 		patService := NewPatService(patMock)
 
-		_, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		_, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err == nil {
 			t.Fatal("expected error for expired token, got nil")
 		}
@@ -142,7 +143,7 @@ func TestVerifyAPIToken(t *testing.T) {
 	t.Run("still returns success when MarkAsLastUsedNowByID fails", func(t *testing.T) {
 		patID := uuid.MustParse("00000000-0000-0000-0000-000000000011")
 		pat := models.PAT{Scopes: "scan", Fingerprint: new("fp2")}
-		pat.UserID = userID
+		pat.UserID = &userID
 		pat.ID = patID
 
 		patMock := mocks.NewPersonalAccessTokenRepository(t)
@@ -150,25 +151,25 @@ func TestVerifyAPIToken(t *testing.T) {
 		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, patID).Return(errors.New("db error"))
 		patService := NewPatService(patMock)
 
-		gotUserID, _, err := patService.VerifyAPIToken(context.Background(), cleartext)
+		gotSession, err := patService.VerifyAPIToken(context.Background(), cleartext)
 		if err != nil {
 			t.Fatalf("expected success despite MarkAsLastUsedNowByID failure, got %v", err)
 		}
-		if gotUserID != userID.String() {
-			t.Fatalf("expected userID %s, got %s", userID, gotUserID)
+		if gotSession.GetActorID() != userID.String() {
+			t.Fatalf("expected userID %s, got %s", userID, gotSession.GetActorID())
 		}
 	})
 }
 
 func TestToModel(t *testing.T) {
-	userID := "00000000-0000-0000-0000-000000000002"
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorUser), ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")}
 
 	t.Run("symmetric: generates bearer token, stores hash, returns cleartext", func(t *testing.T) {
 		patService := NewPatService(nil)
 		pat, cleartext, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			Description: "trivy",
 			Scopes:      "scan",
-		}, userID)
+		}, owner)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -192,7 +193,7 @@ func TestToModel(t *testing.T) {
 		pat, cleartext, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			PubKey: &pubKey,
 			Scopes: "scan",
-		}, userID)
+		}, owner)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,7 +212,7 @@ func TestToModel(t *testing.T) {
 		patService := NewPatService(nil)
 		_, _, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			Scopes: "invalid-scope",
-		}, userID)
+		}, owner)
 		if err == nil {
 			t.Fatal("expected error for invalid scopes")
 		}
@@ -223,7 +224,7 @@ func TestToModel(t *testing.T) {
 		_, _, err := patService.ToModel(context.Background(), dtos.PatCreateRequest{
 			PubKey: &invalidKey,
 			Scopes: "scan",
-		}, userID)
+		}, owner)
 		if err == nil {
 			t.Fatal("expected error for invalid public key")
 		}
@@ -233,10 +234,12 @@ func TestToModel(t *testing.T) {
 func TestAuthenticateRequestWithToken(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
+		userID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 		var pat = models.PAT{
 			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
 			ExpiryDate: new(time.Now().Add(time.Hour)),
 		}
+		pat.UserID = &userID
 
 		patMock := new(mocks.PersonalAccessTokenRepository)
 		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)

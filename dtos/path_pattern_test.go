@@ -44,7 +44,7 @@ func TestIsWildcard(t *testing.T) {
 	}
 }
 
-func TestPathPattern_ContainsWildcard(t *testing.T) {
+func TestPathPatternContainsWildcard(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -63,7 +63,7 @@ func TestPathPattern_ContainsWildcard(t *testing.T) {
 	}
 }
 
-func TestPathPattern_MatchesSuffix_ExactMatch(t *testing.T) {
+func TestPathPatternMatchesSuffix_ExactMatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -114,7 +114,7 @@ func TestRootPathPattern(t *testing.T) {
 	}
 }
 
-func TestPathPattern_MatchesSuffix_Wildcard(t *testing.T) {
+func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -153,7 +153,7 @@ func TestPathPattern_MatchesSuffix_Wildcard(t *testing.T) {
 	}
 }
 
-func TestPathPattern_MatchesSuffix_RealWorldExamples(t *testing.T) {
+func TestPathPatternMatchesSuffix_RealWorldExamples(t *testing.T) {
 	// Simulating real vulnerability paths like:
 	// ["pkg:npm/app@1.0.0", "pkg:npm/lodash@4.17.0", "pkg:npm/vulnerable@1.0.0"]
 	tests := []struct {
@@ -199,4 +199,31 @@ func TestPathPattern_MatchesSuffix_RealWorldExamples(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
 		})
 	}
+}
+
+func TestPathPatternMatchesSuffixForArtifacts(t *testing.T) {
+	t.Run("strips a leading pattern element identifying one of the vuln's own artifacts", func(t *testing.T) {
+		// A devguard export always includes the artifact as the path's root,
+		// but VulnerabilityPath never does - so re-uploading a downloaded VEX
+		// document must still match by ignoring that leading segment.
+		pattern := PathPattern{"pkg:oci/my-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
+		path := []string{"pkg:npm/vulnerable@1.0.0"}
+
+		assert.False(t, pattern.MatchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
+		assert.True(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+	})
+
+	t.Run("does not strip when the leading element isn't one of the given artifacts", func(t *testing.T) {
+		pattern := PathPattern{"pkg:oci/some-other-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
+		path := []string{"pkg:npm/vulnerable@1.0.0"}
+
+		assert.False(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+	})
+
+	t.Run("behaves like plain suffix matching when no artifact identities are given", func(t *testing.T) {
+		pattern := PathPattern{"pkg:npm/vulnerable@1.0.0"}
+		path := []string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
+
+		assert.True(t, pattern.MatchesSuffixForArtifacts(path, nil))
+	})
 }

@@ -8,8 +8,10 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -81,7 +83,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 			}
 		}
 
-		return g.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID(), userAgent)
+		return g.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetActorName(), userAgent)
 	case shared.VulnEvent:
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event
@@ -121,7 +123,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 
 		// we create a new ticket in github
 		client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
-		if err == ErrNotConnected {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		} else if err != nil {
 			return err

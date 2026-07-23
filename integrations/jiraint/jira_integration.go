@@ -265,10 +265,7 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	return adfComment
 
 }
-func (i *JiraIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// Jira integration does not have access control in the same way as GitLab or GitHub
-	return false, nil
-}
+
 func (i *JiraIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Jira integration does not have groups in the same way as GitLab or GitHub
 	return "", fmt.Errorf("Jira integration does not support getting role in group")
@@ -309,7 +306,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(ctx context.Context, asset model
 
 	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(ctx, nil, integrationUUID)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get Jira client for integration %s: %w", integrationUUID, err)
+		return nil, 0, fmt.Errorf("%w: integration %s: %v", commonint.ErrNotConnected, integrationUUID, err)
 	}
 
 	projectID, err := extractProjectIDFromRepoID(*asset.RepositoryID)

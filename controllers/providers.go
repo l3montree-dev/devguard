@@ -94,6 +94,8 @@ var ControllerModule = fx.Options(
 	// Security & Compliance
 	fx.Provide(NewCSAFController),
 	fx.Provide(NewComplianceController),
+	fx.Provide(NewCompliancePostureController),
+	fx.Provide(NewComplianceComponentController),
 	fx.Provide(NewAttestationController),
 	fx.Provide(NewInToToController),
 	fx.Provide(NewPolicyController),
@@ -122,4 +124,6 @@ var ControllerModule = fx.Options(
 
 	//Crowdsourced Vexing
 	fx.Provide(NewCrowdsourcedVexingController),
+
+	fx.Provide(NewAdvisoryController),
 )

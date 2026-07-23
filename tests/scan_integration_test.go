@@ -14,7 +14,6 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -44,8 +43,7 @@ func TestMultipleOrigins(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -171,8 +169,7 @@ func TestKeepExistingVulnsClosed(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -466,8 +463,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -507,8 +503,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -544,8 +539,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -578,8 +572,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -609,8 +602,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -641,8 +633,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -683,8 +674,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -716,8 +706,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -748,8 +737,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -795,8 +783,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			createCVE2025_46569(f.DB)
 			org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 			setupCtx := func(ctx shared.Context) {
-				s := mocks.NewAuthSession(t)
-				s.On("GetUserID").Return("abc")
+				s := NewUserSession(t, "abc")
 				shared.SetAsset(ctx, asset)
 				shared.SetProject(ctx, project)
 				shared.SetOrg(ctx, org)
@@ -836,8 +823,7 @@ func TestScanning(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1073,8 +1059,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1157,8 +1142,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1265,8 +1249,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1499,8 +1482,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		app := echo.New()
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -1621,8 +1603,7 @@ func TestTicketHandling(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2010,13 +1991,11 @@ func TestIdempotency(t *testing.T) {
 		artifactController := f.App.ArtifactController
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.AuthSession{}
-
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, &authSession)
+			shared.SetSession(ctx, authSession)
 			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
@@ -2143,13 +2122,11 @@ func TestOnlyFixingVulnerabilitiesWithASinglePath(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.AuthSession{}
-
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, &authSession)
+			shared.SetSession(ctx, authSession)
 			shared.SetAssetVersion(ctx, assetVersion)
 		}
 
@@ -2186,8 +2163,7 @@ func TestScanWithMultiplePaths(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2236,8 +2212,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2322,8 +2297,7 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2420,310 +2394,6 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 	})
 }
 
-func TestKeepOriginalRootComponentHeaderTrue(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		controller := f.App.ScanController
-		artifactController := f.App.ArtifactController
-
-		app := echo.New()
-		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
-
-		// The original root component bom-ref from small-sbom.json
-		originalRootRef := "pkg:devguard/neu@main"
-
-		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user").Maybe()
-			shared.SetAsset(ctx, asset)
-			shared.SetProject(ctx, project)
-			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, authSession)
-			shared.SetAssetVersion(ctx, assetVersion)
-		}
-
-		// Helper function to check if the original root component exists in the components array
-		hasOriginalRootInComponents := func(bom *cyclonedx.BOM) bool {
-			if bom.Components == nil {
-				return false
-			}
-			for _, comp := range *bom.Components {
-				if comp.PackageURL == originalRootRef {
-					return true
-				}
-			}
-			return false
-		}
-
-		t.Run("should override to true when header is 1", func(t *testing.T) {
-			// Set asset to NOT keep original root component
-			asset.KeepOriginalSbomRootComponent = false
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile, err := os.Open("testdata/small-sbom.json")
-			assert.Nil(t, err)
-			defer sbomFile.Close()
-
-			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "header-1-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1") // Override to true
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			// Download the SBOM and verify the original root component is preserved
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("GET", "/sbom/json", nil)
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "header-1-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
-
-			err = artifactController.SBOMJSON(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			var bom cyclonedx.BOM
-			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
-			assert.Nil(t, err)
-
-			// With header=1, the original root component from the SBOM should be preserved
-			// in the components array (even though asset default is false)
-			assert.NotNil(t, bom.Metadata)
-			assert.NotNil(t, bom.Metadata.Component)
-			assert.True(t, hasOriginalRootInComponents(&bom), "original root component should be in components array when header=1")
-		})
-
-		t.Run("should use asset default true when no header provided", func(t *testing.T) {
-			// Set asset to keep original root component
-			asset.KeepOriginalSbomRootComponent = true
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile, err := os.Open("testdata/small-sbom.json")
-			assert.Nil(t, err)
-			defer sbomFile.Close()
-
-			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "asset-default-true-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			// No X-Keep-Original-SBOM-Root-Component header - should use asset default (true)
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			// Download the SBOM and verify original root component is preserved
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("GET", "/sbom/json", nil)
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "asset-default-true-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
-
-			err = artifactController.SBOMJSON(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			var bom cyclonedx.BOM
-			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
-			assert.Nil(t, err)
-
-			// With asset.KeepOriginalSbomRootComponent=true and no header,
-			// the original root component should be in the components array
-			assert.NotNil(t, bom.Metadata)
-			assert.NotNil(t, bom.Metadata.Component)
-			assert.True(t, hasOriginalRootInComponents(&bom), "original root component should be in components array when asset default is true")
-		})
-	})
-}
-
-func TestKeepOriginalRootComponentHeaderFalse(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		controller := f.App.ScanController
-		artifactController := f.App.ArtifactController
-
-		app := echo.New()
-		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
-
-		// The original root component bom-ref from small-sbom.json
-		originalRootRef := "pkg:devguard/neu@main"
-
-		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user").Maybe()
-			shared.SetAsset(ctx, asset)
-			shared.SetProject(ctx, project)
-			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, authSession)
-			shared.SetAssetVersion(ctx, assetVersion)
-		}
-
-		// Helper function to check if the original root component exists in the components array
-		hasOriginalRootInComponents := func(bom *cyclonedx.BOM) bool {
-			if bom.Components == nil {
-				return false
-			}
-			for _, comp := range *bom.Components {
-				if comp.PackageURL == originalRootRef {
-					return true
-				}
-			}
-			return false
-		}
-
-		t.Run("should use asset default when no header is provided", func(t *testing.T) {
-			// Set asset to NOT keep original root component
-			asset.KeepOriginalSbomRootComponent = false
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile, err := os.Open("testdata/small-sbom.json")
-			assert.Nil(t, err)
-			defer sbomFile.Close()
-
-			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "no-header-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			// No X-Keep-Original-SBOM-Root-Component header
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			// Download the SBOM and verify root component handling
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("GET", "/sbom/json", nil)
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "no-header-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
-
-			err = artifactController.SBOMJSON(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			var bom cyclonedx.BOM
-			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
-			assert.Nil(t, err)
-
-			// With KeepOriginalSbomRootComponent=false, the original root component
-			// should NOT be present in the components array
-			assert.NotNil(t, bom.Metadata)
-			assert.NotNil(t, bom.Metadata.Component)
-			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when keepOriginalSbomRootComponent=false")
-		})
-
-		t.Run("should override to false when header is 0", func(t *testing.T) {
-			// Set asset to keep original root component
-			asset.KeepOriginalSbomRootComponent = true
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile, err := os.Open("testdata/small-sbom.json")
-			assert.Nil(t, err)
-			defer sbomFile.Close()
-
-			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "header-0-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "0") // Override to false
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			// Download the SBOM and verify root component handling
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("GET", "/sbom/json", nil)
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "header-0-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
-
-			err = artifactController.SBOMJSON(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			var bom cyclonedx.BOM
-			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
-			assert.Nil(t, err)
-
-			// With header=0, the original root component should NOT be in the components array
-			// (even though asset default is true)
-			assert.NotNil(t, bom.Metadata)
-			assert.NotNil(t, bom.Metadata.Component)
-			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header=0")
-		})
-
-		t.Run("should ignore invalid header values", func(t *testing.T) {
-			// Set asset to NOT keep original root component
-			asset.KeepOriginalSbomRootComponent = false
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile, err := os.Open("testdata/small-sbom.json")
-			assert.Nil(t, err)
-			defer sbomFile.Close()
-
-			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "invalid-header-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "invalid") // Invalid value
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			// Download the SBOM and verify default behavior (asset setting) is used
-			recorder = httptest.NewRecorder()
-			req = httptest.NewRequest("GET", "/sbom/json", nil)
-			ctx = app.NewContext(req, recorder)
-			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "invalid-header-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
-
-			err = artifactController.SBOMJSON(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-
-			var bom cyclonedx.BOM
-			err = cyclonedx.NewBOMDecoder(strings.NewReader(recorder.Body.String()), cyclonedx.BOMFileFormatJSON).Decode(&bom)
-			assert.Nil(t, err)
-
-			// With invalid header, should fall back to asset default (false)
-			// So the original root component should NOT be in components array
-			assert.NotNil(t, bom.Metadata)
-			assert.NotNil(t, bom.Metadata.Component)
-			assert.False(t, hasOriginalRootInComponents(&bom), "original root component should NOT be in components array when header is invalid (falls back to asset default=false)")
-		})
-	})
-}
-
 // TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
 // When a component is missing from the components table (e.g. deleted externally,
 // or evicted by a concurrent transaction), a rescan must still succeed by
@@ -2736,8 +2406,7 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2785,92 +2454,6 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 	})
 }
 
-func TestKeepOriginalRootComponentRejectsSbomWithoutPurl(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		controller := f.App.ScanController
-
-		app := echo.New()
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
-
-		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
-			shared.SetAsset(ctx, asset)
-			shared.SetProject(ctx, project)
-			shared.SetOrg(ctx, org)
-			shared.SetSession(ctx, authSession)
-		}
-
-		t.Run("should return 400 when asset keepOriginalSbomRootComponent is true and SBOM has no root PURL", func(t *testing.T) {
-			asset.KeepOriginalSbomRootComponent = true
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile := emptySbom() // empty-sbom.json has metadata.component but no PackageURL
-			req := httptest.NewRequest("POST", "/scan", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "no-purl-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.NotNil(t, err)
-
-			he, ok := err.(*echo.HTTPError)
-			assert.True(t, ok, "error should be an echo.HTTPError")
-			assert.Equal(t, 400, he.Code)
-		})
-
-		t.Run("should return 400 when header overrides to true and SBOM has no root PURL", func(t *testing.T) {
-			asset.KeepOriginalSbomRootComponent = false
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile := emptySbom()
-			req := httptest.NewRequest("POST", "/scan", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "no-purl-header-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			req.Header.Set("X-Keep-Original-SBOM-Root-Component", "1")
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.NotNil(t, err)
-
-			he, ok := err.(*echo.HTTPError)
-			assert.True(t, ok, "error should be an echo.HTTPError")
-			assert.Equal(t, 400, he.Code)
-		})
-
-		t.Run("should succeed when keepOriginalSbomRootComponent is false and SBOM has no root PURL", func(t *testing.T) {
-			asset.KeepOriginalSbomRootComponent = false
-			err := f.DB.Save(&asset).Error
-			assert.Nil(t, err)
-
-			recorder := httptest.NewRecorder()
-			sbomFile := emptySbom()
-			req := httptest.NewRequest("POST", "/scan", sbomFile)
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Artifact-Name", "no-purl-ok-artifact")
-			req.Header.Set("X-Asset-Default-Branch", "main")
-			req.Header.Set("X-Asset-Ref", "main")
-			ctx := app.NewContext(req, recorder)
-			setupContext(ctx)
-
-			err = controller.ScanDependencyVulnFromProject(ctx)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, recorder.Code)
-		})
-	})
-}
-
 func TestNoWriteHeader(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.ScanController
@@ -2879,8 +2462,7 @@ func TestNoWriteHeader(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
@@ -2992,8 +2574,7 @@ func TestScanScopedToArtifact(t *testing.T) {
 		createCVE2025_46569(f.DB)
 		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)

@@ -48,3 +48,16 @@ type DetailedFirstPartyVulnDTO struct {
 	FirstPartyVulnDTO
 	Events []VulnEventDTO `json:"events"`
 }
+
+type FirstPartyVulnStatus struct {
+	StatusType              string                      `json:"status"`
+	Justification           string                      `json:"justification" validate:"max=4000"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+}
+
+type BatchFirstPartyVulnStatus struct {
+	VulnIDs                 []uuid.UUID                 `json:"vulnIds"`
+	StatusType              string                      `json:"status"`
+	Justification           string                      `json:"justification" validate:"max=4000"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+}

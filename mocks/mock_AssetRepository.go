@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -1204,6 +1205,86 @@ func (_c *AssetRepository_GetByProjectIDs_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// GetByProjectIDsWithProviderID provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) GetByProjectIDsWithProviderID(ctx context.Context, tx shared.DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error) {
+	ret := _mock.Called(ctx, tx, projectIDs, providerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByProjectIDsWithProviderID")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID, string) ([]models.Asset, error)); ok {
+		return returnFunc(ctx, tx, projectIDs, providerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID, string) []models.Asset); ok {
+		r0 = returnFunc(ctx, tx, projectIDs, providerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, projectIDs, providerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_GetByProjectIDsWithProviderID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByProjectIDsWithProviderID'
+type AssetRepository_GetByProjectIDsWithProviderID_Call struct {
+	*mock.Call
+}
+
+// GetByProjectIDsWithProviderID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - projectIDs []uuid.UUID
+//   - providerID string
+func (_e *AssetRepository_Expecter) GetByProjectIDsWithProviderID(ctx interface{}, tx interface{}, projectIDs interface{}, providerID interface{}) *AssetRepository_GetByProjectIDsWithProviderID_Call {
+	return &AssetRepository_GetByProjectIDsWithProviderID_Call{Call: _e.mock.On("GetByProjectIDsWithProviderID", ctx, tx, projectIDs, providerID)}
+}
+
+func (_c *AssetRepository_GetByProjectIDsWithProviderID_Call) Run(run func(ctx context.Context, tx shared.DB, projectIDs []uuid.UUID, providerID string)) *AssetRepository_GetByProjectIDsWithProviderID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_GetByProjectIDsWithProviderID_Call) Return(assets []models.Asset, err error) *AssetRepository_GetByProjectIDsWithProviderID_Call {
+	_c.Call.Return(assets, err)
+	return _c
+}
+
+func (_c *AssetRepository_GetByProjectIDsWithProviderID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error)) *AssetRepository_GetByProjectIDsWithProviderID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
 	ret := _mock.Called(ctx, tx)
@@ -1709,6 +1790,78 @@ func (_c *AssetRepository_ReadWithAssetVersions_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// ReadWithProject provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadWithProject")
+	}
+
+	var r0 models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) (models.Asset, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) models.Asset); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.Asset)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_ReadWithProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadWithProject'
+type AssetRepository_ReadWithProject_Call struct {
+	*mock.Call
+}
+
+// ReadWithProject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - id uuid.UUID
+func (_e *AssetRepository_Expecter) ReadWithProject(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_ReadWithProject_Call {
+	return &AssetRepository_ReadWithProject_Call{Call: _e.mock.On("ReadWithProject", ctx, tx, id)}
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) Run(run func(ctx context.Context, tx *gorm.DB, id uuid.UUID)) *AssetRepository_ReadWithProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) Return(asset models.Asset, err error) *AssetRepository_ReadWithProject_Call {
+	_c.Call.Return(asset, err)
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithProject_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)) *AssetRepository_ReadWithProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) Save(ctx context.Context, tx shared.DB, t *models.Asset) error {
 	ret := _mock.Called(ctx, tx, t)
@@ -2019,8 +2172,8 @@ func (_c *AssetRepository_Update_Call) RunAndReturn(run func(ctx context.Context
 }
 
 // Upsert provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
-	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, assets, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
@@ -2028,7 +2181,7 @@ func (_mock *AssetRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*mo
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.Asset, []clause.Column, []string) error); ok {
-		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+		r0 = returnFunc(ctx, tx, assets, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -2043,14 +2196,14 @@ type AssetRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - t *[]*models.Asset
+//   - assets *[]*models.Asset
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *AssetRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
-	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+func (_e *AssetRepository_Expecter) Upsert(ctx interface{}, tx interface{}, assets interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
+	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, assets, conflictingColumns, updateOnly)}
 }
 
-func (_c *AssetRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2088,7 +2241,95 @@ func (_c *AssetRepository_Upsert_Call) Return(err error) *AssetRepository_Upsert
 	return _c
 }
 
-func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error) *AssetRepository_Upsert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertSplit provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) UpsertSplit(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error) {
+	ret := _mock.Called(ctx, tx, externalProviderID, assets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertSplit")
+	}
+
+	var r0 []*models.Asset
+	var r1 []*models.Asset
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []*models.Asset) ([]*models.Asset, []*models.Asset, error)); ok {
+		return returnFunc(ctx, tx, externalProviderID, assets)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, []*models.Asset) []*models.Asset); ok {
+		r0 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, []*models.Asset) []*models.Asset); ok {
+		r1 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, string, []*models.Asset) error); ok {
+		r2 = returnFunc(ctx, tx, externalProviderID, assets)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// AssetRepository_UpsertSplit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertSplit'
+type AssetRepository_UpsertSplit_Call struct {
+	*mock.Call
+}
+
+// UpsertSplit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - externalProviderID string
+//   - assets []*models.Asset
+func (_e *AssetRepository_Expecter) UpsertSplit(ctx interface{}, tx interface{}, externalProviderID interface{}, assets interface{}) *AssetRepository_UpsertSplit_Call {
+	return &AssetRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", ctx, tx, externalProviderID, assets)}
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) Run(run func(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset)) *AssetRepository_UpsertSplit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []*models.Asset
+		if args[3] != nil {
+			arg3 = args[3].([]*models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) Return(assets1 []*models.Asset, assets2 []*models.Asset, err error) *AssetRepository_UpsertSplit_Call {
+	_c.Call.Return(assets1, assets2, err)
+	return _c
+}
+
+func (_c *AssetRepository_UpsertSplit_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)) *AssetRepository_UpsertSplit_Call {
 	_c.Call.Return(run)
 	return _c
 }

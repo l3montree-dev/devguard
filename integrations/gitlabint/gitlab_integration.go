@@ -221,54 +221,9 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 	}
 }
 
-func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	// get the oauth2 tokens for this user
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, shared.GetSession(ctx).GetUserID(), externalEntityProviderID)
-	if err != nil {
-		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
-	}
-
-	// check that the token is valid
-	if !g.checkIfTokenIsValid(ctx, *token, 0) {
-		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
-		return false, shared.ErrOauth2TokenNotValidRedirectionRequired
-	}
-
-	return true, nil
-}
-
-func (g *GitlabIntegration) checkIfTokenIsValid(ctx shared.Context, token models.GitLabOauth2Token, iteration int) bool {
-	reqCtx, span := gitlabTracer.Start(ctx.Request().Context(), "gitlab.checkIfTokenIsValid")
-	defer span.End()
-	span.SetAttributes(attribute.Int("iteration", iteration))
-
-	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(reqCtx, token, true)
-	if err != nil {
-		slog.Error("failed to create gitlab batch client", "err", err)
-		return false
-	}
-
-	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.GetVersion(reqCtx)
-	if err != nil {
-		if iteration >= 3 {
-			// we tried 3 times to check if the token is valid, but it is still not valid
-			slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
-			return false
-		}
-		slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
-		// wait 1 second before trying again
-		time.Sleep(1 * time.Second)
-		return g.checkIfTokenIsValid(ctx, token, iteration+1)
-	}
-
-	return true
-}
-
 func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Context) ([]models.GitLabOauth2Token, error) {
-	// check if the user has a gitlab login
+	// this only works for user-owned sessions, since it looks up the kratos identity
+	// by the session's owner id (which must be a user id here).
 	// we can even improve the response by checking if the user has a gitlab login
 	// todo this, fetch the kratos user and check if the user has a gitlab login
 	adminClient := shared.GetAuthAdminClient(ctx)
@@ -276,7 +231,13 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 	ctxWithTimeout, cancel := context.WithTimeout(ctx.Request().Context(), 10*time.Second)
 	defer cancel()
 
-	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, shared.GetSession(ctx).GetUserID())
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return nil, fmt.Errorf("only users can fetch oauth2 tokens from the auth server")
+	}
+
+	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, ownerID)
 	if err != nil {
 		slog.Error("failed to get identity", "err", err)
 		return nil, err
@@ -296,13 +257,13 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 			RefreshToken: token.RefreshToken,
 			BaseURL:      token.BaseURL,
 			GitLabUserID: token.GitLabUserID,
-			UserID:       shared.GetSession(ctx).GetUserID(),
+			UserID:       ownerID,
 			ProviderID:   providerID,
 			Expiry:       token.Expiry,
 		})
 	}
 
-	// save the oauth2 tokens if the user doesnt have any tokens yet
+	// save the oauth2 tokens if the owner doesn't have any tokens yet
 	if len(tokenSlice) > 0 {
 		err := g.gitlabOauth2TokenRepository.CreateIfNotExists(ctx.Request().Context(), nil, utils.SlicePtr(tokenSlice))
 		if err != nil {
@@ -314,8 +275,8 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx shared.Conte
 }
 
 func (g *GitlabIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
-	// get the oauth2 tokens for this user only from the auth server
-	// if the user revoked is sign in, we do not want to show him the org anymore.
+	// get the oauth2 tokens for this session owner only from the auth server
+	// if the owner revoked their sign in, we do not want to show them the org anymore.
 	tokens, err := g.getAndSaveOauth2TokenFromAuthServer(ctx)
 	if err != nil {
 		slog.Debug("failed to find gitlab oauth2 tokens")
@@ -395,7 +356,7 @@ func (g *GitlabIntegration) getExcessIIDs(ctx context.Context, asset models.Asse
 func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) ([]string, error) {
 	_, _, iids, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil, nil
 		}
 		return nil, err
@@ -410,7 +371,7 @@ func (g *GitlabIntegration) GetExcessTicketIDs(ctx context.Context, asset models
 func (g *GitlabIntegration) CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error {
 	client, projectID, excessIIDs, err := g.getExcessIIDs(ctx, asset, vulnsWithTickets)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -906,9 +867,15 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.New("providerID query parameter is required")
 		}
 
+		session := shared.GetSession(ctx)
+		ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+		if ownerType != shared.SessionActorUser {
+			return errors.New("only users can auto-setup gitlab external entity providers")
+		}
+
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(reqCtx, nil, ownerID, *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
@@ -919,8 +886,8 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 			return errors.Wrap(err, "could not convert project id to int")
 		}
 
-		// check if the user has a gitlab oauth2 token
-		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, shared.GetSession(ctx).GetUserID(), providerID)
+		// check if the session owner has a gitlab oauth2 token
+		token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(reqCtx, nil, ownerID, providerID)
 		if err != nil {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}
@@ -1358,8 +1325,6 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	return err
 }
 
-var ErrNotConnected = errors.New("not connected to gitlab")
-
 func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset models.Asset) (shared.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
@@ -1394,7 +1359,7 @@ func (g *GitlabIntegration) GetClientBasedOnAsset(ctx context.Context, asset mod
 		return client, projectID, nil
 	}
 
-	return nil, 0, ErrNotConnected
+	return nil, 0, fmt.Errorf("%w: gitlab", commonint.ErrNotConnected)
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
@@ -1408,7 +1373,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	)
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1477,7 +1442,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
-		return nil, err
+		return createdIssue, err
 	}
 
 	return createdIssue, nil
@@ -1507,7 +1472,10 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.CreateIssueComment(ctx, projectID, int(createdIssue.IID), &gitlab.CreateIssueNoteOptions{
 		Body: new(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
-	return createdIssue, err
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+	}
+	return createdIssue, nil
 }
 
 func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
@@ -1540,7 +1508,7 @@ func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseR
 func (g *GitlabIntegration) CreateLabels(ctx context.Context, asset models.Asset) error {
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
@@ -1585,7 +1553,7 @@ func (g *GitlabIntegration) UpdateLabels(ctx context.Context, asset models.Asset
 
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		if errors.Is(err, ErrNotConnected) {
+		if errors.Is(err, commonint.ErrNotConnected) {
 			return nil
 		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)

@@ -19,10 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -31,18 +34,30 @@ import (
 )
 
 type ProjectController struct {
-	projectRepository shared.ProjectRepository
-	assetRepository   shared.AssetRepository
-	projectService    shared.ProjectService
-	webhookRepository shared.WebhookIntegrationRepository
+	projectRepository      shared.ProjectRepository
+	assetRepository        shared.AssetRepository
+	assetVersionRepository shared.AssetVersionRepository
+	artifactRepository     shared.ArtifactRepository
+	assetVersionService    shared.AssetVersionService
+	assetService           shared.AssetService
+	releaseService         shared.ReleaseService
+	projectService         shared.ProjectService
+	webhookRepository      shared.WebhookIntegrationRepository
+	scanService            shared.ScanService
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
 	return &ProjectController{
-		projectRepository: repository,
-		assetRepository:   assetRepository,
-		projectService:    projectService,
-		webhookRepository: webhookRepository,
+		projectRepository:      repository,
+		assetRepository:        assetRepository,
+		assetVersionRepository: assetVersionRepository,
+		artifactRepository:     artifactRepository,
+		assetVersionService:    assetVersionService,
+		assetService:           assetService,
+		releaseService:         releaseService,
+		projectService:         projectService,
+		webhookRepository:      webhookRepository,
+		scanService:            scanService,
 	}
 }
 
@@ -61,7 +76,7 @@ func (projectController *ProjectController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -157,7 +172,7 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -171,13 +186,23 @@ func (projectController *ProjectController) InviteMembers(c shared.Context) erro
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(c.Request().Context(), newMemberID, shared.RoleMember, project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(c.Request().Context(), shared.NewSession(newMemberID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()); err != nil {
 			return err
 		}
 	}
 	return c.NoContent(200)
 }
 
+// @Summary Remove member from project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param userID path string true "User ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/members/{userID}/ [delete]
 func (projectController *ProjectController) RemoveMember(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
@@ -191,12 +216,23 @@ func (projectController *ProjectController) RemoveMember(c shared.Context) error
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
 
+// @Summary Change member role in project
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param userID path string true "User ID"
+// @Param body body dtos.ProjectChangeRoleRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/members/{userID}/ [put]
 func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	project := shared.GetProject(c)
@@ -211,7 +247,7 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "userID is required")
 	}
 
-	if userID == shared.GetSession(c).GetUserID() {
+	if userID == shared.GetSession(c).GetActorName() {
 		return echo.NewHTTPError(400, "cannot change your own role")
 	}
 
@@ -219,13 +255,8 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
-	}
-
-	// check if role is valid
-	if role := req.Role; role != "admin" && role != "member" {
-		return echo.NewHTTPError(400, "invalid role")
 	}
 
 	members, err := rbac.GetAllMembersOfOrganization()
@@ -237,11 +268,11 @@ func (projectController *ProjectController) ChangeRole(c shared.Context) error {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleAdmin, project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(reqCtx, userID, shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.RoleMember, project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(reqCtx, userID, shared.Role(req.Role), project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role), project.ID.String()); err != nil {
 		return err
 	}
 
@@ -311,7 +342,7 @@ func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
 	project := shared.GetProject(c)
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}
@@ -406,6 +437,15 @@ func (projectController *ProjectController) List(c shared.Context) error {
 	return c.JSON(200, projects)
 }
 
+// @Summary Search projects with sub-projects and assets
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param search query string false "Search query"
+// @Success 200 {array} dtos.ProjectDTO
+// @Router /organizations/{organization}/projects/search/ [get]
 func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
 
 	results, err := projectController.projectService.SearchProjectsWithSubProjectsAndAssetsPaged(c)
@@ -452,7 +492,7 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 	}
 	// get rbac
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return err
 	}
@@ -532,6 +572,12 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	configContent := string(body)
 
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
+	}
+
 	if project.ConfigFiles == nil {
 		project.ConfigFiles = make(map[string]any)
 	}
@@ -547,4 +593,207 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 		return echo.NewHTTPError(500, "could not update config file").WithInternal(err)
 	}
 	return ctx.String(200, configContent)
+}
+
+// @Summary Sync or delete an externally managed project/asset tree
+// @Description Called by external inventory providers (e.g. k8s-devguard-image-inventory) to upsert or delete a dynamically managed project hierarchy. On verb=update, creates or updates the project, sub-project, asset, asset version and artifact, then processes the supplied CycloneDX SBOM and triggers a vulnerability scan. On verb=delete, removes the artifact/asset-version/asset/project entries cascading upward as long as no other data references them.
+// @Tags External Entity
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param providerID path string true "External provider ID"
+// @Param body body dtos.ExternalSubprojectRequestDTO true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/external/{providerID} [post]
+func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx shared.Context) error {
+
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not read request body: %s", err.Error())).WithInternal(err)
+	}
+
+	var probe dtos.ExternalSubprojectRequestDTO
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(probe); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	providerID := shared.GetProviderID(ctx)
+	organization := shared.GetOrg(ctx)
+	parentProject := shared.GetProject(ctx)
+	ownerID := shared.GetSession(ctx).GetActorName()
+
+	if probe.Verb == "delete" {
+		proExternalEntityID := probe.ProjectExternalEntityID
+		if probe.SubProjectExternalEntityID != "" {
+			proExternalEntityID = probe.SubProjectExternalEntityID
+		}
+		if err := projectController.projectRepository.CleanupExternalProjectAssetVersion(ctx.Request().Context(), nil, organization.GetID(), providerID, proExternalEntityID, probe.AssetExternalEntityID, probe.AssetVersionName, probe.Artifact); err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("could not delete project: %s", err.Error())).WithInternal(err)
+		}
+
+		return ctx.JSON(200, map[string]string{"message": "project and asset deleted successfully"})
+	}
+
+	bom := new(cdx.BOM)
+
+	if probe.Sbom == nil {
+		return echo.NewHTTPError(400, "sbom is required")
+	}
+	if err := json.Unmarshal(probe.Sbom, bom); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not parse CycloneDX BOM: %s", err.Error())).WithInternal(err)
+	}
+
+	project, err := projectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), probe.ProjectName, probe.ProjectExternalEntityID, parentProject.ID, probe.ProjectDescription)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create project: %s", err.Error())).WithInternal(err)
+	}
+
+	pID := project.ID
+
+	if probe.SubProjectExternalEntityID != "" {
+		subProject, err := projectController.projectService.FindOrCreateProject(ctx, providerID, organization.GetID(), probe.SubProjectName, probe.SubProjectExternalEntityID, project.ID, probe.SubProjectDescription)
+		if err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("could not create sub-project: %s", err.Error())).WithInternal(err)
+		}
+		pID = subProject.ID
+	}
+
+	rbac := shared.GetRBAC(ctx)
+	asset, err := projectController.assetService.FindOrCreateAsset(ctx.Request().Context(), rbac, providerID, organization.GetID(), pID, probe.AssetName, probe.AssetExternalEntityID, ownerID, probe.AssetDescription)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
+	}
+
+	assetVersion, err := projectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, probe.AssetVersionName, asset.ID, false, nil)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset version: %s", err.Error())).WithInternal(err)
+	}
+
+	artifact := models.Artifact{
+		ArtifactName:     probe.Artifact,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+	if err := projectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
+		slog.Error("trivy operator: could not save artifact", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not save artifact"})
+	}
+
+	release, err := projectController.releaseService.FindOrCreate(ctx.Request().Context(), parentProject.ID, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("could not create release: %s", err.Error())).WithInternal(err)
+	}
+
+	//add or update release item
+	releaseItem := models.ReleaseItem{
+		ReleaseID:        release.ID,
+		ArtifactName:     &artifact.ArtifactName,
+		AssetID:          &asset.ID,
+		AssetVersionName: &assetVersion.Name,
+	}
+
+	err = projectController.releaseService.AddItem(ctx.Request().Context(), &releaseItem)
+	if err != nil {
+		slog.Error("could not add release item", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
+	}
+
+	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, probe.Artifact, "operator")
+	if err != nil {
+		slog.Error("trivy operator: failed to normalize BOM", "err", err)
+		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})
+	}
+
+	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), nil, organization, *project, *asset, assetVersion, probe.Artifact, normalized)
+	if err != nil {
+		slog.Error("trivy operator: could not update SBOM", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not update SBOM"})
+	}
+
+	tx := projectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+	defer tx.Rollback()
+
+	userAgent := ctx.Request().UserAgent()
+	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
+	if err != nil {
+		slog.Error("trivy operator: scan failed", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "scan failed"})
+	}
+
+	tx.Commit()
+	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
+}
+
+// @Summary List externally managed project/asset tree
+// @Description Returns the full tree of projects, sub-projects, assets, asset versions and artifacts that were dynamically created by an external inventory provider (e.g. k8s-devguard-image-inventory) for the given providerID.
+// @Tags External Entity
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param providerID path string true "External provider ID"
+// @Success 200 {array} dtos.ProjectExternalEntityTree
+// @Router /organizations/{organization}/projects/{projectSlug}/external/{providerID} [get]
+func (projectController *ProjectController) ListExternalSubprojects(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+	parentProject := shared.GetProject(ctx)
+	providerID := shared.GetProviderID(ctx)
+
+	// Query 1: direct child projects filtered by providerID
+	projects, err := projectController.projectRepository.GetDirectChildProjectsWithProviderID(reqCtx, nil, parentProject.ID, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list projects").WithInternal(err)
+	}
+	if len(projects) == 0 {
+		return ctx.JSON(200, []dtos.ProjectExternalEntityTree{})
+	}
+
+	projectIDs := make([]uuid.UUID, len(projects))
+	for i, p := range projects {
+		projectIDs[i] = p.ID
+	}
+
+	// Query 2: all sub-projects for all parent projects in one shot
+	subProjects, err := projectController.projectRepository.GetChildProjectsForParents(reqCtx, nil, projectIDs, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list sub-projects").WithInternal(err)
+	}
+
+	subProjectIDs := make([]uuid.UUID, len(subProjects))
+	for i, sp := range subProjects {
+		subProjectIDs[i] = sp.ID
+	}
+
+	// Query 3: all assets for projects + sub-projects, filtered by providerID
+	allProjectIDs := append(projectIDs, subProjectIDs...)
+	allAssets, err := projectController.assetRepository.GetByProjectIDsWithProviderID(reqCtx, nil, allProjectIDs, providerID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list assets").WithInternal(err)
+	}
+
+	allAssetIDs := make([]uuid.UUID, len(allAssets))
+	for i, a := range allAssets {
+		allAssetIDs[i] = a.ID
+	}
+
+	// Query 4: all asset versions for all assets
+	allAssetVersions, err := projectController.assetVersionRepository.GetAssetVersionsByAssetIDs(reqCtx, nil, allAssetIDs)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list asset versions").WithInternal(err)
+	}
+
+	// Query 5: all artifacts for all assets
+	allArtifacts, err := projectController.artifactRepository.GetByAssetIDs(reqCtx, nil, allAssetIDs)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list artifacts").WithInternal(err)
+	}
+
+	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
 }

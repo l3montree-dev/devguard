@@ -3,7 +3,6 @@ package gitlabint
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -12,7 +11,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
-	"golang.org/x/time/rate"
 )
 
 type SimpleGitlabClientFactory struct {
@@ -61,10 +59,7 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(ctx context.Context, to
 				utils.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
 			}
 
-			// create a rate limiter. 10 requests per second
-			rateLimiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 10)
-
-			client, err := gitlab.NewClient(token.AccessToken, gitlab.WithCustomLimiter(rateLimiter), gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
+			client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
 			if err != nil {
 				return gitlabOauth2Client{}, err
 			}

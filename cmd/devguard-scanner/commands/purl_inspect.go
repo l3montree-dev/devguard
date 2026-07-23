@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	netURL "net/url"
 	"os"
 	"strings"
 	"time"
@@ -38,15 +39,27 @@ func NewPURLInspectCommand() *cobra.Command {
 	inspectCmd := &cobra.Command{
 		Use:   "purl-inspect <purl>",
 		Short: "Inspect PURL for matching CVEs and vulnerabilities",
-		Long: `Inspects a Package URL (PURL) against the vulnerability database and displays
-detailed information about matching CVEs, affected components, and relationships.
+		Long: `Look up a specific package version in the DevGuard vulnerability database and display all
+known CVEs, their CVSS scores, EPSS exploit probability, and whether a fix is available.
 
-Shows both raw matches and deduplicated results (after alias resolution).
+A PURL (Package URL) is a standard way to identify a software package across ecosystems.
+The format is: pkg:<type>/<namespace>/<name>@<version>
 
-Examples:
-  devguard-cli vulndb inspect "pkg:npm/lodash@4.17.20"
-  devguard-cli vulndb inspect "pkg:deb/debian/libc6@2.31-1"
-  devguard-cli vulndb inspect "pkg:pypi/requests@2.25.0"`,
+For example:
+  pkg:npm/lodash@4.17.20          (npm package)
+  pkg:deb/debian/libc6@2.31-1    (Debian package)
+  pkg:pypi/requests@2.25.0       (Python package)
+
+The output also shows alias deduplication — when two CVE IDs refer to the same underlying
+vulnerability, DevGuard keeps only the canonical one and tells you which were removed.`,
+		Example: `  # Inspect an npm package
+  devguard-scanner purl-inspect "pkg:npm/lodash@4.17.20"
+
+  # Inspect a Python package and save the raw JSON
+  devguard-scanner purl-inspect "pkg:pypi/requests@2.25.0" --outputPath result.json
+
+  # Inspect a Debian system package
+  devguard-scanner purl-inspect "pkg:deb/debian/libc6@2.31-1"`,
 		Args: cobra.ExactArgs(1),
 		RunE: purlInspectCmd,
 	}
@@ -65,7 +78,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
-	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, purlString)
+	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, netURL.PathEscape(purlString))
 	fmt.Println("Inspecting PURL via API:", url)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -74,6 +87,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create request")
 	}
 
+	// nosemgrep:http-client-missing-egress-transport this is just the clinet, no need for the egress transport
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "could not perform request")
@@ -328,6 +342,9 @@ func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.Purl
 		acTable := table.NewWriter()
 		acTable.SetStyle(table.StyleLight)
 		acTable.AppendHeader(table.Row{"#", "PURL", "Source", "Version Range", "CVEs"})
+		acTable.SetColumnConfigs([]table.ColumnConfig{
+			{Number: 5, WidthMax: 60, WidthMaxEnforcer: text.WrapSoft},
+		})
 
 		for i, ac := range affectedComponents {
 			versionRange := "-"

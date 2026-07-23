@@ -91,7 +91,7 @@ func (g *orgRepository) ContentTree(ctx context.Context, tx *gorm.DB, orgID uuid
 
 func (g *orgRepository) GetOrgByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Org, error) {
 	var org models.Org
-	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id = ?", id).First(&org).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id = ?", id).First(&org).Error // nosemgrep: bola-raw-gorm-first-bypasses-tenant-scope -- Org is the top-level tenant root; org access is enforced upstream by route-level RBAC on the org slug
 	return org, err
 }
 

@@ -35,11 +35,13 @@ type CSAFController struct {
 	organizationRepository   shared.OrganizationRepository
 	cveRepository            shared.CveRepository
 	artifactRepository       shared.ArtifactRepository
+	advisoryService          shared.AdvisoryService
 }
 
-func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository) *CSAFController {
+func NewCSAFController(csafService shared.CSAFService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, vulnEventRepository shared.VulnEventRepository, assetVersionRepository shared.AssetVersionRepository, assetRepository shared.AssetRepository, organizationRepository shared.OrganizationRepository, cveRepository shared.CveRepository, artifactRepository shared.ArtifactRepository, advisoryService shared.AdvisoryService) *CSAFController {
 	return &CSAFController{
 		csafService:              csafService,
+		advisoryService:          advisoryService,
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		vulnEventRepository:      vulnEventRepository,
@@ -67,12 +69,22 @@ func (controller *CSAFController) GetIndexFile(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
 
 	// then write each revision entry version to the index string
 	var index strings.Builder
 	for _, vuln := range vulns {
 		year := vuln.CreatedAt.Year()
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
+		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
+	}
+	for _, advisories := range allAdvisories {
+		year := advisories.CreatedAt.Year()
+		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisories.ID)
+		fileName := fmt.Sprintf("%s.json", cveID)
 		fmt.Fprintf(&index, "%d/%s\n", year, fileName)
 	}
 	return ctx.String(200, index.String())
@@ -94,6 +106,10 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 	if err != nil {
 		return err
 	}
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
 
 	// then write each revision entry version to the index string
 	var csvContents strings.Builder
@@ -107,6 +123,14 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 		fileName := fmt.Sprintf("%s.json", strings.ToLower(vuln.CVEID))
 		// then write each entry to the csv string and return the result
 		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, entry.CreatedAt.Format(time.RFC3339))
+	}
+
+	// advisories don't have events yet, so use their creation as the initial change entry.
+	for _, advisory := range allAdvisories {
+		year := advisory.CreatedAt.Year()
+		cveID := fmt.Sprintf("dgsa-%d-%d", year, advisory.ID)
+		fileName := fmt.Sprintf("%s.json", cveID)
+		fmt.Fprintf(&csvContents, "\"%d/%s\",\"%s\"\n", year, fileName, advisory.CreatedAt.Format(time.RFC3339))
 	}
 
 	return ctx.String(200, csvContents.String())
@@ -256,8 +280,17 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		return err
 	}
 
+	allAdvisories, err := controller.csafService.GetAllAdvisories(ctx.Request().Context(), asset.ID)
+	if err != nil {
+		return err
+	}
+
 	vulnsOfThatYear := utils.Filter(allVulns, func(vuln models.DependencyVuln) bool {
 		return vuln.CreatedAt.Year() == yearNumber
+	})
+
+	advisoriesOfThatYear := utils.Filter(allAdvisories, func(advisory models.Advisory) bool {
+		return advisory.CreatedAt.Year() == yearNumber
 	})
 
 	// sort reports alphabetically by CVEID for better usability
@@ -281,6 +314,14 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 		data.Filenames = append(data.Filenames, entryData{
 			Href:  fmt.Sprintf("%s.json", strings.ToLower(entry.CVEID)),
 			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, entry.CVEID)),
+		})
+	}
+
+	for _, adv := range advisoriesOfThatYear {
+		cveID := fmt.Sprintf("DGSA-%d-%d", adv.CreatedAt.Year(), adv.ID)
+		data.Filenames = append(data.Filenames, entryData{
+			Href:  fmt.Sprintf("%s.json", strings.ToLower(cveID)),
+			Title: strings.ToLower(*services.GenerateDocumentTitle(asset.Name, cveID)),
 		})
 	}
 
@@ -507,14 +548,32 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 	}
 	org := shared.GetOrg(ctx)
 	asset := shared.GetAsset(ctx)
-
-	// remove everything <asset-slug>_ from the beginning of the document id
 	cveID = normalize.UppercaseCVEID(strings.Split(cveID, ".json")[0])
+	var report gocsaf.Advisory
+	var err error
 
-	// generate the report first
-	report, err := controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
-	if err != nil {
-		return err
+	if strings.Contains(strings.ToLower(cveID), "dgsa") {
+		parsedID := cveID[strings.LastIndex(cveID, "-")+1:]
+		id, parseErr := strconv.ParseInt(parsedID, 10, 64)
+		if parseErr != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid advisory ID %q in %q", parsedID, cveID))
+		}
+
+		advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, id)
+		if err != nil {
+			return err
+		}
+
+		report, err = controller.csafService.GenerateCSAFReportForAdvisory(ctx.Request().Context(), &advisory, org.Name, asset.ID, asset.Name)
+		if err != nil {
+			return err
+		}
+	} else {
+		// generate the report first
+		report, err = controller.csafService.GenerateCSAFReport(ctx.Request().Context(), org.Name, asset.ID, asset.Name, cveID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// make the report canonical

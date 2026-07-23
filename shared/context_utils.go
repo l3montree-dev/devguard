@@ -33,18 +33,44 @@ import (
 	"github.com/ory/client-go"
 )
 
-type AuthSession interface {
-	GetUserID() string
-	GetScopes() []string
-	IsInstanceAdmin() bool
-}
+// ctxKey* constants are the only string literals used to key values into
+// shared.Context (echo.Context.Get/Set). They must not be used directly
+// outside this file - every other package reads/writes context values through
+// the accessor functions below (GetX/SetX/MaybeGetX), so a rename or type
+// change here can never silently desync from a copy-pasted literal elsewhere.
+const (
+	ctxKeyThirdPartyIntegration = "thirdPartyIntegration"
+	ctxKeyAuthAdminClient       = "authAdminClient"
+	ctxKeyRBAC                  = "rbac"
+	ctxKeyOrg                   = "org"
+	ctxKeyOrgSlug               = "orgSlug"
+	ctxKeyProject               = "project"
+	ctxKeyProjectSlug           = "projectSlug"
+	ctxKeyAsset                 = "asset"
+	ctxKeyAssetSlug             = "assetSlug"
+	ctxKeyAssetVersion          = "assetVersion"
+	ctxKeyPublicRequest         = "publicRequest"
+	ctxKeySession               = "session"
+	ctxKeyActorScope            = "actorScope"
+	ctxKeyArtifact              = "artifact"
+	ctxKeyEventID               = "eventID"
+	ctxKeyProviderID            = "providerID"
+	ctxKeyDependencyVulnID      = "dependencyVulnID"
+	ctxKeyFirstPartyVulnID      = "firstPartyVulnID"
+	ctxKeyLicenseRiskID         = "licenseRiskID"
+)
 
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {
-	return ctx.Get("thirdPartyIntegration").(IntegrationAggregate)
+	return ctx.Get(ctxKeyThirdPartyIntegration).(IntegrationAggregate)
 }
 
 func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
-	ctx.Set("thirdPartyIntegration", i)
+	ctx.Set(ctxKeyThirdPartyIntegration, i)
+}
+
+func MaybeGetThirdPartyIntegration(ctx Context) (IntegrationAggregate, bool) {
+	i, ok := ctx.Get(ctxKeyThirdPartyIntegration).(IntegrationAggregate)
+	return i, ok
 }
 
 type AdminClient interface {
@@ -110,15 +136,20 @@ func (a AdminClientImplementation) GetIdentity(ctx context.Context, userID strin
 }
 
 func SetAuthAdminClient(ctx Context, i AdminClient) {
-	ctx.Set("authAdminClient", i)
+	ctx.Set(ctxKeyAuthAdminClient, i)
 }
 
 func GetAuthAdminClient(ctx Context) AdminClient {
-	return ctx.Get("authAdminClient").(AdminClient)
+	return ctx.Get(ctxKeyAuthAdminClient).(AdminClient)
+}
+
+func MaybeGetAuthAdminClient(ctx Context) (AdminClient, bool) {
+	i, ok := ctx.Get(ctxKeyAuthAdminClient).(AdminClient)
+	return i, ok
 }
 
 func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
-	dependencyVulnID := ctx.Param("dependencyVulnID")
+	dependencyVulnID := ctx.Param(ctxKeyDependencyVulnID)
 	if dependencyVulnID != "" {
 		id, err := uuid.Parse(dependencyVulnID)
 		if err != nil {
@@ -126,7 +157,7 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		}
 		return id, dtos.VulnTypeDependencyVuln, nil
 	}
-	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
+	dependencyVulnIDFromGet, ok := ctx.Get(ctxKeyDependencyVulnID).(string)
 	if ok && dependencyVulnIDFromGet != "" {
 		id, err := uuid.Parse(dependencyVulnIDFromGet)
 		if err != nil {
@@ -135,7 +166,7 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		return id, dtos.VulnTypeDependencyVuln, nil
 	}
 
-	firstPartyVulnID := ctx.Param("firstPartyVulnID")
+	firstPartyVulnID := ctx.Param(ctxKeyFirstPartyVulnID)
 	if firstPartyVulnID != "" {
 		id, err := uuid.Parse(firstPartyVulnID)
 		if err != nil {
@@ -143,7 +174,7 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		}
 		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
-	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
+	firstPartyVulnIDFromGet, ok := ctx.Get(ctxKeyFirstPartyVulnID).(string)
 	if ok && firstPartyVulnIDFromGet != "" {
 		id, err := uuid.Parse(firstPartyVulnIDFromGet)
 		if err != nil {
@@ -152,7 +183,7 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		return id, dtos.VulnTypeFirstPartyVuln, nil
 	}
 
-	licenseRiskID := ctx.Param("licenseRiskID")
+	licenseRiskID := ctx.Param(ctxKeyLicenseRiskID)
 	if licenseRiskID != "" {
 		id, err := uuid.Parse(licenseRiskID)
 		if err != nil {
@@ -160,7 +191,7 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 		}
 		return id, dtos.VulnTypeLicenseRisk, nil
 	}
-	licenseRiskIDFromGet, ok := ctx.Get("licenseRiskID").(string)
+	licenseRiskIDFromGet, ok := ctx.Get(ctxKeyLicenseRiskID).(string)
 	if ok && licenseRiskIDFromGet != "" {
 		id, err := uuid.Parse(licenseRiskIDFromGet)
 		if err != nil {
@@ -173,59 +204,69 @@ func GetVulnID(ctx Context) (uuid.UUID, dtos.VulnType, error) {
 }
 
 func SetRBAC(ctx Context, rbac AccessControl) {
-	ctx.Set("rbac", rbac)
+	ctx.Set(ctxKeyRBAC, rbac)
 }
 
+func MaybeGetRBAC(ctx Context) (AccessControl, bool) {
+	rbac, ok := ctx.Get(ctxKeyRBAC).(AccessControl)
+	return rbac, ok
+}
+
+// SetOrg/GetOrg use the ctxKeyOrg key, deliberately distinct from ctxKeyOrgSlug
+// - the latter is the raw org slug (URL path param or header-injected override,
+// see AssetNameMiddleware) that GetParam reads. Reusing one key for both the
+// string slug and the resolved model would make GetParam's fallback return the
+// wrong type depending on call order.
 func SetOrg(c Context, org models.Org) {
-	c.Set("organization", org)
+	c.Set(ctxKeyOrg, org)
 }
 
 func SetOrgSlug(ctx Context, orgSlug string) {
-	ctx.Set("orgSlug", orgSlug)
+	ctx.Set(ctxKeyOrgSlug, orgSlug)
 }
 
 func GetOrg(c Context) models.Org {
-	return c.Get("organization").(models.Org)
+	return c.Get(ctxKeyOrg).(models.Org)
 }
 
 func HasOrganization(c Context) bool {
-	_, ok := c.Get("organization").(models.Org)
+	_, ok := c.Get(ctxKeyOrg).(models.Org)
 	return ok
 }
 func HasProject(c Context) bool {
-	_, ok := c.Get("project").(models.Project)
+	_, ok := c.Get(ctxKeyProject).(models.Project)
 	return ok
 }
 func GetRBAC(ctx Context) AccessControl {
-	return ctx.Get("rbac").(AccessControl)
+	return ctx.Get(ctxKeyRBAC).(AccessControl)
 }
 
 func SetIsPublicRequest(ctx Context) {
-	ctx.Set("publicRequest", true)
+	ctx.Set(ctxKeyPublicRequest, true)
 }
 
 func IsPublicRequest(ctx Context) bool {
-	return ctx.Get("publicRequest") != nil
+	return ctx.Get(ctxKeyPublicRequest) != nil
 }
 
 func GetSession(ctx Context) AuthSession {
-	return ctx.Get("session").(AuthSession)
+	return ctx.Get(ctxKeySession).(AuthSession)
 }
 
 func SetSession(ctx Context, session AuthSession) {
-	ctx.Set("session", session)
+	ctx.Set(ctxKeySession, session)
+}
+
+func MaybeGetSession(ctx Context) (AuthSession, bool) {
+	session, ok := ctx.Get(ctxKeySession).(AuthSession)
+	return session, ok
 }
 
 func GetParam(ctx Context, param string) string {
-	v := ctx.Param(param)
-	if v == "" {
-		fallback := ctx.Get(param)
-		if fallback == nil {
-			return ""
-		}
-		return fallback.(string)
+	if v, ok := ctx.Get(param).(string); ok {
+		return v
 	}
-	return v
+	return ctx.Param(param)
 }
 
 func GetURLDecodedParam(ctx Context, param string) (string, error) {
@@ -238,7 +279,7 @@ func GetURLDecodedParam(ctx Context, param string) (string, error) {
 }
 
 func GetProjectSlug(ctx Context) (string, error) {
-	projectID := GetParam(ctx, "projectSlug")
+	projectID := GetParam(ctx, ctxKeyProjectSlug)
 	if projectID == "" {
 		return "", fmt.Errorf("could not get project id")
 	}
@@ -246,7 +287,7 @@ func GetProjectSlug(ctx Context) (string, error) {
 }
 
 func GetOrgSlug(ctx Context) (string, error) {
-	orgSlug := GetParam(ctx, "orgSlug")
+	orgSlug := GetParam(ctx, ctxKeyOrgSlug)
 	if orgSlug == "" {
 		return "", fmt.Errorf("could not get org slug")
 	}
@@ -254,19 +295,35 @@ func GetOrgSlug(ctx Context) (string, error) {
 }
 
 func SetProjectSlug(ctx Context, projectSlug string) {
-	ctx.Set("projectSlug", projectSlug)
+	ctx.Set(ctxKeyProjectSlug, projectSlug)
 }
 
 func SetAssetSlug(ctx Context, assetSlug string) {
-	ctx.Set("assetSlug", assetSlug)
+	ctx.Set(ctxKeyAssetSlug, assetSlug)
 }
 
 func SetArtifact(ctx Context, artifact models.Artifact) {
-	ctx.Set("artifact", artifact)
+	ctx.Set(ctxKeyArtifact, artifact)
 }
 
 func GetArtifact(ctx Context) models.Artifact {
-	return ctx.Get("artifact").(models.Artifact)
+	return ctx.Get(ctxKeyArtifact).(models.Artifact)
+}
+
+// MaybeGetArtifact tolerates the artifact being stored as either a value or a
+// pointer, since some webhook/event call sites set a *models.Artifact.
+func MaybeGetArtifact(ctx Context) (models.Artifact, error) {
+	val := ctx.Get(ctxKeyArtifact)
+	if val == nil {
+		return models.Artifact{}, fmt.Errorf("artifact not found in context")
+	}
+	if artifact, ok := val.(*models.Artifact); ok {
+		return *artifact, nil
+	}
+	if artifact, ok := val.(models.Artifact); ok {
+		return artifact, nil
+	}
+	return models.Artifact{}, fmt.Errorf("artifact context value has unexpected type %T", val)
 }
 
 func GetArtifactName(ctx Context) (string, error) {
@@ -284,7 +341,7 @@ func GetArtifactName(ctx Context) (string, error) {
 }
 
 func GetAssetSlug(ctx Context) (string, error) {
-	assetSlug := GetParam(ctx, "assetSlug")
+	assetSlug := GetParam(ctx, ctxKeyAssetSlug)
 	if assetSlug == "" {
 		return "", fmt.Errorf("could not get asset slug")
 	}
@@ -300,19 +357,31 @@ func GetAssetVersionSlug(ctx Context) (string, error) {
 }
 
 func GetAsset(ctx Context) models.Asset {
-	return ctx.Get("asset").(models.Asset)
+	return ctx.Get(ctxKeyAsset).(models.Asset)
 }
 
 func SetAsset(ctx Context, asset models.Asset) {
-	ctx.Set("asset", asset)
+	ctx.Set(ctxKeyAsset, asset)
+}
+
+// SetActorScope/GetActorScope carry the session's own scoped entity (as opposed
+// to the URL-resolved project/asset set via SetProject/SetAsset), pre-resolved
+// once by ResourceFetchMiddleware from the session's owner ID.
+func SetActorScope(ctx Context, scope ActorScope) {
+	ctx.Set(ctxKeyActorScope, scope)
+}
+
+func GetActorScope(ctx Context) ActorScope {
+	scope, _ := ctx.Get(ctxKeyActorScope).(ActorScope)
+	return scope
 }
 
 func GetAssetVersion(ctx Context) models.AssetVersion {
-	return ctx.Get("assetVersion").(models.AssetVersion)
+	return ctx.Get(ctxKeyAssetVersion).(models.AssetVersion)
 }
 
 func MaybeGetOrganization(ctx Context) (models.Org, error) {
-	org, ok := ctx.Get("organization").(models.Org)
+	org, ok := ctx.Get(ctxKeyOrg).(models.Org)
 	if !ok {
 		return models.Org{}, fmt.Errorf("could not get organization")
 	}
@@ -320,7 +389,7 @@ func MaybeGetOrganization(ctx Context) (models.Org, error) {
 }
 
 func MaybeGetProject(ctx Context) (models.Project, error) {
-	project, ok := ctx.Get("project").(models.Project)
+	project, ok := ctx.Get(ctxKeyProject).(models.Project)
 	if !ok {
 		return models.Project{}, fmt.Errorf("could not get project")
 	}
@@ -328,7 +397,7 @@ func MaybeGetProject(ctx Context) (models.Project, error) {
 }
 
 func MaybeGetAsset(ctx Context) (models.Asset, error) {
-	asset, ok := ctx.Get("asset").(models.Asset)
+	asset, ok := ctx.Get(ctxKeyAsset).(models.Asset)
 	if !ok {
 		return models.Asset{}, fmt.Errorf("could not get asset")
 	}
@@ -336,7 +405,7 @@ func MaybeGetAsset(ctx Context) (models.Asset, error) {
 }
 
 func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
-	assetVersion, ok := ctx.Get("assetVersion").(models.AssetVersion)
+	assetVersion, ok := ctx.Get(ctxKeyAssetVersion).(models.AssetVersion)
 	if !ok {
 		return models.AssetVersion{}, fmt.Errorf("could not get asset version")
 	}
@@ -344,11 +413,11 @@ func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
 }
 
 func SetAssetVersion(ctx Context, assetVersion models.AssetVersion) {
-	ctx.Set("assetVersion", assetVersion)
+	ctx.Set(ctxKeyAssetVersion, assetVersion)
 }
 
 func GetEventID(ctx Context) (string, error) {
-	eventID := ctx.Param("eventID")
+	eventID := ctx.Param(ctxKeyEventID)
 	if eventID == "" {
 		return "", fmt.Errorf("could not get event id")
 	}
@@ -356,15 +425,24 @@ func GetEventID(ctx Context) (string, error) {
 }
 
 func SetEventID(ctx Context, eventID string) {
-	ctx.Set("eventID", eventID)
+	ctx.Set(ctxKeyEventID, eventID)
 }
 
 func SetProject(ctx Context, project models.Project) {
-	ctx.Set("project", project)
+	ctx.Set(ctxKeyProject, project)
 }
 
 func GetProject(ctx Context) models.Project {
-	return ctx.Get("project").(models.Project)
+	return ctx.Get(ctxKeyProject).(models.Project)
+}
+
+func SetProviderID(ctx Context, providerID string) {
+	ctx.Set(ctxKeyProviderID, providerID)
+}
+
+func GetProviderID(ctx Context) string {
+	v, _ := ctx.Get(ctxKeyProviderID).(string)
+	return v
 }
 
 func GetRepositoryID(asset *models.Asset) (string, error) {
@@ -738,4 +816,47 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 
 func CreateLinkedCtx(ctx context.Context) context.Context {
 	return trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
+}
+
+// CopyContextValues copies every request-scoped value that might still be
+// needed once the original request has ended (e.g. inside a spawned goroutine)
+// from src into dst. It's the only place outside the accessor functions above
+// allowed to know the full set of context keys.
+func CopyContextValues(src, dst Context) {
+	if i, ok := MaybeGetThirdPartyIntegration(src); ok {
+		SetThirdPartyIntegration(dst, i)
+	}
+	if session, ok := MaybeGetSession(src); ok {
+		SetSession(dst, session)
+	}
+	if org, err := MaybeGetOrganization(src); err == nil {
+		SetOrg(dst, org)
+	}
+	if project, err := MaybeGetProject(src); err == nil {
+		SetProject(dst, project)
+	}
+	if asset, err := MaybeGetAsset(src); err == nil {
+		SetAsset(dst, asset)
+	}
+	if assetVersion, err := MaybeGetAssetVersion(src); err == nil {
+		SetAssetVersion(dst, assetVersion)
+	}
+	if rbac, ok := MaybeGetRBAC(src); ok {
+		SetRBAC(dst, rbac)
+	}
+	if authClient, ok := MaybeGetAuthAdminClient(src); ok {
+		SetAuthAdminClient(dst, authClient)
+	}
+	if orgSlug, err := GetOrgSlug(src); err == nil {
+		SetOrgSlug(dst, orgSlug)
+	}
+	if projectSlug, err := GetProjectSlug(src); err == nil {
+		SetProjectSlug(dst, projectSlug)
+	}
+	if assetSlug, err := GetAssetSlug(src); err == nil {
+		SetAssetSlug(dst, assetSlug)
+	}
+	if IsPublicRequest(src) {
+		SetIsPublicRequest(dst)
+	}
 }

@@ -171,3 +171,32 @@ func Purlify(artifactName string, assetVersionName string) string {
 func PURLToString(purl packageurl.PackageURL) (string, error) {
 	return url.PathUnescape(purl.ToString())
 }
+
+func AssetName(assetName string) (string, error) {
+	// split the asset name
+	assetParts := strings.Split(assetName, "/")
+	if len(assetParts) == 5 {
+		// the user probably provided the full url
+		// check if projects and assets is part of the asset parts - if so, remove them
+		// <organization>/projects/<project>/assets/<asset>
+		if assetParts[1] == "projects" && assetParts[3] == "assets" {
+			assetParts = []string{assetParts[0], assetParts[2], assetParts[4]}
+		}
+	}
+	if len(assetParts) != 3 {
+		return "", fmt.Errorf("invalid asset name: %s", assetName)
+	}
+
+	return fmt.Sprintf("%s/%s/%s", assetParts[0], assetParts[1], assetParts[2]), nil
+}
+
+// AssetSlugPath expands a normalized "<organization>/<project>/<asset>" name
+// into the web UI path "<organization>/projects/<project>/assets/<asset>".
+func AssetSlugPath(assetName string) (string, error) {
+	assetParts := strings.Split(assetName, "/")
+	if len(assetParts) != 3 {
+		return "", fmt.Errorf("invalid asset name: %s", assetName)
+	}
+
+	return fmt.Sprintf("%s/projects/%s/assets/%s", assetParts[0], assetParts[1], assetParts[2]), nil
+}

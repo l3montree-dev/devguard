@@ -10,6 +10,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Reproduces container-scanning silently dropping all components: the
+// artifact name is a real purl, and Trivy's root component purl matches it
+// on type/namespace/name, so isArtifactRootComponent wrongly treats it as
+// self-referential and skips linking it - orphaning its children.
+func TestContainerScanRootComponentSharesArtifactPurlStaysReachable(t *testing.T) {
+	artifactName := "pkg:oci/my-image"
+
+	bom := &cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cdx.SpecVersion1_6,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef:     "pkg:oci/my-image@sha256:deadbeef",
+				Name:       "my-image",
+				PackageURL: "pkg:oci/my-image@sha256:deadbeef",
+				Type:       cdx.ComponentTypeContainer,
+			},
+		},
+		Components: &[]cdx.Component{{
+			BOMRef:     "pkg:npm/vulnerable-lib@1.0.0",
+			Name:       "vulnerable-lib",
+			Version:    "1.0.0",
+			PackageURL: "pkg:npm/vulnerable-lib@1.0.0",
+			Type:       cdx.ComponentTypeLibrary,
+		}},
+		Dependencies: &[]cdx.Dependency{
+			{Ref: "pkg:oci/my-image@sha256:deadbeef", Dependencies: &[]string{"pkg:npm/vulnerable-lib@1.0.0"}},
+		},
+	}
+
+	g, err := SBOMGraphFromCycloneDX(bom, artifactName, "container-scanning")
+	assert.NoError(t, err)
+
+	err = g.ScopeToArtifact(artifactName)
+	assert.NoError(t, err)
+
+	var ids []string
+	for c := range g.Components() {
+		ids = append(ids, c.BOMRef)
+	}
+	assert.Contains(t, ids, "pkg:npm/vulnerable-lib@1.0.0", "the scanned image's real component must stay reachable from the artifact node")
+}
+
 func TestStackOverflowSBOMGraphToCycloneDX(t *testing.T) {
 	// read the testdata/stack-overflow-sbom.json to reproduce the issue
 	b, _ := os.ReadFile("testdata/stack-overflow-sbom.json")
@@ -18,7 +61,7 @@ func TestStackOverflowSBOMGraphToCycloneDX(t *testing.T) {
 	assert.NoError(t, err, "Should unmarshal the test SBOM without error")
 
 	// Create a graph from the BOM and then export it back to CycloneDX
-	_, err = SBOMGraphFromCycloneDX(&bom, "", "", false)
+	_, err = SBOMGraphFromCycloneDX(&bom, "", "")
 	assert.NoError(t, err, "Should create graph from CycloneDX BOM without error")
 }
 
@@ -59,7 +102,7 @@ func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	g, err := SBOMGraphFromCycloneDX(bom, "", "")
 	assert.NoError(t, err)
 
 	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
@@ -124,7 +167,7 @@ func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "", false)
+	g, err := SBOMGraphFromCycloneDX(bom, "", "")
 	assert.NoError(t, err)
 
 	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
@@ -457,7 +500,7 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	})
 }
 
-func TestSBOMGraphFromVulnerabilities(t *testing.T) {
+func TestCycloneDXVEXFromVulnerabilities(t *testing.T) {
 	t.Run("VEX should include affected components", func(t *testing.T) {
 		// When creating a VEX from vulnerabilities, the components referenced
 		// in the Affects field should be included in the output BOM.
@@ -491,8 +534,7 @@ func TestSBOMGraphFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		g := SBOMGraphFromVulnerabilities(vulns)
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -526,8 +568,7 @@ func TestSBOMGraphFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		g := SBOMGraphFromVulnerabilities(vulns)
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})

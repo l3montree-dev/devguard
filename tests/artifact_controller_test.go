@@ -117,12 +117,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			ctx := e.NewContext(req, rec)
 
 			// Set context values
-			ctx.Set("organization", org)
-			ctx.Set("project", project)
-			ctx.Set("asset", asset)
-			ctx.Set("assetVersion", assetVersion)
-			ctx.Set("artifact", artifact1)
-			ctx.Set("session", NewSessionMock("test-user"))
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetArtifact(ctx, artifact1)
+			shared.SetSession(ctx, shared.NewSession("test-user", shared.SessionActorUser, []string{}, false))
 
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
@@ -164,12 +164,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			ctx := e.NewContext(req, rec)
 
 			// Set context values
-			ctx.Set("organization", org)
-			ctx.Set("project", project)
-			ctx.Set("asset", asset)
-			ctx.Set("assetVersion", assetVersion)
-			ctx.Set("artifact", artifact1)
-			ctx.Set("session", NewSessionMock("test-user"))
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetArtifact(ctx, artifact1)
+			shared.SetSession(ctx, shared.NewSession("test-user", shared.SessionActorUser, []string{}, false))
 
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
@@ -200,12 +200,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			ctx := e.NewContext(req, rec)
 
 			// Set context values
-			ctx.Set("organization", org)
-			ctx.Set("project", project)
-			ctx.Set("asset", asset)
-			ctx.Set("assetVersion", assetVersion)
-			ctx.Set("artifact", artifact3)
-			ctx.Set("session", NewSessionMock("test-user"))
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetArtifact(ctx, artifact3)
+			shared.SetSession(ctx, shared.NewSession("test-user", shared.SessionActorUser, []string{}, false))
 
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
@@ -260,12 +260,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			ctx := e.NewContext(req, rec)
 
 			// Set context values
-			ctx.Set("organization", org)
-			ctx.Set("project", project)
-			ctx.Set("asset", asset)
-			ctx.Set("assetVersion", assetVersion)
-			ctx.Set("artifact", artifactSingle)
-			ctx.Set("session", NewSessionMock("test-user"))
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetArtifact(ctx, artifactSingle)
+			shared.SetSession(ctx, shared.NewSession("test-user", shared.SessionActorUser, []string{}, false))
 
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
@@ -334,12 +334,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			ctx := e.NewContext(req, rec)
 
 			// Set context values
-			ctx.Set("organization", org)
-			ctx.Set("project", project)
-			ctx.Set("asset", asset)
-			ctx.Set("assetVersion", assetVersion)
-			ctx.Set("artifact", artifactMulti1)
-			ctx.Set("session", NewSessionMock("test-user"))
+			shared.SetOrg(ctx, org)
+			shared.SetProject(ctx, project)
+			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetArtifact(ctx, artifactMulti1)
+			shared.SetSession(ctx, shared.NewSession("test-user", shared.SessionActorUser, []string{}, false))
 
 			// Execute delete
 			err := f.App.ArtifactController.DeleteArtifact(ctx)
@@ -390,7 +390,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 		})
 		creationTime := time.Now()
@@ -401,7 +401,7 @@ func TestBuildVEX(t *testing.T) {
 			req := httptest.NewRequest("GET", "/vex-json/", nil)
 			ctx := app.NewContext(req, recorder)
 			setupContext(&ctx)
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -467,7 +467,7 @@ func TestBuildVEX(t *testing.T) {
 				panic(err)
 			}
 
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing
@@ -516,7 +516,7 @@ func TestBuildVEX(t *testing.T) {
 			if err := f.DB.Save(&vuln1).Error; err != nil {
 				panic(err)
 			}
-			err := f.App.ArtifactController.VEXJSON(ctx)
+			err := f.App.ArtifactController.CycloneDXVexJSON(ctx)
 			assert.Nil(t, err)
 
 			//prep results for testing

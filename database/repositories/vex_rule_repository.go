@@ -127,7 +127,8 @@ func (r *vexRuleRepository) FindByAssetVersionPaged(ctx context.Context, tx *gor
 
 func (r *vexRuleRepository) FindByID(ctx context.Context, tx *gorm.DB, id string) (models.VEXRule, error) {
 	var rule models.VEXRule
-	err := r.GetDB(ctx, tx).Where("id = ?", id).First(&rule).Error
+	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rule)
+	err := db.First(&rule).Error
 	return rule, err
 }
 
@@ -173,9 +174,22 @@ func (r *vexRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules 
 	for i := range rules {
 		rules[i].EnsureID()
 	}
+
+	// Deduplicate by ID - postgres cannot affect the same row twice within a single
+	// INSERT ... ON CONFLICT DO UPDATE statement (SQLSTATE 21000).
+	deduped := make([]models.VEXRule, 0, len(rules))
+	seen := make(map[string]struct{}, len(rules))
+	for _, rule := range rules {
+		if _, ok := seen[rule.ID]; ok {
+			continue
+		}
+		seen[rule.ID] = struct{}{}
+		deduped = append(deduped, rule)
+	}
+
 	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
-	}).Create(&rules).Error
+	}).Create(&deduped).Error
 }
 
 func (r *vexRuleRepository) DeleteBatch(ctx context.Context, tx *gorm.DB, rules []models.VEXRule) error {

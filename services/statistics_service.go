@@ -194,7 +194,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 		fixableLowUniqueRisk, fixableMediumUniqueRisk, fixableHighUniqueRisk, fixableCriticalUniqueRisk := calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
 
 		lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss := calculateUniqueCVEPurlCountsByCvss(openVulns)
-		fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss := calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
+		fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss := calculateUniqueFixableCVEPurlCountsByCvss(openVulns)
 
 		result := models.ArtifactRiskHistory{
 			ArtifactName:     artifact.ArtifactName,
@@ -400,6 +400,37 @@ func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.Dependen
 		case risk >= 7.0 && risk < 9.0:
 			high++
 		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	uniqueCombinations := make(map[string]float64)
+
+	for _, vuln := range dependencyVulns {
+		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
+			continue
+		}
+		cvss := float64(vuln.GetCVE().CVSS)
+		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
+
+		existingCvss, exists := uniqueCombinations[combinationKey]
+		if !exists || cvss > existingCvss {
+			uniqueCombinations[combinationKey] = cvss
+		}
+	}
+
+	for _, cvss := range uniqueCombinations {
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
 			critical++
 		}
 	}

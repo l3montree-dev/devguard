@@ -3,12 +3,15 @@ name = "devguard-scanner-tools"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "semgrep==1.165.0",
-    "checkov==3.2.533",
+    "semgrep==1.169.0",
+    "checkov==3.3.8",
 ]
 
 [tool.uv]
+exclude-newer = "7 days"
+# exclude-newer-packages = ["semgrep"] # was published 2026-07-15 
 # Pin transitive deps to versions that fix known CVEs.
 # These constraints are enforced during `uv lock` and captured in uv.lock —
 # no manual Nix overrides needed.
-constraint-dependencies = []
+constraint-dependencies = [
+]

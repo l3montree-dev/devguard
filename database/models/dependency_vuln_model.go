@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
@@ -51,6 +52,19 @@ func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
 	}
 	slices.Sort(names)
 	return strings.Join(names, " ")
+}
+
+// ArtifactPurls returns the purl devguard's own exports (CSAF, CycloneDX
+// VEX) use to identify each of this vuln's artifacts as the root of its
+// path - see normalize.Purlify. Used to strip that leading path segment
+// again during VEX rule matching, since VulnerabilityPath itself never
+// includes it.
+func (vuln *DependencyVuln) ArtifactPurls() []string {
+	identities := make([]string, 0, len(vuln.Artifacts))
+	for _, artifact := range vuln.Artifacts {
+		identities = append(identities, normalize.Purlify(artifact.ArtifactName, vuln.AssetVersionName))
+	}
+	return identities
 }
 
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {

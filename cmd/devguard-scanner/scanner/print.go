@@ -26,6 +26,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -93,11 +94,18 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 	fmt.Println(tw.Render())
 
 	if assetName != "" {
-		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, slug.Make(assetVersionName)))
-		fmt.Printf("See all code risks at:\n%s\n", link)
+		assetSlugPath, err := normalize.AssetSlugPath(assetName)
+		if err != nil {
+			slog.Debug("could not build asset slug path for link", "err", err)
+		} else {
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetSlugPath, slug.Make(assetVersionName)))
+			fmt.Printf("See all code risks at:\n%s\n", link)
+		}
 	}
 
 	if openCount > 0 {
+		fmt.Printf("Found %d unhandled vulnerabilities\n", openCount)
+
 		return fmt.Errorf("found %d unhandled vulnerabilities", openCount)
 	}
 	return nil
@@ -124,6 +132,18 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "CVSS", "Installed", "Fixed", "Status"})
 	tw.SetColumnConfigs([]table.ColumnConfig{{Number: 1, AutoMerge: true}})
 
+	vulnCVSS := func(v cdx.Vulnerability) float64 {
+		cvss := 0.0
+		if v.Ratings != nil {
+			for _, r := range *v.Ratings {
+				if r.Score != nil && (r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31) {
+					cvss = *r.Score
+				}
+			}
+		}
+		return cvss
+	}
+
 	sortedVulns := *vulns
 	sort.Slice(sortedVulns, func(i, j int) bool {
 		refI, refJ := "", ""
@@ -133,14 +153,17 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		if sortedVulns[j].Affects != nil && len(*sortedVulns[j].Affects) > 0 {
 			refJ = (*sortedVulns[j].Affects)[0].Ref
 		}
-		return refI < refJ
+		if refI != refJ {
+			return refI < refJ
+		}
+		return vulnCVSS(sortedVulns[i]) > vulnCVSS(sortedVulns[j])
 	})
 
 	thresholdViolations := 0
 	prevLibrary := ""
 
 	for _, v := range sortedVulns {
-		state := "open"
+		state := "in_triage"
 		if v.Analysis != nil && v.Analysis.State != "" {
 			state = string(v.Analysis.State)
 		}
@@ -161,14 +184,14 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		exceedsThreshold := false
-		if failOnRisk != "" && state == "open" &&
+		if failOnRisk != "" && state == "in_triage" &&
 			((failOnRisk == "low" && risk > 0.1) ||
 				(failOnRisk == "medium" && risk >= 4) ||
 				(failOnRisk == "high" && risk >= 7) ||
 				(failOnRisk == "critical" && risk >= 9)) {
 			exceedsThreshold = true
 		}
-		if failOnCVSS != "" && state == "open" &&
+		if failOnCVSS != "" && state == "in_triage" &&
 			((failOnCVSS == "low" && cvss > 0.1) ||
 				(failOnCVSS == "medium" && cvss >= 4) ||
 				(failOnCVSS == "high" && cvss >= 7) ||
@@ -221,7 +244,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		tw.AppendRow(table.Row{
-			colorRow(libraryName),
+			libraryName,
 			colorRow(v.ID),
 			colorRow(fmt.Sprintf("%.2f", risk)),
 			colorRow(fmt.Sprintf("%.1f", cvss)),
@@ -234,8 +257,13 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 	fmt.Println(tw.Render())
 
 	if assetName != "" && ref != "" {
-		link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, slug.Make(ref)))
-		fmt.Printf("See all dependency risks at:\n%s\n", link)
+		assetSlugPath, err := normalize.AssetSlugPath(assetName)
+		if err != nil {
+			slog.Debug("could not build asset slug path for link", "err", err)
+		} else {
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetSlugPath, slug.Make(ref)))
+			fmt.Printf("See all dependency risks at:\n%s\n", link)
+		}
 	}
 
 	if thresholdViolations > 0 {

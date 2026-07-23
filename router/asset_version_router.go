@@ -42,12 +42,11 @@ func NewAssetVersionRouter(
 	assetRepository shared.AssetRepository,
 	vulnEventRepository shared.VulnEventRepository,
 ) AssetVersionRouter {
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	assetVersionRouter := assetGroup.Group.Group("/refs/:assetVersionSlug", middlewares.AssetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
-	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	assetVersionRouter.GET("/vex.json/", assetVersionController.CycloneDXVexJSON)
 	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
 	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
@@ -67,12 +66,12 @@ func NewAssetVersionRouter(
 	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
 	assetVersionRouter.GET("/artifact-root-nodes/", assetVersionController.ReadRootNodes)
 
-	assetVersionRouter.POST("/artifacts/", artifactController.Create, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/artifacts/", artifactController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	assetVersionRouter.DELETE("/", assetVersionController.Delete, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	assetVersionRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, middlewares.EventMiddleware(vulnEventRepository), middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.DELETE("/", assetVersionController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	assetVersionRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, middlewares.EventMiddleware(vulnEventRepository), middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	return AssetVersionRouter{Group: assetVersionRouter}
 }

@@ -133,17 +133,44 @@ func NewAttestationCommand() *cobra.Command {
 		Use:               "attestations <oci@SHA>",
 		Short:             "Discover attestations for an image and optionally evaluate a rego policy",
 		DisableAutoGenTag: true,
-		Long: `Retrieve and validate security attestations for container images used in Helm charts or other deployment workflows.
+		Long: `Retrieve all attestations (metadata documents) attached to a container image and optionally evaluate them against a Rego policy.
 
-It automates what is normally a manual, time-consuming process of verifying that each image is properly hardened and accompanied by essential metadata such as SBOM, VEX, and SARIF.`,
-		Example: `  # Discover attestations for an image
+Attestations are documents attached to the image during its build pipeline — for example an SBOM,
+a VEX document (vulnerability exceptions), or SARIF security scan results. Each attestation has a
+predicate type (a URI) that identifies its kind. The policy receives all discovered attestations
+and can match against specific predicate types to check that required metadata is present.
+
+Example Rego policy that requires an SBOM and a VEX document:
+
+  package devguard
+
+  import future.keywords.if
+  import future.keywords.in
+
+  deny[msg] if {
+    not has_attestation("https://cyclonedx.org/bom")
+    msg := "Image is missing a CycloneDX SBOM attestation"
+  }
+
+  deny[msg] if {
+    not has_attestation("https://cyclonedx.org/vex")
+    msg := "Image is missing a VEX document"
+  }
+
+  has_attestation(predicate_type) if {
+    some att in input.attestations
+    att.predicateType == predicate_type
+  }
+
+The command exits with code 1 if any deny rule fires — making it suitable as a deployment gate.`,
+		Example: `  # List all attestations attached to an image
   devguard-scanner attestations ghcr.io/org/image:tag
 
-  # Evaluate against a rego policy
-  devguard-scanner attestations ghcr.io/org/image:tag --policy path/to/file.rego
+  # Evaluate against a Rego policy (exits 1 if policy fails)
+  devguard-scanner attestations ghcr.io/org/image:tag --policy policy.rego
 
-  # Save policy evaluation results as SARIF
-  devguard-scanner attestations ghcr.io/org/image:tag --policy path/to/file.rego --outputPath report.sarif.json`,
+  # Save evaluation results as SARIF for upload to DevGuard
+  devguard-scanner attestations ghcr.io/org/image:tag --policy policy.rego --format sarif --outputPath report.sarif.json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestationsCmd(cmd, args)

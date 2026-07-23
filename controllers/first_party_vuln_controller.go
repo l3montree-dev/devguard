@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -18,12 +19,6 @@ type FirstPartyVulnController struct {
 	firstPartyVulnRepository shared.FirstPartyVulnRepository
 	firstPartyVulnService    shared.FirstPartyVulnService
 	projectService           shared.ProjectService
-}
-
-type FirstPartyVulnStatus struct {
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnRepository, firstPartyVulnService shared.FirstPartyVulnService, projectService shared.ProjectService) *FirstPartyVulnController {
@@ -178,12 +173,16 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status FirstPartyVulnStatus
+	var status dtos.FirstPartyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	statusType := status.StatusType
@@ -197,7 +196,7 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	mechanicalJustification := status.MechanicalJustification
 
 	userAgent := ctx.Request().UserAgent()
-	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification, &userAgent)
+	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(ctx.Request().Context(), nil, ownerID, &firstPartyVuln, statusType, justification, mechanicalJustification, &userAgent)
 	if err != nil {
 		return err
 	}
@@ -382,4 +381,45 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 			}
 		}),
 	}
+}
+
+func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	ownerID := shared.GetSession(ctx).GetActorName()
+
+	var status dtos.BatchFirstPartyVulnStatus
+	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if err := dtos.V.Struct(status); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+	if len(status.VulnIDs) == 0 {
+		return echo.NewHTTPError(400, "vulnIds must not be empty")
+	}
+	if err := models.CheckStatusType(status.StatusType); err != nil {
+		return echo.NewHTTPError(400, "invalid status type")
+	}
+
+	userAgent := ctx.Request().UserAgent()
+	updated := make([]dtos.DetailedFirstPartyVulnDTO, 0, len(status.VulnIDs))
+	for _, vulnID := range status.VulnIDs {
+		fpv, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
+		if err != nil {
+			slog.Error("could not find firstPartyVuln", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(
+			ctx.Request().Context(), nil, ownerID, &fpv,
+			status.StatusType, status.Justification, status.MechanicalJustification, &userAgent)
+		if err != nil {
+			slog.Error("could not update firstPartyVuln state", "err", err, "vulnID", vulnID)
+			continue
+		}
+
+		_ = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{Ctx: ctx, Event: ev}, &userAgent)
+		updated = append(updated, convertFirstPartyVulnToDetailedDTO(fpv))
+	}
+	return ctx.JSON(200, updated)
 }

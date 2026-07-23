@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -48,17 +47,6 @@ func LoadConfig() error {
 	return godotenv.Load()
 }
 
-var V = func() *validator.Validate {
-	v := validator.New()
-	// future_max_1y: value must be a Unix timestamp between now and now+1 year
-	v.RegisterValidation("future_max_1y", func(fl validator.FieldLevel) bool { //nolint:errcheck
-		ts := fl.Field().Int()
-		now := time.Now().Unix()
-		return ts > now && ts <= now+31536000
-	})
-	return v
-}()
-
 func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 	return SanitizeEnv(Environmental{
 		ConfidentialityRequirements: string(m.ConfidentialityRequirement),
@@ -68,7 +56,7 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 }
 
 func BootstrapOrg(ctx context.Context, rbac AccessControl, userID string, userRole Role) error {
-	if err := rbac.GrantRole(ctx, userID, userRole); err != nil {
+	if err := rbac.GrantRole(ctx, NewSession(userID, SessionActorUser, nil, false), userRole); err != nil {
 		return err
 	}
 

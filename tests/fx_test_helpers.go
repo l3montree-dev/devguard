@@ -24,9 +24,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/require"
 )
+
+// NewUserSession returns a fully-stubbed user-owned shared.AuthSession mock.
+// Every AuthSession method is stubbed with .Maybe() so callers don't need to
+// know in advance which subset the code path under test will invoke — this
+// is the single place to update when the AuthSession interface changes,
+// instead of every test hand-rolling its own mocks.NewAuthSession(t) + .On(...)
+// chain. Call .On(...) on the returned mock afterwards to override a default.
+func NewUserSession(t testing.TB, userID string) *mocks.AuthSession {
+	t.Helper()
+	session := mocks.NewAuthSession(t)
+	session.On("GetActorID").Maybe().Return(userID)
+	session.On("GetActorName").Maybe().Return(userID)
+	session.On("GetSessionActorType").Maybe().Return(shared.SessionActorUser)
+	session.On("GetScopes").Maybe().Return([]string{"manage", "scan"})
+	session.On("IsInstanceAdmin").Maybe().Return(false)
+	return session
+}
 
 // TestFixture provides a complete test environment with database and FX app
 type TestFixture struct {
@@ -102,6 +120,7 @@ func (f *TestFixture) CreateProject(orgID uuid.UUID, name string) models.Project
 
 	project := models.Project{
 		Name:           name,
+		Slug:           name,
 		OrganizationID: orgID,
 	}
 	err := f.DB.Create(&project).Error
@@ -115,6 +134,7 @@ func (f *TestFixture) CreateAsset(projectID uuid.UUID, name string) models.Asset
 
 	asset := models.Asset{
 		Name:      name,
+		Slug:      name,
 		ProjectID: projectID,
 	}
 	err := f.DB.Create(&asset).Error

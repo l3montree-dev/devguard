@@ -1,18 +1,32 @@
 { pkgs, self, pyproject-nix, uv2nix, pyproject-build-systems }: rec {
-  devguardBinaries = import ./devguard.nix { inherit self; buildGoModule = pkgs.buildGoModule; lib = pkgs.lib; system = pkgs.stdenv.hostPlatform.system; };
-
-  args = { 
-    lib = pkgs.lib; 
-    buildGoModule = pkgs.buildGoModule; 
-    fetchFromGitHub = pkgs.fetchFromGitHub; 
-    installShellFiles = pkgs.installShellFiles; 
+  devguardBinaries = import ./devguard.nix {
+    inherit self;
+    buildGoModule = pkgs.buildGoModule;
+    lib = pkgs.lib;
+    system = pkgs.stdenv.hostPlatform.system;
+    runCommand = pkgs.runCommand;
+    jq = pkgs.jq;
+    trivy = trivyFromSource.package;
   };
 
-  craneFromSource = import ./crane.nix args;
-  gitleaksFromSource = import ./gitleaks.nix args;
+  args = {
+    lib = pkgs.lib;
+    buildGoModule = pkgs.buildGoModule;
+    fetchFromGitHub = pkgs.fetchFromGitHub;
+    installShellFiles = pkgs.installShellFiles;
+    runCommand = pkgs.runCommand;
+    jq = pkgs.jq;
+  };
+
+  # trivy is self-contained (scans its own source with its own freshly-built
+  # binary); gitleaks and crane need it passed in to scan their own sources.
   trivyFromSource = import ./trivy.nix args;
-  
+  craneFromSource = import ./crane.nix (args // { trivy = trivyFromSource.package; });
+  gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
+
   common = import ./common.nix { inherit self; };
+  # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
+  dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
     postgresql_16 = pkgs.postgresql_16;
     fetchurl = pkgs.fetchurl;
@@ -23,9 +37,42 @@
   lib = pkgs.lib;
   python313 = pkgs.python313;
   callPackage = pkgs.callPackage;
+  runCommand = pkgs.runCommand;
+  jq = pkgs.jq;
+  trivy = trivyFromSource.package;
   # passed explicitly from flake.nix
   inherit uv2nix pyproject-nix pyproject-build-systems;
   };
+
+  # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
+  # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a
+  # prebuilt, closed-source-to-us OCaml binary (semgrep-core) bundled inside
+  # its Python wheel - there's no
+  # go.sum-equivalent lockfile available to derive a real dependency tree
+  # from, so this is a minimal hand-written descriptor (just identity +
+  # version) rather than a full transitive graph like the Go tools get.
+  # checkov, by contrast, doesn't need an entry here: it's pure Python with
+  # no embedded compiled binary, so trivy already resolves it (and its
+  # dependencies) as ordinary pypi library components.
+  semgrepSBOM = pkgs.runCommand "semgrep-sbom" { } ''
+    mkdir -p $out/sboms
+    binPath="${pythonTools.pythonSet.semgrep}/lib/python3.13/site-packages/semgrep/bin/semgrep-core"
+    name="''${binPath#/}"
+    cat > $out/sboms/semgrep-core.json <<EOF
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "$name",
+      "name": "$name",
+      "version": "${pythonTools.pythonSet.semgrep.version}"
+    }
+  }
+}
+EOF
+  '';
 
   appConfig = pkgs.runCommand "devguard-app-config" { } ''
     install -D -m 0644 ${
@@ -39,12 +86,14 @@
 
   devguardOCI = { debug }: pkgs.dockerTools.buildLayeredImage {
     name = "devguard";
-    tag = common.version;
+    tag = dockerTag;
 
     contents = [
       pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
       devguardBinaries.devguard
       devguardBinaries.devguardCLI
+      devguardBinaries.devguardSBOM
+      devguardBinaries.devguardCLISBOM
       appConfig
     ] ++ (if debug then [ pkgs.busybox ] else []);
 
@@ -58,14 +107,20 @@
 
   devguardScannerOCI = pkgs.dockerTools.buildLayeredImage {
     name = "devguard-scanner";
-    tag = common.version;
+    tag = dockerTag;
     contents =  [
       pkgs.cacert  # TLS root certificates (needed for outbound HTTPS)
       devguardBinaries.devguardScanner
-      trivyFromSource
+      trivyFromSource.package
       pythonTools.venv
-      craneFromSource
-      gitleaksFromSource
+      craneFromSource.package
+      gitleaksFromSource.package
+      gitleaksFromSource.sbom
+      trivyFromSource.sbom
+      craneFromSource.sbom
+      devguardBinaries.devguardScannerSBOM
+      semgrepSBOM
+      pythonTools.sbom
       pkgs.jq
       pkgs.gettext
       pkgs.busybox

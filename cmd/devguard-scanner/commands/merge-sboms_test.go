@@ -39,7 +39,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 1, // metadata component added to components list
-			expectedDeps:       1, // root dependency only
+			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
 			wantErr:            false,
 		},
 		{
@@ -65,8 +65,11 @@ func TestMergeSBOMs(t *testing.T) {
 					Dependencies: nil, // nil dependencies
 				},
 			},
-			expectedComponents: 2, // comp1 + metadata component lib1
-			expectedDeps:       1, // root dependency only
+			// comp1 is never declared as anyone's dependency (extra's Dependencies is
+			// nil), so it's unreachable and gets pruned - only lib1 (the metadata
+			// component) survives.
+			expectedComponents: 1,
+			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
 			wantErr:            false,
 		},
 		{
@@ -87,7 +90,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 1, // metadata component added to components list
-			expectedDeps:       1, // root dependency only
+			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
 			wantErr:            false,
 		},
 		{
@@ -142,7 +145,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 4, // comp1 + lib1 + comp2 + lib2
-			expectedDeps:       3, // 2 from sboms + 1 root
+			expectedDeps:       5, // root + lib1 + comp1 (empty) + lib2 + comp2 (empty)
 			wantErr:            false,
 		},
 		{

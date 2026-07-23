@@ -58,7 +58,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -85,15 +84,15 @@ var intentionallyPublicPaths = map[string]bool{
 // Key format: "METHOD /full/echo/path/template/"
 var memberOnlyPaths = map[string]bool{
 	// Vuln triage actions — any member who can read the asset version may triage findings.
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/sync/":                            true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/batch/":                           true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/":               true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/mitigate/":      true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/":              true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/mitigate/":     true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/":                                    true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/":                     true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/mitigate/":            true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/sync/":                               true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/batch/":                              true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/":                  true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/dependency-vulns/:dependencyVulnID/mitigate/":         true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/":                 true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/first-party-vulns/:firstPartyVulnID/mitigate/":        true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/":                                       true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/":                        true,
+	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/mitigate/":               true,
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/final-license-decision/": true,
 	// VEX rules — any member may create/edit/delete VEX rules (membership = passed read RBAC).
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/":                 true,
@@ -135,7 +134,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	// come from DisallowPublicRequests or a write-action RBAC check.
 	patService := &mocks.PersonalAccessTokenService{}
 	patService.On("VerifyRequestSignature", mock.Anything, mock.Anything).
-		Maybe().Return(accesscontrol.NewSession("test-user", []string{"manage", "scan"}, false), nil)
+		Maybe().Return(shared.NewSession("test-user", shared.SessionActorUser, []string{"manage", "scan"}, false), nil)
 
 	rbacProvider := &mocks.RBACProvider{}
 	rbacProvider.On("GetDomainRBAC", mock.Anything).Maybe().Return(ac)
@@ -211,6 +210,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		rbacProvider,
 		orgService,
 		assetVersionRepo,
+		patService,
 	)
 
 	orgRouter := NewOrgRouter(
@@ -221,6 +221,8 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
 		new(controllers.FirstPartyVulnController),
+		new(controllers.CompliancePostureController),
+		new(controllers.ComplianceComponentController),
 		new(controllers.PolicyController),
 		new(controllers.IntegrationController),
 		new(controllers.WebhookController),
@@ -229,6 +231,9 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		map[string]*gitlabint.GitlabOauth2Config{},
 		rbacProvider,
 		new(controllers.StatisticsController),
+		new(controllers.PatController),
+		projectRepo,
+		assetRepo,
 	)
 
 	projectRouter := NewProjectRouter(
@@ -237,12 +242,16 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.AssetController),
 		new(dependencyfirewall.DependencyProxyController),
 		new(controllers.DependencyVulnController),
+		new(controllers.CompliancePostureController),
+		new(controllers.ComplianceComponentController),
 		new(controllers.PolicyController),
 		new(controllers.ReleaseController),
 		new(controllers.StatisticsController),
 		new(controllers.WebhookController),
 		projectRepo,
 		new(controllers.ComponentController),
+		map[string]*gitlabint.GitlabOauth2Config{},
+		new(controllers.PatController),
 	)
 
 	assetRouter := NewAssetRouter(
@@ -257,6 +266,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.IntegrationController),
 		new(controllers.ScanController),
 		assetRepo,
+		new(controllers.PatController),
 	)
 
 	assetVersionRouter := NewAssetVersionRouter(
@@ -282,7 +292,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
 	NewVEXRuleRouter(assetVersionRouter, new(controllers.VEXRuleController))
-	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
+	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
 	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo)
 
 	return e
@@ -293,9 +303,9 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 // IsPublicRequest=true, so DisallowPublicRequests blocks the request.
 func publicVisitorAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	return ac
 }
@@ -305,15 +315,15 @@ func publicVisitorAC() *mocks.AccessControl {
 // will pass (IsPublicRequest stays false), but write-level RBAC checks deny.
 func readOnlyMemberAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
 
 	// Org-level: allow read, deny everything else.
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead).Maybe().Return(true, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Project-level: allow read, deny write.
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
-	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Asset-level: allow read, deny write/delete.
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)

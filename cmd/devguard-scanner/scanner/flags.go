@@ -53,7 +53,7 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 // provided. It should be called after config has been parsed for commands that support
 // unauthenticated scanning (results will not be saved to DevGuard).
 func WarnIfUnauthenticated() {
-	if config.RuntimeBaseConfig.Token == "" && config.RuntimeBaseConfig.AssetName == "" {
+	if config.RuntimeBaseConfig.Token == "" || config.RuntimeBaseConfig.AssetName == "" {
 		fmt.Fprintln(os.Stderr, "Warning: You are scanning without saving the results. Provide --token and --assetName to save results to DevGuard.")
 	}
 }
@@ -69,10 +69,20 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("origin", "DEFAULT", "Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'.")
 	cmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")
 	cmd.Flags().Bool("ignoreExternalReferences", false, "If an attestation does contain a external reference to an sbom or vex, this will be ignored. Useful when scanning your own image from the registry where your own attestations are attached.")
-	cmd.Flags().Bool("keepOriginalSbomRootComponent", false, "Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies")
+	cmd.Flags().Bool("keepOriginalSbomRootComponent", false, "Deprecated, does nothing: the original SBOM root component is now always kept when it has a valid PackageURL.")
 	cmd.Flags().Bool("noWrite", false, "Run the scan and display results (including VEX/false-positive assessments) without persisting anything to DevGuard.")
 	cmd.Flags().String("output", "table", "Output format for scan results. Options: 'table' (default), 'cyclonedx' (CycloneDX VEX JSON).")
 }
+// AddSupplementarySBOMFlags adds flags shared by sca/container-scanning for
+// discovering and saving supplementary SBOMs. sbomPath controls where to look
+// for supplementary SBOMs to merge in (a directory when scanning a path, an
+// absolute in-image path when scanning a container image); sbomOutputPath is
+// unrelated - it optionally saves the final, merged SBOM to a local file.
+func AddSupplementarySBOMFlags(cmd *cobra.Command) {
+	cmd.Flags().String("sbomPath", "/sboms", "Path to scan for supplementary SBOM json files to merge into the scan results. A directory when scanning a path, an absolute path inside the image filesystem when scanning a container image. Each supplementary SBOM's root component name must match the exact in-image/in-project path of the application it describes, so that DevGuard can attach it under the right node and silence the 'unresolved application' warning for it.")
+	cmd.Flags().String("sbomOutputPath", "", "If set, write the final (merged) SBOM to this file path in addition to uploading it.")
+}
+
 func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
 	AddDefaultFlags(cmd)
 	AddAssetRefFlags(cmd)

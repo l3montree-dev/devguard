@@ -27,7 +27,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	ov "github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -109,72 +108,9 @@ type SBOMGraph struct {
 	Nodes map[string]*GraphNode          // id -> node
 	Edges map[string]map[string]struct{} // parent id -> set of child ids
 
-	Vulnerabilities map[string]*cdx.Vulnerability // vuln ID -> vulnerability
-
 	RootID string // ID of the root node (constant: "ROOT")
 
 	ScopeID string // The id of the current scope node
-}
-
-type VexReport struct {
-	Report *cdx.BOM
-	Source string
-}
-
-func validateVexReport(report *cdx.BOM) error {
-	if report.Metadata == nil || report.Metadata.Component == nil {
-		return fmt.Errorf("invalid VEX report: missing metadata.component")
-	}
-	if report.Metadata.Component.PackageURL == "" {
-		return fmt.Errorf("invalid VEX report: root component must have a PackageURL")
-	}
-	return nil
-}
-
-func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
-	if err := validateVexReport(report); err != nil {
-		return nil, err
-	}
-
-	return &VexReport{
-		Report: report,
-		Source: source,
-	}, nil
-}
-
-type VexReportOpenVEX struct {
-	Report *ov.VEX
-	Source string
-}
-
-func validateVexReportOpenVEX(report *ov.VEX) error {
-	if report.ID == "" {
-		return fmt.Errorf("invalid OpenVEX report: missing id")
-	}
-	if report.Context == "" {
-		return fmt.Errorf("invalid OpenVEX report: missing context")
-	}
-	if report.Author == "" {
-		return fmt.Errorf("invalid OpenVEX report: missing author")
-	}
-	if report.Timestamp == nil || report.Timestamp.IsZero() {
-		return fmt.Errorf("invalid OpenVEX report: missing timestamp")
-	}
-	if report.Version == 0 {
-		return fmt.Errorf("invalid OpenVEX report: missing version")
-	}
-	return nil
-}
-
-func NewVexReportOpenVEX(report *ov.VEX, source string) (*VexReportOpenVEX, error) {
-	if err := validateVexReportOpenVEX(report); err != nil {
-		return nil, err
-	}
-
-	return &VexReportOpenVEX{
-		Report: report,
-		Source: source,
-	}, nil
 }
 
 func edgesToDepMap(edges map[string]map[string]struct{}) map[string][]string {
@@ -196,11 +132,10 @@ const GraphRootNodeID = "ROOT"
 // NewSBOMGraph creates an empty graph with a root node.
 func NewSBOMGraph() *SBOMGraph {
 	g := &SBOMGraph{
-		Nodes:           make(map[string]*GraphNode),
-		Edges:           make(map[string]map[string]struct{}),
-		Vulnerabilities: make(map[string]*cdx.Vulnerability),
-		RootID:          GraphRootNodeID,
-		ScopeID:         GraphRootNodeID,
+		Nodes:   make(map[string]*GraphNode),
+		Edges:   make(map[string]map[string]struct{}),
+		RootID:  GraphRootNodeID,
+		ScopeID: GraphRootNodeID,
 	}
 	// Always create root node
 	g.Nodes[GraphRootNodeID] = &GraphNode{BOMRef: GraphRootNodeID, Type: GraphNodeTypeRoot, Component: &cdx.Component{
@@ -322,54 +257,50 @@ func (g *SBOMGraph) AddEdge(parentID, childID string) {
 	g.Edges[parentID][childID] = struct{}{}
 }
 
-// statePriority returns a priority value for vulnerability states.
-// Higher value = higher priority. exploitable > in_triage > false_positive
-func statePriority(state cdx.ImpactAnalysisState) int {
-	switch state {
-	case cdx.IASExploitable:
-		return 3
-	case cdx.IASInTriage:
-		return 2
-	case cdx.IASFalsePositive:
-		return 1
-	default:
-		return 0
+// pruneUnidentifiablePackages removes every component-type node that isn't a
+// real, identifiable package (no package-shaped PackageURL) and reparents
+// its children to its own parent(s), so dependency information carried by an
+// unidentifiable node isn't lost - its children simply move up a level.
+//
+// Parents and children are re-derived from the current graph state each time
+// a node is processed (rather than from a snapshot taken up front), so
+// chains of unidentifiable nodes (A -> B -> C, where A and B are both
+// unidentifiable) flatten correctly down to a single edge regardless of the
+// (unordered) iteration order over g.Nodes.
+func (g *SBOMGraph) pruneUnidentifiablePackages() {
+	for id, node := range g.Nodes {
+		if node.Type != GraphNodeTypeComponent || looksLikePackagePURL(node.Component.PackageURL) {
+			continue
+		}
+
+		parents := []string{}
+		for parentID, children := range g.Edges {
+			if _, ok := children[id]; ok {
+				parents = append(parents, parentID)
+			}
+		}
+
+		for childID := range g.Edges[id] {
+			for _, parentID := range parents {
+				if parentID != childID {
+					g.AddEdge(parentID, childID)
+				}
+			}
+		}
+
+		for _, parentID := range parents {
+			delete(g.Edges[parentID], id)
+		}
+		delete(g.Edges, id)
+		delete(g.Nodes, id)
 	}
 }
 
-// AddVulnerability adds a vulnerability with deduplication.
-// When the same CVE+Affects combination exists, state priority determines which one to keep:
-// exploitable > in_triage > false_positive
-func (g *SBOMGraph) AddVulnerability(vuln cdx.Vulnerability) {
-	var affectsStr strings.Builder
-	if vuln.Affects != nil {
-		for _, aff := range *vuln.Affects {
-			affectsStr.WriteString(aff.Ref + ";")
-		}
-	}
-
-	key := vuln.ID + "@" + affectsStr.String()
-
-	existing, exists := g.Vulnerabilities[key]
-	if !exists {
-		g.Vulnerabilities[key] = &vuln
-		return
-	}
-
-	// Compare state priorities - higher priority wins
-	existingState := cdx.ImpactAnalysisState("")
-	if existing.Analysis != nil {
-		existingState = existing.Analysis.State
-	}
-
-	newState := cdx.ImpactAnalysisState("")
-	if vuln.Analysis != nil {
-		newState = vuln.Analysis.State
-	}
-
-	if statePriority(newState) > statePriority(existingState) {
-		g.Vulnerabilities[key] = &vuln
-	}
+// MakeValid prunes unidentifiable components (see pruneUnidentifiablePackages).
+// Call this once after building a graph via InvalidSBOMGraphFromCycloneDX and
+// doing any enrichment (EnrichSBOM) on it.
+func (g *SBOMGraph) MakeValid() {
+	g.pruneUnidentifiablePackages()
 }
 
 func (g *SBOMGraph) ClearScope() {
@@ -408,11 +339,10 @@ func (g *SBOMGraph) IsScoped() bool {
 // Clone creates a deep copy of the graph.
 func (g *SBOMGraph) Clone() *SBOMGraph {
 	clone := &SBOMGraph{
-		Nodes:           make(map[string]*GraphNode, len(g.Nodes)),
-		Edges:           make(map[string]map[string]struct{}, len(g.Edges)),
-		Vulnerabilities: make(map[string]*cdx.Vulnerability, len(g.Vulnerabilities)),
-		RootID:          g.RootID,
-		ScopeID:         g.ScopeID,
+		Nodes:   make(map[string]*GraphNode, len(g.Nodes)),
+		Edges:   make(map[string]map[string]struct{}, len(g.Edges)),
+		RootID:  g.RootID,
+		ScopeID: g.ScopeID,
 	}
 
 	// Deep copy nodes
@@ -432,10 +362,6 @@ func (g *SBOMGraph) Clone() *SBOMGraph {
 			clone.Edges[parentID][childID] = struct{}{}
 		}
 	}
-
-	// Deep copy vulnerabilities
-	// Note: Vuln is shared, make deep copy if needed
-	maps.Copy(clone.Vulnerabilities, g.Vulnerabilities)
 
 	return clone
 }
@@ -526,6 +452,46 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 
 	}
 
+	// "Last one wins": components/info sources are identified by name+version,
+	// so the same node can be shared by multiple artifacts. Whichever scan most
+	// recently touched a given node's declared children is authoritative for
+	// that node's entire edge set from here on - even if it declares none. This
+	// deliberately does not scope the change to the artifact being merged: if a
+	// later, lower-fidelity scan (e.g. a flat binary-mode scan that can't
+	// attribute dependencies to a specific parent) re-observes a component
+	// without declaring any children for it, that supersedes whatever an older
+	// scan of the same component version said, everywhere it's referenced.
+	//
+	// Example 1 - stale transitive dep dropped everywhere it's shared:
+	//   Before: circl@v1.6.3 -> x/crypto@v0.50.0   (declared by an older, nested scan)
+	//   Other:  circl@v1.6.3 has no declared children (a flat binary-mode rescan)
+	//   Result: circl@v1.6.3 -> x/crypto@v0.50.0 is dropped, even for artifacts
+	//           other than the one just rescanned, because they reach
+	//           x/crypto@v0.50.0 through this same shared circl@v1.6.3 node.
+	//
+	// Example 2 - untouched components are unaffected:
+	//   Other never re-imports go-git@v5.18.0 at all (not in other.Nodes), so
+	//   the loop below skips it entirely and its existing edges (e.g. to
+	//   x/crypto@v0.50.0) are left exactly as they were.
+	//
+	// Example 3 - redeclared children still win via the loop above, not this one:
+	//   Other:  circl@v1.6.3 -> x/crypto@v0.53.0  (explicitly declared this time)
+	//   Result: g.Edges["circl@v1.6.3"] is reset to {x/crypto@v0.53.0} by the
+	//           "Import all edges" loop above; this loop is skipped for
+	//           circl@v1.6.3 because it IS a key in other.Edges.
+	for parentID, node := range other.Nodes {
+		if parentID == GraphRootNodeID {
+			continue
+		}
+		if node.Type != GraphNodeTypeComponent && node.Type != GraphNodeTypeInfoSource {
+			continue
+		}
+		if _, declared := other.Edges[parentID]; declared {
+			continue // already fully replaced above
+		}
+		g.Edges[parentID] = make(map[string]struct{})
+	}
+
 	// Calculate diff
 	diff := GraphDiff{}
 	afterNodes := g.reachableNodes()
@@ -554,10 +520,110 @@ func (g *SBOMGraph) MergeGraph(other *SBOMGraph) GraphDiff {
 			diff.RemovedEdges = append(diff.RemovedEdges, edge)
 		}
 	}
-	// add vulnerabilities
-	maps.Copy(g.Vulnerabilities, other.Vulnerabilities)
 	g.pruneUnreachable()
 	return diff
+}
+
+// EnrichSBOM adds or replaces extra's root component (and everything it
+// declares) in g. If g already has a component with the same Name as extra's
+// root (e.g. an unresolved binary a scan found but couldn't inspect further),
+// that component's identity (BOMRef) is kept, but its whole subtree is
+// replaced with extra's - down to no children at all, if that's what extra
+// declares - via MergeGraph's existing "last source wins" replace semantics
+// (including its automatic pruning of anything left unreachable). Otherwise
+// extra's root is attached as a new child of parentRef, additively - parentRef
+// keeps whatever other children it already had.
+//
+// The returned bool reports which of those two happened: true if extra's
+// root was attached as a brand new node, false if an existing component's
+// subtree was replaced in place.
+func (g *SBOMGraph) EnrichSBOM(extra *cdx.BOM, parentRef string) (isNew bool, err error) {
+	if extra.Metadata == nil || extra.Metadata.Component == nil {
+		return false, fmt.Errorf("extra BOM has no root component")
+	}
+
+	root := *extra.Metadata.Component
+	declaredRef := root.BOMRef
+
+	ref := declaredRef
+	isNew = true
+	for node := range g.Components() {
+		if node.Component != nil && node.Component.Name == root.Name {
+			ref, isNew = node.Component.BOMRef, false
+			break
+		}
+	}
+	root.BOMRef = ref
+
+	patch := NewSBOMGraph()
+	patch.Nodes[ref] = &GraphNode{BOMRef: ref, Type: GraphNodeTypeComponent, Component: &root}
+	patch.Edges[ref] = make(map[string]struct{})
+
+	if extra.Components != nil {
+		for _, c := range *extra.Components {
+			patch.Nodes[c.BOMRef] = &GraphNode{BOMRef: c.BOMRef, Type: GraphNodeTypeComponent, Component: &c}
+		}
+	}
+
+	if extra.Dependencies != nil {
+		for _, d := range *extra.Dependencies {
+			if d.Ref == "" {
+				continue
+			}
+			targetRef := d.Ref
+			if d.Ref == declaredRef {
+				targetRef = ref
+			}
+			if patch.Edges[targetRef] == nil {
+				patch.Edges[targetRef] = make(map[string]struct{})
+			}
+			if d.Dependencies != nil {
+				for _, childRef := range *d.Dependencies {
+					patch.Edges[targetRef][childRef] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// Must happen before MergeGraph, whose internal pruneUnreachable would
+	// otherwise drop the freshly-merged node before this edge makes it
+	// reachable.
+	if isNew {
+		g.AddEdge(parentRef, ref)
+	}
+
+	g.MergeGraph(patch)
+
+	// Some scanners (e.g. trivy against installed Python site-packages, which
+	// carries no relationship metadata) can only ever attach every package it
+	// finds directly to parentRef - a flat, no-real-tree placeholder. Once a
+	// newly attached subtree's real edges nest one of those packages
+	// somewhere else in the graph - anywhere in extra's own declared closure,
+	// not just ref's immediate children - that flat parentRef->X edge is now
+	// stale: X is only actually reachable transitively. Demote it by
+	// removing the direct edge.
+	for r := range patch.Nodes {
+		if r == GraphRootNodeID || r == parentRef || !g.hasOtherParent(r, parentRef) {
+			continue
+		}
+		delete(g.Edges[parentRef], r)
+	}
+
+	return isNew, nil
+}
+
+// hasOtherParent reports whether ref has an incoming edge from any node
+// other than exclude.
+func (g *SBOMGraph) hasOtherParent(ref, exclude string) bool {
+	for parent, children := range g.Edges {
+		if parent == exclude {
+			continue
+		}
+		if _, ok := children[ref]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *SBOMGraph) pruneUnreachable() {
@@ -821,18 +887,6 @@ func (g *SBOMGraph) ComponentEdges() iter.Seq2[string, string] {
 				if !yield(parent, child) {
 					return
 				}
-			}
-		}
-	}
-}
-
-// VulnerabilitiesIter returns all vulnerabilities.
-// Deduplication with state priority is handled in AddVulnerability.
-func (g *SBOMGraph) VulnerabilitiesIter() iter.Seq[*cdx.Vulnerability] {
-	return func(yield func(*cdx.Vulnerability) bool) {
-		for _, v := range g.Vulnerabilities {
-			if !yield(v) {
-				return
 			}
 		}
 	}
@@ -1304,9 +1358,16 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		depMap[parent] = append(depMap[parent], child)
 	}
 
-	// Root's direct deps are the first-level components (children of info sources)
+	// Root's direct deps are the first-level components (children of info sources).
+	// When RootName aliases an already-existing component node (e.g. a caller
+	// reusing its own root's identity rather than a synthesized one), that node
+	// itself shows up here too, as the info source's edge to the kept original
+	// root component - skip it to avoid a self-referential dependency.
 	for infoSource := range g.InfoSources() {
 		for childID := range g.Edges[infoSource.BOMRef] {
+			if childID == rootName {
+				continue
+			}
 			if node := g.Nodes[childID]; node != nil && node.Type == GraphNodeTypeComponent {
 				if slices.Contains(depMap[rootName], childID) {
 					continue
@@ -1317,10 +1378,14 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 	}
 
 	dependencies := []cdx.Dependency{}
+	rootNameCovered := false
 	for c := range g.Components() {
 		deps := depMap[c.BOMRef]
 		if deps == nil {
 			deps = []string{} // Ensure empty array, not null in JSON
+		}
+		if c.Component.BOMRef == rootName {
+			rootNameCovered = true
 		}
 		dependencies = append(dependencies, cdx.Dependency{
 			Ref:          c.Component.BOMRef,
@@ -1328,19 +1393,19 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		})
 	}
 
-	// include the depMap entries for root
-	rootDeps := depMap[rootName]
-	if rootDeps == nil {
-		rootDeps = []string{} // Ensure empty array, not null in JSON
-	}
-	dependencies = append(dependencies, cdx.Dependency{
-		Ref:          rootName,
-		Dependencies: &rootDeps,
-	})
-
-	vulns := []cdx.Vulnerability{}
-	for v := range g.VulnerabilitiesIter() {
-		vulns = append(vulns, *v)
+	// include the depMap entries for root, unless RootName aliases an existing
+	// component node the loop above already covered (e.g. a caller reusing its
+	// own root's identity rather than a synthesized one) - appending another
+	// entry for the same ref would duplicate it.
+	if !rootNameCovered {
+		rootDeps := depMap[rootName]
+		if rootDeps == nil {
+			rootDeps = []string{} // Ensure empty array, not null in JSON
+		}
+		dependencies = append(dependencies, cdx.Dependency{
+			Ref:          rootName,
+			Dependencies: &rootDeps,
+		})
 	}
 
 	return &cdx.BOM{
@@ -1357,7 +1422,6 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 		},
 		Components:         &components,
 		Dependencies:       &dependencies,
-		Vulnerabilities:    &vulns,
 		ExternalReferences: externalRefs,
 	}
 }
@@ -1412,7 +1476,25 @@ func getDashboardURL(metadata BOMMetadata, escapedArtifactName string) string {
 // =============================================================================
 
 // SBOMGraphFromCycloneDX creates an SBOMGraph from a CycloneDX BOM.
-func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, keepOriginalSbomRootComponent bool) (*SBOMGraph, error) {
+// The original root component is always kept as a node in the graph when it
+// has a valid PackageURL, so that re-uploading a downloaded SBOM is
+// idempotent. When the root component has no (valid) PackageURL, it cannot
+// be identified as a real package, so its direct dependencies are reparented
+// to the info source node instead.
+func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*SBOMGraph, error) {
+	g, err := InvalidSBOMGraphFromCycloneDX(bom, artifactName, infoSourceID)
+	if err != nil {
+		return nil, err
+	}
+	g.MakeValid()
+	return g, nil
+}
+
+// InvalidSBOMGraphFromCycloneDX is like SBOMGraphFromCycloneDX but skips
+// pruning unidentifiable components (e.g. a purl-less root). Call MakeValid
+// once done enriching, or use SBOMGraphFromCycloneDX directly if you don't
+// need to enrich the graph via EnrichSBOM first.
+func InvalidSBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string) (*SBOMGraph, error) {
 	// Validate required fields
 	if bom == nil {
 		return nil, fmt.Errorf("BOM cannot be nil")
@@ -1434,16 +1516,6 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	}
 	if rootComponent.Name == "" {
 		return nil, fmt.Errorf("root component name is required")
-	}
-
-	// if we want to keep the original root component, we need to validate that it has a valid purl, otherwise we will not be able to add it to the graph
-	if keepOriginalSbomRootComponent {
-		if rootComponent.PackageURL == "" {
-			return nil, fmt.Errorf("root component PackageURL is required when keepOriginalSbomRootComponent is true")
-		}
-		if _, err := packageurl.FromString(rootComponent.PackageURL); err != nil {
-			return nil, fmt.Errorf("root component has invalid PackageURL: %w", err)
-		}
 	}
 
 	// Validate BOM format
@@ -1537,10 +1609,12 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 				}
 			}
 
-			// Add component (type sanitization already happens in AddComponent)
-			if looksLikePackagePURL(comp.PackageURL) {
-				g.AddComponent(comp)
-			}
+			// Add the component (type sanitization already happens in
+			// AddComponent). Components without an identifiable package
+			// PackageURL are added too, but get pruned - with their
+			// dependencies reparented to their own parent - by
+			// pruneUnidentifiablePackages below.
+			g.AddComponent(comp)
 		}
 	}
 
@@ -1551,16 +1625,13 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 	// represent synthetic grouping nodes in CycloneDX dependency graphs.
 	depMap := buildFilteredDependencyMap(bom.Dependencies, g.Nodes, rootRef)
 	if bom.Dependencies != nil {
-		addEdgesFromDependencyMap(g, depMap, rootRef, infoID, keepOriginalSbomRootComponent)
+		addEdgesFromDependencyMap(g, depMap, rootRef)
 	}
 
 	// If no explicit root dependencies, all components are roots
 	if len(depMap[rootRef]) == 0 {
 		if bom.Components != nil {
 			for _, comp := range *bom.Components {
-				if !looksLikePackagePURL(comp.PackageURL) {
-					continue // Skip root project components
-				}
 				// Check if this component is a child of any other
 				isChild := false
 				for _, children := range depMap {
@@ -1576,32 +1647,30 @@ func SBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID string, kee
 		}
 	}
 
-	// If keepOriginalSbomRootComponent is true, add edge from infosource to original root ref
-	if keepOriginalSbomRootComponent && rootRef != "" {
-		g.AddEdge(infoID, rootRef)
-	}
-
-	// Add vulnerabilities (ignore invalid severity values)
-	if bom.Vulnerabilities != nil {
-		for _, vuln := range *bom.Vulnerabilities {
-			// Sanitize invalid severity values in ratings
-			if vuln.Ratings != nil {
-				validRatings := []cdx.VulnerabilityRating{}
-				for _, rating := range *vuln.Ratings {
-					if isValidSeverity(rating.Severity) {
-						validRatings = append(validRatings, rating)
-					}
-					// Invalid ratings are silently dropped
-				}
-				if len(validRatings) > 0 {
-					vuln.Ratings = &validRatings
-				} else {
-					vuln.Ratings = nil
-				}
+	// Link the info source to the original root component so it appears in
+	// the graph, unless the root component's own identity already IS the
+	// artifact (e.g. a downloaded devguard SBOM being re-uploaded, or a
+	// scanner like Trivy naming its container root component after the
+	// image itself) - in that case adding this edge would make the
+	// artifact self-referential. The root's real children (if any) are
+	// reparented directly onto the artifact node instead, so they don't
+	// become unreachable orphans.
+	if rootRef != "" {
+		if isArtifactRootComponent(rootComponent, artifactName) {
+			for _, child := range depMap[rootRef] {
+				g.AddEdge(artifactID, child)
 			}
-			g.AddVulnerability(vuln)
+		} else {
+			g.AddEdge(infoID, rootRef)
 		}
 	}
+
+	// Components (including the root) that don't have an identifiable
+	// package PackageURL are pruned once MakeValid is called, with their
+	// dependencies reparented to their own parent(s) - see MakeValid.
+
+	// Vulnerabilities carried on an ingested BOM are not part of the component graph; VEX
+	// ingestion handles them separately (see the transformer package).
 
 	return g, nil
 }
@@ -1669,20 +1738,6 @@ func isValidExternalReferenceType(t cdx.ExternalReferenceType) bool {
 	return validTypes[t]
 }
 
-// isValidSeverity checks if severity is valid
-func isValidSeverity(severity cdx.Severity) bool {
-	validSeverities := map[cdx.Severity]bool{
-		cdx.SeverityUnknown:  true,
-		cdx.SeverityLow:      true,
-		cdx.SeverityMedium:   true,
-		cdx.SeverityHigh:     true,
-		cdx.SeverityCritical: true,
-		cdx.SeverityInfo:     true,
-		cdx.SeverityNone:     true,
-	}
-	return validSeverities[severity]
-}
-
 func getChildrenOfParent(depMap map[string][]string, nodes map[string]*GraphNode, parent string) []string {
 	return getChildrenOfParentWithVisited(depMap, nodes, parent, map[string]bool{})
 }
@@ -1737,7 +1792,7 @@ func buildFilteredDependencyMap(dependencies *[]cdx.Dependency, nodes map[string
 	return depMap
 }
 
-func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef, infoID string, keepOriginalSbomRootComponent bool) {
+func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef string) {
 	for parent := range depMap {
 		parentNode := g.Nodes[parent]
 		// Skip if parent is not represented in the graph.
@@ -1752,12 +1807,8 @@ func addEdgesFromDependencyMap(g *SBOMGraph, depMap map[string][]string, rootRef
 
 		// Resolve synthetic intermediary nodes recursively.
 		children := getChildrenOfParent(depMap, g.Nodes, parent)
-		edgeSource := parent
-		if parent == rootRef && !keepOriginalSbomRootComponent {
-			edgeSource = infoID
-		}
 		for _, child := range children {
-			g.AddEdge(edgeSource, child)
+			g.AddEdge(parent, child)
 		}
 	}
 }
@@ -1796,47 +1847,36 @@ func getChildrenOfParentWithVisited(depMap map[string][]string, nodes map[string
 	return realChildren
 }
 
-func SBOMGraphFromVulnerabilities(vulns []cdx.Vulnerability) *SBOMGraph {
-	g := NewSBOMGraph()
-
-	// Create artifact and info source to connect components to the graph
-	artifactID := g.AddArtifact("vex")
-	infoSourceID := g.AddInfoSource(artifactID, "vex", InfoSourceSBOM)
-
-	for _, vuln := range vulns {
-		g.AddVulnerability(vuln)
-
-		// Extract affected components and add them to the graph
-		if vuln.Affects != nil {
-			for _, aff := range *vuln.Affects {
-				purlStr := aff.Ref
-				if purlStr == "" {
-					continue
-				}
-
-				// Parse the PURL to extract name and version
-				purl, err := packageurl.FromString(purlStr)
-				if err != nil {
-					continue
-				}
-
-				comp := cdx.Component{
-					BOMRef:     purlStr,
-					Name:       purl.Name,
-					Version:    purl.Version,
-					PackageURL: purlStr,
-					Type:       cdx.ComponentTypeLibrary,
-				}
-				compID := g.AddComponent(comp)
-				g.AddEdge(infoSourceID, compID)
-			}
-		}
-	}
-	return g
-}
-
 func looksLikePackagePURL(id string) bool {
 	return strings.HasPrefix(id, "pkg:") && strings.Contains(id, "@")
+}
+
+// isArtifactRootComponent reports whether rootComponent's identity matches
+// what ToCycloneDX itself would derive as the root component for
+// artifactName - i.e. this SBOM was previously exported by devguard for this
+// exact artifact and is now being re-uploaded. In that case the artifact
+// node already represents this component, so linking to it separately would
+// make the artifact self-referential.
+//
+// This only compares PURLs. artifactName is frequently a plain human-chosen
+// name (e.g. a Trivy scan's root component is routinely named after the
+// artifact it scanned without that being a re-upload of devguard's own
+// output), so matching on Name alone would misfire on ordinary scans.
+func isArtifactRootComponent(rootComponent *cdx.Component, artifactName string) bool {
+	if rootComponent.PackageURL == "" {
+		return false
+	}
+	rootPurl, err := packageurl.FromString(rootComponent.PackageURL)
+	if err != nil {
+		return false
+	}
+	artifactPurl, err := packageurl.FromString(artifactName)
+	if err != nil {
+		return false
+	}
+	return rootPurl.Type == artifactPurl.Type &&
+		rootPurl.Namespace == artifactPurl.Namespace &&
+		rootPurl.Name == artifactPurl.Name
 }
 
 // =============================================================================

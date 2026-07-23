@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -30,21 +31,32 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	expiryDuration = 48 * time.Hour
+)
+
 type OrgController struct {
 	organizationRepository shared.OrganizationRepository
 	orgService             shared.OrgService
 	rbacProvider           shared.RBACProvider
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
+	adminService           shared.AdminService
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository) *OrgController {
+func isInvitationExpired(invite models.Invitation) bool {
+	now := time.Now()
+	return now.After(invite.CreatedAt.Add(expiryDuration))
+}
+
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
 		rbacProvider:           rbacProvider,
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
+		adminService:           adminService,
 	}
 }
 
@@ -62,7 +74,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -195,7 +207,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -207,13 +219,21 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
 
-	// get the user id from the session
-	userID := shared.GetSession(ctx).GetUserID()
+	if isInvitationExpired(invitation) {
+		return echo.NewHTTPError(400, "invitation expired")
+	}
+
+	// get the owner id from the session
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return echo.NewHTTPError(400, "only users can accept invitations").WithInternal(fmt.Errorf("only users can accept invitations"))
+	}
 	// get the email of that user
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, err := authAdminClient.GetIdentity(reqCtx, userID)
+	m, err := authAdminClient.GetIdentity(reqCtx, ownerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
@@ -226,7 +246,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	// get the rbac from the context
 	rbac := controller.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
 	// grant the user the role of member
-	err = rbac.GrantRole(reqCtx, userID, "member")
+	err = rbac.GrantRole(reqCtx, session, "member")
 	if err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
@@ -259,7 +279,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 		return err
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -300,8 +320,8 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	if userID == "" {
 		return echo.NewHTTPError(400, "userID is required")
 	}
-	currentUserID := shared.GetSession(ctx).GetUserID()
-	if userID == currentUserID {
+	currentActorName := shared.GetSession(ctx).GetActorName()
+	if userID == currentActorName {
 		return echo.NewHTTPError(400, "you cannot change your own role")
 	}
 
@@ -309,18 +329,27 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	// get the rbac from the context
 	rbac := shared.GetRBAC(ctx)
 
-	//
-	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(reqCtx, userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
+	members, err := rbac.GetAllMembersOfOrganization()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
 
-	if err := rbac.GrantRole(reqCtx, userID, shared.Role(req.Role)); err != nil {
+	if !utils.Contains(members, userID) {
+		return echo.NewHTTPError(400, "user is not a member of the organization")
+	}
+
+	//
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not a member
+
+	if err := rbac.GrantRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role)); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -345,8 +374,8 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	rbac := shared.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(reqCtx, userID, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(reqCtx, userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
 	projects, err := controller.projectService.ListProjectsByOrganizationID(reqCtx, shared.GetOrg(ctx).GetID())
@@ -355,8 +384,8 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	}
 
 	for _, project := range projects {
-		rbac.RevokeRoleInProject(reqCtx, userID, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
-		rbac.RevokeRoleInProject(reqCtx, userID, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
+		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
+		rbac.RevokeRoleInProject(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
 	}
 
 	return ctx.NoContent(200)
@@ -375,7 +404,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}
-	return ctx.JSON(200, map[string]string{"ownerId": owner})
+	return ctx.JSON(200, map[string]string{"actorID": owner})
 }
 
 // @Summary Get organization config file
@@ -424,6 +453,12 @@ func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not read request body").WithInternal(err)
 	}
 	configContent := string(body)
+
+	if configID == dtos.DependencyProxyConfigFileID {
+		if err := dtos.ValidateConfigFile(body); err != nil {
+			return err
+		}
+	}
 
 	if organization.ConfigFiles == nil {
 		organization.ConfigFiles = make(map[string]any)
@@ -495,14 +530,35 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	// fetch the regular members of the current organization
 	members, err := shared.FetchMembersOfOrganization(ctx)
-
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
+	invitations, err := controller.invitationRepository.FindByOrgID(ctx.Request().Context(), nil, organization.ID.String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get invitations of organization").WithInternal(err)
+	}
+
+	var invitedUsers []dtos.InvitedUserDTO
+	for _, inv := range invitations {
+		var invitationStatus dtos.InvitationStatus
+		if isInvitationExpired(inv) {
+			invitationStatus = dtos.InvitationStatusExpired
+		} else {
+			invitationStatus = dtos.InvitationStatusPending
+		}
+		invitedUsers = append(invitedUsers, dtos.InvitedUserDTO{
+			ID:               inv.ID.String(),
+			Email:            inv.Email,
+			ExpiryDate:       inv.CreatedAt.Add(expiryDuration),
+			InvitationStatus: invitationStatus,
+		})
+	}
+
 	resp := dtos.OrgDetailsDTO{
-		OrgDTO:  transformer.OrgDTOFromModel(organization),
-		Members: members,
+		OrgDTO:         transformer.OrgDTOFromModel(organization),
+		Members:        members,
+		InvitedMembers: invitedUsers,
 	}
 
 	return ctx.JSON(200, resp)
@@ -516,10 +572,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 // @Success 200 {array} models.Org
 // @Router /organizations [get]
 func (controller *OrgController) List(ctx shared.Context) error {
-	// get all organizations the user has access to
-	userID := shared.GetSession(ctx).GetUserID()
-
-	domains, err := controller.rbacProvider.DomainsOfUser(userID)
+	domains, err := controller.rbacProvider.DomainsOfSession(shared.GetSession(ctx))
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)
@@ -542,4 +595,22 @@ func (controller *OrgController) List(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, organizations)
+}
+
+func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+
+	ID := ctx.Param("ID")
+
+	invitationID, err := uuid.Parse(ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not parse invitation ID").WithInternal(err)
+	}
+
+	err = controller.invitationRepository.Delete(reqCtx, nil, invitationID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
 }

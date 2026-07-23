@@ -48,7 +48,11 @@ func NewPatController(service shared.PersonalAccessTokenService, repository shar
 func (p *PatController) Create(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
-	userID := session.GetUserID()
+	userID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return echo.NewHTTPError(400, "only users can create personal access tokens").WithInternal(fmt.Errorf("only users can create personal access tokens"))
+	}
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorUser), ID: uuid.MustParse(userID)}
 
 	// get the json body
 	var req dtos.PatCreateRequest
@@ -57,17 +61,110 @@ func (p *PatController) Create(c shared.Context) error {
 	}
 
 	// validate the request
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, userID)
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
 	if err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not create personal access token: %s", err.Error()))
 	}
 
 	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
 		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
+func (p *PatController) CreateForOrg(c shared.Context) error {
+	org := shared.GetOrg(c)
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorOrg), ID: org.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
+func (p *PatController) CreateForProject(c shared.Context) error {
+	project := shared.GetProject(c)
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorProject), ID: project.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
+	}
+
+	resp := dtos.PATCreateResponseDTO{
+		PATDTO:      transformer.PATModelToDTO(patStruct),
+		BearerToken: bearerToken,
+	}
+	return c.JSON(200, resp)
+}
+
+func (p *PatController) CreateForAsset(c shared.Context) error {
+	asset := shared.GetAsset(c)
+	owner := dtos.TokenOwner{Type: string(shared.SessionActorAsset), ID: asset.ID}
+
+	// get the json body
+	var req dtos.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	patStruct, bearerToken, err := p.service.ToModel(c.Request().Context(), req, owner)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not create project access token: %s", err.Error()))
+	}
+
+	if err := p.patRepository.Create(c.Request().Context(), nil, &patStruct); err != nil {
+		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
 	}
 
 	resp := dtos.PATCreateResponseDTO{
@@ -90,7 +187,7 @@ func (p *PatController) RevokeByPrivateKey(c shared.Context) error {
 	}
 
 	// validate the request
-	if err := shared.V.Struct(req); err != nil {
+	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
@@ -115,18 +212,86 @@ func (p *PatController) Delete(c shared.Context) error {
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
 
 	// check if the current user is allowed to delete the token
-	pat, err := p.patRepository.Read(c.Request().Context(), nil, uuid.MustParse(tokenID))
+	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.UserID != session.UserID
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}
 	// check the owner of the token
-	if pat.UserID.String() != shared.GetSession(c).GetUserID() {
+	session := shared.GetSession(c)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return echo.NewHTTPError(400, "only users can delete their personal access token via this endpoint").WithInternal(fmt.Errorf("only users can delete their personal access token via this endpoint"))
+	}
+	if pat.UserID.String() != ownerID {
 		return echo.NewHTTPError(403, "not allowed to delete this token")
 	}
-	err = p.patRepository.Delete(c.Request().Context(), nil, uuid.MustParse(tokenID))
+	err = p.patRepository.DeleteUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID))
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete personal access token").WithInternal(err)
+	}
+	return c.NoContent(200)
+}
+
+func (p *PatController) DeleteByOrg(c shared.Context) error {
+	org := shared.GetOrg(c)
+	tokenID := shared.SanitizeParam(c.Param("tokenID"))
+
+	// check if the token exists
+	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.OrgID != org.ID
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read organization access token").WithInternal(err)
+	}
+	// ensure the token belongs to this org (org write permission is already enforced by the router middleware)
+	if pat.OrgID == nil || pat.OrgID.String() != org.ID.String() {
+		return echo.NewHTTPError(403, "not allowed to delete this token")
+	}
+	err = p.patRepository.DeleteUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID))
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete organization access token").WithInternal(err)
+	}
+	return c.NoContent(200)
+}
+
+func (p *PatController) DeleteByProject(c shared.Context) error {
+	project := shared.GetProject(c)
+	tokenID := shared.SanitizeParam(c.Param("tokenID"))
+
+	// check if the token exists
+	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.ProjectID != project.ID
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read project access token").WithInternal(err)
+	}
+	// ensure the token belongs to this project (project write permission is already enforced by the router middleware)
+	if pat.ProjectID == nil || pat.ProjectID.String() != project.ID.String() {
+		return echo.NewHTTPError(403, "not allowed to delete this token")
+	}
+	err = p.patRepository.DeleteUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID))
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete project access token").WithInternal(err)
+	}
+	return c.NoContent(200)
+}
+
+func (p *PatController) DeleteByAsset(c shared.Context) error {
+	asset := shared.GetAsset(c)
+	tokenID := shared.SanitizeParam(c.Param("tokenID"))
+
+	// check if the token exists
+	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.AssetID != asset.ID
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read asset access token").WithInternal(err)
+	}
+	// ensure the token belongs to this asset (projassetect write permission is already enforced by the router middleware)
+	if pat.AssetID == nil || pat.AssetID.String() != asset.ID.String() {
+		return echo.NewHTTPError(403, "not allowed to delete this token")
+	}
+	err = p.patRepository.DeleteUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID))
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete asset access token").WithInternal(err)
 	}
 	return c.NoContent(200)
 }
@@ -141,11 +306,47 @@ func (p *PatController) Delete(c shared.Context) error {
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
 	session := shared.GetSession(c)
-	userID := session.GetUserID()
+	userID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return echo.NewHTTPError(400, "only users can list their personal access tokens via this endpoint").WithInternal(fmt.Errorf("only users can list their personal access tokens via this endpoint"))
+	}
 
 	pats, err := p.patRepository.ListByUserID(c.Request().Context(), nil, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not list personal access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByOrg(c shared.Context) error {
+	org := shared.GetOrg(c)
+
+	pats, err := p.patRepository.ListByOrgID(c.Request().Context(), nil, org.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list organization access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByProject(c shared.Context) error {
+	project := shared.GetProject(c)
+
+	pats, err := p.patRepository.ListByProjectID(c.Request().Context(), nil, project.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list project access tokens").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
+}
+
+func (p *PatController) ListByAsset(c shared.Context) error {
+	asset := shared.GetAsset(c)
+
+	pats, err := p.patRepository.ListByAssetID(c.Request().Context(), nil, asset.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not list asset access tokens").WithInternal(err)
 	}
 
 	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))

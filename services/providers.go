@@ -40,4 +40,6 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewCrowdsourcedVexingService, fx.As(new(shared.CrowdSourcedVexingService)))),
 	fx.Provide(fx.Annotate(NewDBEncryptionService, fx.As(new(shared.DBEncryptionService)))),
 	fx.Provide(fx.Annotate(NewCVERelationshipService, fx.As(new(shared.CVERelationshipService)))),
+	fx.Provide(fx.Annotate(NewAdvisoryService, fx.As(new(shared.AdvisoryService)))),
+	fx.Provide(fx.Annotate(NewCompliancePostureService, fx.As(new(shared.CompliancePostureService)))),
 )

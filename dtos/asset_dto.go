@@ -64,8 +64,6 @@ type AssetDTO struct {
 	PipelineLastRun                 time.Time `json:"pipelineLastRun"`
 	PipelineError                   *string   `json:"pipelineError,omitempty"`
 
-	KeepOriginalSbomRootComponent bool `json:"keepOriginalSbomRootComponent"`
-
 	State string `json:"state"`
 }
 
@@ -97,9 +95,9 @@ type AssetCreateRequest struct {
 	Importance            int  `json:"importance"`
 	ReachableFromInternet bool `json:"reachableFromInternet"`
 
-	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required"`
-	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required"`
-	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required"`
+	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required,oneof=low medium high"`
+	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required,oneof=low medium high"`
+	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required,oneof=low medium high"`
 	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
@@ -115,9 +113,9 @@ type AssetPatchRequest struct {
 
 	ReachableFromInternet *bool `json:"reachableFromInternet"`
 
-	ConfidentialityRequirement *RequirementLevel `json:"confidentialityRequirement"`
-	IntegrityRequirement       *RequirementLevel `json:"integrityRequirement"`
-	AvailabilityRequirement    *RequirementLevel `json:"availabilityRequirement"`
+	ConfidentialityRequirement *RequirementLevel `json:"confidentialityRequirement" validate:"omitempty,oneof=low medium high"`
+	IntegrityRequirement       *RequirementLevel `json:"integrityRequirement" validate:"omitempty,oneof=low medium high"`
+	AvailabilityRequirement    *RequirementLevel `json:"availabilityRequirement" validate:"omitempty,oneof=low medium high"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -133,6 +131,4 @@ type AssetPatchRequest struct {
 	ParanoidMode       *bool   `json:"paranoidMode"`
 
 	SharesInformation *bool `json:"sharesInformation"`
-
-	KeepOriginalSbomRootComponent *bool `json:"keepOriginalSbomRootComponent"`
 }

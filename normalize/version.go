@@ -157,6 +157,9 @@ func checkVersionWithComparator[V any](
 	lessThan func(a, b V) bool,
 	greaterThan func(a, b V) bool,
 ) (bool, error) {
+	if introduced == nil && fixed == nil && version == nil {
+		return true, nil
+	}
 	targetVer, err := newVersion(lookingForVersion)
 	if err != nil {
 		return false, err

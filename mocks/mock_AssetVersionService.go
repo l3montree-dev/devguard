@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -124,19 +125,19 @@ func (_c *AssetVersionService_BuildOpenVeX_Call) RunAndReturn(run func(ctx conte
 }
 
 // BuildVeX provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) BuildVeX(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph {
-	ret := _mock.Called(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)
+func (_mock *AssetVersionService) BuildVeX(ctx context.Context, tx shared.DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM {
+	ret := _mock.Called(ctx, tx, metadata, asset, assetVersion, dependencyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildVeX")
 	}
 
-	var r0 *normalize.SBOMGraph
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, string, string, models.Asset, models.AssetVersion, []models.DependencyVuln) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)
+	var r0 *cyclonedx.BOM
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, normalize.BOMMetadata, models.Asset, models.AssetVersion, []models.DependencyVuln) *cyclonedx.BOM); ok {
+		r0 = returnFunc(ctx, tx, metadata, asset, assetVersion, dependencyVulns)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*normalize.SBOMGraph)
+			r0 = ret.Get(0).(*cyclonedx.BOM)
 		}
 	}
 	return r0
@@ -150,18 +151,15 @@ type AssetVersionService_BuildVeX_Call struct {
 // BuildVeX is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - frontendURL string
-//   - orgName string
-//   - orgSlug string
-//   - projectSlug string
+//   - metadata normalize.BOMMetadata
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, frontendURL interface{}, orgName interface{}, orgSlug interface{}, projectSlug interface{}, asset interface{}, assetVersion interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
-	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, frontendURL, orgName, orgSlug, projectSlug, asset, assetVersion, dependencyVulns)}
+func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, metadata interface{}, asset interface{}, assetVersion interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
+	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, metadata, asset, assetVersion, dependencyVulns)}
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, tx shared.DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -171,33 +169,21 @@ func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, t
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 normalize.BOMMetadata
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(normalize.BOMMetadata)
 		}
-		var arg3 string
+		var arg3 models.Asset
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(models.Asset)
 		}
-		var arg4 string
+		var arg4 models.AssetVersion
 		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg4 = args[4].(models.AssetVersion)
 		}
-		var arg5 string
+		var arg5 []models.DependencyVuln
 		if args[5] != nil {
-			arg5 = args[5].(string)
-		}
-		var arg6 models.Asset
-		if args[6] != nil {
-			arg6 = args[6].(models.Asset)
-		}
-		var arg7 models.AssetVersion
-		if args[7] != nil {
-			arg7 = args[7].(models.AssetVersion)
-		}
-		var arg8 []models.DependencyVuln
-		if args[8] != nil {
-			arg8 = args[8].([]models.DependencyVuln)
+			arg5 = args[5].([]models.DependencyVuln)
 		}
 		run(
 			arg0,
@@ -206,20 +192,17 @@ func (_c *AssetVersionService_BuildVeX_Call) Run(run func(ctx context.Context, t
 			arg3,
 			arg4,
 			arg5,
-			arg6,
-			arg7,
-			arg8,
 		)
 	})
 	return _c
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) Return(sBOMGraph *normalize.SBOMGraph) *AssetVersionService_BuildVeX_Call {
-	_c.Call.Return(sBOMGraph)
+func (_c *AssetVersionService_BuildVeX_Call) Return(bOM *cyclonedx.BOM) *AssetVersionService_BuildVeX_Call {
+	_c.Call.Return(bOM)
 	return _c
 }
 
-func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, frontendURL string, orgName string, orgSlug string, projectSlug string, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *normalize.SBOMGraph) *AssetVersionService_BuildVeX_Call {
+func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -57,8 +57,16 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 	}
 	args := []string{"scan", p, "--sarif", "--sarif-output", sarifFilePath, "-v"}
 	args = append(args, configFileArgs...)
+	args = append(args, config.RuntimeExtraArgs...)
 	scannerCmd = exec.Command("semgrep", args...) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	slog.Info("Starting sast scanning", "path", p, "resultPath", sarifFilePath)
+
+	// Semgrep writes state/logs to $HOME/.semgrep; in restricted CI environments (e.g. GitHub
+	// Actions) the real HOME may not be writable. Override to a temp dir to avoid PermissionError.
+	semgrepHome := path.Join(os.TempDir(), "semgrep-home")
+	if err := os.MkdirAll(semgrepHome, 0755); err == nil {
+		scannerCmd.Env = append(os.Environ(), "HOME="+semgrepHome)
+	}
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -68,7 +76,7 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
 			slog.Warn("Vulnerabilities found, but continuing execution.")
-			slog.Debug("Semgrep output", "stderr", stderr.String())
+			slog.Warn("Semgrep output", "stderr", stderr.String())
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
@@ -103,7 +111,10 @@ path provided via flags or configuration, obfuscates sensitive snippets, and
 uploads the SARIF results to DevGuard. The request is signed using the configured
 token before upload.
 
-You may pass the target as the first positional argument instead of using --path.`,
+You may pass the target as the first positional argument instead of using --path.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying semgrep invocation.
+See the semgrep CLI reference for available flags: https://semgrep.dev/docs/cli-reference`,
 		Example: `  # Run SAST scan on local repository
   devguard-scanner sast ./my-repo
 
@@ -114,8 +125,14 @@ You may pass the target as the first positional argument instead of using --path
   devguard-scanner sast ghcr.io/org/image:tag
 
   # Scan and save results locally
-  devguard-scanner sast ./my-repo --outputPath results.sarif.json`,
-		RunE: sarifCommandFactory("sast"),
+  devguard-scanner sast ./my-repo --outputPath results.sarif.json
+
+  # Forward extra flags to semgrep
+  devguard-scanner sast ./my-repo -- --exclude-rule some-rule-id`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
+			return sarifCommandFactory("sast")(cmd, args)
+		},
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(sastCommand)
