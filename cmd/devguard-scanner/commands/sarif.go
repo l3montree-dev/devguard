@@ -129,6 +129,11 @@ stdout so you can chain it into other tools (e.g. 'sarif2markdown').`,
   devguard-scanner sarif results.sarif.json --scannerID custom-scanner-v1`,
 		Args: cobra.ExactArgs(1),
 		RunE: sarifCmd,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sarif — Upload a SARIF report",
+			"description":     "Upload an existing SARIF report to DevGuard with devguard-scanner sarif to store findings from your own scanners without re-scanning the source files.",
+			"keyword_primary": "devguard-scanner sarif",
+		},
 	}
 
 	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")

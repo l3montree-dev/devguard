@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -42,6 +43,10 @@ func runDocs(_ *cobra.Command, args []string) error {
 	rootFile.Close()
 	postProcessMarkdown(rootFilename)
 
+	if err := prependFrontmatter(rootFilename, commands.RootCmd); err != nil {
+		return err
+	}
+
 	for _, cmd := range commands.RootCmd.Commands() {
 		if cmd.Hidden {
 			continue
@@ -50,6 +55,46 @@ func runDocs(_ *cobra.Command, args []string) error {
 	}
 
 	slog.Info("docs generated", "dir", outDir)
+	return nil
+}
+
+func frontmatter(cmd *cobra.Command) string {
+	var output, title, description, keywordPrimary string
+	if v, ok := cmd.Annotations["title"]; ok {
+		title = v
+	} else {
+		title = cmd.Short
+	}
+	if v, ok := cmd.Annotations["description"]; ok {
+		description = v
+	} else {
+		description = cmd.Long
+	}
+	if v, ok := cmd.Annotations["keyword_primary"]; ok {
+		keywordPrimary = v
+	} else {
+		keywordPrimary = cmd.CommandPath()
+	}
+	output = "---\n" + fmt.Sprintf("title: %s\n", title) + fmt.Sprintf("description: %s\n", description) + "seo:\n  robots: index,follow\n  og:\n    image: /og-image.png\n    type: article\n  schema:\n    type: TechArticle\n" + fmt.Sprintf("  keyword_primary: %s\n", keywordPrimary) + "lang: en-US\nignoreChecks: null\n---"
+
+	return output
+}
+
+func prependFrontmatter(filename string, cmd *cobra.Command) error {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		slog.Error("could not read file", "err", err, "file", filename)
+		return err
+	}
+	contentString := string(content)
+	frontmatter := frontmatter(cmd)
+
+	finalText := frontmatter + "\n\n" + contentString
+
+	if err := os.WriteFile(filename, []byte(finalText), 0o644); err != nil {
+		slog.Error("could not write frontMatter file", "err", err, "file", filename)
+		return err
+	}
 	return nil
 }
 
@@ -70,6 +115,10 @@ func generateDocsForCommand(cmd *cobra.Command, outDir string) {
 	}
 	f.Close()
 	postProcessMarkdown(filename)
+
+	if err := prependFrontmatter(filename, cmd); err != nil {
+		return
+	}
 
 	for _, subCmd := range cmd.Commands() {
 		if subCmd.Hidden {
