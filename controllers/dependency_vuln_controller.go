@@ -46,19 +46,6 @@ type DependencyVulnController struct {
 	utils.FireAndForgetSynchronizer
 }
 
-type DependencyVulnStatus struct {
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-}
-
-type BatchDependencyVulnStatus struct {
-	VulnIDs                 []uuid.UUID                      `json:"vulnIds"`
-	StatusType              string                           `json:"status"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-}
-
 func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer, cveRepository shared.CveRepository) *DependencyVulnController {
 	return &DependencyVulnController{
 		dependencyVulnRepository:  dependencyVulnRepository,
@@ -267,7 +254,6 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller DependencyVulnController) Read(ctx shared.Context) error {
-
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
@@ -283,6 +269,13 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
 	}
+	// convert the related CVEs to DTOs
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	for relationshipType, cves := range related {
+		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVEDTO {
+			return transformer.CVEToDTO(cve)
+		})
+	}
 
 	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 	if dependencyVuln.CVE != nil {
@@ -290,14 +283,9 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	type vulnWithRelated struct {
-		dtos.DetailedDependencyVulnDTO
-		Related map[dtos.RelationshipType][]models.CVE `json:"related"`
-	}
-
-	return ctx.JSON(200, vulnWithRelated{
+	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelationsDTO{
 		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
-		Related:                   related,
+		Related:                   relatedDTOs,
 	})
 }
 
