@@ -49,6 +49,11 @@ The command prints three lines to stdout:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return generateTagRun(cmd, args)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner generate-tag — build a container image tag from metadata",
+			"description":     "Generate a container image tag, artifact name, and URL-encoded artifact name from build parameters like version, ref, and architecture with devguard-scanner.",
+			"keyword_primary": "devguard-scanner generate-tag",
+		},
 	}
 
 	scanner.AddAssetRefFlags(generateTagCmd)

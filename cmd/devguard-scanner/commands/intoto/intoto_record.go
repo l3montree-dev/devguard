@@ -132,6 +132,11 @@ If your entire step is a single command, use 'intoto run' instead.`,
 		Example: `  # In a CI job: snapshot inputs before the build
   devguard-scanner intoto start --step build --apiUrl https://api.devguard.org --assetName org/project/app --token $TOKEN`,
 		RunE: startInTotoRecording,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto start — Snapshot pipeline step inputs",
+			"description":     "Record the cryptographic hashes of all input files at the beginning of a pipeline step, to be paired with intoto stop into a signed in-toto link.",
+			"keyword_primary": "devguard-scanner intoto start",
+		},
 	}
 
 	return cmd
@@ -149,6 +154,11 @@ and after this step, and that this specific token (CI identity) performed it.`,
 		Example: `  # In a CI job: snapshot outputs and upload after the build
   devguard-scanner intoto stop --step build --apiUrl https://api.devguard.org --assetName org/project/app --token $TOKEN`,
 		RunE: stopInTotoRecording,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto stop — Snapshot outputs and upload the link",
+			"description":     "Record the cryptographic hashes of all output files at the end of a pipeline step, sign the in-toto link with the DevGuard token and upload it to DevGuard.",
+			"keyword_primary": "devguard-scanner intoto stop",
+		},
 	}
 
 	cmd.Flags().String("output", "", "The output file name. Default is the <step>.link.json name")

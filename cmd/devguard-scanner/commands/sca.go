@@ -716,6 +716,11 @@ See the trivy CLI reference for available flags: https://trivy.dev/docs/latest/g
   # Forward extra flags to trivy
   devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m`,
 		RunE: scaCommand,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sca — run Software Composition Analysis",
+			"description":     "Run Software Composition Analysis on a project or container image to generate an SBOM and return vulnerability results from DevGuard with devguard-scanner.",
+			"keyword_primary": "devguard-scanner sca",
+		},
 	}
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)

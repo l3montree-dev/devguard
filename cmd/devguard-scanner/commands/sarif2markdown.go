@@ -73,6 +73,11 @@ Two output modes are available:
 			fmt.Print(markdown)
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sarif2markdown — Convert SARIF to markdown",
+			"description":     "Convert a SARIF JSON file into a human-readable markdown report with devguard-scanner sarif2markdown for pull requests, wikis, or code review comments.",
+			"keyword_primary": "devguard-scanner sarif2markdown",
+		},
 	}
 
 	cmd.Flags().StringP("input", "i", "", "Input SARIF JSON file")

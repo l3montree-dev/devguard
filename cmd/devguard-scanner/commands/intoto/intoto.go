@@ -21,6 +21,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"regexp"
+
 	"github.com/in-toto/go-witness/attestation"
 	envAttestor "github.com/in-toto/go-witness/attestation/environment"
 	"github.com/in-toto/go-witness/attestation/git"
@@ -34,10 +39,6 @@ import (
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io"
-	"net/http"
-	"os"
-	"regexp"
 )
 
 var patterns = []*regexp.Regexp{
@@ -266,6 +267,11 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 
 			return downloadSupplyChainLinks(cmd.Context(), c, "links", apiURL, assetName, supplyChainID)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto fetch-links — Fetch supply chain links",
+			"description":     "Download the signed in-toto links recorded for a given supply chain ID from DevGuard so they can be inspected or verified locally.",
+			"keyword_primary": "devguard-scanner intoto fetch-links",
+		},
 	}
 
 	cmd.Flags().String("token", "", "The token to use to authenticate with the devguard api")
@@ -315,6 +321,11 @@ DevGuard enforces a fixed three-step pipeline layout:
 The layout enforces that each step's inputs match the previous step's outputs, so any tampering
 between steps is detectable. DevGuard knows all links are present when it receives the deploy
 link with a --supplyChainOutputDigest attached.`,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto — Record and verify supply chain steps",
+			"description":     "Record and verify software supply chain steps with in-toto, capturing signed cryptographic evidence at each stage of your CI pipeline and uploading it to DevGuard.",
+			"keyword_primary": "devguard-scanner intoto",
+		},
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// run the root command pre-run

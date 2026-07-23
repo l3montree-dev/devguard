@@ -111,6 +111,11 @@ See the checkov CLI reference for available flags: https://www.checkov.io/2.Basi
 			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 			return sarifCommandFactory("iac")(cmd, args)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner iac — Infrastructure-as-Code scan",
+			"description":     "Run an Infrastructure-as-Code scan with devguard-scanner iac to check Terraform, CloudFormation, and Kubernetes manifests for misconfigurations and upload SARIF results to DevGuard.",
+			"keyword_primary": "devguard-scanner iac",
+		},
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(iacCommand)
