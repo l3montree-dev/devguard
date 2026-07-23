@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -300,6 +301,10 @@ func (s externalEntityProviderService) updateUserRoleInAsset(ctx context.Context
 }
 
 func (s externalEntityProviderService) syncProjectAssets(ctx shared.Context, user string, project *models.Project) ([]*models.Asset, error) {
+	if project.ID == uuid.Nil {
+		return nil, fmt.Errorf("cannot sync assets for project %q without a database ID", project.Slug)
+	}
+
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	domainRBAC := shared.GetRBAC(ctx)
 

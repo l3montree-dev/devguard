@@ -589,6 +589,22 @@ func TestSyncProjectAssets(t *testing.T) {
 		thirdPartyIntegration.AssertExpectations(t)
 	})
 
+	t.Run("project without database ID", func(t *testing.T) {
+		service := createTestService(t)
+		ctx := createTestContext()
+		project := &models.Project{
+			Slug:                     "project-without-id",
+			ExternalEntityProviderID: new("gitlab"),
+			ExternalEntityID:         new("123"),
+		}
+
+		result, err := service.syncProjectAssets(ctx, "user123", project)
+
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "without a database ID")
+	})
+
 	t.Run("third party error", func(t *testing.T) {
 		service := createTestService(t)
 		ctx := createTestContext()
