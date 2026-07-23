@@ -35,13 +35,26 @@ func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 		sarifFilePath = path.Join(dir, "results_sarif.sarif")
 	}
 
+	scanTypeFlag := "-d"
+	info, err := os.Stat(p)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, errors.Wrap(err, "scan target filepath does not exist")
+		}
+		return nil, errors.Wrap(err, "could not read scan target filepath")
+	}
+	if !info.IsDir() {
+		scanTypeFlag = "-f"
+	}
+
 	var scannerCmd *exec.Cmd
 	slog.Info("Starting iac scanning", "path", p)
 	var configFileArgs []string
 	if config.RuntimeBaseConfig.ConfigFilePath != "" {
 		configFileArgs = []string{"--config-file", config.RuntimeBaseConfig.ConfigFilePath}
 	}
-	args := []string{"-s", "-d", p, "--output", "sarif", "--output-file-path", outputDir}
+	args := []string{"-s", scanTypeFlag, p, "--output", "sarif", "--output-file-path", outputDir}
 	args = append(args, configFileArgs...)
 	args = append(args, config.RuntimeExtraArgs...)
 
