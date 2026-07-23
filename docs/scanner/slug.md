@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner slug — Create a URL-friendly slug
+description: Turn arbitrary text into a URL-friendly slug with devguard-scanner slug, handy for generating artifact names or identifiers in scripts.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner slug
+lang: en-US
+ignoreChecks: null
+---
+
 ## slug
 
 Create a URL-friendly slug from text

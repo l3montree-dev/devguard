@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner login — Log in to a container registry
+description: Authenticate devguard-scanner with a remote container registry using a username and password so it can pull and push images.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner login
+lang: en-US
+ignoreChecks: null
+---
+
 ## login
 
 Log in to a remote registry

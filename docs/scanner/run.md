@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner intoto run — Record a single-command step
+description: Run a pipeline step as a single command, snapshot input and output file hashes around it, sign the resulting in-toto link and upload it to DevGuard.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner intoto run
+lang: en-US
+ignoreChecks: null
+---
+
 ## intoto run
 
 Record a single-command pipeline step and upload the signed link

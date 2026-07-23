@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner curl — Signed HTTP requests
+description: Make curl-compatible HTTP requests with devguard-scanner curl, automatically signing them with your DevGuard Personal Access Token for authentication.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner curl
+lang: en-US
+ignoreChecks: null
+---
+
 ## curl
 
 Make HTTP requests with DevGuard PAT signing (curl-compatible)

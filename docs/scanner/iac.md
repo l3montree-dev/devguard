@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner iac — Infrastructure-as-Code scan
+description: Run an Infrastructure-as-Code scan with devguard-scanner iac to check Terraform, CloudFormation, and Kubernetes manifests for misconfigurations and upload SARIF results to DevGuard.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner iac
+lang: en-US
+ignoreChecks: null
+---
+
 ## iac
 
 Run an Infrastructure-as-Code (IaC) scan
@@ -8,6 +23,9 @@ Run an Infrastructure-as-Code scan (e.g. checkov) against a repository or path a
 
 This command scans Terraform, CloudFormation, Kubernetes manifests, and other IaC
 files for security issues and misconfigurations.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying checkov invocation.
+See the checkov CLI reference for available flags: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
 
 ```shell
 devguard-scanner iac [path] [flags]
@@ -24,6 +42,9 @@ devguard-scanner iac [path] [flags]
 
   # Scan and save results locally
   devguard-scanner iac ./terraform --outputPath iac-results.sarif.json
+
+  # Forward extra flags to checkov
+  devguard-scanner iac ./terraform -- --skip-check CKV_AWS_20
 ```
 
 ### Options

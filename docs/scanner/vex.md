@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner vex — Upload a VEX document
+description: Upload a CycloneDX VEX document to DevGuard with devguard-scanner vex to suppress non-exploitable CVEs so they no longer count against your risk score.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner vex
+lang: en-US
+ignoreChecks: null
+---
+
 ## vex
 
 Upload a VEX document to DevGuard
@@ -42,7 +57,7 @@ devguard-scanner vex <vex-file> [flags]
   -h, --help                            help for vex
       --ignoreExternalReferences        If an attestation does contain a external reference to an sbom or vex, this will be ignored. Useful when scanning your own image from the registry where your own attestations are attached.
       --isTag                           If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
-      --keepOriginalSbomRootComponent   Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies
+      --keepOriginalSbomRootComponent   Deprecated, does nothing: the original SBOM root component is now always kept when it has a valid PackageURL.
       --noWrite                         Run the scan and display results (including VEX/false-positive assessments) without persisting anything to DevGuard.
       --origin string                   Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'. (default "DEFAULT")
       --output string                   Output format for scan results. Options: 'table' (default), 'cyclonedx' (CycloneDX VEX JSON). (default "table")

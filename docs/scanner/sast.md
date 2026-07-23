@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner sast — run a static application security test
+description: Run a static application security test with semgrep against your project and upload the SARIF results to DevGuard with devguard-scanner.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner sast
+lang: en-US
+ignoreChecks: null
+---
+
 ## sast
 
 Run a static application security test (SAST)
@@ -12,6 +27,9 @@ uploads the SARIF results to DevGuard. The request is signed using the configure
 token before upload.
 
 You may pass the target as the first positional argument instead of using --path.
+
+Any flags after a "--" separator are forwarded verbatim to the underlying semgrep invocation.
+See the semgrep CLI reference for available flags: https://semgrep.dev/docs/cli-reference
 
 ```shell
 devguard-scanner sast [path] [flags]
@@ -31,6 +49,9 @@ devguard-scanner sast [path] [flags]
 
   # Scan and save results locally
   devguard-scanner sast ./my-repo --outputPath results.sarif.json
+
+  # Forward extra flags to semgrep
+  devguard-scanner sast ./my-repo -- --exclude-rule some-rule-id
 ```
 
 ### Options

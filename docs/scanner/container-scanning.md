@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner container-scanning — Container image SCA
+description: Run software composition analysis on a container image with devguard-scanner container-scanning, generating or uploading an SBOM that DevGuard analyzes for vulnerabilities.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner container-scanning
+lang: en-US
+ignoreChecks: null
+---
+
 ## container-scanning
 
 Software composition analysis of a container image
@@ -40,12 +55,14 @@ devguard-scanner container-scanning [flags]
       --ignoreUpstreamAttestations      Ignores attestations from the scanned container image - if they exists
       --image string                    OCI image reference to scan (e.g. ghcr.io/org/image:tag). If empty, --path or the first argument may be used to provide a tar or local files.
       --isTag                           If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
-      --keepOriginalSbomRootComponent   Use this flag if you get software from a supplier and you want to identify vulnerabilities in the root component itself, not only in the dependencies
+      --keepOriginalSbomRootComponent   Deprecated, does nothing: the original SBOM root component is now always kept when it has a valid PackageURL.
       --noWrite                         Run the scan and display results (including VEX/false-positive assessments) without persisting anything to DevGuard.
       --origin string                   Origin of the SBOM (how it was generated). Examples: 'source-scanning', 'container-scanning', 'base-image'. Default: 'container-scanning'. (default "DEFAULT")
       --output string                   Output format for scan results. Options: 'table' (default), 'cyclonedx' (CycloneDX VEX JSON). (default "table")
       --path string                     Path to a tar file or directory containing the container image to scan. If empty, --image must be provided or an argument.
       --ref string                      The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.
+      --sbomOutputPath string           If set, write the final (merged) SBOM to this file path in addition to uploading it.
+      --sbomPath string                 Path to scan for supplementary SBOM json files to merge into the scan results. A directory when scanning a path, an absolute path inside the image filesystem when scanning a container image. Each supplementary SBOM's root component name must match the exact in-image/in-project path of the application it describes, so that DevGuard can attach it under the right node and silence the 'unresolved application' warning for it. (default "/sboms")
       --timeout int                     Set the timeout for scanner operations in seconds (default 300)
       --token string                    The personal access token to authenticate the request
       --webUI string                    The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'. (default "https://app.devguard.org")

@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner generate-tag — build a container image tag from metadata
+description: Generate a container image tag, artifact name, and URL-encoded artifact name from build parameters like version, ref, and architecture with devguard-scanner.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner generate-tag
+lang: en-US
+ignoreChecks: null
+---
+
 ## generate-tag
 
 Generate a tag for an image based on its contents
