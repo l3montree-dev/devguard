@@ -27,7 +27,6 @@ import (
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/config"
-	"github.com/l3montree-dev/devguard/utils"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/time/rate"
 )
@@ -135,7 +134,7 @@ func DoGetRequestWithContext(ctx context.Context, url string, client *http.Clien
 	}
 
 	if client == nil {
-		client = utils.EgressClient
+		client = &EgressClient
 	}
 	resp, err := client.Do(req)
 	if err != nil {

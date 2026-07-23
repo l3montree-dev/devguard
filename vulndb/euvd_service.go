@@ -78,6 +78,7 @@ func (service euvdService) ResolveAndInsertEUVDRelationships(ctx context.Context
 	FROM euvd_relationships_stage euvd
 	WHERE NOT EXISTS (SELECT 1 FROM cve_relationships cr WHERE cr.target_cve = euvd.target_cve)
 	AND EXISTS (SELECT 1 FROM cves c WHERE c.cve = euvd.target_cve)
+	ORDER BY target_cve, source_cve, relationship_type -- deterministic order so RETURNING below is reproducible across runs
 	ON CONFLICT (target_cve, source_cve, relationship_type) DO NOTHING
 	-- return the resolved rows to be written in the exported gob files
 	RETURNING target_cve, source_cve, relationship_type`)

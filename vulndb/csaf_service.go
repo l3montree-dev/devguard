@@ -22,6 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -60,13 +61,22 @@ type minimalCSAFVuln struct {
 	CVE *string `json:"cve,omitempty"`
 }
 
-var csafSources = map[string]string{"BSI": "https://wid.cert-bund.de/.well-known/csaf/white/", "NCSC": "https://advisories.ncsc.nl/csaf/v2/"}
+type csafSource struct {
+	name string
+	url  string
+}
+
+// fixed order so the export is reproducible; do not derive this from a map
+var csafSources = []csafSource{
+	{name: "BSI", url: "https://wid.cert-bund.de/.well-known/csaf/white/"},
+	{name: "NCSC", url: "https://advisories.ncsc.nl/csaf/v2/"},
+}
 
 func fetchAllCSAFSources(ctx context.Context) ([]models.CVE, error) {
 	allCVEs := make([]models.CVE, 0, len(csafSources)*3000)
-	for source, url := range csafSources {
-		slog.Info("start fetching CSAF reports", "source", source)
-		cves, err := FetchCSAFData(ctx, url)
+	for _, source := range csafSources {
+		slog.Info("start fetching CSAF reports", "source", source.name)
+		cves, err := FetchCSAFData(ctx, source.url)
 		if err != nil {
 			return nil, err
 		}
@@ -333,6 +343,7 @@ func fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []str
 
 	slog.Info("start fetching csaf files...")
 	// collect the results on the main goroutine; the convert stage closes cveOutput
+	// order depends on goroutine scheduling, so it must be sorted below for a reproducible export
 	cves := make([]models.CVE, 0, len(fileNames))
 	for cve := range cveOutput {
 		cves = append(cves, *cve)
@@ -341,6 +352,10 @@ func fetchFilesConcurrently(ctx context.Context, baseURL string, fileNames []str
 	if err := group.Wait(); err != nil {
 		return nil, fmt.Errorf("ran into error while syncing CSAF advisories, source: %s, error: %w", baseURL, err)
 	}
+
+	slices.SortFunc(cves, func(a, b models.CVE) int {
+		return strings.Compare(a.CVE, b.CVE)
+	})
 
 	slog.Info("successfully finished csaf sync", "time", time.Since(start), "advisories fetched", len(cves))
 	return cves, nil
