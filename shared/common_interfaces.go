@@ -220,7 +220,6 @@ type CveRepository interface {
 	CreateCVEWithConflictHandling(ctx context.Context, tx DB, cve *models.CVE) error
 	CreateCVEAffectedComponentsEntries(ctx context.Context, tx DB, cve *models.CVE, components []models.AffectedComponent) error
 	UpdateEpssBatch(ctx context.Context, tx DB, batch []models.CVE) error
-	FindAdvisoriesForCVE(ctx context.Context, tx DB, cveID string) ([]models.CVE, error)
 	GetAllRelatedCVEsForCVE(ctx context.Context, tx DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error)
 }
 
@@ -710,7 +709,6 @@ type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
 	ExportRCWithDiff(ctx context.Context, localArchive bool) error
-	FetchAllCSAFSources(ctx context.Context) ([]models.CVE, error)
 }
 
 type AdminService interface {

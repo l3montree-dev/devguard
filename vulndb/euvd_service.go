@@ -44,7 +44,7 @@ func (service euvdService) importEUVDAliases(ctx context.Context, tx pgx.Tx) ([]
 		return nil, err
 	}
 
-	relationships, err := service.convertAliasesToRelationships(aliasCSV)
+	relationships, err := convertAliasesToRelationships(aliasCSV)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (service euvdService) fetchEUVDAliases() ([][]string, error) {
 	return csvReader.ReadAll()
 }
 
-func (service euvdService) convertAliasesToRelationships(aliasesCSV [][]string) ([]models.CVERelationship, error) {
+func convertAliasesToRelationships(aliasesCSV [][]string) ([]models.CVERelationship, error) {
 	// check the format of the csv file; should break if the format changes so we explicitly investigate the change
 	if len(aliasesCSV) == 0 || len(aliasesCSV[0]) != 2 || aliasesCSV[0][0] != csvEUVDColumnID || aliasesCSV[0][1] != csvCVEColumnID {
 		return nil, fmt.Errorf("invalid/unexpected csv format; check the csv file provided by the EUVD")

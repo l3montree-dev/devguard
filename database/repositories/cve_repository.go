@@ -260,31 +260,6 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 	return g.GetDB(ctx, tx).Exec(sql, ids, epss, percentiles).Error
 }
 
-func (g *cveRepository) FindAdvisoriesForCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.CVE, error) {
-	var advisories []models.CVE
-	// find advisories either through direct relations or 1 layer deeper (e.g. for downstream cves)
-	err := g.GetDB(ctx, tx).Raw(`
-	SELECT DISTINCT
-		cves.*
-	FROM
-		cve_relationships advisory
-	JOIN cves
-		ON advisory.source_cve = cves.cve
-	WHERE
-		advisory.relationship_type = ?
-	AND advisory.source_cve != ?
-	AND (
-		advisory.target_cve = ?
-		OR advisory.target_cve IN (
-			SELECT downstream.target_cve
-			FROM cve_relationships downstream
-			WHERE downstream.source_cve = ?
-		)
-	)
-	ORDER BY cves.cve DESC -- bsi advisories (wid...) appear before other advisories ;`, dtos.RelationshipTypeAdvisory, cveID, cveID, cveID).Find(&advisories).Error
-	return advisories, err
-}
-
 // fetches all related cves recursively via their relationships
 // and return them grouped by their relationship type
 // fetched cves do not have any affected components or relationships
