@@ -145,3 +145,8 @@ type DetailedDependencyVulnWithRelationsDTO struct {
 	DetailedDependencyVulnDTO
 	Related map[RelationshipType][]CVEDTO `json:"related"`
 }
+
+type CVEWithRelationsDTO struct {
+	CVEDTO
+	Related map[RelationshipType][]CVEDTO `json:"related"`
+}

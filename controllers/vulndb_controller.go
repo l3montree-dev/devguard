@@ -113,9 +113,16 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
 
-	advisories, err := c.cveRepository.FindAdvisoriesForCVE(ctx.Request().Context(), nil, cve.CVE)
+	related, err := c.cveRepository.GetAllRelatedCVEsForCVE(ctx.Request().Context(), nil, cve.CVE)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not fetch advisories for cve").WithInternal(err)
+	}
+
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	for relation, relatedCVEs := range related {
+		relatedDTOs[relation] = utils.Map(relatedCVEs, func(cve models.CVE) dtos.CVEDTO {
+			return transformer.CVEToDTO(cve)
+		})
 	}
 
 	e := shared.GetEnvironmental(ctx)
@@ -124,7 +131,7 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 	cve.Risk = risk
 	cve.Vector = vector
 
-	return ctx.JSON(200, models.CVEWithAdvisories{CVE: cve, Advisories: advisories})
+	return ctx.JSON(200, dtos.CVEWithRelationsDTO{CVEDTO: transformer.CVEToDTO(cve), Related: relatedDTOs})
 }
 
 // @Summary Inspect a package URL (PURL) for vulnerabilities
