@@ -71,7 +71,7 @@ func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, 
 	var dependencyVulns = []models.DependencyVuln{}
 	err := repository.Repository.GetDB(ctx, tx).Model(&models.VulnEvent{}).Select("DISTINCT dependency_vulns.*").Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Find(&dependencyVulns).Error
+	}).Preload("Events.VexRule").Find(&dependencyVulns).Error
 	if err != nil {
 		return nil, err
 	}
