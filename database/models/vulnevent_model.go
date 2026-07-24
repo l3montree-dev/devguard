@@ -19,6 +19,7 @@ type VulnEvent struct {
 	FirstPartyVulnID         *uuid.UUID                       `json:"firstPartyVulnId" gorm:"type:uuid;column:first_party_vuln_id"`
 	CompliancePostureID      *uuid.UUID                       `json:"compliancePostureId" gorm:"type:uuid;column:compliance_posture_id"`
 	VexRuleID                *string                          `json:"vexRuleId" gorm:"type:text;column:vex_rule_id"`
+	VexRule                  *VEXRule                         `json:"vexRule,omitempty" gorm:"foreignKey:VexRuleID;references:ID"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`

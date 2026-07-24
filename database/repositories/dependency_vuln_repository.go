@@ -263,7 +263,7 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("dependency_vulns.id = ?", id), t)
 	err := db.Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Joins("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error
+	}).Preload("Events.VexRule").Joins("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error
 
 	return t, err
 }
