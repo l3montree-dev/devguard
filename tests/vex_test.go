@@ -353,8 +353,7 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 
 		// Verify VEX rules were created from the VEX document
 		var vexRules []models.VEXRule
-		result = f.DB.Where("asset_id = ? AND asset_version_name = ?",
-			asset.ID, assetVersion.Name).Find(&vexRules)
+		result = f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
 		assert.NoError(t, result.Error)
 	})
 }

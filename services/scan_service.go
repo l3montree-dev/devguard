@@ -151,6 +151,19 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		return nil, nil, nil, err
 	}
 
+	// newly opened vulns may already be covered by previously created, still-enabled VEX
+	// rules for this asset (e.g. a rule created before this vulnerability was ever detected).
+	if len(opened) > 0 {
+		existingRules, rulesErr := s.vexRuleService.FindByAssetID(ctx, tx, asset.ID)
+		if rulesErr != nil {
+			slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
+		} else if len(existingRules) > 0 {
+			if _, applyErr := s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, opened); applyErr != nil {
+				slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+			}
+		}
+	}
+
 	span.SetAttributes(
 		attribute.Int("scan.opened", len(opened)),
 		attribute.Int("scan.closed", len(closed)),
