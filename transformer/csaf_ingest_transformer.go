@@ -122,14 +122,13 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, assetVersionNa
 
 				rule := models.VEXRule{
 					AssetID:       assetID,
-					CVEID:         cveID,
 					VexSource:     source,
 					Justification: remediationDetail[productID],
 					EventType:     et,
-					PathPattern:   pattern,
+					CELExpression: pattern.ToCELExpression(),
 					CreatedByID:   "system",
 				}
-				rule.SetPathPattern(rule.PathPattern)
+				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 		}

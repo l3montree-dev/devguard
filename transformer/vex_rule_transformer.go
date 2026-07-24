@@ -27,14 +27,14 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 
 		// Composite key components
 		AssetID:   rule.AssetID,
-		CVEID:     rule.CVEID,
 		VexSource: rule.VexSource,
 
 		// Rule data
+		Title:                   rule.Title,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
-		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		CELExpression:           rule.CELExpression,
 		CreatedByID:             rule.CreatedByID,
 		CreatedAt:               rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:               rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -46,8 +46,7 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 
 func VEXRuleToRecommendationDTO(rule models.VEXRule) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
-		CVEID:                   rule.CVEID,
-		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		CELExpression:           rule.CELExpression,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,

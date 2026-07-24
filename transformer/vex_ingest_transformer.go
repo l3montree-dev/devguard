@@ -148,14 +148,13 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 			for _, pp := range pathPattern {
 				rule := models.VEXRule{
 					AssetID:       assetID,
-					CVEID:         cveID,
 					VexSource:     source,
 					Justification: justification,
 					EventType:     eventType,
-					PathPattern:   pp,
+					CELExpression: pp.ToCELExpression(),
 					CreatedByID:   "system", // system user
 				}
-				rule.SetPathPattern(rule.PathPattern)
+				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 			continue
@@ -183,14 +182,13 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 
 		rule := models.VEXRule{
 			AssetID:       assetID,
-			CVEID:         cveID,
 			VexSource:     source,
 			Justification: justification,
 			EventType:     eventType,
-			PathPattern:   pattern,
+			CELExpression: pattern.ToCELExpression(),
 			CreatedByID:   "system", // system user
 		}
-		rule.SetPathPattern(rule.PathPattern) // compute the hash
+		rule.SetCELExpression(rule.CELExpression)
 		rules = append(rules, rule)
 	}
 
@@ -230,14 +228,13 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, so
 		for _, purlString := range purlStrings {
 			rule := models.VEXRule{
 				AssetID:       assetID,
-				CVEID:         cveID,
 				VexSource:     source,
 				Justification: justification,
 				EventType:     eventType,
-				PathPattern:   dtos.PathPattern{dtos.PathPatternWildcard, purlString},
+				CELExpression: dtos.PathPattern{dtos.PathPatternWildcard, purlString}.ToCELExpression(),
 				CreatedByID:   "system", // system user
 			}
-			rule.SetPathPattern(rule.PathPattern)
+			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
 		}
 	}

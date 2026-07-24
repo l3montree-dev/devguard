@@ -18,6 +18,7 @@ type VulnEvent struct {
 	LicenseRiskID            *uuid.UUID                       `json:"licenseRiskId" gorm:"type:uuid;column:license_risk_id"`
 	FirstPartyVulnID         *uuid.UUID                       `json:"firstPartyVulnId" gorm:"type:uuid;column:first_party_vuln_id"`
 	CompliancePostureID      *uuid.UUID                       `json:"compliancePostureId" gorm:"type:uuid;column:compliance_posture_id"`
+	VexRuleID                *string                          `json:"vexRuleId" gorm:"type:text;column:vex_rule_id"`
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
