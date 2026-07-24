@@ -794,6 +794,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	assetVersion models.AssetVersion,
 	artifact models.Artifact,
 	userID string,
+	vexRefs []models.ExternalReference,
 	userAgent *string,
 ) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
 	// Fetch information sources (SBOM URLs) from the artifact
@@ -812,13 +813,6 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}), func(el string) string {
 		return el
 	})
-
-	// Fetch VEX URLs from external references
-	vexRefs, err := s.externalReferenceRepository.FindByAssetVersion(ctx, tx, asset.ID, assetVersion.Name)
-	if err != nil {
-		slog.Error("failed to fetch vex external references", "error", err, "artifactName", artifact.ArtifactName)
-		// Don't fail the entire operation if fetching external refs fails
-	}
 
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)

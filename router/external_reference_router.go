@@ -27,20 +27,20 @@ type ExternalReferenceRouter struct {
 }
 
 func NewExternalReferenceRouter(
-	assetVersionRouter AssetVersionRouter,
+	assetRouter AssetRouter,
 	externalReferenceController *controllers.ExternalReferenceController,
 	assetRepository shared.AssetRepository,
 ) ExternalReferenceRouter {
 	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 	// External references are scoped to asset versions
 	// Read access - anyone who can read the asset version can list references
-	refGroup := assetVersionRouter.Group.Group("/external-references")
+	refGroup := assetRouter.Group.Group("/external-references")
 	refGroup.GET("/", externalReferenceController.List) // List all references for asset version
 
 	// Write access - requires asset update permission
 	refWriteGroup := refGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))       // Create reference
-	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))    // Sync external sources
+	refWriteGroup.POST("/", externalReferenceController.Create, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))        // Create reference
+	refWriteGroup.POST("/sync/", externalReferenceController.Sync, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))     // Sync external sources
 	refWriteGroup.DELETE("/:url/", externalReferenceController.Delete, assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate)) // Delete reference by URL-encoded URL
 
 	return ExternalReferenceRouter{Group: refGroup}

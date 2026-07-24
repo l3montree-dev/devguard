@@ -24,11 +24,10 @@ const (
 )
 
 type ExternalReferenceDTO struct {
-	AssetID          string                `json:"assetId"`
-	AssetVersionName string                `json:"assetVersionName"`
-	URL              string                `json:"url"`
-	Type             ExternalReferenceType `json:"type"`
-	Error            *string               `json:"error,omitempty"` // optional error message if the reference could not be processed
+	AssetID string                `json:"assetId"`
+	URL     string                `json:"url"`
+	Type    ExternalReferenceType `json:"type"`
+	Error   *string               `json:"error,omitempty"` // optional error message if the reference could not be processed
 }
 
 type CreateExternalReferenceRequest struct {

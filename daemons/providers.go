@@ -72,6 +72,7 @@ type DaemonRunner struct {
 	maliciousPackageChecker      shared.MaliciousPackageChecker
 	vulnDBImportService          shared.VulnDBService
 	vexRuleService               shared.VEXRuleService
+	externalReferenceRepository  shared.ExternalReferenceRepository
 
 	debugOptions         DebugOptions
 	fixedVersionResolver shared.FixedVersionResolver
