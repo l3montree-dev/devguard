@@ -2,13 +2,13 @@
 title: DevGuard-Scanner sbom — Scan a CycloneDX SBOM
 description: Upload a CycloneDX SBOM from a file or stdin with devguard-scanner sbom and let DevGuard analyze it for known vulnerabilities.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner sbom
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner sbom
 lang: en-US
 ignoreChecks: null
 ---

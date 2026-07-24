@@ -2,13 +2,13 @@
 title: DevGuard-Scanner intoto fetch-links — Fetch supply chain links
 description: Download the signed in-toto links recorded for a given supply chain ID from DevGuard so they can be inspected or verified locally.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner intoto fetch-links
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner intoto fetch-links
 lang: en-US
 ignoreChecks: null
 ---

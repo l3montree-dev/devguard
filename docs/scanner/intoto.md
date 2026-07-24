@@ -2,13 +2,13 @@
 title: DevGuard-Scanner intoto — Record and verify supply chain steps
 description: Record and verify software supply chain steps with in-toto, capturing signed cryptographic evidence at each stage of your CI pipeline and uploading it to DevGuard.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner intoto
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner intoto
 lang: en-US
 ignoreChecks: null
 ---

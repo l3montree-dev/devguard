@@ -2,13 +2,13 @@
 title: DevGuard-Scanner sarif — Upload a SARIF report
 description: Upload an existing SARIF report to DevGuard with devguard-scanner sarif to store findings from your own scanners without re-scanning the source files.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner sarif
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner sarif
 lang: en-US
 ignoreChecks: null
 ---

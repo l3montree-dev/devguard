@@ -2,13 +2,13 @@
 title: DevGuard-Scanner intoto verify — Check supply chain verification status
 description: Query the DevGuard supply chain verification endpoint to confirm all required pipeline steps ran correctly, intended for automated deployment gates rather than direct use.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner intoto verify
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner intoto verify
 lang: en-US
 ignoreChecks: null
 ---

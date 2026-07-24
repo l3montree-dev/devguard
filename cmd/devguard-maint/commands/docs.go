@@ -1,15 +1,16 @@
 package commands
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"gopkg.in/yaml.v3"
 )
 
 var DocsCmd = &cobra.Command{
@@ -75,7 +76,38 @@ func frontmatter(cmd *cobra.Command) string {
 	} else {
 		keywordPrimary = cmd.CommandPath()
 	}
-	output = "---\n" + fmt.Sprintf("title: %s\n", title) + fmt.Sprintf("description: %s\n", description) + "seo:\n  robots: index,follow\n  og:\n    image: /og-image.png\n    type: article\n  schema:\n    type: TechArticle\n" + fmt.Sprintf("  keyword_primary: %s\n", keywordPrimary) + "lang: en-US\nignoreChecks: null\n---"
+	data := struct {
+		Title       string `yaml:"title"`
+		Description string `yaml:"description"`
+		SEO         struct {
+			Robots string `yaml:"robots"`
+			OG     struct {
+				Image string `yaml:"image"`
+				Type  string `yaml:"type"`
+			} `yaml:"og"`
+			Schema struct {
+				Type string `yaml:"type"`
+			} `yaml:"schema"`
+			KeywordPrimary string `yaml:"keyword_primary"`
+		} `yaml:"seo"`
+		Lang         string `yaml:"lang"`
+		IgnoreChecks any    `yaml:"ignoreChecks"`
+	}{
+		Title:       strings.Join(strings.Fields(title), " "),
+		Description: strings.Join(strings.Fields(description), " "),
+		Lang:        "en-US",
+	}
+	data.SEO.Robots = "index,follow"
+	data.SEO.OG.Image = "/og-image.png"
+	data.SEO.OG.Type = "article"
+	data.SEO.Schema.Type = "TechArticle"
+	data.SEO.KeywordPrimary = strings.Join(strings.Fields(keywordPrimary), " ")
+
+	out, err := yaml.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	output = "---\n" + string(out) + "---"
 
 	return output
 }
