@@ -103,86 +103,17 @@ func (_c *ExternalReferenceRepository_Create_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
-// DeleteByAssetVersion provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) DeleteByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteByAssetVersion")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ExternalReferenceRepository_DeleteByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByAssetVersion'
-type ExternalReferenceRepository_DeleteByAssetVersion_Call struct {
-	*mock.Call
-}
-
-// DeleteByAssetVersion is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *ExternalReferenceRepository_Expecter) DeleteByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
-	return &ExternalReferenceRepository_DeleteByAssetVersion_Call{Call: _e.mock.On("DeleteByAssetVersion", ctx, tx, assetID, assetVersionName)}
-}
-
-func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) Return(err error) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ExternalReferenceRepository_DeleteByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error) *ExternalReferenceRepository_DeleteByAssetVersion_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // DeleteByURL provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) DeleteByURL(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string) error {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, url)
+func (_mock *ExternalReferenceRepository) DeleteByURL(ctx context.Context, tx shared.DB, assetID uuid.UUID, url string) error {
+	ret := _mock.Called(ctx, tx, assetID, url)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByURL")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, url)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetID, url)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -198,13 +129,12 @@ type ExternalReferenceRepository_DeleteByURL_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - assetVersionName string
 //   - url string
-func (_e *ExternalReferenceRepository_Expecter) DeleteByURL(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, url interface{}) *ExternalReferenceRepository_DeleteByURL_Call {
-	return &ExternalReferenceRepository_DeleteByURL_Call{Call: _e.mock.On("DeleteByURL", ctx, tx, assetID, assetVersionName, url)}
+func (_e *ExternalReferenceRepository_Expecter) DeleteByURL(ctx interface{}, tx interface{}, assetID interface{}, url interface{}) *ExternalReferenceRepository_DeleteByURL_Call {
+	return &ExternalReferenceRepository_DeleteByURL_Call{Call: _e.mock.On("DeleteByURL", ctx, tx, assetID, url)}
 }
 
-func (_c *ExternalReferenceRepository_DeleteByURL_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string)) *ExternalReferenceRepository_DeleteByURL_Call {
+func (_c *ExternalReferenceRepository_DeleteByURL_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, url string)) *ExternalReferenceRepository_DeleteByURL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -222,16 +152,11 @@ func (_c *ExternalReferenceRepository_DeleteByURL_Call) Run(run func(ctx context
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -242,54 +167,53 @@ func (_c *ExternalReferenceRepository_DeleteByURL_Call) Return(err error) *Exter
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_DeleteByURL_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, url string) error) *ExternalReferenceRepository_DeleteByURL_Call {
+func (_c *ExternalReferenceRepository_DeleteByURL_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, url string) error) *ExternalReferenceRepository_DeleteByURL_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// FindByAssetVersion provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) FindByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+// FindByAssetID provides a mock function for the type ExternalReferenceRepository
+func (_mock *ExternalReferenceRepository) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.ExternalReference, error) {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetVersion")
+		panic("no return value specified for FindByAssetID")
 	}
 
 	var r0 []models.ExternalReference
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.ExternalReference, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.ExternalReference, error)); ok {
+		return returnFunc(ctx, tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.ExternalReference); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.ExternalReference); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ExternalReference)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// ExternalReferenceRepository_FindByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetVersion'
-type ExternalReferenceRepository_FindByAssetVersion_Call struct {
+// ExternalReferenceRepository_FindByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetID'
+type ExternalReferenceRepository_FindByAssetID_Call struct {
 	*mock.Call
 }
 
-// FindByAssetVersion is a helper method to define mock.On call
+// FindByAssetID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *ExternalReferenceRepository_Expecter) FindByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ExternalReferenceRepository_FindByAssetVersion_Call {
-	return &ExternalReferenceRepository_FindByAssetVersion_Call{Call: _e.mock.On("FindByAssetVersion", ctx, tx, assetID, assetVersionName)}
+func (_e *ExternalReferenceRepository_Expecter) FindByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *ExternalReferenceRepository_FindByAssetID_Call {
+	return &ExternalReferenceRepository_FindByAssetID_Call{Call: _e.mock.On("FindByAssetID", ctx, tx, assetID)}
 }
 
-func (_c *ExternalReferenceRepository_FindByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *ExternalReferenceRepository_FindByAssetVersion_Call {
+func (_c *ExternalReferenceRepository_FindByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *ExternalReferenceRepository_FindByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -303,26 +227,21 @@ func (_c *ExternalReferenceRepository_FindByAssetVersion_Call) Run(run func(ctx 
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_FindByAssetVersion_Call) Return(externalReferences []models.ExternalReference, err error) *ExternalReferenceRepository_FindByAssetVersion_Call {
+func (_c *ExternalReferenceRepository_FindByAssetID_Call) Return(externalReferences []models.ExternalReference, err error) *ExternalReferenceRepository_FindByAssetID_Call {
 	_c.Call.Return(externalReferences, err)
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_FindByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.ExternalReference, error)) *ExternalReferenceRepository_FindByAssetVersion_Call {
+func (_c *ExternalReferenceRepository_FindByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.ExternalReference, error)) *ExternalReferenceRepository_FindByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

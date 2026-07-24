@@ -1343,6 +1343,80 @@ func (_c *DependencyVulnRepository_GetByAssetVersionPaged_Call) RunAndReturn(run
 	return _c
 }
 
+// GetByVexRuleID provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetByVexRuleID(ctx context.Context, tx shared.DB, vexRuleID string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, vexRuleID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByVexRuleID")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, vexRuleID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, vexRuleID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, vexRuleID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetByVexRuleID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByVexRuleID'
+type DependencyVulnRepository_GetByVexRuleID_Call struct {
+	*mock.Call
+}
+
+// GetByVexRuleID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - vexRuleID string
+func (_e *DependencyVulnRepository_Expecter) GetByVexRuleID(ctx interface{}, tx interface{}, vexRuleID interface{}) *DependencyVulnRepository_GetByVexRuleID_Call {
+	return &DependencyVulnRepository_GetByVexRuleID_Call{Call: _e.mock.On("GetByVexRuleID", ctx, tx, vexRuleID)}
+}
+
+func (_c *DependencyVulnRepository_GetByVexRuleID_Call) Run(run func(ctx context.Context, tx shared.DB, vexRuleID string)) *DependencyVulnRepository_GetByVexRuleID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetByVexRuleID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetByVexRuleID_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetByVexRuleID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vexRuleID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetByVexRuleID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
 	ret := _mock.Called(ctx, tx)

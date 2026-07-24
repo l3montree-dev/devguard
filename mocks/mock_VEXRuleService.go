@@ -582,6 +582,78 @@ func (_c *VEXRuleService_DeleteByAssetID_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// EvalCELExpression provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) EvalCELExpression(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
+	ret := _mock.Called(ctx, rule, vuln)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EvalCELExpression")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.VEXRule, models.DependencyVuln) (bool, error)); ok {
+		return returnFunc(ctx, rule, vuln)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.VEXRule, models.DependencyVuln) bool); ok {
+		r0 = returnFunc(ctx, rule, vuln)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.VEXRule, models.DependencyVuln) error); ok {
+		r1 = returnFunc(ctx, rule, vuln)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleService_EvalCELExpression_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EvalCELExpression'
+type VEXRuleService_EvalCELExpression_Call struct {
+	*mock.Call
+}
+
+// EvalCELExpression is a helper method to define mock.On call
+//   - ctx context.Context
+//   - rule models.VEXRule
+//   - vuln models.DependencyVuln
+func (_e *VEXRuleService_Expecter) EvalCELExpression(ctx interface{}, rule interface{}, vuln interface{}) *VEXRuleService_EvalCELExpression_Call {
+	return &VEXRuleService_EvalCELExpression_Call{Call: _e.mock.On("EvalCELExpression", ctx, rule, vuln)}
+}
+
+func (_c *VEXRuleService_EvalCELExpression_Call) Run(run func(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln)) *VEXRuleService_EvalCELExpression_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.VEXRule
+		if args[1] != nil {
+			arg1 = args[1].(models.VEXRule)
+		}
+		var arg2 models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].(models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_EvalCELExpression_Call) Return(b bool, err error) *VEXRuleService_EvalCELExpression_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *VEXRuleService_EvalCELExpression_Call) RunAndReturn(run func(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error)) *VEXRuleService_EvalCELExpression_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByAssetID provides a mock function for the type VEXRuleService
 func (_mock *VEXRuleService) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
 	ret := _mock.Called(ctx, tx, assetID)
@@ -652,166 +724,6 @@ func (_c *VEXRuleService_FindByAssetID_Call) Return(vEXRules []models.VEXRule, e
 }
 
 func (_c *VEXRuleService_FindByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error)) *VEXRuleService_FindByAssetID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindByAssetIDAndCVE provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) FindByAssetIDAndCVE(ctx context.Context, tx shared.DB, assetID uuid.UUID, cveID string) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, assetID, cveID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetIDAndCVE")
-	}
-
-	var r0 []models.VEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, assetID, cveID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, assetID, cveID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, cveID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// VEXRuleService_FindByAssetIDAndCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetIDAndCVE'
-type VEXRuleService_FindByAssetIDAndCVE_Call struct {
-	*mock.Call
-}
-
-// FindByAssetIDAndCVE is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - cveID string
-func (_e *VEXRuleService_Expecter) FindByAssetIDAndCVE(ctx interface{}, tx interface{}, assetID interface{}, cveID interface{}) *VEXRuleService_FindByAssetIDAndCVE_Call {
-	return &VEXRuleService_FindByAssetIDAndCVE_Call{Call: _e.mock.On("FindByAssetIDAndCVE", ctx, tx, assetID, cveID)}
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndCVE_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, cveID string)) *VEXRuleService_FindByAssetIDAndCVE_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndCVE_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleService_FindByAssetIDAndCVE_Call {
-	_c.Call.Return(vEXRules, err)
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, cveID string) ([]models.VEXRule, error)) *VEXRuleService_FindByAssetIDAndCVE_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindByAssetIDAndVulnID provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) FindByAssetIDAndVulnID(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, assetID, vulnID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetIDAndVulnID")
-	}
-
-	var r0 []models.VEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, assetID, vulnID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, assetID, vulnID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, vulnID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// VEXRuleService_FindByAssetIDAndVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetIDAndVulnID'
-type VEXRuleService_FindByAssetIDAndVulnID_Call struct {
-	*mock.Call
-}
-
-// FindByAssetIDAndVulnID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - vulnID uuid.UUID
-func (_e *VEXRuleService_Expecter) FindByAssetIDAndVulnID(ctx interface{}, tx interface{}, assetID interface{}, vulnID interface{}) *VEXRuleService_FindByAssetIDAndVulnID_Call {
-	return &VEXRuleService_FindByAssetIDAndVulnID_Call{Call: _e.mock.On("FindByAssetIDAndVulnID", ctx, tx, assetID, vulnID)}
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndVulnID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID)) *VEXRuleService_FindByAssetIDAndVulnID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndVulnID_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleService_FindByAssetIDAndVulnID_Call {
-	_c.Call.Return(vEXRules, err)
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDAndVulnID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)) *VEXRuleService_FindByAssetIDAndVulnID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -908,6 +820,86 @@ func (_c *VEXRuleService_FindByAssetIDPaged_Call) Return(paged shared.Paged[mode
 }
 
 func (_c *VEXRuleService_FindByAssetIDPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error)) *VEXRuleService_FindByAssetIDPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindByAssetIDWithMatchingVuln provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx, assetID, vulnID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByAssetIDWithMatchingVuln")
+	}
+
+	var r0 []models.VEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) ([]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx, assetID, vulnID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, assetID, vulnID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, vulnID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleService_FindByAssetIDWithMatchingVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetIDWithMatchingVuln'
+type VEXRuleService_FindByAssetIDWithMatchingVuln_Call struct {
+	*mock.Call
+}
+
+// FindByAssetIDWithMatchingVuln is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+//   - vulnID uuid.UUID
+func (_e *VEXRuleService_Expecter) FindByAssetIDWithMatchingVuln(ctx interface{}, tx interface{}, assetID interface{}, vulnID interface{}) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
+	return &VEXRuleService_FindByAssetIDWithMatchingVuln_Call{Call: _e.mock.On("FindByAssetIDWithMatchingVuln", ctx, tx, assetID, vulnID)}
+}
+
+func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID)) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
+	_c.Call.Return(vEXRules, err)
+	return _c
+}
+
+func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1049,69 +1041,6 @@ func (_c *VEXRuleService_IngestVEXRules_Call) Return(err error) *VEXRuleService_
 }
 
 func (_c *VEXRuleService_IngestVEXRules_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error) *VEXRuleService_IngestVEXRules_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Update provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) Update(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
-	ret := _mock.Called(ctx, tx, rule)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Update")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.VEXRule) error); ok {
-		r0 = returnFunc(ctx, tx, rule)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// VEXRuleService_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
-type VEXRuleService_Update_Call struct {
-	*mock.Call
-}
-
-// Update is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - rule *models.VEXRule
-func (_e *VEXRuleService_Expecter) Update(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleService_Update_Call {
-	return &VEXRuleService_Update_Call{Call: _e.mock.On("Update", ctx, tx, rule)}
-}
-
-func (_c *VEXRuleService_Update_Call) Run(run func(ctx context.Context, tx shared.DB, rule *models.VEXRule)) *VEXRuleService_Update_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *models.VEXRule
-		if args[2] != nil {
-			arg2 = args[2].(*models.VEXRule)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_Update_Call) Return(err error) *VEXRuleService_Update_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *VEXRuleService_Update_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rule *models.VEXRule) error) *VEXRuleService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
