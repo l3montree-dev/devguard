@@ -16,6 +16,7 @@
 package dtos
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/Masterminds/semver"
@@ -87,6 +88,11 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 		}
 	}
 	return false
+}
+
+func (p PathPattern) ToCELExpression() string {
+	s := fmt.Sprintf("matchesPattern(vuln, %q)", p)
+	return s
 }
 
 // elementMatches checks whether a single pattern element matches a single
@@ -237,10 +243,12 @@ type VEXRuleDTO struct {
 	VexSource string    `json:"vexSource"`
 
 	// Rule data
+	Title                   string                      `json:"title"`
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`
 	PathPattern             PathPattern                 `json:"pathPattern"`
+	CELExpression           string                      `json:"celExpression"`
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
 	UpdatedAt               string                      `json:"updatedAt"`
@@ -250,8 +258,7 @@ type VEXRuleDTO struct {
 }
 
 type VexRuleRecommendation struct {
-	CVEID                   string                      `json:"cveId"`
-	PathPattern             PathPattern                 `json:"pathPattern"`
+	CELExpression           string                      `json:"celExpression"`
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`
