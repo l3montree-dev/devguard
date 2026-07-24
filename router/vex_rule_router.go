@@ -34,7 +34,7 @@ func NewVEXRuleRouter(
 	ruleGroup := assetRouter.Group.Group("/vex-rules")
 	ruleGroup.GET("/", vexRuleController.List)               // List all rules for asset version
 	ruleGroup.GET("/:ruleId/", vexRuleController.Get)        // Get single rule by ID
-	ruleGroup.POST("/test/", vexRuleController.TestVexRules) // Test VEX rules against a given vulnerability
+	ruleGroup.POST("/test/", vexRuleController.TestVexRules, middlewares.DisallowPublicRequests) // Test VEX rules against a given vulnerability
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))

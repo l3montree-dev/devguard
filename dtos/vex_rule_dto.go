@@ -18,6 +18,7 @@ package dtos
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/uuid"
@@ -91,8 +92,11 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 }
 
 func (p PathPattern) ToCELExpression() string {
-	s := fmt.Sprintf("matchesPattern(vuln, %q)", p)
-	return s
+	quoted := make([]string, len(p))
+	for i, elem := range p {
+		quoted[i] = fmt.Sprintf("%q", elem)
+	}
+	return fmt.Sprintf("matchesPattern(vuln, [%s])", strings.Join(quoted, ", "))
 }
 
 // elementMatches checks whether a single pattern element matches a single

@@ -125,6 +125,7 @@ func NewDaemonRunner(
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBService,
 	vexRuleService shared.VEXRuleService,
+	externalReferenceRepository shared.ExternalReferenceRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
 ) *DaemonRunner {
 	return &DaemonRunner{
@@ -156,6 +157,7 @@ func NewDaemonRunner(
 		maliciousPackageChecker:      maliciousPackageChecker,
 		vulnDBImportService:          vulnDBImportService,
 		vexRuleService:               vexRuleService,
+		externalReferenceRepository:  externalReferenceRepository,
 		fixedVersionResolver:         fixedVersionResolver,
 	}
 }
