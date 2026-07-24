@@ -17,6 +17,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -35,6 +36,10 @@ type VEXRuleService struct {
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
+
+// ErrVEXRuleAssetVersionConflict indicates that a deterministic rule ID is
+// already occupied by a rule outside the requested asset-version scope.
+var ErrVEXRuleAssetVersionConflict = errors.New("vex rule conflicts with another asset version")
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
@@ -56,6 +61,27 @@ func (s *VEXRuleService) Create(ctx context.Context, tx shared.DB, rule *models.
 	}
 
 	return nil
+}
+
+func (s *VEXRuleService) CreateOrGet(ctx context.Context, tx shared.DB, rule *models.VEXRule) (models.VEXRule, bool, error) {
+	persistedRule, created, err := s.vexRuleRepository.CreateOrGet(ctx, tx, rule)
+	if err != nil {
+		return models.VEXRule{}, false, fmt.Errorf("failed to create or find VEX rule: %w", err)
+	}
+	// AssetVersionName is not part of the deterministic rule ID, so a conflict
+	// can resolve to a rule from another version. Enforce the full requested
+	// scope before allowing callers to apply the persisted rule.
+	if persistedRule.AssetID != rule.AssetID || persistedRule.AssetVersionName != rule.AssetVersionName {
+		return models.VEXRule{}, false, fmt.Errorf(
+			"%w: persisted scope %s/%s, requested scope %s/%s",
+			ErrVEXRuleAssetVersionConflict,
+			persistedRule.AssetID,
+			persistedRule.AssetVersionName,
+			rule.AssetID,
+			rule.AssetVersionName,
+		)
+	}
+	return persistedRule, created, nil
 }
 
 func (s *VEXRuleService) Begin(ctx context.Context) shared.DB {

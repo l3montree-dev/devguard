@@ -349,6 +349,7 @@ type VEXRuleRepository interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(ctx context.Context, tx DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
+	CreateOrGet(ctx context.Context, tx DB, rule *models.VEXRule) (models.VEXRule, bool, error)
 	Upsert(ctx context.Context, tx DB, rule *models.VEXRule) error
 	UpsertBatch(ctx context.Context, tx DB, rules []models.VEXRule) error
 	Update(ctx context.Context, tx DB, rule *models.VEXRule) error
@@ -511,6 +512,7 @@ type ConfigRepository interface {
 type VEXRuleService interface {
 	Begin(ctx context.Context) DB
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
+	CreateOrGet(ctx context.Context, tx DB, rule *models.VEXRule) (models.VEXRule, bool, error)
 	Update(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
 	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
