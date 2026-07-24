@@ -407,6 +407,36 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 
 }
 
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(
+	ctx context.Context,
+	tx *gorm.DB,
+	assetTuples []struct {
+		AssetID          string
+		AssetVersionName string
+	},
+) ([]models.DependencyVuln, error) {
+	var vulns = []models.DependencyVuln{}
+
+	var args []interface{}
+	var placeholders []string
+
+	for _, key := range assetTuples {
+		placeholders = append(placeholders, "(?, ?)")
+		args = append(args, key.AssetID, key.AssetVersionName)
+	}
+
+	query := fmt.Sprintf(
+		"(asset_id, asset_version_name) IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE").Where(query, args...).Find(&vulns).Error; err != nil {
+		return nil, err
+	}
+	return vulns, nil
+
+}
+
 // Override the base GetAllVulnsByAssetID method to preload artifacts
 func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}

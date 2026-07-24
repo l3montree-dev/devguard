@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -70,6 +71,16 @@ func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB,
 func (r *vexRuleRepository) FindByAssetVersionAndCVE(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
 	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND LOWER(cve_id) = LOWER(?)", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
+	return rules, err
+}
+
+func (r *vexRuleRepository) FindByAssetVersionAndCVEAliases(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, cveIDs []string) ([]models.VEXRule, error) {
+	var rules []models.VEXRule
+	var lowercaseCVEs []string
+	for _, cve := range cveIDs {
+		lowercaseCVEs = append(lowercaseCVEs, strings.ToLower(cve))
+	}
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND LOWER(cve_id) IN ?", assetID, assetVersionName, lowercaseCVEs).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

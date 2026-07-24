@@ -19,32 +19,46 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 )
 
 type VEXRuleService struct {
-	vexRuleRepository        shared.VEXRuleRepository
-	dependencyVulnRepository shared.DependencyVulnRepository
-	vulnEventRepository      shared.VulnEventRepository
+	vexRuleRepository         shared.VEXRuleRepository
+	systemVEXRuleRepository   shared.SystemVEXRuleRepository
+	dependencyVulnRepository  shared.DependencyVulnRepository
+	vulnEventRepository       shared.VulnEventRepository
+	cveRepository             shared.CveRepository
+	cveRelationshipRepository shared.CVERelationshipRepository
+	cveRelationshipService    shared.CVERelationshipService
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
+	systemVEXRuleRepository shared.SystemVEXRuleRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	vulnEventRepository shared.VulnEventRepository,
+	cveRepository shared.CveRepository,
+	cveRelationshipRepository shared.CVERelationshipRepository,
+	cveRelationshipService shared.CVERelationshipService,
 ) *VEXRuleService {
 	return &VEXRuleService{
-		vexRuleRepository:        vexRuleRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
+		vexRuleRepository:         vexRuleRepository,
+		systemVEXRuleRepository:   systemVEXRuleRepository,
+		dependencyVulnRepository:  dependencyVulnRepository,
+		vulnEventRepository:       vulnEventRepository,
+		cveRepository:             cveRepository,
+		cveRelationshipRepository: cveRelationshipRepository,
+		cveRelationshipService:    cveRelationshipService,
 	}
 }
 
@@ -94,8 +108,18 @@ func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx sha
 		return nil, fmt.Errorf("failed to find vulnerability: %w", err)
 	}
 
-	// Find rules for this CVE
-	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, vuln.CVEID)
+	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(ctx, tx, []string{vuln.CVEID})
+	if err != nil {
+		slog.Info("Failed to find CVE Aliases, continuing without")
+	}
+	var cveAliases []string
+	for alias := range cveAliasMap[vuln.CVEID] {
+		cveAliases = append(cveAliases, alias)
+	}
+	cveAliases = append(cveAliases, vuln.CVEID)
+
+	// Find rules for this CVE and aliases
+	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVEAliases(ctx, tx, assetID, assetVersionName, cveAliases)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +147,7 @@ func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, r
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	matching := matchRulesToVulns([]models.VEXRule{rule}, vulns)
+	matching := s.MatchRulesToVulns(ctx, tx, []models.VEXRule{rule}, vulns)
 
 	return len(matching[rule.ID]), nil
 }
@@ -141,7 +165,7 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shar
 
 	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, assetVersionName, assetID, nil)
 
-	vulnsByRule := matchRulesToVulns(rules, vulns)
+	vulnsByRule := s.MatchRulesToVulns(ctx, tx, rules, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
@@ -198,7 +222,7 @@ func (s *VEXRuleService) ApplyRulesToExistingForce(ctx context.Context, tx share
 }
 
 func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
-	vulnsByRule := matchRulesToVulns(rules, vulns)
+	vulnsByRule := s.MatchRulesToVulns(ctx, tx, rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
 		ruleMap[rules[i].ID] = &rules[i]
@@ -272,8 +296,26 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 	if len(rules) == 0 {
 		return nil, nil
 	}
+	assetDeduplicationMap := make(map[string]bool)
+	assetTuples := []struct {
+		AssetID          string
+		AssetVersionName string
+	}{}
+
+	for _, rule := range rules {
+		assetIDString := rule.AssetID.String()
+		compositeKey := assetIDString + rule.AssetVersionName
+		if !assetDeduplicationMap[compositeKey] {
+			assetDeduplicationMap[compositeKey] = true
+			assetTuples = append(assetTuples, struct {
+				AssetID          string
+				AssetVersionName string
+			}{AssetID: assetIDString, AssetVersionName: rule.AssetVersionName})
+		}
+	}
+
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(ctx, tx, assetTuples)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
@@ -399,8 +441,18 @@ func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) ma
 	return result
 }
 
-func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+func (s *VEXRuleService) MatchRulesToVulns(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
 	result := make(map[string][]models.DependencyVuln)
+	// Prepare aliases
+	// Relationship field of rules cannot be preloaded since the preload assumes that the CVEID is the source_cve in the relationship
+	// Therefore it cannot find the relationships
+	// We try to find the relationships manually and create a many-to-many crossreference so each CVE will always find each alias
+	ruleCVEIDs := utils.Map(rules, func(rule models.VEXRule) string { return rule.CVEID })
+
+	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(ctx, tx, ruleCVEIDs)
+	if err != nil {
+		slog.Info("could not find aliases to create cross relations", "err", err)
+	}
 	// Filter by each rule's cve and path pattern - only match ENABLED rules
 	// group by cve id
 	m := make(map[string][]models.VEXRule)
@@ -409,16 +461,110 @@ func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) ma
 			continue
 		}
 		m[rule.CVEID] = append(m[rule.CVEID], rule)
+		// Prepare for aliases
+		for aliasCVEID := range cveAliasMap[rule.CVEID] {
+			m[aliasCVEID] = append(m[aliasCVEID], rule)
+		}
 	}
 
 	for _, vuln := range vulns {
 		rulesForCVE := m[vuln.CVEID]
+
 		for _, rule := range rulesForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
+			if vuln.Vulnerability.AssetID == rule.AssetID &&
+				vuln.Vulnerability.AssetVersionName == rule.AssetVersionName &&
+				pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}
 	}
 	return result
+}
+
+func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*transformer.VexReportOpenVEX) error {
+	systemVEXRulesMap := make(map[string]bool)
+	var systemVEXRules []models.SystemVEXRule
+	includedCVEsMap := make(map[string]bool)
+	var includedCVEs []string
+
+	for _, report := range reports {
+		if report.Source == "" {
+			slog.Info("OpenVEX report contains no source. Skipping this report")
+			continue
+		}
+		if report.Report == nil {
+			slog.Info("OpenVEX report contains no report information. Skipping this report")
+			continue
+		}
+
+		parsedVEXRules, err := transformer.OpenVEXToRules(report.Report, uuid.Nil, "main", report.Source)
+		if err != nil {
+			slog.Info("Error while parsing OpenVEX report", "error", err, "report", report.Report.ID)
+			continue
+		}
+		for _, parsedRule := range parsedVEXRules {
+			// This clause uses a map for deduplication
+			if _, exists := systemVEXRulesMap[parsedRule.ID]; !exists {
+				systemVEXRule := transformer.VEXRuleToSystemVEXRule(parsedRule)
+				systemVEXRulesMap[parsedRule.ID] = true
+				systemVEXRules = append(systemVEXRules, systemVEXRule)
+				if _, cveExists := includedCVEsMap[parsedRule.CVEID]; !cveExists {
+					includedCVEs = append(includedCVEs, parsedRule.CVEID)
+				}
+			}
+		}
+	}
+	//Check if CVEs are already in database since database can take some time to be established
+	// If there are a lot of CVEs in a project, the lookup might fail for having
+	// more than 65535 keys
+	const cveBatchSize = 1000
+
+	existingCVEMap := make(map[string]models.CVE)
+
+	for start := 0; start < len(includedCVEs); start += cveBatchSize {
+		end := start + cveBatchSize
+		if end > len(includedCVEs) {
+			end = len(includedCVEs)
+		}
+
+		batch := includedCVEs[start:end]
+		found, err := s.cveRepository.FindCVEs(ctx, nil, batch)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing CVEs: %w", err)
+		}
+
+		for _, cve := range found {
+			existingCVEMap[strings.ToLower(strings.TrimSpace(cve.CVE))] = cve
+		}
+	}
+
+	filteredRules := make([]models.SystemVEXRule, 0, len(systemVEXRules))
+	for _, rule := range systemVEXRules {
+		cveKey := strings.ToLower(strings.TrimSpace(rule.CVEID))
+		if _, exists := existingCVEMap[cveKey]; !exists {
+			// Might SPAM logs
+			slog.Info("skipping system VEX rule because CVE does not exist in database yet",
+				"cveID", rule.CVEID,
+				"vexSource", rule.VexSource,
+				"ruleID", rule.ID,
+			)
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+
+	if len(filteredRules) == 0 {
+		slog.Info("no system VEX rules left after CVE filtering")
+		return nil
+	}
+
+	//Bulk Upload of valid VEXRules
+	err := s.systemVEXRuleRepository.UpsertBatch(ctx, nil, filteredRules)
+	if err != nil {
+		return fmt.Errorf("Error while inserting extracted VEXRules into database: %s", err)
+	}
+	slog.Info("updated system VEXRules", "fetched", len(systemVEXRules), "filtered", len(filteredRules))
+
+	return nil
 }

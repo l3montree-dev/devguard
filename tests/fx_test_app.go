@@ -104,6 +104,7 @@ type TestApp struct {
 	VexRuleRepository           shared.VEXRuleRepository
 	ExternalReferenceRepository shared.ExternalReferenceRepository
 	VexRuleService              shared.VEXRuleService
+	SystemVEXRuleRepository     shared.SystemVEXRuleRepository
 
 	// Access Control
 	RBACProvider shared.RBACProvider

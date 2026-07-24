@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -42,6 +43,80 @@ type ScanService_Expecter struct {
 
 func (_m *ScanService) EXPECT() *ScanService_Expecter {
 	return &ScanService_Expecter{mock: &_m.Mock}
+}
+
+// FetchOpenVexFromGitHub provides a mock function for the type ScanService
+func (_mock *ScanService) FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error) {
+	ret := _mock.Called(ctx, targetURL, targetBranch)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchOpenVexFromGitHub")
+	}
+
+	var r0 []*transformer.VexReportOpenVEX
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]*transformer.VexReportOpenVEX, error)); ok {
+		return returnFunc(ctx, targetURL, targetBranch)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []*transformer.VexReportOpenVEX); ok {
+		r0 = returnFunc(ctx, targetURL, targetBranch)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*transformer.VexReportOpenVEX)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, targetURL, targetBranch)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ScanService_FetchOpenVexFromGitHub_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchOpenVexFromGitHub'
+type ScanService_FetchOpenVexFromGitHub_Call struct {
+	*mock.Call
+}
+
+// FetchOpenVexFromGitHub is a helper method to define mock.On call
+//   - ctx context.Context
+//   - targetURL string
+//   - targetBranch string
+func (_e *ScanService_Expecter) FetchOpenVexFromGitHub(ctx interface{}, targetURL interface{}, targetBranch interface{}) *ScanService_FetchOpenVexFromGitHub_Call {
+	return &ScanService_FetchOpenVexFromGitHub_Call{Call: _e.mock.On("FetchOpenVexFromGitHub", ctx, targetURL, targetBranch)}
+}
+
+func (_c *ScanService_FetchOpenVexFromGitHub_Call) Run(run func(ctx context.Context, targetURL string, targetBranch string)) *ScanService_FetchOpenVexFromGitHub_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_FetchOpenVexFromGitHub_Call) Return(vexReports []*transformer.VexReportOpenVEX, err error) *ScanService_FetchOpenVexFromGitHub_Call {
+	_c.Call.Return(vexReports, err)
+	return _c
+}
+
+func (_c *ScanService_FetchOpenVexFromGitHub_Call) RunAndReturn(run func(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error)) *ScanService_FetchOpenVexFromGitHub_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService

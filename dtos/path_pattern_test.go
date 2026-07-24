@@ -84,7 +84,7 @@ func TestPathPatternMatchesSuffix_ExactMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
 		})
 	}
 }
@@ -109,7 +109,7 @@ func TestRootPathPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
 		})
 	}
 }
@@ -148,7 +148,7 @@ func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
 		})
 	}
 }
@@ -196,7 +196,7 @@ func TestPathPatternMatchesSuffix_RealWorldExamples(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
 		})
 	}
 }
@@ -209,7 +209,7 @@ func TestPathPatternMatchesSuffixForArtifacts(t *testing.T) {
 		pattern := PathPattern{"pkg:oci/my-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/vulnerable@1.0.0"}
 
-		assert.False(t, pattern.matchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
+		assert.False(t, pattern.MatchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
 		assert.True(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 

@@ -206,45 +206,118 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 // path pattern is therefore a component-level wildcard ["*", componentPurl] that matches
 // any path reaching that component - it does not distinguish individual dependency paths.
 func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, source string) ([]models.VEXRule, error) {
-	rules := make([]models.VEXRule, 0, len(doc.Statements))
-	for _, statement := range doc.Statements {
-		cveID := extractCVE(string(statement.Vulnerability.Name))
-		if cveID == "" {
-			cveID = extractCVE(statement.Vulnerability.ID)
-		}
-		if cveID == "" {
-			continue
-		}
-
-		eventType, err := mapOpenVexStatusToEventType(statement.Status)
-		if err != nil {
-			slog.Info("unable to map OpenVEX status to event type, skipping VEX rule creation for this statement", "cveID", cveID, "status", statement.Status, "error", err)
-			continue
-		}
-
-		justification := statement.ImpactStatement
-		if justification == "" {
-			justification = statement.StatusNotes
-		}
-
-		// collect the component-level PURLs the statement scopes to
-		purlStrings := openVexStatementPurls(statement)
-		for _, purlString := range purlStrings {
-			rule := models.VEXRule{
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				CVEID:            cveID,
-				VexSource:        source,
-				Justification:    justification,
-				EventType:        eventType,
-				PathPattern:      dtos.PathPattern{dtos.PathPatternWildcard, purlString},
-				CreatedByID:      "system", // system user
-			}
-			rule.SetPathPattern(rule.PathPattern)
-			rules = append(rules, rule)
-		}
+	if doc.Statements == nil {
+		return nil, fmt.Errorf("no statements inside OpenVex Report")
 	}
 
+	rules := make([]models.VEXRule, 0, len(doc.Statements))
+	for _, statement := range doc.Statements {
+		if statement.Status == "" {
+			slog.Info("statement does not status, skipping component for VEX rule creation", "openVEXReport", doc.ID)
+			continue
+		}
+		cveID := extractCVE(string(statement.Vulnerability.Name))
+		if cveID == "" {
+			slog.Info("statment does not contain vulnerability name or identifier, skipping component for VEX rule creation", "statement", statement.ID)
+			continue
+		}
+		if statement.Products == nil {
+			slog.Info("no products inside of statement, skipping component for VEX rule creation", "statement", statement.ID, "cveID", cveID)
+			continue
+		}
+
+		for _, product := range statement.Products {
+			var err error
+			var componentPurl packageurl.PackageURL
+			if product.Identifiers != nil && product.Identifiers[vex.PURL] != "" {
+				componentPurl, err = packageurl.FromString(product.Identifiers[vex.PURL])
+			} else if product.ID != "" {
+				componentPurl, err = packageurl.FromString(product.ID)
+			} else {
+				slog.Info("product identifier is not present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
+			if componentPurl.Version == "" {
+				// Might SPAM logs
+				slog.Info("product identifier does not contain version, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
+			if err != nil {
+				slog.Info("failed to parse product identifier therefore no identifier present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
+				continue
+			}
+
+			var justification string
+			switch statement.Status {
+			case vex.StatusAffected:
+				justification = statement.ActionStatement
+			case vex.StatusNotAffected:
+				justification = statement.ImpactStatement
+			}
+
+			mechanicalJustification := dtos.MechanicalJustificationType(statement.Justification)
+
+			eventType, err := mapOpenVEXToEventType(&statement)
+			if err != nil {
+				slog.Info("unable to map OpenVEX Statement to event type, skipping VEX rule creation for this vuln", "cveID", cveID, "error", err)
+				continue
+			}
+
+			componentPurlStr, err := normalize.PURLToString(componentPurl)
+			if err != nil {
+				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
+				componentPurlStr = componentPurl.String()
+			}
+
+			if len(product.Subcomponents) > 0 {
+				for _, subcomponent := range product.Subcomponents {
+					var subcomponentPurl packageurl.PackageURL
+					subcomponentPurl, err = packageurl.FromString(subcomponent.ID)
+					if err != nil {
+						slog.Info("failed to parse product subcomponent identifier therefore no identifier present, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID, "product", componentPurlStr)
+						continue
+					}
+					subcomponentPurlStr, err := normalize.PURLToString(subcomponentPurl)
+					if err != nil {
+						subcomponentPurlStr = subcomponentPurl.String()
+						slog.Info("failed to unescape subcomponent purl for path pattern, continuing anyway", "purl", subcomponentPurlStr, "error", err)
+					}
+					pattern := dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, subcomponentPurlStr}
+
+					rule := models.VEXRule{
+						AssetID:                 assetID,
+						AssetVersionName:        assetVersionName,
+						CVEID:                   cveID,
+						VexSource:               source,
+						Justification:           justification,
+						EventType:               eventType,
+						PathPattern:             pattern,
+						MechanicalJustification: mechanicalJustification,
+						CreatedByID:             "system",
+					}
+					rule.SetPathPattern(rule.PathPattern)
+					rules = append(rules, rule)
+				}
+			} else {
+				pattern := dtos.PathPattern{componentPurlStr}
+				rule := models.VEXRule{
+					AssetID:                 assetID,
+					AssetVersionName:        assetVersionName,
+					CVEID:                   cveID,
+					VexSource:               source,
+					Justification:           justification,
+					MechanicalJustification: mechanicalJustification,
+					EventType:               eventType,
+					PathPattern:             pattern,
+					CreatedByID:             "system",
+				}
+				rule.SetPathPattern(rule.PathPattern)
+				rules = append(rules, rule)
+			}
+		}
+	}
 	return rules, nil
 }
 
@@ -278,15 +351,22 @@ func componentPurl(c vex.Component) string {
 	return ""
 }
 
-func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) {
-	switch status {
+func mapOpenVEXToEventType(s *vex.Statement) (dtos.VulnEventType, error) {
+	if s == nil {
+		return "", fmt.Errorf("statement is nil")
+	}
+	switch s.Status {
 	case vex.StatusNotAffected:
 		return dtos.EventTypeFalsePositive, nil
 	case vex.StatusAffected:
-		return dtos.EventTypeAccepted, nil
+		if s.ActionStatement != "" {
+			return dtos.EventTypeComment, nil
+		} else {
+			return dtos.EventTypeAccepted, nil
+		}
 	default:
 		// under_investigation / fixed do not close a vuln through a VEX rule
-		return "", fmt.Errorf("no event type mapping for OpenVEX status: %s", status)
+		return "", fmt.Errorf("no event type mapping for OpenVEX status: %s", s.Status)
 	}
 }
 
@@ -336,4 +416,65 @@ func extractCVE(s string) string {
 		return parts[len(parts)-1]
 	}
 	return s
+}
+
+type VexReport struct {
+	Report *cdx.BOM
+	Source string
+}
+
+func validateVexReport(report *cdx.BOM) error {
+	if report.Metadata == nil || report.Metadata.Component == nil {
+		return fmt.Errorf("invalid VEX report: missing metadata.component")
+	}
+	if report.Metadata.Component.PackageURL == "" {
+		return fmt.Errorf("invalid VEX report: root component must have a PackageURL")
+	}
+	return nil
+}
+
+func NewVexReport(report *cdx.BOM, source string) (*VexReport, error) {
+	if err := validateVexReport(report); err != nil {
+		return nil, err
+	}
+
+	return &VexReport{
+		Report: report,
+		Source: source,
+	}, nil
+}
+
+type VexReportOpenVEX struct {
+	Report *vex.VEX
+	Source string
+}
+
+func validateVexReportOpenVEX(report *vex.VEX) error {
+	if report.ID == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing id")
+	}
+	if report.Context == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing context")
+	}
+	if report.Author == "" {
+		return fmt.Errorf("invalid OpenVEX report: missing author")
+	}
+	if report.Timestamp == nil || report.Timestamp.IsZero() {
+		return fmt.Errorf("invalid OpenVEX report: missing timestamp")
+	}
+	if report.Version == 0 {
+		return fmt.Errorf("invalid OpenVEX report: missing version")
+	}
+	return nil
+}
+
+func NewVexReportOpenVEX(report *vex.VEX, source string) (*VexReportOpenVEX, error) {
+	if err := validateVexReportOpenVEX(report); err != nil {
+		return nil, err
+	}
+
+	return &VexReportOpenVEX{
+		Report: report,
+		Source: source,
+	}, nil
 }

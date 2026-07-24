@@ -386,3 +386,19 @@ func (repository *assetVersionRepository) GetAmountOfAssetVersionsInOrg(ctx cont
 	`, orgID).Find(&totalAmount).Error
 	return totalAmount, err
 }
+
+func (repository *assetVersionRepository) FindSystemVEXRuleApplicableAssetVersions(ctx context.Context, tx *gorm.DB) ([]models.AssetVersion, error) {
+	var assetVersions []models.AssetVersion
+
+	err := repository.GetDB(ctx, tx).
+		Model(&models.AssetVersion{}).
+		Joins("Asset").
+		Where(
+			`"Asset"."paranoid_mode" = ?`,
+			false,
+		).
+		Preload("Asset").
+		Find(&assetVersions).Error
+
+	return assetVersions, err
+}

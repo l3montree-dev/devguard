@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 
@@ -284,6 +285,14 @@ type DependencyVulnRepository interface {
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(
+		ctx context.Context,
+		tx DB,
+		assetTuples []struct {
+			AssetID          string
+			AssetVersionName string
+		},
+	) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -357,6 +366,15 @@ type VEXRuleRepository interface {
 	DeleteByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) error
 	Begin(ctx context.Context) DB
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
+	FindByAssetVersionAndCVEAliases(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveIDs []string) ([]models.VEXRule, error)
+}
+
+type SystemVEXRuleRepository interface {
+	All(ctx context.Context, tx DB) ([]models.SystemVEXRule, error)
+	GetDB(ctx context.Context, db DB) DB
+	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.SystemVEXRule, error)
+	FindByCVEBatch(ctx context.Context, tx DB, cveIDs []string) ([]models.SystemVEXRule, error)
+	UpsertBatch(ctx context.Context, tx DB, rules []models.SystemVEXRule) error
 }
 
 type OrganizationRepository interface {
@@ -480,6 +498,7 @@ type AssetVersionRepository interface {
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
 	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
+	FindSystemVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {
@@ -501,6 +520,7 @@ type ScanService interface {
 	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
+	FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*transformer.VexReportOpenVEX, err error)
 }
 
 type ConfigRepository interface {
@@ -526,10 +546,17 @@ type VEXRuleService interface {
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetVersionAndCVE(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)
 	FindByAssetVersionAndVulnID(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error)
+	MatchRulesToVulns(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln
+	UpdateSystemVEXRulesFromStaticSources(ctx context.Context, reports []*transformer.VexReportOpenVEX) error
 }
 
 type CrowdSourcedVexingService interface {
 	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (models.VEXRule, error)
+}
+
+type CVERelationshipService interface {
+	CreateAliasRelationshipMapBatch(ctx context.Context, tx DB, cveIDs []string) (map[string]map[string]struct{}, error)
+	IsAlias(cveSource, cveTarget string, cveMap map[string]map[string]struct{}) bool
 }
 
 type VulnEventRepository interface {
@@ -684,6 +711,7 @@ type ComponentService interface {
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
+	FindCrossRelationshipsBatch(ctx context.Context, tx DB, assiciatedCVEIDs []string) ([]models.CVERelationship, error)
 }
 
 type LicenseRiskService interface {

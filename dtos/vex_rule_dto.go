@@ -53,7 +53,7 @@ func IsWildcard(elem string) bool {
 //
 // Unexported: callers should use MatchesSuffixForArtifacts, which also
 // strips a leading artifact-identity path segment before delegating here.
-func (p PathPattern) matchesSuffix(path []string) bool {
+func (p PathPattern) MatchesSuffix(path []string) bool {
 
 	if len(p) == 0 {
 		return true
@@ -186,7 +186,7 @@ func (p PathPattern) MatchesSuffixForArtifacts(path []string, artifactIdentities
 	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
 		return matchPatternExact(p[1:], path)
 	}
-	return p.matchesSuffix(path)
+	return p.MatchesSuffix(path)
 }
 
 type VEXRuleDTO struct {
