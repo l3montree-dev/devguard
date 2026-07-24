@@ -42,7 +42,7 @@ services:
       - devguard-local
 
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.10.3
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.11.0
     shm_size: 1g
     security_opt:
       - no-new-privileges:true
@@ -123,7 +123,7 @@ services:
       - devguard-local
 
   devguard-migrate:
-    image: ghcr.io/l3montree-dev/devguard:v1.10.3
+    image: ghcr.io/l3montree-dev/devguard:v1.11.0
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -150,7 +150,7 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:v1.10.3
+    image: ghcr.io/l3montree-dev/devguard:v1.11.0
     read_only: true
     tmpfs:
       - /tmp:size=8G
@@ -188,7 +188,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.10.1
+    image: ghcr.io/l3montree-dev/devguard-web:v1.11.0
     read_only: true
     tmpfs:
       - /tmp:size=100M
