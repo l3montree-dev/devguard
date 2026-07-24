@@ -38,16 +38,16 @@ func (_m *ExternalEntityProviderService) EXPECT() *ExternalEntityProviderService
 }
 
 // RefreshExternalEntityProviderProjects provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, user string) error {
-	ret := _mock.Called(ctx, org, user)
+func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx shared.Context, org models.Org, session shared.AuthSession) error {
+	ret := _mock.Called(ctx, org, session)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshExternalEntityProviderProjects")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, models.Org, string) error); ok {
-		r0 = returnFunc(ctx, org, user)
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, models.Org, shared.AuthSession) error); ok {
+		r0 = returnFunc(ctx, org, session)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -62,12 +62,12 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 // RefreshExternalEntityProviderProjects is a helper method to define mock.On call
 //   - ctx shared.Context
 //   - org models.Org
-//   - user string
-func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, user interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
-	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, user)}
+//   - session shared.AuthSession
+func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, session interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, session)}
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx shared.Context, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx shared.Context, org models.Org, session shared.AuthSession)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 shared.Context
 		if args[0] != nil {
@@ -77,9 +77,9 @@ func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Ca
 		if args[1] != nil {
 			arg1 = args[1].(models.Org)
 		}
-		var arg2 string
+		var arg2 shared.AuthSession
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(shared.AuthSession)
 		}
 		run(
 			arg0,
@@ -95,7 +95,7 @@ func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Ca
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx shared.Context, org models.Org, user string) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx shared.Context, org models.Org, session shared.AuthSession) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

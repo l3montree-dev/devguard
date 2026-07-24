@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testMessage for testing
@@ -222,5 +223,30 @@ func TestBrokerIntegration(t *testing.T) {
 		case <-time.After(1 * time.Second):
 			t.Error("Message not received")
 		}
+	})
+
+	t.Run("ListenerFailureMarksBrokerUnhealthy", func(t *testing.T) {
+		ctx := context.Background()
+		topic := shared.PubSubChannel("listener_health_check")
+
+		_, err := broker.Subscribe(topic)
+		require.NoError(t, err)
+		require.True(t, broker.IsHealthy())
+
+		var terminated bool
+		err = db.QueryRow(ctx, `
+			SELECT pg_terminate_backend(pid)
+			FROM pg_stat_activity
+			WHERE datname = current_database()
+				AND pid <> pg_backend_pid()
+				AND query = $1
+			LIMIT 1
+		`, `LISTEN "listener_health_check"`).Scan(&terminated)
+		require.NoError(t, err)
+		require.True(t, terminated, "listener database connection was not terminated")
+
+		require.Eventually(t, func() bool {
+			return !broker.IsHealthy()
+		}, 5*time.Second, 10*time.Millisecond)
 	})
 }

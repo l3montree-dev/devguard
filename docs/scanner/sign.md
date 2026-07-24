@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner sign — Sign a file or container image
+description: Sign a local file or OCI image with cosign using devguard-scanner, optionally uploading the public key to DevGuard before creating the signature.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner sign
+lang: en-US
+ignoreChecks: null
+---
+
 ## sign
 
 Sign a file or image

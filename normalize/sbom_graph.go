@@ -1649,11 +1649,20 @@ func InvalidSBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID stri
 
 	// Link the info source to the original root component so it appears in
 	// the graph, unless the root component's own identity already IS the
-	// artifact (e.g. a downloaded devguard SBOM being re-uploaded) - in that
-	// case the artifact node already represents it, and adding this edge
-	// would make the artifact self-referential.
-	if rootRef != "" && !isArtifactRootComponent(rootComponent, artifactName) {
-		g.AddEdge(infoID, rootRef)
+	// artifact (e.g. a downloaded devguard SBOM being re-uploaded, or a
+	// scanner like Trivy naming its container root component after the
+	// image itself) - in that case adding this edge would make the
+	// artifact self-referential. The root's real children (if any) are
+	// reparented directly onto the artifact node instead, so they don't
+	// become unreachable orphans.
+	if rootRef != "" {
+		if isArtifactRootComponent(rootComponent, artifactName) {
+			for _, child := range depMap[rootRef] {
+				g.AddEdge(artifactID, child)
+			}
+		} else {
+			g.AddEdge(infoID, rootRef)
+		}
 	}
 
 	// Components (including the root) that don't have an identifiable

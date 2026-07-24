@@ -71,7 +71,7 @@ func (s *assetService) FindOrCreateAsset(ctx context.Context, rbac shared.Access
 	return asset, nil
 }
 
-func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUser string, asset models.Asset) (*models.Asset, error) {
+func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, session shared.AuthSession, asset models.Asset) (*models.Asset, error) {
 	newAsset := asset
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return nil, echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
@@ -93,7 +93,7 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 	}
 
 	// make the current user the admin of the asset
-	if err := rbac.GrantRoleInAsset(ctx, currentUser, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
+	if err := rbac.GrantRoleInAsset(ctx, session, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
 		slog.Error("error assigning current user as asset admin", "err", err)
 		return nil, err
 	}

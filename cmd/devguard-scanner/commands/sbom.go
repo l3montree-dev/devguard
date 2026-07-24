@@ -97,6 +97,11 @@ Only CycloneDX-formatted SBOMs are supported. Pass a file path, '-' to read from
   devguard-scanner sbom my-bom.json --failOnRisk high`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: sbomCmd,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sbom — Scan a CycloneDX SBOM",
+			"description":     "Upload a CycloneDX SBOM from a file or stdin with devguard-scanner sbom and let DevGuard analyze it for known vulnerabilities.",
+			"keyword_primary": "devguard-scanner sbom",
+		},
 	}
 
 	scanner.AddDependencyVulnsScanFlags(cmd)

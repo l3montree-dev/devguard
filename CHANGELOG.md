@@ -3,6 +3,74 @@
 All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.11.0] - 2026-07-24
+
+### Added
+
+- **EUVD/KEV integration** — the devguard vulnerability database now fetches and imports EUVD (European Union Vulnerability Database) data, including known-exploited-vulnerability (KEV) information, which now feeds into risk score calculation alongside the existing CISA KEV catalog; EUVD aliases are resolved to their downstream CVE equivalents before being written to `cve_relationships`, and export/import now carries EUVD information end to end
+- **BSI and Netherlands CSAF sync** — the devguard vulnerability database now also syncs CSAF advisories published by Germany's BSI (CERT-Bund) and the Dutch NCSC
+- **Related CVE information on vulnerability endpoints** — the dependency vuln and vulnerability database fetching endpoints now also return related advisories alongside the vulnerability itself
+- **Project access tokens** — access tokens are now split into personal and project-scoped tokens, with permission checks enforced per org/project/asset token via casbin RBAC
+- **`iac` scan auto-detection** — the scanner now auto-detects whether the scan target is a file or a directory instead of always scanning as a directory
+- **Frontmatter in generated scanner docs** — `devguard-maint docs` now adds frontmatter to the generated markdown reference pages
+
+### Changed
+
+- **Scanner keyring prompts** — reduced the number of password prompts when requesting credentials from the OS keyring during `auth`
+
+### Fixed
+
+- **Owner role naming** — reverted an unintended rename of the owner role
+- **`devguard-maint release devguard`** — now runs `make docs` before tagging and fails the release if it errors; regenerated docs (backend `docs/` and the copied scanner reference in `devguard-documentation`) are automatically committed and pushed instead of blocking the release
+- Fixed a Swagger annotation bug where `ExternalReferenceDTO`/`CreateExternalReferenceRequest` were missing their `dtos.` package qualifier, breaking `make docs`
+
+## [v1.10.3] - 2026-07-21
+
+### Changed
+
+- **SCA result table** — vulnerabilities are now sorted by CVSS score (descending) within each library, and the library column no longer breaks row merging when only some of its vulnerabilities exceed the fail-on threshold
+
+### Fixed
+
+- **Affected components with no version constraints** (#5829) — `CheckVersion` now treats a component with no introduced/fixed/exact version as matching any looked-up version, instead of erroring out
+- **`purl-inspect`** — the PURL is now percent-encoded before being sent to the API, so qualifiers (e.g. `?arch=amd64`) are no longer dropped or misparsed as an HTTP query string
+- **`purl-inspect` affected components table** — the CVEs column is now wrapped at a fixed width instead of stretching the table across the full terminal width
+
+## [v1.10.2] - 2026-07-20
+
+- Just linter fixes
+
+## [v1.10.1] - 2026-07-20
+
+### Changed
+
+- **Compliance posture permissions** — changing an organization's compliance posture is now restricted to org admins, instead of any org member
+
+### Fixed
+
+- **`devguard-maint release helm-chart`** — no longer fails when `docker-compose-try-it.yaml` is already up to date (previously tried to commit an empty diff and aborted); the command now regenerates the Helm chart's `values.yaml`/`Chart.yaml`/`questions.yaml` via `devguard-helm-chart/schema`'s `bun run generate` instead of hand-rolled regex edits, and also verifies a matching `devguard-ci-components` release exists before proceeding
+
+## [v1.10.0] - 2026-07-20
+
+Thanks to @nicksan222 for their first contribution to DevGuard! 🎉
+
+### Added
+
+- **Compliance posture** — a new compliance module tracking framework controls and posture per project/org, seeded from the Grundschutz++ and Secure Controls Framework (SCF) catalogs, with a new API (`compliance_posture_controller`) and OSCAL/CSAF-based control mappings
+- **OSCAL component support** — compliance components can now be ingested from an OSCAL component definition (with a Grundschutz control mapping), stored, and queried per project, including filtering for vulnerabilities that are solvable via a given component
+- **Evidence links in OSCAL export** — the OSCAL/compliance posture export now includes evidence links back to the originating findings
+- **Advisory tab (first approach)** — a new advisory feature backed by its own model, repository, state machine, and CSAF-driven service, exposed through a dedicated advisory API and router
+- **Faster SCA scanning** — `devguard-scanner sca` can now use an embedded Trivy source DB for faster scans
+- **Component reparenting in SBOMs** — root components' direct children are now reparented under the detected artifact name during SBOM normalization, improving dependency tree accuracy for SARIF/SCA scans
+
+### Changed
+
+- **Database health check** — the health check endpoint now fails when the PostgreSQL pub/sub listener disconnects, instead of reporting healthy while broker notifications are silently lost ([#2589](https://github.com/l3montree-dev/devguard/issues/2589))
+- Compliance migrations renamed/reordered for consistent ordering after the compliance posture and OSCAL components features landed side by side
+
+### Fixed
+
+- **Vulnerability report PDF generation (opencode template)** — added the missing highlighting-macros include to the opencode LaTeX template, fixing PDF generation for that report style
 
 ## [v1.9.3] - 2026-07-15
 

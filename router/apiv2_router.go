@@ -29,8 +29,6 @@ func NewAPIV2Router(
 	configService shared.ConfigService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 ) APIV2Router {
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	v2 := srv.Echo.Group("/api/v2",
 		func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -50,9 +48,9 @@ func NewAPIV2Router(
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
-		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
-		assetScopedRBAC(shared.ObjectAsset, shared.ActionRead),
+		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
+		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 

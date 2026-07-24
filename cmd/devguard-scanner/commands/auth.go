@@ -56,11 +56,7 @@ Once stored, all devguard-scanner commands will automatically pick up the token 
 				return err
 			}
 			if printToken {
-				token, err := config.GetTokenFromKeyring(apiURL, assetName)
-				if err != nil {
-					return fmt.Errorf("could not read token from keyring: %w", err)
-				}
-				fmt.Print(token)
+				fmt.Print(config.RuntimeBaseConfig.Token)
 				return nil
 			}
 
@@ -87,6 +83,11 @@ Once stored, all devguard-scanner commands will automatically pick up the token 
 			}
 			fmt.Printf("Logged in to %s as asset %q\n", apiURL, assetName)
 			return nil
+		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner auth — Verify and store a token",
+			"description":     "Verify a DevGuard personal access token and store it in the OS keyring with devguard-scanner auth so you no longer need to pass --token on every command.",
+			"keyword_primary": "devguard-scanner auth",
 		},
 	}
 

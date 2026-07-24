@@ -1,3 +1,19 @@
+---
+title: Help about any command
+description: Help provides help for any command in the application.
+Simply type intoto help [path to command] for full details.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner intoto help
+lang: en-US
+ignoreChecks: null
+---
+
 ## intoto help
 
 Help about any command

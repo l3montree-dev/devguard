@@ -125,21 +125,6 @@ func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string
 	return assets, roles, nil
 }
 
-func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	for _, i := range t.integrations {
-		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
-		if unauth != nil {
-			// we COULD actually use this provider
-			return access, unauth
-		}
-		if access {
-			// we have access to this provider
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func (t *thirdPartyIntegrations) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	wg := utils.ErrGroup[[]dtos.GitRepository](-1)
 	for _, i := range t.integrations {

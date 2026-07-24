@@ -15,6 +15,6 @@ Example:
     go tool migrate create -ext sql -dir ./database/migrations  test_migration
 
 
-Once created we almost always only want to use the *_up.sql file to make our changes to the database.
+Once created we always only want to use the *_up.sql file to make our changes to the database, delete the *_down.sql file to avoid clutter.
 
 Also note that you specifically have to use "public." in front of every table to correctly address it. 

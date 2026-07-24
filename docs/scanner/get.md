@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner get — Authenticated GET request
+description: Perform a simple GET request signed with a DevGuard Personal Access Token using devguard-scanner get; deprecated in favor of the curl command.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner get
+lang: en-US
+ignoreChecks: null
+---
+
 ## get
 
 Do a simple authenticated GET request. Deprecated in favor of 'curl' command.

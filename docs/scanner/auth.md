@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner auth — Verify and store a token
+description: Verify a DevGuard personal access token and store it in the OS keyring with devguard-scanner auth so you no longer need to pass --token on every command.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner auth
+lang: en-US
+ignoreChecks: null
+---
+
 ## auth
 
 Verify a DevGuard token and store it in the system keyring

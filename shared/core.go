@@ -35,7 +35,7 @@ func InitLogger() {
 
 	// set global logger with custom options
 	slog.SetDefault(slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			Level:      slog.LevelDebug,
 			AddSource:  true,
 			TimeFormat: time.Kitchen,
@@ -56,7 +56,7 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 }
 
 func BootstrapOrg(ctx context.Context, rbac AccessControl, userID string, userRole Role) error {
-	if err := rbac.GrantRole(ctx, userID, userRole); err != nil {
+	if err := rbac.GrantRole(ctx, NewSession(userID, SessionActorUser, nil, false), userRole); err != nil {
 		return err
 	}
 

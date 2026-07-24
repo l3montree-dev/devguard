@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner iac — Infrastructure-as-Code scan
+description: Run an Infrastructure-as-Code scan with devguard-scanner iac to check Terraform, CloudFormation, and Kubernetes manifests for misconfigurations and upload SARIF results to DevGuard.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner iac
+lang: en-US
+ignoreChecks: null
+---
+
 ## iac
 
 Run an Infrastructure-as-Code (IaC) scan

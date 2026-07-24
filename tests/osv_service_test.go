@@ -72,7 +72,7 @@ func TestOSVPostInsertCleanup(t *testing.T) {
 
 			for tableName, indexes := range indexesPerTable {
 				for _, index := range indexes {
-					assert.True(t, slices.Contains(newIndexesPerTable[tableName], index))
+					assert.True(t, slices.Contains(newIndexesPerTable[tableName], index), fmt.Sprintf("index: %s does not match.", index))
 				}
 			}
 

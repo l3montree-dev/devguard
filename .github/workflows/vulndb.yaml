@@ -80,9 +80,9 @@ jobs:
 
       - name: Push the database archive to GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:latest \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v3:latest \
             vulndb.tar.zst
       - name: Push the archive signature to the GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v2:latest.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v3:latest.sig \
             vulndb.tar.zst.sig

@@ -358,6 +358,145 @@ rules:
             withOwnershipScope(...)
             ...
           }
+  - id: session-getactorid-without-sessionactortype
+    severity: WARNING
+    message: |
+      shared.AuthSession.GetActorID() is used without checking GetSessionActorType() in
+      the same function.
+
+      A session's actor ID is only meaningful together with its actor type: the same
+      string is a user ID for a user-scoped token, but an org/project/asset ID for a
+      PAT scoped to that resource (see shared.SessionActorUser/SessionActorOrg/
+      SessionActorProject/SessionActorAsset). Code that reads GetActorID() and treats
+      it as if it were always a user ID (e.g. hardcoding a "user::" prefix for a casbin
+      subject) silently mis-authorizes non-user-owned tokens instead of erroring or
+      branching per actor type.
+
+      Fix: branch on session.GetSessionActorType() (see accesscontrol.GetAllProjectsForSession
+      / GetAllAssetsForSession for the expected pattern), or use session.GetActorName()
+      instead of GetActorID() when the value is only used as an audit/actor stamp (not
+      a real identity lookup) — see accesscontrol/session.go's GetActorName.
+    languages: [go]
+    paths:
+      exclude:
+        - "**/*_test.go"
+        - "**/tests/**"
+        - "**/mocks/**"
+    patterns:
+      - pattern: $SESSION.GetActorID()
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            $SESSION.GetSessionActorType()
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            $SESSION.GetSessionActorType()
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) $RET {
+            ...
+            $SESSION.GetSessionActorType()
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) {
+            ...
+            $SESSION.GetSessionActorType()
+            ...
+          }
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            if $SESSION.GetSessionActorType() != $X {
+              ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            if $SESSION.GetSessionActorType() != $X {
+              ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) $RET {
+            ...
+            if $SESSION.GetSessionActorType() != $X {
+              ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) {
+            ...
+            if $SESSION.GetSessionActorType() != $X {
+              ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) $RET {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) {
+            ...
+            switch $SESSION.GetSessionActorType() {
+            case $C: ...
+            }
+            ...
+          }
+
+  - id: project-asset-route-group-param-name-mismatch
+    severity: ERROR
+    message: |
+      A project- or asset-scoped route group must use the exact path param names
+      :projectSlug / :assetSlug.
+
+      middlewares.ResourceFetchMiddleware is the single place that resolves the
+      organization/project/asset for every request - it does so by reading these
+      exact param names (shared.GetProjectSlug/GetAssetSlug), once, before any
+      RBAC check or handler runs. A route group that scopes to a project or asset
+      using a differently-named param (:projectId, :project, :assetID, ...)
+      silently breaks resolution: ResourceFetchMiddleware treats the route as if
+      it carried no project/asset at all, IsAllowedInProject/IsAllowedInAsset
+      never run for it, and shared.GetProject(ctx)/GetAsset(ctx) will panic in
+      whatever handler expects them to be set.
+
+      Fix: name the param exactly :projectSlug or :assetSlug.
+    languages: [go]
+    paths:
+      include:
+        - "**/router/**"
+      exclude:
+        - "**/*_test.go"
+    pattern-regex: '\.Group\("/(projects/:(?!projectSlug\b)\w+|assets/:(?!assetSlug\b)\w+)'
 
   - id: bola-repository-update-missing-tenant-scope
     severity: ERROR

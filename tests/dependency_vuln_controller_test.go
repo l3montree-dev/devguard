@@ -35,6 +35,7 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 			mocks.NewStatisticsService(t),
 			mocks.NewVulnEventRepository(t),
 			nil,
+			mocks.NewCveRepository(t),
 		)
 	}
 
@@ -295,8 +296,7 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			rec := httptest.NewRecorder()
 			ctx := NewContext(req, rec)
 
-			session := mocks.NewAuthSession(t)
-			session.On("GetUserID").Return("")
+			session := NewUserSession(t, "")
 			shared.SetSession(ctx, session)
 			// set the elements into the context
 			shared.SetAsset(ctx, asset)

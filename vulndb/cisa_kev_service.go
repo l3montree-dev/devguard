@@ -52,8 +52,6 @@ type cisaKEVEntry struct {
 	CWEs                       []string `json:"cwes"`
 }
 
-const kevBatchSize int = 50_000
-
 func (s *cisaKEVService) Fetch(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, CisaKEVURL, nil)
 	if err != nil {
@@ -111,64 +109,13 @@ func parseDate(dateStr string) (*datatypes.Date, error) {
 	return &d, nil
 }
 
-// Apply writes pre-fetched CISA KEV entries to the database using the provided transaction,
-// expanding KEV data to alias CVEs via the relationship table.
-// The caller is responsible for committing or rolling back the transaction.
-func (s cisaKEVService) Apply(ctx context.Context, tx shared.DB, cves []models.CVE) error {
-	kevMap := make(map[string]models.CVE, len(cves))
-	cveIDs := make([]string, len(cves))
-	for i, cve := range cves {
-		kevMap[cve.CVE] = cve
-		cveIDs[i] = cve.CVE
-	}
-
-	var relationships []models.CVERelationship
-	for i := 0; i < len(cveIDs); i += kevBatchSize {
-		end := min(i+kevBatchSize, len(cveIDs))
-		batch, err := s.cveRelationshipRepository.GetRelationshipsByTargetCVEBatch(ctx, tx, cveIDs[i:end])
-		if err != nil {
-			slog.Error("could not fetch CVE relationships", "error", err)
-			return err
-		}
-		relationships = append(relationships, batch...)
-	}
-
-	for _, rel := range relationships {
-		if kevData, ok := kevMap[rel.TargetCVE]; ok {
-			if _, exists := kevMap[rel.SourceCVE]; !exists {
-				relatedCVE := models.CVE{
-					CVE:                   rel.SourceCVE,
-					CISAExploitAdd:        kevData.CISAExploitAdd,
-					CISAActionDue:         kevData.CISAActionDue,
-					CISARequiredAction:    kevData.CISARequiredAction,
-					CISAVulnerabilityName: kevData.CISAVulnerabilityName,
-				}
-				cves = append(cves, relatedCVE)
-				kevMap[rel.SourceCVE] = relatedCVE
-			}
-		}
-	}
-
-	slog.Info("updating CISA KEV data", "direct", len(cveIDs), "viaRelationships", len(cves)-len(cveIDs))
-
-	for i := 0; i < len(cves); i += kevBatchSize {
-		end := min(i+kevBatchSize, len(cves))
-		if err := s.cveRepository.UpdateCISAKEVBatch(ctx, tx, cves[i:end]); err != nil {
-			slog.Error("error when trying to save CISA KEV information batch")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+func InsertKEVBulk(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	// Always reset CISA fields so CVEs that are no longer in the catalog (or were
 	// never in it) end up with NULL — not the empty-string zero-value written by
 	// the initial CVE insert. The reset must run even when the entry list is empty,
 	// otherwise existing CVEs keep "" while newly-inserted quickdiff CVEs get NULL,
 	// and the integrity checksum (coalesce(field, '\0')) treats the two differently.
-	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL`); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE cves SET cisa_exploit_add = NULL, cisa_action_due = NULL, cisa_required_action = NULL, cisa_vulnerability_name = NULL, euvd_exploit_add = NULL`); err != nil {
 		return fmt.Errorf("could not reset cisa kev fields: %w", err)
 	}
 	if len(entries) == 0 {
@@ -180,35 +127,42 @@ func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 			cisa_exploit_add        date,
 			cisa_action_due         date,
 			cisa_required_action    text,
-			cisa_vulnerability_name text
+			cisa_vulnerability_name text,
+			euvd_exploit_add 		date
 		) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("could not create kev staging table: %w", err)
 	}
 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
-		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "euvd_exploit_add"},
 		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
 			e := entries[i]
-			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+			return []any{e.CVE, e.CISAExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName, e.EUVDExploitAddDate}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into staging table: %w", err)
 	}
 
 	// Update direct CVEs and alias CVEs. DISTINCT ON with ORDER BY cisa_exploit_add ASC gives a
-	// deterministic winner when an alias maps to multiple KEV canonical CVEs.
+	// deterministic winner for the CISA fields when an alias maps to multiple KEV canonical CVEs.
+	// euvd_exploit_add is resolved with a window min over the whole CVE partition (computed before
+	// DISTINCT ON collapses the rows) so a CVE aliased to a cisa-only and a euvd-only record keeps
+	// both dates instead of losing one to the single DISTINCT ON winner.
 	tag, err := tx.Exec(ctx, `
 		UPDATE cves SET
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
-			cisa_vulnerability_name = ks.cisa_vulnerability_name
+			cisa_vulnerability_name = ks.cisa_vulnerability_name,
+			euvd_exploit_add        = ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			SELECT DISTINCT ON (cve)
+				cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name,
+				min(euvd_exploit_add) OVER (PARTITION BY cve) AS euvd_exploit_add
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, ks.euvd_exploit_add
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined
@@ -218,11 +172,11 @@ func InsertCISAKEVBulk(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) e
 	if err != nil {
 		return fmt.Errorf("could not update cves with kev data: %w", err)
 	}
-	slog.Debug("InsertCISAKEVBulk: update complete", "rows_updated", tag.RowsAffected())
+	slog.Debug("InsertKEVBulk: update complete", "rows_updated", tag.RowsAffected())
 	return nil
 }
 
-func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry) error {
+func applyKEVToStage(ctx context.Context, tx pgx.Tx, entries []KEVEntry) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -232,15 +186,16 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 			cisa_exploit_add        date,
 			cisa_action_due         date,
 			cisa_required_action    text,
-			cisa_vulnerability_name text
+			cisa_vulnerability_name text,
+			euvd_exploit_add 		date
 		) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("could not create kev staging table: %w", err)
 	}
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"kev_stage"},
-		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name"},
+		[]string{"cve", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "euvd_exploit_add"},
 		pgx.CopyFromSlice(len(entries), func(i int) ([]any, error) {
 			e := entries[i]
-			return []any{e.CVE, e.ExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName}, nil
+			return []any{e.CVE, e.CISAExploitAddDate, e.ActionDueDate, e.RequiredAction, e.VulnerabilityName, e.EUVDExploitAddDate}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy kev rows into kev staging table: %w", err)
 	}
@@ -250,14 +205,17 @@ func applyCISAKEVToStage(ctx context.Context, tx pgx.Tx, entries []CISAKEVEntry)
 			cisa_exploit_add        = ks.cisa_exploit_add,
 			cisa_action_due         = ks.cisa_action_due,
 			cisa_required_action    = ks.cisa_required_action,
-			cisa_vulnerability_name = ks.cisa_vulnerability_name
+			cisa_vulnerability_name = ks.cisa_vulnerability_name,
+			euvd_exploit_add        = ks.euvd_exploit_add
 		FROM (
-			SELECT DISTINCT ON (cve) cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+			SELECT DISTINCT ON (cve)
+				cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name,
+				min(euvd_exploit_add) OVER (PARTITION BY cve) AS euvd_exploit_add
 			FROM (
-				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name
+				SELECT cve, cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, euvd_exploit_add
 				FROM kev_stage
 				UNION ALL
-				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name
+				SELECT cr.source_cve, ks.cisa_exploit_add, ks.cisa_action_due, ks.cisa_required_action, ks.cisa_vulnerability_name, ks.euvd_exploit_add
 				FROM kev_stage ks
 				JOIN cve_relationships cr ON cr.target_cve = ks.cve
 			) combined

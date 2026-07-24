@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,8 +58,9 @@ type PostgreSQLBroker struct {
 	subscribers              map[shared.PubSubChannel]ListeningConnection
 	subscribeMux             sync.RWMutex
 	wg                       sync.WaitGroup
-	ID                       string // Unique identifier for the broker instance
-	shouldReceiveOwnMessages bool   // Flag to control whether to receive own messages
+	ID                       string      // Unique identifier for the broker instance
+	shouldReceiveOwnMessages bool        // Flag to control whether to receive own messages
+	listenerFailed           atomic.Bool // Set by a listener goroutine when its connection fails.
 }
 
 func (b *PostgreSQLBroker) SetShouldReceiveOwnMessages(should bool) {
@@ -170,6 +172,7 @@ func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgx
 	for {
 		notification, err := conn.Conn().WaitForNotification(context.TODO())
 		if err != nil {
+			b.listenerFailed.Store(true)
 			conn.Release()
 			monitoring.Alert("could not listen for notifications from PostgreSQL broker", err)
 			return
@@ -214,20 +217,7 @@ func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgx
 
 // IsHealthy checks if the broker is functioning properly
 func (b *PostgreSQLBroker) IsHealthy() bool {
-	// check if all listening connections are still alive
-	b.subscribeMux.RLock()
-	defer b.subscribeMux.RUnlock()
-
-	for topic, listeningConn := range b.subscribers {
-		ctx := context.Background()
-		ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		if err := listeningConn.Conn.Ping(ctxWithTimeout); err != nil {
-			slog.Error("listening connection is not healthy", "topic", topic, "error", err)
-			return false
-		}
-	}
-	return true
+	return !b.listenerFailed.Load()
 }
 
 // GetActiveTopics returns a list of topics currently being listened to

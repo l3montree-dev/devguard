@@ -133,7 +133,7 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	})
 }
 
-func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent string) error {
+func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, ownerID string, userAgent string) error {
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
@@ -144,7 +144,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 		return echo.NewHTTPError(500, "could not fetch vex references for artifact").WithInternal(err)
 	}
 
-	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, &userAgent)
+	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, vexRefs, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -186,7 +186,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 	userAgent := ctx.Request().UserAgent()
 
 	assetVersions, err := c.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx.Request().Context(), nil, asset.ID)
@@ -194,10 +194,9 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 		slog.Error("could not get asset versions for asset", "err", err)
 		return echo.NewHTTPError(500, "could not get asset versions for asset").WithInternal(err)
 	}
-
 	for _, assetVersion := range assetVersions {
 		for _, artifact := range assetVersion.Artifacts {
-			if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
+			if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, ownerID, userAgent); err != nil {
 				return err
 			}
 		}
@@ -219,7 +218,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources [post]
 func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
-	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetUserID(), ctx.Request().UserAgent()); err != nil {
+	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetActorName(), ctx.Request().UserAgent()); err != nil {
 		return err
 	}
 	return ctx.NoContent(200)

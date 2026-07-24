@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner container-scanning — Container image SCA
+description: Run software composition analysis on a container image with devguard-scanner container-scanning, generating or uploading an SBOM that DevGuard analyzes for vulnerabilities.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner container-scanning
+lang: en-US
+ignoreChecks: null
+---
+
 ## container-scanning
 
 Software composition analysis of a container image

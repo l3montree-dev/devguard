@@ -26,15 +26,17 @@ type SessionRouter struct {
 	*echo.Group
 }
 
-// @Summary Get current user info
+// @Summary Get current session info
 // @Tags Authentication
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {object} object{userID=string}
+// @Success 200 {object} object{ownerID=string,ownerType=string}
 // @Router /whoami [get]
 func whoami(ctx echo.Context) error {
+	session := shared.GetSession(ctx)
 	return ctx.JSON(200, map[string]string{
-		"userID": shared.GetSession(ctx).GetUserID(),
+		"actorId":   session.GetActorID(),
+		"actorType": string(session.GetSessionActorType()),
 	})
 }
 
@@ -54,9 +56,10 @@ func NewSessionRouter(
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
 	assetVersionRepository shared.AssetVersionRepository,
+	patVerifier shared.PersonalAccessTokenService,
 ) SessionRouter {
 	sessionRouter := apiV1Router.Group.Group("",
-		middlewares.SessionMiddleware(adminClient, configService, patService),
+		middlewares.SessionMiddleware(adminClient, configService, patVerifier),
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 	)
 
@@ -71,15 +74,13 @@ func NewSessionRouter(
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-	projectScopedRBAC := middlewares.ProjectAccessControlFactory(projectRepository)
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	fastAccessRoutes := sessionRouter.Group("",
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
-		middlewares.MultiOrganizationMiddlewareRBAC(casbinRBACProvider, orgService),
-		projectScopedRBAC(shared.ObjectProject, shared.ActionRead),
-		assetScopedRBAC(shared.ObjectAsset, shared.ActionRead),
+		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
+		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),
 	)
 

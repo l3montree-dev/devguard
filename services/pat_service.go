@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -30,7 +29,7 @@ type PatService struct {
 	adminKeyLoaded bool
 }
 
-var _ shared.Verifier = (*PatService)(nil) // Ensure PatService implements shared.PatService interface
+var _ shared.PersonalAccessTokenService = (*PatService)(nil) // Ensure PatService implements shared.PersonalAccessTokenService interface
 
 func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService {
 	// read the admin public key from the environment variable and convert it to ecdsa.PublicKey
@@ -67,12 +66,28 @@ func NewPatService(repository shared.PersonalAccessTokenRepository) *PatService 
 	}
 }
 
-func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, userID string) (models.PAT, string, error) {
+func ownerToFields(o dtos.TokenOwner) (userID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) {
+	switch shared.SessionActor(o.Type) {
+	case shared.SessionActorUser:
+		return &o.ID, nil, nil, nil
+	case shared.SessionActorOrg:
+		return nil, &o.ID, nil, nil
+	case shared.SessionActorProject:
+		return nil, nil, &o.ID, nil
+	case shared.SessionActorAsset:
+		return nil, nil, nil, &o.ID
+	}
+	return nil, nil, nil, nil
+}
+
+func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest, owner dtos.TokenOwner) (models.PAT, string, error) {
 	if !utils.ContainsAll(dtos.AllowedScopes, strings.Fields(request.Scopes)) {
 		return models.PAT{}, "", fmt.Errorf("invalid scopes: %s", request.Scopes)
 	}
 
 	expiry := new(time.Unix(request.ExpiryDateUnix, 0))
+
+	userID, orgID, projectID, assetID := ownerToFields(owner)
 
 	if request.IsSymmetric() {
 		cleartext, hash, err := generateBearerToken()
@@ -80,7 +95,10 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 			return models.PAT{}, "", fmt.Errorf("could not generate bearer token: %w", err)
 		}
 		return models.PAT{
-			UserID:          uuid.MustParse(userID),
+			UserID:          userID,
+			OrgID:           orgID,
+			ProjectID:       projectID,
+			AssetID:         assetID,
 			Description:     request.Description,
 			Scopes:          request.Scopes,
 			BearerTokenHash: &hash,
@@ -95,8 +113,12 @@ func (p *PatService) ToModel(ctx context.Context, request dtos.PatCreateRequest,
 	if err != nil {
 		return models.PAT{}, "", fmt.Errorf("could not derive fingerprint from public key: %w", err)
 	}
+
 	return models.PAT{
-		UserID:      uuid.MustParse(userID),
+		UserID:      userID,
+		OrgID:       orgID,
+		ProjectID:   projectID,
+		AssetID:     assetID,
 		Description: request.Description,
 		Scopes:      request.Scopes,
 		PubKey:      request.PubKey,
@@ -265,23 +287,39 @@ func signRequest(hexPrivKey string, req *http.Request) error {
 	return nil
 }
 
-func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (string, string, error) {
+func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (shared.AuthSession, error) {
 	if token == "" {
-		return "", "", fmt.Errorf("invalid token format")
+		return nil, fmt.Errorf("invalid token format")
 	}
 
 	pat, err := p.patRepository.GetByBearerTokenHash(ctx, nil, utils.HashString(token))
 	if err != nil {
-		return "", "", fmt.Errorf("could not verify bearer token: %w", err)
+		return nil, fmt.Errorf("could not verify bearer token: %w", err)
 	}
 	if pat.IsExpired() {
-		return "", "", fmt.Errorf("bearer token has expired")
+		return nil, fmt.Errorf("bearer token has expired")
 	}
 
 	if err := p.patRepository.MarkAsLastUsedNowByID(ctx, nil, pat.ID); err != nil {
 		slog.Warn("could not mark pat as last used", "err", err)
 	}
-	return pat.UserID.String(), pat.Scopes, nil
+
+	return patToSession(pat)
+}
+
+func patToSession(pat models.PAT) (shared.AuthSession, error) {
+	switch true {
+	case pat.UserID != nil:
+		return shared.NewSession(pat.UserID.String(), shared.SessionActorUser, strings.Fields(pat.Scopes), false), nil
+	case pat.OrgID != nil:
+		return shared.NewSession(pat.OrgID.String(), shared.SessionActorOrg, strings.Fields(pat.Scopes), false), nil
+	case pat.ProjectID != nil:
+		return shared.NewSession(pat.ProjectID.String(), shared.SessionActorProject, strings.Fields(pat.Scopes), false), nil
+	case pat.AssetID != nil:
+		return shared.NewSession(pat.AssetID.String(), shared.SessionActorAsset, strings.Fields(pat.Scopes), false), nil
+	default:
+		return nil, fmt.Errorf("invalid token owner type")
+	}
 }
 
 func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fingerprint string) (ecdsa.PublicKey, models.PAT, error) {
@@ -367,7 +405,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		}
 		if isAdmin {
 			// add all scopes
-			return accesscontrol.NewSession("admin", dtos.AllowedScopes, true), nil
+			return shared.NewSession("admin", shared.SessionActorUser, dtos.AllowedScopes, true), nil
 		}
 		return nil, fmt.Errorf("no fingerprint provided")
 	}
@@ -384,8 +422,7 @@ func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Reque
 		slog.Warn("could not mark pat as last used", "err", err)
 	}
 
-	scopesArray := strings.Fields(pat.Scopes)
-	return accesscontrol.NewSession(pat.UserID.String(), scopesArray, false), nil
+	return patToSession(pat)
 }
 
 func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) error {

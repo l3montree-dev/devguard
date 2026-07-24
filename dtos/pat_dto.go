@@ -15,6 +15,10 @@
 
 package dtos
 
+import (
+	"github.com/google/uuid"
+)
+
 var AllowedScopes = []string{"manage", "scan"}
 
 type RevokeByPrivateKeyRequest struct {
@@ -53,4 +57,9 @@ type PATDTO struct {
 type PATCreateResponseDTO struct {
 	PATDTO
 	BearerToken string `json:"bearerToken,omitempty"`
+}
+
+type TokenOwner struct {
+	Type string
+	ID   uuid.UUID
 }

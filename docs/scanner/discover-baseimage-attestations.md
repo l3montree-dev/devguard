@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner discover-baseimage-attestations — fetch base image attestations
+description: Read a Dockerfile's FROM line and download attestations such as SBOM and VEX documents attached to the base image using devguard-scanner.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner discover-baseimage-attestations
+lang: en-US
+ignoreChecks: null
+---
+
 ## discover-baseimage-attestations
 
 Download attestations (SBOM, VEX, …) for the base image used in a Dockerfile

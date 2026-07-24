@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner sast — run a static application security test
+description: Run a static application security test with semgrep against your project and upload the SARIF results to DevGuard with devguard-scanner.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner sast
+lang: en-US
+ignoreChecks: null
+---
+
 ## sast
 
 Run a static application security test (SAST)

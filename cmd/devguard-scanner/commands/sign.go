@@ -115,6 +115,11 @@ configured token.`,
   devguard-scanner sign ./artifact.bin --offline`,
 		Args: cobra.ExactArgs(1),
 		RunE: signCmd,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sign — Sign a file or container image",
+			"description":     "Sign a local file or OCI image with cosign using devguard-scanner, optionally uploading the public key to DevGuard before creating the signature.",
+			"keyword_primary": "devguard-scanner sign",
+		},
 	}
 
 	scanner.AddDefaultFlags(cmd)

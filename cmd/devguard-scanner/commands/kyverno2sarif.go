@@ -79,6 +79,11 @@ Typical pipeline usage:
 			}
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner kyverno2sarif — Convert Kyverno test output to SARIF",
+			"description":     "Convert the JSON output of 'kyverno test' into SARIF format with devguard-scanner kyverno2sarif so DevGuard and other SARIF-aware tools can ingest your Kubernetes policy results.",
+			"keyword_primary": "devguard-scanner kyverno2sarif",
+		},
 	}
 
 	cmd.Flags().StringP("input", "i", "", "Input file containing Kyverno test output (must be json format)")

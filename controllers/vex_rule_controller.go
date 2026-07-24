@@ -264,7 +264,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		MechanicalJustification: req.MechanicalJustification,
 		EventType:               eventType,
 		CELExpression:           req.CELExpression,
-		CreatedByID:             session.GetUserID(),
+		CreatedByID:             session.GetActorName(),
 		Enabled:                 true, // Manual rules are always enabled
 	}
 

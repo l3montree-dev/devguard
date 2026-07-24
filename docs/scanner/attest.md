@@ -1,3 +1,18 @@
+---
+title: DevGuard-Scanner attest — Create and upload an attestation
+description: Attach a signed predicate to a container image or artifact and upload it to DevGuard with devguard-scanner attest for verifiable build provenance.
+seo:
+  robots: index,follow
+  og:
+    image: /og-image.png
+    type: article
+  schema:
+    type: TechArticle
+  keyword_primary: devguard-scanner attest
+lang: en-US
+ignoreChecks: null
+---
+
 ## attest
 
 Create and upload an attestation for an image or artifact

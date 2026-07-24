@@ -54,6 +54,11 @@ Use --type to limit the cleanup to signatures, attestations, SBOMs, or all.`,
 			slog.Info("cosign clean finished", "target", target)
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner clean — Remove attestations or signatures",
+			"description":     "Remove attestations and signatures from an OCI image with devguard-scanner clean, optionally limiting the cleanup to signatures, attestations, or SBOMs.",
+			"keyword_primary": "devguard-scanner clean",
+		},
 	}
 
 	scanner.AddDefaultFlags(cmd)

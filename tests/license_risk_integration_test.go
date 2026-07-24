@@ -196,8 +196,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 
 		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 		setupContext := func(ctx shared.Context) {
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("abc")
+			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)

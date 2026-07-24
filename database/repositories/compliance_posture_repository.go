@@ -37,13 +37,14 @@ type CompliancePostureRepository struct {
 
 type frameworkControlPostureRow struct {
 	models.FrameworkControl
-	CompliancePostureID *uuid.UUID         `gorm:"column:id"`
-	State               dtos.VulnState     `gorm:"column:state"`
-	OrgID               *uuid.UUID         `gorm:"column:org_id"`
-	ProjectID           *uuid.UUID         `gorm:"column:project_id"`
-	AssetID             *uuid.UUID         `gorm:"column:asset_id"`
-	AssetVersionName    *string            `gorm:"column:asset_version_name"`
-	Events              []models.VulnEvent `gorm:"foreignKey:CompliancePostureID;references:CompliancePostureID"`
+	CompliancePostureID *uuid.UUID                                             `gorm:"column:id"`
+	State               dtos.VulnState                                         `gorm:"column:state"`
+	OrgID               *uuid.UUID                                             `gorm:"column:org_id"`
+	ProjectID           *uuid.UUID                                             `gorm:"column:project_id"`
+	AssetID             *uuid.UUID                                             `gorm:"column:asset_id"`
+	AssetVersionName    *string                                                `gorm:"column:asset_version_name"`
+	Events              []models.VulnEvent                                     `gorm:"foreignKey:CompliancePostureID;references:CompliancePostureID"`
+	ByComponents        []models.ComplianceComponentImplementsControlStatement `gorm:"foreignKey:CompliancePostureID;references:CompliancePostureID"`
 }
 
 // nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
@@ -93,6 +94,9 @@ func (row frameworkControlPostureRow) toDetailsDTO() dtos.CompliancePostureWithD
 	for _, ev := range row.Events {
 		dto.Events = append(dto.Events, transformer.ConvertVulnEventToDto(ev))
 	}
+	for _, bc := range row.ByComponents {
+		dto.ByComponents = append(dto.ByComponents, transformer.ComplianceComponentImplementsControlStatementToDTO(bc))
+	}
 	return dto
 }
 
@@ -106,7 +110,9 @@ func NewCompliancePostureRepository(db *gorm.DB) *CompliancePostureRepository {
 func (r *CompliancePostureRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, posture models.CompliancePosture) (*models.CompliancePosture, error) {
 	var existingPosture models.CompliancePosture
 	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", posture.ID), existingPosture)
-	if err := db.Preload("FrameworkControl").First(&existingPosture).Error; err != nil {
+	if err := db.Preload("FrameworkControl").
+		Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
+		First(&existingPosture).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("failed to query compliance posture: %w", err)
 		}
@@ -208,6 +214,12 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+		case f.Field == "has_component_coverage" && f.Operator == "is":
+			if fmt.Sprint(f.Value()) == "true" {
+				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			} else {
+				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			}
 		default:
 			subquery = subquery.Where(f.SQL(), f.Value())
 		}
@@ -296,6 +308,12 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+		case f.Field == "has_component_coverage" && f.Operator == "is":
+			if fmt.Sprint(f.Value()) == "true" {
+				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			} else {
+				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
+			}
 		default:
 			subquery = subquery.Where(f.SQL(), f.Value())
 		}
@@ -309,6 +327,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 	if err := subquery.Model(&frameworkControlPostureRow{}).
 		Preload("MappedControls").
 		Preload("Events").
+		Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -426,6 +445,7 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 			Joins("FrameworkControl").
 			Preload("FrameworkControl.MappedControls").
 			Preload("Events").
+			Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
 			Where("compliance_postures.id = ?", result.ID).
 			First(&posture).Error; err != nil {
 			return nil, err

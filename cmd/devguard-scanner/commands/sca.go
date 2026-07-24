@@ -103,7 +103,7 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 		}
 
 		slog.Info("scanning oci image", "image", image)
-		args := []string{"image", image, "--format", "cyclonedx", "--output", sbomFile}
+		args := []string{"image", image, "--image-src", "docker,containerd,podman,remote", "--format", "cyclonedx", "--output", sbomFile}
 		args = append(args, configFileArgs...)
 		args = append(args, config.RuntimeExtraArgs...)
 
@@ -669,7 +669,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		// download any config file if exists
 		configFilePath, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
 		if err != nil {
-			slog.Warn("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
+			slog.Debug("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
 		} else {
 			// set the config file path in the runtime config so that it can be used by the scanner commands
 			config.RuntimeBaseConfig.ConfigFilePath = configFilePath
@@ -716,6 +716,11 @@ See the trivy CLI reference for available flags: https://trivy.dev/docs/latest/g
   # Forward extra flags to trivy
   devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m`,
 		RunE: scaCommand,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sca — run Software Composition Analysis",
+			"description":     "Run Software Composition Analysis on a project or container image to generate an SBOM and return vulnerability results from DevGuard with devguard-scanner.",
+			"keyword_primary": "devguard-scanner sca",
+		},
 	}
 
 	scanner.AddDependencyVulnsScanFlags(scaCommand)

@@ -17,6 +17,7 @@ package transformer
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +31,24 @@ import (
 func mustMarshalJSON(v any) datatypes.JSON {
 	b, _ := json.Marshal(v)
 	return datatypes.JSON(b)
+}
+
+var urlRegex = regexp.MustCompile(`https?://[^\s)\]"'<>]+`)
+
+// evidenceLinks extracts URLs found in the given texts and turns them into
+// OSCAL evidence links, so anything a user posted as a link on a compliance
+// posture or control implementation shows up as evidence in the SSP export.
+func evidenceLinks(texts ...string) []oscalTypes.Link {
+	var links []oscalTypes.Link
+	for _, text := range texts {
+		for _, url := range urlRegex.FindAllString(text, -1) {
+			links = append(links, oscalTypes.Link{
+				Href: url,
+				Rel:  "evidence",
+			})
+		}
+	}
+	return links
 }
 
 func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetailsDTO {
@@ -66,9 +85,14 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 	for i, e := range c.Events {
 		events[i] = ConvertVulnEventToDto(e)
 	}
+	byComponents := make([]dtos.ComplianceComponentImplementsControlStatementDTO, len(c.ByComponents))
+	for i, bc := range c.ByComponents {
+		byComponents[i] = ComplianceComponentImplementsControlStatementToDTO(bc)
+	}
 	return dtos.CompliancePostureWithDetailsDTO{
 		CompliancePostureWithControlDTO: p,
 		Events:                          events,
+		ByComponents:                    byComponents,
 	}
 }
 
@@ -122,7 +146,11 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		},
 	}
 
-	systemComponent := oscalTypes.SystemComponent{
+	// DevGuard itself is always a component of the system - it directly
+	// tracks and assesses every control's posture, regardless of whether any
+	// additional real-world components (branch protection, etc.) also claim
+	// to implement it.
+	devGuardComponent := oscalTypes.SystemComponent{
 		UUID:        uuid.New().String(),
 		Title:       "DevGuard System Component",
 		Description: "This component represents the DevGuard system responsible for managing compliance posture data.",
@@ -131,13 +159,12 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		},
 		Type: "software",
 	}
-	components := []oscalTypes.SystemComponent{
-		// only a single component for now, - this system, like trestle is doing it
-		systemComponent,
-	}
 
-	systemImplementation.Components = components
-	systemSecurityPlan.SystemImplementation = systemImplementation
+	// seenComponents dedupes components across postures/controls - the same
+	// tracked component (e.g. "branch protection") can implement many controls.
+	seenComponents := map[string]oscalTypes.SystemComponent{
+		devGuardComponent.UUID: devGuardComponent,
+	}
 
 	controlImplementation := oscalTypes.ControlImplementation{}
 	implementedRequirements := []oscalTypes.ImplementedRequirement{}
@@ -154,23 +181,67 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 		if state == "open" {
 			state = "planned"
 		}
-		if len(compliancePosture.Events) > 0 && compliancePosture.Events[len(compliancePosture.Events)-1].Justification != nil {
-			description = *compliancePosture.Events[len(compliancePosture.Events)-1].Justification
+		for i := len(compliancePosture.Events) - 1; i >= 0; i-- {
+			event := compliancePosture.Events[i]
+			if event.Type == dtos.EventTypeImplemented && event.Justification != nil {
+				description = *event.Justification
+				break
+			}
 		}
-		byComponents := []oscalTypes.ByComponent{}
-		byComponent := oscalTypes.ByComponent{
-			ComponentUuid: systemComponent.UUID,
+
+		// DevGuard's own direct assessment of this control is always present.
+		devGuardByComponent := oscalTypes.ByComponent{
+			ComponentUuid: devGuardComponent.UUID,
 			Description:   description,
 			ImplementationStatus: &oscalTypes.ImplementationStatus{
 				State: state,
 			},
 			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
 		}
-		byComponents = append(byComponents, byComponent)
+		if links := evidenceLinks(description); len(links) > 0 {
+			devGuardByComponent.Links = &links
+		}
+		byComponents := []oscalTypes.ByComponent{devGuardByComponent}
+
+		// Plus any real-world components tracked for this control.
+		for _, statement := range compliancePosture.ByComponents {
+			if _, ok := seenComponents[statement.ComplianceComponentID]; !ok {
+				seenComponents[statement.ComplianceComponentID] = oscalTypes.SystemComponent{
+					UUID:        statement.ComplianceComponentID,
+					Title:       statement.ComplianceComponentTitle,
+					Description: statement.ComplianceComponentDescription,
+					Status: oscalTypes.SystemComponentStatus{
+						State: "operational",
+					},
+					Type: "software",
+				}
+			}
+
+			statementByComponent := oscalTypes.ByComponent{
+				ComponentUuid: statement.ComplianceComponentID,
+				Description:   statement.Description,
+				ImplementationStatus: &oscalTypes.ImplementationStatus{
+					State: statement.ImplementationStatus,
+				},
+				UUID: statement.ID,
+			}
+			if links := evidenceLinks(statement.Description); len(links) > 0 {
+				statementByComponent.Links = &links
+			}
+			byComponents = append(byComponents, statementByComponent)
+		}
+
 		implementedRequirement.ByComponents = &byComponents
 
 		implementedRequirements = append(implementedRequirements, implementedRequirement)
 	}
+
+	components := make([]oscalTypes.SystemComponent, 0, len(seenComponents))
+	for _, c := range seenComponents {
+		components = append(components, c)
+	}
+	systemImplementation.Components = components
+	systemSecurityPlan.SystemImplementation = systemImplementation
 
 	controlImplementation.ImplementedRequirements = implementedRequirements
 	systemSecurityPlan.ControlImplementation = controlImplementation
