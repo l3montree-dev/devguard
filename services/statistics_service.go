@@ -499,7 +499,7 @@ func (s *statisticsService) GetOrgStatistics(ctx context.Context, orgID uuid.UUI
 	}
 
 	if amount == 0 {
-		return dtos.OrgOverview{}, fmt.Errorf("organization has no vulnerability data yet: %w", err)
+		return dtos.OrgOverview{}, nil
 	}
 
 	if !forceRefresh {
