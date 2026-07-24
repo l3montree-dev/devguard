@@ -18,6 +18,7 @@ type CrowdsourcedVexingService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	trustedEntityRepository  shared.TrustedEntityRepository
 	rbacProvider             shared.RBACProvider
+	vexRuleService           shared.VEXRuleService
 }
 
 func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationMemberIDs []string) crowdsourcevexing.Organization {
@@ -40,14 +41,12 @@ func mapProject(project models.Project, projectTrustscore float64) crowdsourceve
 
 func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
 	return crowdsourcevexing.VexRule{
-		ID:               vexrule.ID,
-		PathPattern:      vexrule.PathPattern,
-		CVE:              crowdsourcevexing.CVE{CVE: vexrule.CVEID},
-		AssetID:          vexrule.AssetID.String(),
-		AssetVersionName: vexrule.AssetVersionName,
-		Reasoning:        vexrule.Justification,
-		Assessment:       string(vexrule.MechanicalJustification),
-		UpdatedAt:        vexrule.UpdatedAt,
+		ID:            vexrule.ID,
+		CELExpression: vexrule.CELExpression,
+		AssetID:       vexrule.AssetID.String(),
+		Reasoning:     vexrule.Justification,
+		Assessment:    string(vexrule.MechanicalJustification),
+		UpdatedAt:     vexrule.UpdatedAt,
 	}
 }
 
@@ -58,7 +57,7 @@ func mapAsset(asset models.Asset) crowdsourcevexing.Asset {
 	}
 }
 
-func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider) *CrowdsourcedVexingService {
+func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider, vexRuleService shared.VEXRuleService) *CrowdsourcedVexingService {
 	return &CrowdsourcedVexingService{
 		vexRuleRepository:        vexRuleRepository,
 		organisationRepository:   organisationRepository,
@@ -67,6 +66,7 @@ func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, or
 		dependencyVulnRepository: dependencyVulnRepository,
 		trustedEntityRepository:  trustedEntityRepository,
 		rbacProvider:             rbacProvider,
+		vexRuleService:           vexRuleService,
 	}
 }
 
@@ -82,9 +82,21 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
 	}
 
-	vexRules, err := s.vexRuleRepository.FindByCVE(requestCtx, tx, vuln.CVEID)
+	vexRules, err := s.vexRuleRepository.All(requestCtx, tx)
 	if err != nil {
 		return models.VEXRule{}, err
+	}
+
+	matchedRules := []models.VEXRule{}
+
+	for _, rule := range vexRules {
+		match, err := s.vexRuleService.EvalCELExpression(requestCtx, rule, vuln)
+		if err != nil {
+			return models.VEXRule{}, err
+		}
+		if match {
+			matchedRules = append(matchedRules, rule)
+		}
 	}
 
 	projectIDs := utils.Map(vexRules, func(r models.VEXRule) uuid.UUID { return r.Asset.ProjectID })
@@ -134,9 +146,7 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	}
 
 	recommendedRule, err := crowdsourcevexing.CrowdsourcedVexing(
-		vuln.VulnerabilityPath,
-		crowdsourcevexing.CVE{CVE: vuln.CVEID},
-		utils.Map(vexRules, mapVexRule),
+		utils.Map(matchedRules, mapVexRule),
 		crowdSourceVexingOrgs,
 		utils.Map(projects, func(p models.Project) crowdsourcevexing.Project {
 			return mapProject(p, projectTrustScores[p.ID])

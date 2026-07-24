@@ -55,29 +55,17 @@ func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXR
 	return result, err
 }
 
-func (r *vexRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.VEXRule, error) {
+func (r *vexRuleRepository) FindByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Preload("Asset").Where("LOWER(cve_id) = LOWER(?) AND enabled = ?", cveID, true).Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 
-func (r *vexRuleRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
-	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Order("created_at DESC").Find(&rules).Error
-	return rules, err
-}
-
-func (r *vexRuleRepository) FindByAssetVersionAndCVE(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
-	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND LOWER(cve_id) = LOWER(?)", assetID, assetVersionName, cveID).Order("created_at DESC").Find(&rules).Error
-	return rules, err
-}
-
-func (r *vexRuleRepository) FindByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+func (r *vexRuleRepository) FindByAssetIDPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
 	var rules []models.VEXRule
 	var total int64
 
-	query := r.GetDB(ctx, tx).Model(&models.VEXRule{}).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+	query := r.GetDB(ctx, tx).Model(&models.VEXRule{}).Where("asset_id = ? ", assetID)
 
 	// Apply search filter
 	if search != "" {
@@ -145,8 +133,8 @@ func (r *vexRuleRepository) Delete(ctx context.Context, tx *gorm.DB, rule models
 	return r.GetDB(ctx, tx).Delete(&rule).Error
 }
 
-func (r *vexRuleRepository) DeleteByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) error {
-	return r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Delete(&models.VEXRule{}).Error
+func (r *vexRuleRepository) DeleteByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) error {
+	return r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Delete(&models.VEXRule{}).Error
 }
 
 func (r *vexRuleRepository) FindByAssetAndVexSource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error) {

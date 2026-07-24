@@ -17,7 +17,6 @@ package models
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,29 +33,24 @@ type VEXRule struct {
 	ID string `json:"id" gorm:"primaryKey;not null;"`
 
 	// Composite key components (for indexing and queries)
-	AssetID          uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"type:text;not null;index:,composite:vex_composite_key"`
-	CVEID            string    `json:"cveId" gorm:"type:text;not null;index:,composite:vex_composite_key"`
-	VexSource        string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
+	AssetID   uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
+	VexSource string    `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 
 	// Relationships
-	Asset        Asset        `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	CVE          *CVE         `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`
-	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	Asset Asset `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	// Rule data
+	Title                   string                           `json:"title" gorm:"type:text;not null"`
 	Justification           string                           `json:"justification" gorm:"type:text;not null"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 	EventType               dtos.VulnEventType               `json:"eventType" gorm:"type:text;not null;"`
 
-	// PathPattern stores the path patterns for this VEX rule.
-	// Supports wildcards: "*" matches any element.
-	PathPattern []string `json:"pathPattern" gorm:"type:jsonb;not null;serializer:json"`
-	CreatedByID string   `json:"createdById" gorm:"type:text;not null"`
+	CELExpression string `json:"celExpression" gorm:"type:text;"`
+	CreatedByID   string `json:"createdById" gorm:"type:text;not null"`
 
 	// Enabled indicates whether this rule should be applied to matching vulnerabilities.
 	// When false, the rule exists but does not create events or modify vulnerability state.
@@ -68,30 +62,22 @@ func (VEXRule) TableName() string {
 	return "vex_rules"
 }
 
-// CalculateID computes a SHA256 hash of AssetID, CVEID, PathPattern, and VexSource for use as the primary key.
-// This ensures a deterministic, unique ID for each VEX rule combination.
-func CalculateVEXRuleID(assetID uuid.UUID, cveID string, pathPattern []string, vexSource string) string {
-	data := fmt.Sprintf("%s/%s/%s/%s", assetID.String(), cveID, strings.Join(pathPattern, ","), vexSource)
+// CalculateID computes a SHA256 hash of AssetID, CVEID, PathPattern, CELExpression, and VexSource
+// for use as the primary key. This ensures a deterministic, unique ID for each VEX rule combination.
+func CalculateVEXRuleID(assetID uuid.UUID, celExpression string, vexSource string) string {
+	data := fmt.Sprintf("%s/%s/%s", assetID.String(), celExpression, vexSource)
 	return utils.HashString(data)
 }
 
-// SetPathPattern sets the PathPattern and recalculates the ID.
-func (r *VEXRule) SetPathPattern(pattern []string) {
-	r.PathPattern = pattern
-	r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, pattern, r.VexSource)
-}
-
-// GetCVE returns the CVE or a zero-value CVE if not loaded, preventing nil dereferences.
-func (r VEXRule) GetCVE() CVE {
-	if r.CVE == nil {
-		return CVE{}
-	}
-	return *r.CVE
+// SetCELExpression sets the CELExpression and recalculates the ID.
+func (r *VEXRule) SetCELExpression(expression string) {
+	r.CELExpression = expression
+	r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
 }
 
 // EnsureID calculates the ID if it hasn't been set yet.
 func (r *VEXRule) EnsureID() {
 	if r.ID == "" {
-		r.ID = CalculateVEXRuleID(r.AssetID, r.CVEID, r.PathPattern, r.VexSource)
+		r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
 	}
 }

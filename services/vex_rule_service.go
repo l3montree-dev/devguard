@@ -17,9 +17,16 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"sync"
 
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -35,6 +42,36 @@ type VEXRuleService struct {
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
+
+var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
+	return cel.NewEnv(
+		cel.Variable("vuln", cel.AnyType),
+		cel.Function("matchesPattern",
+
+			cel.Overload(
+				"matchesPattern_vuln_list",
+				[]*cel.Type{cel.DynType, cel.ListType(cel.StringType)},
+				cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
+					path, err := stringListField(lhs, "vulnerabilityPath")
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid vuln.vulnerabilityPath: %v", err)
+					}
+					artifactPurls, err := stringListField(lhs, "artifactPurls")
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid vuln.artifactPurls: %v", err)
+					}
+					pattern, err := toStringList(rhs)
+					if err != nil {
+						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
+					}
+					matches := dtos.PathPattern(pattern).Matches(path, artifactPurls)
+					return types.Bool(matches)
+				}),
+			),
+		),
+	)
+})
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
@@ -62,32 +99,23 @@ func (s *VEXRuleService) Begin(ctx context.Context) shared.DB {
 	return s.vexRuleRepository.Begin(ctx)
 }
 
-func (s *VEXRuleService) Update(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
-	rule.SetPathPattern(rule.PathPattern)
-	return s.vexRuleRepository.Update(ctx, tx, rule)
-}
-
 func (s *VEXRuleService) Delete(ctx context.Context, tx shared.DB, rule models.VEXRule) error {
 	return s.vexRuleRepository.Delete(ctx, tx, rule)
 }
 
-func (s *VEXRuleService) DeleteByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
-	return s.vexRuleRepository.DeleteByAssetVersion(ctx, tx, assetID, assetVersionName)
+func (s *VEXRuleService) DeleteByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
+	return s.vexRuleRepository.DeleteByAssetID(ctx, tx, assetID)
 }
 
-func (s *VEXRuleService) FindByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetVersion(ctx, tx, assetID, assetVersionName)
+func (s *VEXRuleService) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
+	return s.vexRuleRepository.FindByAssetID(ctx, tx, assetID)
 }
 
-func (s *VEXRuleService) FindByAssetVersionPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
-	return s.vexRuleRepository.FindByAssetVersionPaged(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
+func (s *VEXRuleService) FindByAssetIDPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+	return s.vexRuleRepository.FindByAssetIDPaged(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 }
 
-func (s *VEXRuleService) FindByAssetVersionAndCVE(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, cveID)
-}
-
-func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, vulnID uuid.UUID) ([]models.VEXRule, error) {
+func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error) {
 	// Fetch the vulnerability to get its CVEID and path
 	vuln, err := s.dependencyVulnRepository.Read(ctx, tx, vulnID)
 	if err != nil {
@@ -95,17 +123,19 @@ func (s *VEXRuleService) FindByAssetVersionAndVulnID(ctx context.Context, tx sha
 	}
 
 	// Find rules for this CVE
-	rules, err := s.vexRuleRepository.FindByAssetVersionAndCVE(ctx, tx, assetID, assetVersionName, vuln.CVEID)
+	rules, err := s.vexRuleRepository.FindByAssetID(ctx, tx, assetID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Filter rules to only those matching the vulnerability path pattern
-	artifactIdentities := vuln.ArtifactPurls()
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
-		pattern := dtos.PathPattern(rule.PathPattern)
-		if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, artifactIdentities) {
+		match, err := s.EvalCELExpression(ctx, rule, vuln)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", rule.ID, err)
+		}
+		if match {
 			matchingRules = append(matchingRules, rule)
 		}
 	}
@@ -119,11 +149,11 @@ func (s *VEXRuleService) FindByID(ctx context.Context, tx shared.DB, id string) 
 
 // CountMatchingVulns returns the number of dependency vulnerabilities that match a VEX rule
 func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, rule models.VEXRule) (int, error) {
-	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, rule.AssetVersionName, rule.AssetID, nil)
+	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, rule.AssetID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	matching := matchRulesToVulns([]models.VEXRule{rule}, vulns)
+	matching := s.matchRulesToVulns(ctx, []models.VEXRule{rule}, vulns)
 
 	return len(matching[rule.ID]), nil
 }
@@ -137,14 +167,13 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shar
 
 	result := make(map[string]int)
 	assetID := rules[0].AssetID
-	assetVersionName := rules[0].AssetVersionName
 
-	vulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, tx, assetVersionName, assetID, nil)
+	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, assetID)
 
-	vulnsByRule := matchRulesToVulns(rules, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
+	vulnsByRule := s.matchRulesToVulns(ctx, rules, vulns)
 
 	for _, rule := range rules {
 		if vulns, ok := vulnsByRule[rule.ID]; ok {
@@ -160,9 +189,12 @@ func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shar
 // CreateVulnEventFromVEXRule creates a VulnEvent based on a VEX rule and vulnerability.
 // The event type is determined by the rule's EventType field.
 func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule) (models.VulnEvent, error) {
+	var ev models.VulnEvent
+	var err error
+
 	switch rule.EventType {
 	case dtos.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(
+		ev, err = models.NewFalsePositiveEvent(
 			vuln.CalculateHash(),
 			dtos.VulnTypeDependencyVuln,
 			rule.CreatedByID,
@@ -174,7 +206,7 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 		), nil
 
 	case dtos.EventTypeAccepted:
-		return models.NewCommentEvent(
+		ev, err = models.NewAcceptedEvent(
 			vuln.CalculateHash(),
 			dtos.VulnTypeDependencyVuln,
 			rule.CreatedByID,
@@ -184,21 +216,22 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 		), nil
 
 	default:
-		return models.VulnEvent{}, fmt.Errorf("unsupported event type from VEX rule: %s", rule.EventType)
+		ev, err = models.VulnEvent{}, fmt.Errorf("unsupported event type from VEX rule: %s", rule.EventType)
 	}
+	ev.VexRuleID = &rule.ID
+	if err != nil {
+		return models.VulnEvent{}, fmt.Errorf("failed to create event from VEX rule: %w", err)
+	}
+
+	return ev, nil
 }
 
 func (s *VEXRuleService) ApplyRulesToExisting(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, false)
+	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns)
 }
 
-// ApplyRulesToExistingForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingForce(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns, true)
-}
-
-func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln, forceReapply bool) ([]models.DependencyVuln, error) {
-	vulnsByRule := matchRulesToVulns(rules, vulns)
+func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
+	vulnsByRule := s.matchRulesToVulns(ctx, rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
 		ruleMap[rules[i].ID] = &rules[i]
@@ -213,12 +246,12 @@ func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx sh
 		for _, vuln := range matchingVulns {
 			ev, err := createVulnEventFromVEXRule(vuln, rule)
 			if err != nil {
-				slog.Error("failed to create event from VEX rule", "error", err, "cveID", rule.CVEID)
+				slog.Error("failed to create event from VEX rule", "error", err)
 				continue
 			}
 
 			// Skip duplicate events unless force reapply is enabled
-			if !forceReapply && isVexEventAlreadyApplied(vuln, ev) {
+			if isVexEventAlreadyApplied(vuln, ev) {
 				continue
 			}
 
@@ -255,9 +288,6 @@ func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx sh
 	}
 
 	logAction := "applied"
-	if forceReapply {
-		logAction = "reapplied"
-	}
 	slog.Info(logAction+" VEX rules to existing vulnerabilities",
 		"rulesApplied", len(rules),
 		"vulnsUpdated", len(updatedVulns),
@@ -273,7 +303,7 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 		return nil, nil
 	}
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, rules[0].AssetID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
@@ -281,33 +311,43 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 	return s.ApplyRulesToExisting(ctx, tx, rules, vulns)
 }
 
-// ApplyRulesToExistingVulnsForce applies rules to existing vulns ignoring duplicate checks
-func (s *VEXRuleService) ApplyRulesToExistingVulnsForce(ctx context.Context, tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
-	if len(rules) == 0 {
-		return nil, nil
-	}
-	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, tx, nil, rules[0].AssetVersionName, rules[0].AssetID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
-	}
-	return s.ApplyRulesToExistingForce(ctx, tx, rules, vulns)
-}
-
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
-	for _, ev := range vuln.GetEvents() {
-		if ev.Type == event.Type && (ev.Justification == nil && event.Justification == nil || *ev.Justification == *event.Justification) {
-			return true
-		}
+
+	events := vuln.GetEvents()
+	if len(events) == 0 {
+		return false
 	}
-	return false
+	var ev models.VulnEvent
+	found := false
+
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated {
+			continue
+		}
+		ev = events[i]
+		found = true
+		break
+	}
+
+	if !found {
+		return false
+	}
+
+	if ev.Type != event.Type {
+		return false
+	}
+
+	if ev.Justification == nil || event.Justification == nil {
+		return ev.Justification == nil && event.Justification == nil
+	}
+
+	return *ev.Justification == *event.Justification
 }
 
 // IngestVEXRules syncs the given rules for a single source and applies them to existing
 // vulns. This is the format-agnostic ingestion entry point: callers run the appropriate
 // transformer (CycloneDX/CSAF/OpenVEX) to produce the rules, then hand them here.
-func (s *VEXRuleService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, assetVersion models.AssetVersion, rules []models.VEXRule) error {
+func (s *VEXRuleService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
 	addedRules, err := s.syncRulesForSource(ctx, tx, asset, rules)
 	if err != nil {
 		return fmt.Errorf("failed to sync VEX rules: %w", err)
@@ -375,47 +415,101 @@ func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.D
 	return rulesToAdd, rulesToRemove, nil
 }
 
-func matchVulnsToRules(vulns []models.DependencyVuln, rules []models.VEXRule) map[uuid.UUID][]models.VEXRule {
-	result := make(map[uuid.UUID][]models.VEXRule)
-	// Filter by each rule's cve and path pattern - only match ENABLED rules
-	// group by vuln ID
-	m := make(map[string][]models.DependencyVuln)
-	for _, vuln := range vulns {
-		m[vuln.CVEID] = append(m[vuln.CVEID], vuln)
+func toStringList(val ref.Val) ([]string, error) {
+	native, err := val.ConvertToNative(reflect.TypeOf([]string{}))
+	if err != nil {
+		return nil, err
 	}
-
-	for _, rule := range rules {
-		if !rule.Enabled {
-			continue
-		}
-		vulnsForCVE := m[rule.CVEID]
-		for _, vuln := range vulnsForCVE {
-			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
-				result[vuln.ID] = append(result[vuln.ID], rule)
-			}
-		}
-	}
-	return result
+	return native.([]string), nil
 }
 
-func matchRulesToVulns(rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+func stringListField(mapVal ref.Val, key string) ([]string, error) {
+	mapper, ok := mapVal.(traits.Mapper)
+	if !ok {
+		return nil, fmt.Errorf("expected a map, got %s", mapVal.Type().TypeName())
+	}
+	fieldVal, found := mapper.Find(types.String(key))
+	if !found || fieldVal == nil {
+		return nil, nil
+	}
+	if types.IsError(fieldVal) {
+		return nil, fmt.Errorf("field %q: %v", key, fieldVal)
+	}
+	return toStringList(fieldVal)
+}
+
+func (s *VEXRuleService) EvalCELExpression(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
+	if rule.CELExpression == "" {
+		return false, nil
+	}
+
+	celEnv, err := vexRuleCelEnv()
+	if err != nil {
+		return false, fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+
+	ast, iss := celEnv.Compile(rule.CELExpression)
+	if iss != nil && iss.Err() != nil {
+		return false, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+	}
+
+	prg, err := celEnv.Program(ast)
+	if err != nil {
+		return false, fmt.Errorf("failed to build CEL program: %w", err)
+	}
+
+	m, err := json.Marshal(vuln)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
+	}
+
+	var vulnMap map[string]any
+	if err := json.Unmarshal(m, &vulnMap); err != nil {
+		return false, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
+	}
+	// artifactPurls is derived (vuln.ArtifactPurls()), not a JSON field of
+	// DependencyVuln, so it has to be added to the map explicitly for
+	// matchesPattern(vuln, pattern) to see it.
+	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
+
+	out, _, err := prg.Eval(map[string]any{
+		"vuln": vulnMap,
+	})
+
+	if err != nil {
+		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
+	}
+
+	result, ok := out.Value().(bool)
+	if !ok {
+		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
+	}
+	return result, nil
+}
+
+func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
 	result := make(map[string][]models.DependencyVuln)
-	// Filter by each rule's cve and path pattern - only match ENABLED rules
-	// group by cve id
-	m := make(map[string][]models.VEXRule)
+
+	// CEL-based rules are evaluated against every vulnerability, regardless of CVE ID.
+	var celRules []models.VEXRule
+
 	for _, rule := range rules {
 		if !rule.Enabled {
 			continue
 		}
-		m[rule.CVEID] = append(m[rule.CVEID], rule)
+		if rule.CELExpression != "" {
+			celRules = append(celRules, rule)
+		}
 	}
 
 	for _, vuln := range vulns {
-		rulesForCVE := m[vuln.CVEID]
-		for _, rule := range rulesForCVE {
-			pattern := dtos.PathPattern(rule.PathPattern)
-			if pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
+		for _, rule := range celRules {
+			match, err := s.EvalCELExpression(ctx, rule, vuln)
+			if err != nil {
+				slog.Error("failed to evaluate CEL expression for VEX rule", "ruleId", rule.ID, "error", err)
+				continue
+			}
+			if match {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}

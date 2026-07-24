@@ -489,8 +489,8 @@ func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.C
 }
 
 // RunArtifactSecurityLifecycle provides a mock function for the type ScanService
-func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RunArtifactSecurityLifecycle")
@@ -500,32 +500,32 @@ func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx s
 	var r1 []models.VEXRule
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) *normalize.SBOMGraph); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.VEXRule); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) []models.VEXRule); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.VEXRule)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.DependencyVuln); ok {
-		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) []models.DependencyVuln); ok {
+		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
-		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) error); ok {
+		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -546,12 +546,13 @@ type ScanService_RunArtifactSecurityLifecycle_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
 //   - userID string
+//   - vexRefs []models.ExternalReference
 //   - userAgent *string
-func (_e *ScanService_Expecter) RunArtifactSecurityLifecycle(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}, userAgent interface{}) *ScanService_RunArtifactSecurityLifecycle_Call {
-	return &ScanService_RunArtifactSecurityLifecycle_Call{Call: _e.mock.On("RunArtifactSecurityLifecycle", ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)}
+func (_e *ScanService_Expecter) RunArtifactSecurityLifecycle(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}, vexRefs interface{}, userAgent interface{}) *ScanService_RunArtifactSecurityLifecycle_Call {
+	return &ScanService_RunArtifactSecurityLifecycle_Call{Call: _e.mock.On("RunArtifactSecurityLifecycle", ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)}
 }
 
-func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string)) *ScanService_RunArtifactSecurityLifecycle_Call {
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string)) *ScanService_RunArtifactSecurityLifecycle_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -585,9 +586,13 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx contex
 		if args[7] != nil {
 			arg7 = args[7].(string)
 		}
-		var arg8 *string
+		var arg8 []models.ExternalReference
 		if args[8] != nil {
-			arg8 = args[8].(*string)
+			arg8 = args[8].([]models.ExternalReference)
+		}
+		var arg9 *string
+		if args[9] != nil {
+			arg9 = args[9].(*string)
 		}
 		run(
 			arg0,
@@ -599,6 +604,7 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx contex
 			arg6,
 			arg7,
 			arg8,
+			arg9,
 		)
 	})
 	return _c
@@ -609,7 +615,7 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Return(sBOMGraph *norma
 	return _c
 }
 
-func (_c *ScanService_RunArtifactSecurityLifecycle_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)) *ScanService_RunArtifactSecurityLifecycle_Call {
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)) *ScanService_RunArtifactSecurityLifecycle_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -26,21 +26,20 @@ type VEXRuleRouter struct {
 }
 
 func NewVEXRuleRouter(
-	assetVersionRouter AssetVersionRouter,
+	assetRouter AssetRouter,
 	vexRuleController *controllers.VEXRuleController,
 ) VEXRuleRouter {
 	// VEX rules are scoped to asset versions
 	// Read access - anyone who can read the asset version can list and get rules
-	ruleGroup := assetVersionRouter.Group.Group("/vex-rules")
-	ruleGroup.GET("/", vexRuleController.List)        // List all rules for asset version
-	ruleGroup.GET("/:ruleId/", vexRuleController.Get) // Get single rule by ID
+	ruleGroup := assetRouter.Group.Group("/vex-rules")
+	ruleGroup.GET("/", vexRuleController.List)               // List all rules for asset version
+	ruleGroup.GET("/:ruleId/", vexRuleController.Get)        // Get single rule by ID
+	ruleGroup.POST("/test/", vexRuleController.TestVexRules) // Test VEX rules against a given vulnerability
 
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
-	ruleWriteGroup.POST("/", vexRuleController.Create, middlewares.DisallowPublicRequests)                  // Create rule
-	ruleWriteGroup.PUT("/:ruleId/", vexRuleController.Update, middlewares.DisallowPublicRequests)           // Update rule by ID
-	ruleWriteGroup.POST("/:ruleId/reapply/", vexRuleController.Reapply, middlewares.DisallowPublicRequests) // Reapply rule to existing vulns
-	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete, middlewares.DisallowPublicRequests)        // Delete rule by ID
+	ruleWriteGroup.POST("/", vexRuleController.Create, middlewares.DisallowPublicRequests)           // Create rule
+	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete, middlewares.DisallowPublicRequests) // Delete rule by ID
 
 	return VEXRuleRouter{Group: ruleGroup}
 }

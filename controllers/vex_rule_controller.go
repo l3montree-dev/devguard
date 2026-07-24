@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -31,33 +32,39 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const vulnCacheTTL = 2 * time.Minute
+const vulnCacheSize = 32
+
+var vulnCache = expirable.NewLRU[uuid.UUID, []models.DependencyVuln](vulnCacheSize, nil, vulnCacheTTL)
+
 type VEXRuleController struct {
-	vexRuleService    shared.VEXRuleService
-	statisticsService shared.StatisticsService
+	vexRuleService           shared.VEXRuleService
+	statisticsService        shared.StatisticsService
+	dependencyVulnRepository shared.DependencyVulnRepository
 	utils.FireAndForgetSynchronizer
 }
 
-func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsService shared.StatisticsService, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
+func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsService shared.StatisticsService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
 	return &VEXRuleController{
-		vexRuleService:            vexRuleService,
-		statisticsService:         statisticsService,
+		vexRuleService:           vexRuleService,
+		statisticsService:        statisticsService,
+		dependencyVulnRepository: dependencyVulnRepository,
+
 		FireAndForgetSynchronizer: synchronizer,
 	}
 }
 
+type TestVEXRulesRequest struct {
+	ID            string   `json:"id" validate:"required"`
+	CelExpression []string `json:"celExpression" validate:"required"`
+}
 type CreateVEXRuleRequest struct {
-	CVEID                   string                           `json:"cveId" validate:"required"`
+	Title                   string                           `json:"title"`
 	Justification           string                           `json:"justification" validate:"required"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-	PathPattern             []string                         `json:"pathPattern" validate:"required,min=1"`
-}
-
-type UpdateVEXRuleRequest struct {
-	CVEID                   string                           `json:"cveId"`
-	Justification           string                           `json:"justification"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
 	PathPattern             []string                         `json:"pathPattern"`
-	Enabled                 *bool                            `json:"enabled"` // Pointer to distinguish between not provided and false
+	CELExpression           string                           `json:"celExpression"`
+	EventType               dtos.VulnEventType               `json:"eventType"`
 }
 
 // @Summary List VEX rules for an asset
@@ -68,15 +75,13 @@ type UpdateVEXRuleRequest struct {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param page query int false "Page number (default: 1)"
 // @Param pageSize query int false "Page size (default: 10, max: 100)"
 // @Param search query string false "Search term for CVE ID or justification"
 // @Success 200 {object} object{pageSize=int,page=int,total=int64,data=[]dtos.VEXRuleDTO}
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 
 	vulnID := ctx.QueryParam("dependencyVulnId")
 	if vulnID != "" {
@@ -84,7 +89,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 		if err != nil {
 			return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
 		}
-		rules, err := c.vexRuleService.FindByAssetVersionAndVulnID(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, vulnIDParsed)
+		rules, err := c.vexRuleService.FindByAssetIDWithMatchingVuln(ctx.Request().Context(), nil, asset.ID, vulnIDParsed)
 		if err != nil {
 			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 		}
@@ -106,7 +111,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 	filterQuery := shared.GetFilterQuery(ctx)
 	sortQuery := shared.GetSortQuery(ctx)
 
-	pagedRules, err := c.vexRuleService.FindByAssetVersionPaged(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, pageInfo, search, filterQuery, sortQuery)
+	pagedRules, err := c.vexRuleService.FindByAssetIDPaged(ctx.Request().Context(), nil, asset.ID, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
@@ -131,10 +136,9 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param ruleId path string true "Rule ID"
 // @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [get]
 func (c *VEXRuleController) Get(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -163,6 +167,57 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
 }
 
+func (c *VEXRuleController) cachedVulns(ctx shared.Context) []models.DependencyVuln {
+	assetID := shared.GetAsset(ctx).ID
+
+	if vulns, ok := vulnCache.Get(assetID); ok {
+		return vulns
+	}
+
+	vulns, err := c.dependencyVulnRepository.GetByAssetID(ctx.Request().Context(), nil, assetID)
+	if err != nil {
+		ctx.Logger().Error("failed to retrieve vulnerabilities", "error", err)
+		return nil
+	}
+
+	vulnCache.Add(assetID, vulns)
+	return vulns
+}
+
+func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
+
+	vulns := c.cachedVulns(ctx)
+	response := make(map[string]int)
+
+	var req TestVEXRulesRequest
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
+	}
+
+	var vexRules []models.VEXRule
+	for _, expr := range req.CelExpression {
+		vexRules = append(vexRules, models.VEXRule{
+			CELExpression: expr,
+		})
+		response[expr] = 0
+	}
+
+	for _, vuln := range vulns {
+		for _, rule := range vexRules {
+			match, err := c.vexRuleService.EvalCELExpression(ctx.Request().Context(), rule, vuln)
+			if err != nil {
+				return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
+			}
+			if match {
+				response[rule.CELExpression]++
+			}
+		}
+	}
+
+	return ctx.JSON(200, response)
+
+}
+
 // @Summary Create a VEX rule
 // @Tags VEXRules
 // @Security CookieAuth
@@ -171,13 +226,11 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param body body CreateVEXRuleRequest true "Rule data"
 // @Success 201 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 	session := shared.GetSession(ctx)
 
 	var req CreateVEXRuleRequest
@@ -186,22 +239,31 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	}
 
 	// perform explicit validation to provide clear errors and avoid relying solely on the validator
-	if req.CVEID == "" {
-		return echo.NewHTTPError(400, "cveId is required")
+	// a rule either matches via a CEL expression, or via a CVE ID + path pattern
+	if req.CELExpression == "" {
+		if len(req.PathPattern) == 0 {
+			return echo.NewHTTPError(400, "pathPattern must contain at least one element")
+		}
 	}
-	if len(req.PathPattern) == 0 {
-		return echo.NewHTTPError(400, "pathPattern must contain at least one element")
+
+	pathPattern := req.PathPattern
+	if pathPattern == nil {
+		pathPattern = []string{}
+	}
+
+	eventType := req.EventType
+	if eventType != dtos.EventTypeAccepted {
+		eventType = dtos.EventTypeFalsePositive
 	}
 
 	rule := &models.VEXRule{
 		AssetID:                 asset.ID,
-		AssetVersionName:        assetVersion.Name,
-		CVEID:                   req.CVEID,
+		Title:                   req.Title,
 		VexSource:               "manual",
 		Justification:           req.Justification,
 		MechanicalJustification: req.MechanicalJustification,
-		EventType:               dtos.EventTypeFalsePositive,
-		PathPattern:             req.PathPattern,
+		EventType:               eventType,
+		CELExpression:           req.CELExpression,
 		CreatedByID:             session.GetActorName(),
 		Enabled:                 true, // Manual rules are always enabled
 	}
@@ -217,7 +279,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), tx, []models.VEXRule{*rule})
 	if err != nil {
 		slog.Error("failed to apply VEX rule to existing vulnerabilities", "error", err,
-			"cveID", rule.CVEID, "assetID", rule.AssetID, "vexSource", rule.VexSource)
+			"assetID", rule.AssetID, "vexSource", rule.VexSource)
 		tx.Rollback()
 	}
 	if err := tx.Commit().Error; err != nil {
@@ -254,143 +316,6 @@ func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, a
 	})
 }
 
-// @Summary Update a VEX rule
-// @Tags VEXRules
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
-// @Param ruleId path string true "Rule ID"
-// @Param body body UpdateVEXRuleRequest true "Updated rule data"
-// @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [put]
-func (c *VEXRuleController) Update(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-
-	ruleID := ctx.Param("ruleId")
-	if ruleID == "" {
-		return echo.NewHTTPError(400, "ruleId path parameter is required")
-	}
-
-	var req UpdateVEXRuleRequest
-	if err := ctx.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
-	}
-
-	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
-	if err != nil {
-		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
-	}
-
-	// Verify the rule belongs to this asset
-	if rule.AssetID != asset.ID {
-		return echo.NewHTTPError(403, "rule does not belong to this asset")
-	}
-
-	// Update fields if provided
-	if req.CVEID != "" {
-		rule.CVEID = req.CVEID
-	}
-	if req.Justification != "" {
-		rule.Justification = req.Justification
-	}
-	if req.MechanicalJustification != "" {
-		rule.MechanicalJustification = req.MechanicalJustification
-	}
-	if len(req.PathPattern) > 0 {
-		rule.SetPathPattern(req.PathPattern)
-	}
-
-	// Track if we're enabling the rule (to apply it to vulns)
-	wasEnabled := rule.Enabled
-	if req.Enabled != nil {
-		rule.Enabled = *req.Enabled
-	}
-
-	if err := c.vexRuleService.Update(ctx.Request().Context(), nil, &rule); err != nil {
-		return echo.NewHTTPError(500, "failed to update VEX rule").WithInternal(err)
-	}
-
-	// Apply the rule to existing vulnerabilities if it's enabled
-	// Only apply if rule is now enabled (either was already enabled, or just got enabled)
-	if rule.Enabled {
-		vulns, err := c.vexRuleService.ApplyRulesToExistingVulns(ctx.Request().Context(), nil, []models.VEXRule{rule})
-		if err != nil {
-			// Log the error but don't fail the update - the rule was saved
-			ctx.Logger().Error("failed to apply updated VEX rule to existing vulnerabilities", "error", err, "cveID", rule.CVEID)
-		}
-
-		// Update artifact risk aggregations in background
-		c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
-
-		// Log if rule was just enabled
-		if !wasEnabled {
-			slog.Info("VEX rule enabled and applied to existing vulnerabilities", "ruleID", rule.ID, "cveID", rule.CVEID)
-		}
-	}
-
-	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
-	if err != nil {
-		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
-		count = 0
-	}
-
-	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
-}
-
-// @Summary Reapply a VEX rule
-// @Tags VEXRules
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
-// @Param ruleId path string true "Rule ID"
-// @Success 200 {object} dtos.VEXRuleDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}/reapply [post]
-func (c *VEXRuleController) Reapply(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-
-	ruleID := ctx.Param("ruleId")
-	if ruleID == "" {
-		return echo.NewHTTPError(400, "ruleId path parameter is required")
-	}
-
-	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
-	if err != nil {
-		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
-	}
-
-	// Verify the rule belongs to this asset
-	if rule.AssetID != asset.ID {
-		return echo.NewHTTPError(403, "rule does not belong to this asset")
-	}
-
-	// Reapply the rule to existing vulnerabilities (force reapply ignoring duplicate checks)
-	vulns, err := c.vexRuleService.ApplyRulesToExistingVulnsForce(ctx.Request().Context(), nil, []models.VEXRule{rule})
-	if err != nil {
-		return echo.NewHTTPError(500, "failed to reapply VEX rule").WithInternal(err)
-	}
-
-	// Update artifact risk aggregations in background
-	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
-
-	// Count matching vulnerabilities for the response
-	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, rule)
-	if err != nil {
-		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
-		count = 0
-	}
-
-	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
-}
-
 // @Summary Delete a VEX rule
 // @Tags VEXRules
 // @Security CookieAuth
@@ -399,10 +324,9 @@ func (c *VEXRuleController) Reapply(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug (ref)"
 // @Param ruleId path string true "Rule ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [delete]
 func (c *VEXRuleController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -411,7 +335,12 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "ruleId path parameter is required")
 	}
 
-	rule, err := c.vexRuleService.FindByID(ctx.Request().Context(), nil, ruleID)
+	reqCtx := ctx.Request().Context()
+
+	tx := c.vexRuleService.Begin(reqCtx)
+	defer tx.Rollback()
+
+	rule, err := c.vexRuleService.FindByID(reqCtx, tx, ruleID)
 	if err != nil {
 		return echo.NewHTTPError(404, "rule not found").WithInternal(err)
 	}
@@ -420,10 +349,56 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 	if rule.AssetID != asset.ID {
 		return echo.NewHTTPError(403, "rule does not belong to this asset")
 	}
+	//fetch the dependency vulns that match this rule to update the state to the last state after the rule is deleted
+	vulns, err := c.dependencyVulnRepository.GetByVexRuleID(reqCtx, tx, ruleID)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to fetch dependency vulns for VEX rule").WithInternal(err)
+	}
 
-	if err := c.vexRuleService.Delete(ctx.Request().Context(), nil, rule); err != nil {
+	for i := range vulns {
+		vuln := &vulns[i]
+		if vuln.State == dtos.VulnStateFixed {
+			continue // Skip fixed vulnerabilities
+		}
+
+		var ev models.VulnEvent
+		found := false
+		for j := len(vuln.Events) - 1; j >= 0; j-- {
+			if (vuln.Events[j].Type == dtos.EventTypeReopened || vuln.Events[j].Type == dtos.EventTypeAccepted || vuln.Events[j].Type == dtos.EventTypeFalsePositive) && vuln.Events[j].VexRuleID == nil {
+				justification := "VEX rule deleted, reverting to last state"
+				ev = vuln.Events[j]
+				ev.ID = uuid.New()
+				ev.Justification = &justification
+				ev.UserID = "system"
+				ev.CreatedByVexRule = false
+				found = true
+				break
+			}
+		}
+		if !found {
+			justification := "VEX rule deleted, no previous state found, defaulting to reopened"
+			ev.Justification = &justification
+			ev.UserID = "system"
+			ev.DependencyVulnID = &vuln.ID
+			ev.CreatedByVexRule = false
+			ev.Type = dtos.EventTypeReopened // Default to reopened if no previous state found
+		}
+
+		if err := c.dependencyVulnRepository.ApplyAndSave(reqCtx, tx, vuln, &ev); err != nil {
+			return echo.NewHTTPError(500, "failed to update dependency vuln after VEX rule deletion").WithInternal(err)
+		}
+	}
+
+	if err := c.vexRuleService.Delete(reqCtx, tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to delete VEX rule").WithInternal(err)
 	}
+
+	if err := tx.Commit().Error; err != nil {
+		return echo.NewHTTPError(500, "failed to commit VEX rule deletion").WithInternal(err)
+	}
+
+	// Update artifact risk aggregations in background
+	c.updateArtifactRiskAggregation(reqCtx, asset, vulns)
 
 	return ctx.NoContent(204)
 }

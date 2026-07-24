@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -55,6 +54,28 @@ func (repository *dependencyVulnRepository) applyAndSave(ctx context.Context, tx
 	}
 	dependencyVuln.Events = append(dependencyVuln.Events, *ev)
 	return *ev, nil
+}
+
+func (repository *dependencyVulnRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	err := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ?", assetID).Find(&dependencyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}
+
+func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, tx *gorm.DB, vexRuleID string) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	err := repository.Repository.GetDB(ctx, tx).Model(&models.VulnEvent{}).Select("DISTINCT dependency_vulns.*").Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Find(&dependencyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
 }
 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
@@ -487,61 +508,6 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(c
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Preload("CVE").Where("LOWER(cve_id) = LOWER(?) AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err
-}
-
-// FindByVEXRule finds all dependency vulnerabilities matching a VEX rule's CVE and path pattern.
-// Supports wildcards in path patterns:
-//   - "*" matches any number of path elements (zero or more)
-//   - "**" matches any number of path elements (zero or more)
-//
-// The pattern is matched as a suffix against the vulnerability path.
-// Filtering is done in Go to maintain database compatibility (PostgreSQL, SQLite, etc.).
-func (repository *dependencyVulnRepository) FindByVEXRule(ctx context.Context, tx *gorm.DB, rule models.VEXRule) ([]models.DependencyVuln, error) {
-	result, err := repository.FindByVEXRules(ctx, tx, []models.VEXRule{rule})
-	if err != nil {
-		return nil, err
-	}
-	return result[&rule], nil
-}
-
-func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, tx *gorm.DB, rules []models.VEXRule) (map[*models.VEXRule][]models.DependencyVuln, error) {
-	result := make(map[*models.VEXRule][]models.DependencyVuln)
-
-	if len(rules) == 0 {
-		return result, nil
-	}
-
-	cveIDs := make(map[string]bool)
-	for _, rule := range rules {
-		cveIDs[rule.CVEID] = true
-	}
-
-	assetID := rules[0].AssetID
-	assetVersionName := rules[0].AssetVersionName
-
-	cveIDSlice := make([]string, 0, len(cveIDs))
-	for id := range cveIDs {
-		cveIDSlice = append(cveIDSlice, strings.ToLower(id))
-	}
-
-	// Single query for all vulns
-	var vulns []models.DependencyVuln
-	err := repository.Repository.GetDB(ctx, tx).
-		Where("asset_id = ?", assetID).
-		Where("asset_version_name = ?", assetVersionName).
-		Where("LOWER(cve_id) IN ?", cveIDSlice).
-		Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at ASC")
-		}).
-		Preload("Artifacts").
-		Preload("CVE").
-		Find(&vulns).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx *gorm.DB, packageName string) (*string, error) {

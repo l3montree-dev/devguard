@@ -16,10 +16,13 @@
 package dtos
 
 import (
+	"fmt"
 	"slices"
 
+	"github.com/Masterminds/semver"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
+	packageurl "github.com/package-url/packageurl-go"
 )
 
 // PathPattern wildcard for VEX rules
@@ -37,8 +40,8 @@ const (
 //   - ["*"] matches any path suffix
 type PathPattern []string
 
-// IsWildcard returns true if the element is a wildcard (*).
-func IsWildcard(elem string) bool {
+// isWildcard returns true if the element is a wildcard (*).
+func isWildcard(elem string) bool {
 	return elem == PathPatternWildcard
 }
 
@@ -54,7 +57,6 @@ func IsWildcard(elem string) bool {
 // Unexported: callers should use MatchesSuffixForArtifacts, which also
 // strips a leading artifact-identity path segment before delegating here.
 func (p PathPattern) matchesSuffix(path []string) bool {
-
 	if len(p) == 0 {
 		return true
 	}
@@ -62,14 +64,14 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	// ROOT is a stop marker meaning "direct dependency only". When the pattern
 	// contains ROOT, skip suffix scanning and match the full path from position 0.
 	if slices.Contains(p, normalize.GraphRootNodeID) {
-		return matchPatternExact(p, path)
+		return matchPattern(p, path)
 	}
 
 	// For suffix matching, we try increasingly longer suffixes
 	// Count non-wildcard elements to determine minimum suffix length
 	minLen := 0
 	for _, elem := range p {
-		if !IsWildcard(elem) {
+		if !isWildcard(elem) {
 			minLen++
 		}
 	}
@@ -81,16 +83,55 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	// Try matching against suffixes of increasing length
 	for suffixStart := len(path) - minLen; suffixStart >= 0; suffixStart-- {
 		suffix := path[suffixStart:]
-		if matchPatternExact(p, suffix) {
+		if matchPattern(p, suffix) {
 			return true
 		}
 	}
 	return false
 }
 
-// matchPatternExact checks if the pattern exactly matches the path.
+func (p PathPattern) ToCELExpression() string {
+	s := fmt.Sprintf("matchesPattern(vuln, %q)", p)
+	return s
+}
+
+// elementMatches checks whether a single pattern element matches a single
+// path element. Besides a plain literal comparison, it supports semver
+// constraints in the pattern element's version: a pattern purl like
+// "pkg:npm/lib@>=1.0.0,<2.0.0" matches any path purl of the same package
+// whose version satisfies that constraint (e.g. "pkg:npm/lib@1.5.0").
+// Wildcards are already consumed
+func elementMatches(patternElem, pathElem string) bool {
+	if patternElem == pathElem {
+		return true
+	}
+
+	patternPurl, err := packageurl.FromString(patternElem)
+	if err != nil {
+		return false
+	}
+	pathPurl, err := packageurl.FromString(pathElem)
+	if err != nil {
+		return false
+	}
+	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+		return false
+	}
+
+	constraint, err := semver.NewConstraint(patternPurl.Version)
+	if err != nil {
+		return false
+	}
+	version, err := semver.NewVersion(pathPurl.Version)
+	if err != nil {
+		return false
+	}
+	return constraint.Check(version)
+}
+
+// matchPattern checks if the pattern exactly matches the path.
 // Wildcards can match zero or more elements.
-func matchPatternExact(pattern, path []string) bool {
+func matchPattern(pattern, path []string) bool {
 	if len(pattern) == 0 {
 		return len(path) == 0
 	}
@@ -99,7 +140,7 @@ func matchPatternExact(pattern, path []string) bool {
 	pathIdx := 0
 
 	for pIdx < len(pattern) {
-		if IsWildcard(pattern[pIdx]) {
+		if isWildcard(pattern[pIdx]) {
 			// Wildcard: try to match zero or more elements
 			// If this is the last element in pattern, it matches everything remaining
 			if pIdx == len(pattern)-1 {
@@ -110,7 +151,7 @@ func matchPatternExact(pattern, path []string) bool {
 			// match for this wildcard. [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]:
 			// ROOT anchors the remainder to the current path position.
 			if pattern[pIdx+1] == normalize.GraphRootNodeID {
-				if matchPatternExact(pattern[pIdx+1:], path[pathIdx:]) {
+				if matchPattern(pattern[pIdx+1:], path[pathIdx:]) {
 					return true
 				}
 			}
@@ -119,9 +160,9 @@ func matchPatternExact(pattern, path []string) bool {
 			nextPattern := pattern[pIdx+1]
 
 			for i := pathIdx; i < len(path); i++ {
-				if nextPattern == path[i] {
+				if elementMatches(nextPattern, path[i]) {
 					// Found next pattern element, recursively match the rest
-					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
+					if matchPattern(pattern[pIdx+1:], path[i:]) {
 						return true
 					}
 				}
@@ -131,7 +172,7 @@ func matchPatternExact(pattern, path []string) bool {
 			// Check if remaining pattern is all wildcards or empty
 			allWildcards := true
 			for j := pIdx + 1; j < len(pattern); j++ {
-				if !IsWildcard(pattern[j]) {
+				if !isWildcard(pattern[j]) {
 					allWildcards = false
 					break
 				}
@@ -150,7 +191,7 @@ func matchPatternExact(pattern, path []string) bool {
 		}
 
 		// Literal match
-		if pathIdx >= len(path) || pattern[pIdx] != path[pathIdx] {
+		if pathIdx >= len(path) || !elementMatches(pattern[pIdx], path[pathIdx]) {
 			return false
 		}
 
@@ -161,12 +202,7 @@ func matchPatternExact(pattern, path []string) bool {
 	return pathIdx == len(path)
 }
 
-// ContainsWildcard returns true if the pattern contains a wildcard (*).
-func (p PathPattern) ContainsWildcard() bool {
-	return slices.ContainsFunc(p, IsWildcard)
-}
-
-// MatchesSuffixForArtifacts is like matchesSuffix, but first strips a leading
+// Matches is like matchesSuffix, but first strips a leading
 // pattern element that identifies one of the vulnerability's own artifacts.
 //
 // VulnerabilityPath is always component-only and never includes the
@@ -182,9 +218,17 @@ func (p PathPattern) ContainsWildcard() bool {
 // dependency graph, so a shorter pattern must not match as a mere suffix of
 // a longer, distinct path through a shared component - that per-path
 // distinction is exactly what CSAF's product tree encodes.
-func (p PathPattern) MatchesSuffixForArtifacts(path []string, artifactIdentities []string) bool {
-	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
-		return matchPatternExact(p[1:], path)
+func (p PathPattern) Matches(path []string, artifactPurls []string) bool {
+	if len(p) > 0 {
+		// check if at least one artifact purl matches the first element of the pattern
+		// we are only checking for AT LEAST ONE artifact purl matches, because that is our semantic how artifacts
+		// should work: Compiled from the same source
+		for _, artifactPurl := range artifactPurls {
+			if elementMatches(p[0], artifactPurl) {
+				// strip the first element of the pattern and continue matching the rest
+				return matchPattern(p[1:], path)
+			}
+		}
 	}
 	return p.matchesSuffix(path)
 }
@@ -199,10 +243,12 @@ type VEXRuleDTO struct {
 	VexSource string    `json:"vexSource"`
 
 	// Rule data
+	Title                   string                      `json:"title"`
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`
 	PathPattern             PathPattern                 `json:"pathPattern"`
+	CELExpression           string                      `json:"celExpression"`
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
 	UpdatedAt               string                      `json:"updatedAt"`
@@ -212,8 +258,7 @@ type VEXRuleDTO struct {
 }
 
 type VexRuleRecommendation struct {
-	CVEID                   string                      `json:"cveId"`
-	PathPattern             PathPattern                 `json:"pathPattern"`
+	CELExpression           string                      `json:"celExpression"`
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`

@@ -164,7 +164,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
 		}
 
-		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest uploaded vex", "err", err)
 			span.RecordError(err)
@@ -186,7 +186,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			span.SetStatus(codes.Error, err.Error())
 			return echo.NewHTTPError(400, fmt.Sprintf("could not parse vex document: %v", err.Error())).WithInternal(err)
 		}
-		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest vex rules", "err", err, "format", format)
 			span.RecordError(err)
@@ -234,7 +234,7 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	return s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, rules)
+	return s.vexRuleService.IngestVEXRules(ctx, tx, asset, rules)
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {

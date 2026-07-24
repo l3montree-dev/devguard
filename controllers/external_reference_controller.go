@@ -31,6 +31,7 @@ import (
 )
 
 type ExternalReferenceController struct {
+	assetVersionRepository      shared.AssetVersionRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	artifactRepository          shared.ArtifactRepository
 	dependencyVulnService       shared.DependencyVulnService
@@ -40,6 +41,7 @@ type ExternalReferenceController struct {
 }
 
 func NewExternalReferenceController(
+	assetVersionRepository shared.AssetVersionRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	artifactRepository shared.ArtifactRepository,
 	dependencyVulnService shared.DependencyVulnService,
@@ -48,6 +50,7 @@ func NewExternalReferenceController(
 	scanService shared.ScanService,
 ) *ExternalReferenceController {
 	return &ExternalReferenceController{
+		assetVersionRepository:      assetVersionRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		artifactRepository:          artifactRepository,
 		dependencyVulnService:       dependencyVulnService,
@@ -57,7 +60,7 @@ func NewExternalReferenceController(
 	}
 }
 
-// @Summary List external references for an asset version
+// @Summary List external references for an asset
 // @Tags ExternalReferences
 // @Security CookieAuth
 // @Security PATAuth
@@ -65,14 +68,12 @@ func NewExternalReferenceController(
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} dtos.ExternalReferenceDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references [get]
+// @Success 200 {array} ExternalReferenceDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references [get]
 func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 
-	refs, err := c.externalReferenceRepository.FindByAssetVersion(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
+	refs, err := c.externalReferenceRepository.FindByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		slog.Error("failed to list external references", "error", err)
 		return echo.NewHTTPError(500, "failed to list external references").WithInternal(err)
@@ -81,10 +82,9 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	result := make([]dtos.ExternalReferenceDTO, len(refs))
 	for i, ref := range refs {
 		result[i] = dtos.ExternalReferenceDTO{
-			AssetID:          ref.AssetID.String(),
-			AssetVersionName: ref.AssetVersionName,
-			URL:              ref.URL,
-			Type:             ref.Type,
+			AssetID: ref.AssetID.String(),
+			URL:     ref.URL,
+			Type:    ref.Type,
 		}
 	}
 
@@ -99,13 +99,11 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param request body dtos.CreateExternalReferenceRequest true "Create request"
-// @Success 201 {object} dtos.ExternalReferenceDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references [post]
+// @Param request body CreateExternalReferenceRequest true "Create request"
+// @Success 201 {object} ExternalReferenceDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references [post]
 func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 
 	var req dtos.CreateExternalReferenceRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -118,10 +116,9 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	}
 
 	ref := models.ExternalReference{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		URL:              req.URL,
-		Type:             req.Type, // already validated by struct tags
+		AssetID: asset.ID,
+		URL:     req.URL,
+		Type:    req.Type, // already validated by struct tags
 	}
 
 	if err := c.externalReferenceRepository.Create(ctx.Request().Context(), nil, &ref); err != nil {
@@ -130,10 +127,9 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(201, dtos.ExternalReferenceDTO{
-		AssetID:          ref.AssetID.String(),
-		AssetVersionName: ref.AssetVersionName,
-		URL:              ref.URL,
-		Type:             ref.Type,
+		AssetID: ref.AssetID.String(),
+		URL:     ref.URL,
+		Type:    ref.Type,
 	})
 }
 
@@ -141,7 +137,14 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, &userAgent)
+	vexRefs, err := c.externalReferenceRepository.FindByAssetID(reqCtx, tx, asset.ID)
+	if err != nil {
+		tx.Rollback()
+		slog.Error("could not fetch vex references for artifact", "err", err, "artifact", artifact.ArtifactName)
+		return echo.NewHTTPError(500, "could not fetch vex references for artifact").WithInternal(err)
+	}
+
+	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, vexRefs, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -177,26 +180,25 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references/sync [post]
 func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()
 	userAgent := ctx.Request().UserAgent()
 
-	artifacts, err := c.artifactRepository.GetByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name)
+	assetVersions, err := c.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
-		slog.Error("could not get artifacts for asset version", "err", err)
-		return echo.NewHTTPError(500, "could not get artifacts for asset version").WithInternal(err)
+		slog.Error("could not get asset versions for asset", "err", err)
+		return echo.NewHTTPError(500, "could not get asset versions for asset").WithInternal(err)
 	}
-
-	for _, artifact := range artifacts {
-		if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, ownerID, userAgent); err != nil {
-			return err
+	for _, assetVersion := range assetVersions {
+		for _, artifact := range assetVersion.Artifacts {
+			if err := c.syncArtifact(ctx.Request().Context(), org, project, asset, assetVersion, artifact, ownerID, userAgent); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -214,7 +216,7 @@ func (c *ExternalReferenceController) Sync(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources [post]
 func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 	if err := c.syncArtifact(ctx.Request().Context(), shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx), shared.GetAssetVersion(ctx), shared.GetArtifact(ctx), shared.GetSession(ctx).GetActorName(), ctx.Request().UserAgent()); err != nil {
 		return err
@@ -230,13 +232,11 @@ func (c *ExternalReferenceController) SyncArtifact(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
 // @Param url path string true "URL-encoded external reference URL"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{url} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references/{url} [delete]
 func (c *ExternalReferenceController) Delete(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
 
 	encodedURL := ctx.Param("url")
 	url, err := neturl.QueryUnescape(encodedURL)
@@ -244,7 +244,7 @@ func (c *ExternalReferenceController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid url path parameter").WithInternal(err)
 	}
 
-	if err := c.externalReferenceRepository.DeleteByURL(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, url); err != nil {
+	if err := c.externalReferenceRepository.DeleteByURL(ctx.Request().Context(), nil, asset.ID, url); err != nil {
 		slog.Error("failed to delete external reference", "error", err)
 		return echo.NewHTTPError(500, "failed to delete external reference").WithInternal(err)
 	}

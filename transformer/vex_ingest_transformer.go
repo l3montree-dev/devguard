@@ -147,16 +147,14 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
 				rule := models.VEXRule{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					CVEID:            cveID,
-					VexSource:        source,
-					Justification:    justification,
-					EventType:        eventType,
-					PathPattern:      pp,
-					CreatedByID:      "system", // system user
+					AssetID:       assetID,
+					VexSource:     source,
+					Justification: justification,
+					EventType:     eventType,
+					CELExpression: pp.ToCELExpression(),
+					CreatedByID:   "system", // system user
 				}
-				rule.SetPathPattern(rule.PathPattern)
+				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 			continue
@@ -183,16 +181,14 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 		}
 
 		rule := models.VEXRule{
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			CVEID:            cveID,
-			VexSource:        source,
-			Justification:    justification,
-			EventType:        eventType,
-			PathPattern:      pattern,
-			CreatedByID:      "system", // system user
+			AssetID:       assetID,
+			VexSource:     source,
+			Justification: justification,
+			EventType:     eventType,
+			CELExpression: pattern.ToCELExpression(),
+			CreatedByID:   "system", // system user
 		}
-		rule.SetPathPattern(rule.PathPattern) // compute the hash
+		rule.SetCELExpression(rule.CELExpression)
 		rules = append(rules, rule)
 	}
 
@@ -231,16 +227,14 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, so
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
 			rule := models.VEXRule{
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				CVEID:            cveID,
-				VexSource:        source,
-				Justification:    justification,
-				EventType:        eventType,
-				PathPattern:      dtos.PathPattern{dtos.PathPatternWildcard, purlString},
-				CreatedByID:      "system", // system user
+				AssetID:       assetID,
+				VexSource:     source,
+				Justification: justification,
+				EventType:     eventType,
+				CELExpression: dtos.PathPattern{dtos.PathPatternWildcard, purlString}.ToCELExpression(),
+				CreatedByID:   "system", // system user
 			}
-			rule.SetPathPattern(rule.PathPattern)
+			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
 		}
 	}

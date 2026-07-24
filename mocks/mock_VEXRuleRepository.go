@@ -350,38 +350,37 @@ func (_c *VEXRuleRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// DeleteByAssetVersion provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) DeleteByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+// DeleteByAssetID provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) DeleteByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteByAssetVersion")
+		panic("no return value specified for DeleteByAssetID")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// VEXRuleRepository_DeleteByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByAssetVersion'
-type VEXRuleRepository_DeleteByAssetVersion_Call struct {
+// VEXRuleRepository_DeleteByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByAssetID'
+type VEXRuleRepository_DeleteByAssetID_Call struct {
 	*mock.Call
 }
 
-// DeleteByAssetVersion is a helper method to define mock.On call
+// DeleteByAssetID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *VEXRuleRepository_Expecter) DeleteByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *VEXRuleRepository_DeleteByAssetVersion_Call {
-	return &VEXRuleRepository_DeleteByAssetVersion_Call{Call: _e.mock.On("DeleteByAssetVersion", ctx, tx, assetID, assetVersionName)}
+func (_e *VEXRuleRepository_Expecter) DeleteByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *VEXRuleRepository_DeleteByAssetID_Call {
+	return &VEXRuleRepository_DeleteByAssetID_Call{Call: _e.mock.On("DeleteByAssetID", ctx, tx, assetID)}
 }
 
-func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *VEXRuleRepository_DeleteByAssetVersion_Call {
+func (_c *VEXRuleRepository_DeleteByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *VEXRuleRepository_DeleteByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -395,26 +394,21 @@ func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) Run(run func(ctx context.
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) Return(err error) *VEXRuleRepository_DeleteByAssetVersion_Call {
+func (_c *VEXRuleRepository_DeleteByAssetID_Call) Return(err error) *VEXRuleRepository_DeleteByAssetID_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *VEXRuleRepository_DeleteByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) error) *VEXRuleRepository_DeleteByAssetVersion_Call {
+func (_c *VEXRuleRepository_DeleteByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) error) *VEXRuleRepository_DeleteByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -499,49 +493,48 @@ func (_c *VEXRuleRepository_FindByAssetAndVexSource_Call) RunAndReturn(run func(
 	return _c
 }
 
-// FindByAssetVersion provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) FindByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+// FindByAssetID provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetVersion")
+		panic("no return value specified for FindByAssetID")
 	}
 
 	var r0 []models.VEXRule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VEXRule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VEXRuleRepository_FindByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetVersion'
-type VEXRuleRepository_FindByAssetVersion_Call struct {
+// VEXRuleRepository_FindByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetID'
+type VEXRuleRepository_FindByAssetID_Call struct {
 	*mock.Call
 }
 
-// FindByAssetVersion is a helper method to define mock.On call
+// FindByAssetID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *VEXRuleRepository_Expecter) FindByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *VEXRuleRepository_FindByAssetVersion_Call {
-	return &VEXRuleRepository_FindByAssetVersion_Call{Call: _e.mock.On("FindByAssetVersion", ctx, tx, assetID, assetVersionName)}
+func (_e *VEXRuleRepository_Expecter) FindByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *VEXRuleRepository_FindByAssetID_Call {
+	return &VEXRuleRepository_FindByAssetID_Call{Call: _e.mock.On("FindByAssetID", ctx, tx, assetID)}
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *VEXRuleRepository_FindByAssetVersion_Call {
+func (_c *VEXRuleRepository_FindByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *VEXRuleRepository_FindByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -554,75 +547,70 @@ func (_c *VEXRuleRepository_FindByAssetVersion_Call) Run(run func(ctx context.Co
 		var arg2 uuid.UUID
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersion_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindByAssetVersion_Call {
+func (_c *VEXRuleRepository_FindByAssetID_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindByAssetID_Call {
 	_c.Call.Return(vEXRules, err)
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.VEXRule, error)) *VEXRuleRepository_FindByAssetVersion_Call {
+func (_c *VEXRuleRepository_FindByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error)) *VEXRuleRepository_FindByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// FindByAssetVersionAndCVE provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) FindByAssetVersionAndCVE(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, cveID)
+// FindByAssetIDPaged provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) FindByAssetIDPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
+	ret := _mock.Called(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetVersionAndCVE")
+		panic("no return value specified for FindByAssetIDPaged")
 	}
 
-	var r0 []models.VEXRule
+	var r0 shared.Paged[models.VEXRule]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName, cveID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.VEXRule], error)); ok {
+		return returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, cveID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.VEXRule]); ok {
+		r0 = returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
+		r0 = ret.Get(0).(shared.Paged[models.VEXRule])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName, cveID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VEXRuleRepository_FindByAssetVersionAndCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetVersionAndCVE'
-type VEXRuleRepository_FindByAssetVersionAndCVE_Call struct {
+// VEXRuleRepository_FindByAssetIDPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetIDPaged'
+type VEXRuleRepository_FindByAssetIDPaged_Call struct {
 	*mock.Call
 }
 
-// FindByAssetVersionAndCVE is a helper method to define mock.On call
+// FindByAssetIDPaged is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-//   - assetVersionName string
-//   - cveID string
-func (_e *VEXRuleRepository_Expecter) FindByAssetVersionAndCVE(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, cveID interface{}) *VEXRuleRepository_FindByAssetVersionAndCVE_Call {
-	return &VEXRuleRepository_FindByAssetVersionAndCVE_Call{Call: _e.mock.On("FindByAssetVersionAndCVE", ctx, tx, assetID, assetVersionName, cveID)}
+//   - pageInfo shared.PageInfo
+//   - search string
+//   - filterQuery []shared.FilterQuery
+//   - sortQuery []shared.SortQuery
+func (_e *VEXRuleRepository_Expecter) FindByAssetIDPaged(ctx interface{}, tx interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *VEXRuleRepository_FindByAssetIDPaged_Call {
+	return &VEXRuleRepository_FindByAssetIDPaged_Call{Call: _e.mock.On("FindByAssetIDPaged", ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)}
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersionAndCVE_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string)) *VEXRuleRepository_FindByAssetVersionAndCVE_Call {
+func (_c *VEXRuleRepository_FindByAssetIDPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery)) *VEXRuleRepository_FindByAssetIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -636,112 +624,21 @@ func (_c *VEXRuleRepository_FindByAssetVersionAndCVE_Call) Run(run func(ctx cont
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
+		var arg3 shared.PageInfo
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(shared.PageInfo)
 		}
 		var arg4 string
 		if args[4] != nil {
 			arg4 = args[4].(string)
 		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleRepository_FindByAssetVersionAndCVE_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindByAssetVersionAndCVE_Call {
-	_c.Call.Return(vEXRules, err)
-	return _c
-}
-
-func (_c *VEXRuleRepository_FindByAssetVersionAndCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, cveID string) ([]models.VEXRule, error)) *VEXRuleRepository_FindByAssetVersionAndCVE_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindByAssetVersionPaged provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) FindByAssetVersionPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetVersionPaged")
-	}
-
-	var r0 shared.Paged[models.VEXRule]
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.VEXRule], error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.VEXRule]); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
-	} else {
-		r0 = ret.Get(0).(shared.Paged[models.VEXRule])
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// VEXRuleRepository_FindByAssetVersionPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetVersionPaged'
-type VEXRuleRepository_FindByAssetVersionPaged_Call struct {
-	*mock.Call
-}
-
-// FindByAssetVersionPaged is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
-//   - pageInfo shared.PageInfo
-//   - search string
-//   - filterQuery []shared.FilterQuery
-//   - sortQuery []shared.SortQuery
-func (_e *VEXRuleRepository_Expecter) FindByAssetVersionPaged(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *VEXRuleRepository_FindByAssetVersionPaged_Call {
-	return &VEXRuleRepository_FindByAssetVersionPaged_Call{Call: _e.mock.On("FindByAssetVersionPaged", ctx, tx, assetID, assetVersionName, pageInfo, search, filterQuery, sortQuery)}
-}
-
-func (_c *VEXRuleRepository_FindByAssetVersionPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery)) *VEXRuleRepository_FindByAssetVersionPaged_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 shared.PageInfo
-		if args[4] != nil {
-			arg4 = args[4].(shared.PageInfo)
-		}
-		var arg5 string
+		var arg5 []shared.FilterQuery
 		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg5 = args[5].([]shared.FilterQuery)
 		}
-		var arg6 []shared.FilterQuery
+		var arg6 []shared.SortQuery
 		if args[6] != nil {
-			arg6 = args[6].([]shared.FilterQuery)
-		}
-		var arg7 []shared.SortQuery
-		if args[7] != nil {
-			arg7 = args[7].([]shared.SortQuery)
+			arg6 = args[6].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -751,92 +648,17 @@ func (_c *VEXRuleRepository_FindByAssetVersionPaged_Call) Run(run func(ctx conte
 			arg4,
 			arg5,
 			arg6,
-			arg7,
 		)
 	})
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersionPaged_Call) Return(paged shared.Paged[models.VEXRule], err error) *VEXRuleRepository_FindByAssetVersionPaged_Call {
+func (_c *VEXRuleRepository_FindByAssetIDPaged_Call) Return(paged shared.Paged[models.VEXRule], err error) *VEXRuleRepository_FindByAssetIDPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *VEXRuleRepository_FindByAssetVersionPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error)) *VEXRuleRepository_FindByAssetVersionPaged_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindByCVE provides a mock function for the type VEXRuleRepository
-func (_mock *VEXRuleRepository) FindByCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, cveID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByCVE")
-	}
-
-	var r0 []models.VEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, cveID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, cveID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
-		r1 = returnFunc(ctx, tx, cveID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// VEXRuleRepository_FindByCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCVE'
-type VEXRuleRepository_FindByCVE_Call struct {
-	*mock.Call
-}
-
-// FindByCVE is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - cveID string
-func (_e *VEXRuleRepository_Expecter) FindByCVE(ctx interface{}, tx interface{}, cveID interface{}) *VEXRuleRepository_FindByCVE_Call {
-	return &VEXRuleRepository_FindByCVE_Call{Call: _e.mock.On("FindByCVE", ctx, tx, cveID)}
-}
-
-func (_c *VEXRuleRepository_FindByCVE_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string)) *VEXRuleRepository_FindByCVE_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleRepository_FindByCVE_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindByCVE_Call {
-	_c.Call.Return(vEXRules, err)
-	return _c
-}
-
-func (_c *VEXRuleRepository_FindByCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string) ([]models.VEXRule, error)) *VEXRuleRepository_FindByCVE_Call {
+func (_c *VEXRuleRepository_FindByAssetIDPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error)) *VEXRuleRepository_FindByAssetIDPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
