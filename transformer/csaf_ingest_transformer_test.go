@@ -18,11 +18,11 @@ package transformer
 import (
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,21 +51,21 @@ func TestCSAFtoVexRules(t *testing.T) {
 		t.Fatalf("expected 2 rules, got %d", len(rules))
 	}
 
-	gotPaths := make([]string, 0, len(rules))
+	gotExpressions := make([]string, 0, len(rules))
 	for _, r := range rules {
-		gotPaths = append(gotPaths, strings.Join(r.PathPattern, ","))
+		gotExpressions = append(gotExpressions, r.CELExpression)
 	}
 
-	expectedPaths := []string{
-		strings.Join([]string{
+	expectedExpressions := []string{
+		dtos.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}, ","),
-		strings.Join([]string{
+		}.ToCELExpression(),
+		dtos.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}, ","),
+		}.ToCELExpression(),
 	}
-	assert.ElementsMatch(t, expectedPaths, gotPaths, "PathPatterns do not match expected")
+	assert.ElementsMatch(t, expectedExpressions, gotExpressions, "CEL expressions do not match expected")
 }
