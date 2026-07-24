@@ -62,7 +62,6 @@ type CreateVEXRuleRequest struct {
 	Title                   string                           `json:"title"`
 	Justification           string                           `json:"justification" validate:"required"`
 	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-	PathPattern             []string                         `json:"pathPattern"`
 	CELExpression           string                           `json:"celExpression"`
 	EventType               dtos.VulnEventType               `json:"eventType"`
 }
@@ -241,14 +240,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	// perform explicit validation to provide clear errors and avoid relying solely on the validator
 	// a rule either matches via a CEL expression, or via a CVE ID + path pattern
 	if req.CELExpression == "" {
-		if len(req.PathPattern) == 0 {
-			return echo.NewHTTPError(400, "pathPattern must contain at least one element")
-		}
-	}
-
-	pathPattern := req.PathPattern
-	if pathPattern == nil {
-		pathPattern = []string{}
+		return echo.NewHTTPError(400, "CEL expression is required for VEX rule creation")
 	}
 
 	eventType := req.EventType
