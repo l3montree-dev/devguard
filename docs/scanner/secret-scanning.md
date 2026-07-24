@@ -12,6 +12,9 @@ request using the configured token before uploading the SARIF results.
 
 You may pass the target as the first positional argument instead of using --path.
 
+Any flags after a "--" separator are forwarded verbatim to the underlying gitleaks invocation.
+See the gitleaks CLI reference for available flags: https://github.com/gitleaks/gitleaks#usage
+
 ```shell
 devguard-scanner secret-scanning [path] [flags]
 ```
@@ -27,6 +30,9 @@ devguard-scanner secret-scanning [path] [flags]
 
   # Scan and save output locally
   devguard-scanner secret-scanning ./my-repo --outputPath secrets.sarif.json
+
+  # Forward extra flags to gitleaks
+  devguard-scanner secret-scanning ./my-repo -- --max-target-megabytes 50
 ```
 
 ### Options

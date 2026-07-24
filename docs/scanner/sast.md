@@ -13,6 +13,9 @@ token before upload.
 
 You may pass the target as the first positional argument instead of using --path.
 
+Any flags after a "--" separator are forwarded verbatim to the underlying semgrep invocation.
+See the semgrep CLI reference for available flags: https://semgrep.dev/docs/cli-reference
+
 ```shell
 devguard-scanner sast [path] [flags]
 ```
@@ -31,6 +34,9 @@ devguard-scanner sast [path] [flags]
 
   # Scan and save results locally
   devguard-scanner sast ./my-repo --outputPath results.sarif.json
+
+  # Forward extra flags to semgrep
+  devguard-scanner sast ./my-repo -- --exclude-rule some-rule-id
 ```
 
 ### Options
