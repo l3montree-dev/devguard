@@ -118,19 +118,28 @@ func elementMatches(patternElem, pathElem string) bool {
 	if err != nil {
 		return false
 	}
-	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+
+	matches, err := PurlVersionMatches(patternPurl, pathPurl)
+	if err != nil {
 		return false
+	}
+	return matches
+}
+
+func PurlVersionMatches(patternPurl, pathPurl packageurl.PackageURL) (bool, error) {
+	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+		return false, nil
 	}
 
 	constraint, err := semver.NewConstraint(patternPurl.Version)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("invalid pattern version constraint: %w", err)
 	}
 	version, err := semver.NewVersion(pathPurl.Version)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("invalid path version: %w", err)
 	}
-	return constraint.Check(version)
+	return constraint.Check(version), nil
 }
 
 // matchPattern checks if the pattern exactly matches the path.
