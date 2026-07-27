@@ -735,11 +735,10 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not create request for url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
 				})
 				return
 			}
@@ -756,11 +755,10 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not read response body: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
 				})
 				return
 			}
@@ -768,21 +766,19 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					Type:             format,
-					Error:            new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
+					Type:    format,
+					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
 				})
 				return
 			}
 			mut.Lock()
 			rules = append(rules, vexRules...)
 			valid = append(valid, models.ExternalReference{
-				URL:              url,
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				Type:             format,
+				URL:     url,
+				AssetID: assetID,
+				Type:    format,
 			})
 			mut.Unlock()
 		})

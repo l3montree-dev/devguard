@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	neturl "net/url"
 	"time"
@@ -107,12 +108,12 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 
 	var req dtos.CreateExternalReferenceRequest
 	if err := ctx.Bind(&req); err != nil {
-		return err
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
 	// validate
 	if err := dtos.V.Struct(req); err != nil {
-		return err
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	ref := models.ExternalReference{
