@@ -78,7 +78,6 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body object true "CycloneDX VEX BOM"
-// @Param X-Artifact-Name header string false "Artifact name"
 // @Param X-Tag header string false "Tag flag"
 // @Param X-Asset-Default-Branch header string false "Default branch"
 // @Param X-Origin header string false "Origin"
@@ -98,7 +97,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	asset := shared.GetAsset(ctx)
-	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 
@@ -118,10 +116,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
-	}
-
-	if artifactName == "" {
-		artifactName = normalize.ArtifactPurl(ctx.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
 
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()

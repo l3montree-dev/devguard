@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -17,7 +16,7 @@ import (
 // celFor builds a CEL expression that matches a specific CVE ID and path pattern,
 // mirroring how transformers build VEXRule.CELExpression for tests.
 func celFor(cveID string, pattern []string) string {
-	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, vexrules.PathPattern(pattern).ToCELExpression())
+	return vexrules.ToCELExpression(cveID, vexrules.PathPattern(pattern))
 }
 
 func TestCreateVulnEventFromVEXRule(t *testing.T) {

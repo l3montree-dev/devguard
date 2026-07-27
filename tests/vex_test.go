@@ -3,7 +3,6 @@ package tests
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -24,7 +23,7 @@ import (
 // celFor builds a CEL expression that matches a specific CVE ID and path pattern,
 // mirroring how transformers build VEXRule.CELExpression.
 func celFor(cveID string, pattern []string) string {
-	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, vexrules.PathPattern(pattern).ToCELExpression())
+	return vexrules.ToCELExpression(cveID, vexrules.PathPattern(pattern))
 }
 
 // TestVEXRuleServiceDelete tests the Delete method

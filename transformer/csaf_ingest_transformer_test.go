@@ -56,15 +56,15 @@ func TestCSAFtoVexRules(t *testing.T) {
 	}
 
 	expectedExpressions := []string{
-		vexrules.PathPattern{
+		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}.ToCELExpression(),
-		vexrules.PathPattern{
+		}),
+		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}.ToCELExpression(),
+		}),
 	}
 	assert.ElementsMatch(t, expectedExpressions, gotExpressions, "CEL expressions do not match expected")
 }
