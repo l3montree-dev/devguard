@@ -285,14 +285,7 @@ type DependencyVulnRepository interface {
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
-	GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(
-		ctx context.Context,
-		tx DB,
-		assetTuples []struct {
-			AssetID          string
-			AssetVersionName string
-		},
-	) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(ctx context.Context, tx DB, assetTuples []models.AssetTuple) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -511,16 +504,12 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
-	VexRulesFromDocument([]byte, uuid.UUID, string, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
-	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
 	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
-	FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*transformer.VexReportOpenVEX, err error)
 }
 
 type ConfigRepository interface {
@@ -555,8 +544,8 @@ type CrowdSourcedVexingService interface {
 }
 
 type CVERelationshipService interface {
-	CreateAliasRelationshipMapBatch(ctx context.Context, tx DB, cveIDs []string) (map[string]map[string]struct{}, error)
-	IsAlias(cveSource, cveTarget string, cveMap map[string]map[string]struct{}) bool
+	CreateAliasRelationshipMapBatch(ctx context.Context, tx DB, cveIDs []string) (models.CVEMap, error)
+	IsAlias(cveSource, cveTarget string, cveMap models.CVEMap) bool
 }
 
 type VulnEventRepository interface {

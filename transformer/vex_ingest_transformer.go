@@ -239,8 +239,6 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, so
 			}
 
 			if componentPurl.Version == "" {
-				// Might SPAM logs
-				slog.Info("product identifier does not contain version, skipping VEX rule creation for this vuln", "statement", statement.ID, "cveID", cveID)
 				continue
 			}
 
@@ -450,6 +448,9 @@ type VexReportOpenVEX struct {
 }
 
 func validateVexReportOpenVEX(report *vex.VEX) error {
+	if report == nil {
+		return fmt.Errorf("invalid OpenVEX report: report is empty")
+	}
 	if report.ID == "" {
 		return fmt.Errorf("invalid OpenVEX report: missing id")
 	}

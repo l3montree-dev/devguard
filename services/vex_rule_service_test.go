@@ -340,7 +340,7 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 		return rule.CVEID
 	})
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(models.CVEMap{
 		"CVE-2024-1234": {
 			"GO-2024-1234": {},
 		},
@@ -406,7 +406,7 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 
 	ruleCVEIDs := []string{rule.CVEID}
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(models.CVEMap{
 		"CVE-2024-1234": {
 			"GO-2024-1234": {},
 		},
@@ -483,7 +483,7 @@ func TestVEXRuleEnabledBasedOnParanoidMode(t *testing.T) {
 				},
 			}).Return([]models.DependencyVuln{}, nil)
 
-			cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(map[string]map[string]struct{}{}, nil)
+			cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
 			service := NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 
@@ -655,7 +655,7 @@ func TestApplyRulesToExistingVulnsOnlyAppliesEnabledRules(t *testing.T) {
 		return rule.CVEID
 	})
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(models.CVEMap{
 		"CVE-2024-1234": {
 			"GO-2024-1234": {},
 		},
@@ -757,7 +757,7 @@ func TestEnablingRuleAppliesItToVulns(t *testing.T) {
 		return rule.CVEID
 	})
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, ruleCVEIDs).Return(models.CVEMap{
 		"CVE-2024-1234": {
 			"GO-2024-1234": {},
 		},
@@ -846,7 +846,7 @@ func TestMatchRulesToVulns_ComponentPurlWithAtSign(t *testing.T) {
 		ComponentPurl:     "pkg:npm/@myorg/vulnerable-lib@2.0.0",
 	}
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(models.CVEMap{
 		"CVE-2024-9999": {"GO-2024-9999": {}},
 		"GO-2024-9999":  {"CVE-2024-9999": {}},
 	}, nil)
@@ -894,7 +894,7 @@ func TestMatchRulesToVulns_EncodedAtSignDoesNotMatch(t *testing.T) {
 		ComponentPurl:     "pkg:npm/@myorg/vulnerable-lib@2.0.0",
 	}
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(models.CVEMap{
 		"CVE-2024-9999": {"GO-2024-9999": {}},
 		"GO-2024-9999":  {"CVE-2024-9999": {}},
 	}, nil)
@@ -945,7 +945,7 @@ func TestMatchRulesToVulns_FindsAlias(t *testing.T) {
 		},
 	}
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{rule.CVEID}).Return(models.CVEMap{
 		"CVE-2024-9999": {"GO-2024-9999": {}},
 		"GO-2024-9999":  {"CVE-2024-9999": {}},
 	}, nil)
@@ -1194,7 +1194,7 @@ func TestParseVEXRulesInBOM_ComponentPurlWithEncodedAtSign(t *testing.T) {
 	},
 	}).Return([]models.DependencyVuln{}, nil)
 
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-9999"}).Return(map[string]map[string]struct{}{
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-9999"}).Return(models.CVEMap{
 		"CVE-2024-1234": {
 			"GO-2024-1234": {},
 		},
@@ -1508,7 +1508,7 @@ func TestParseVEXRulesInBOM_PathPatternFromProperties(t *testing.T) {
 			AssetVersionName: "v1.0",
 		},
 	}).Return([]models.DependencyVuln{}, nil)
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(map[string]map[string]struct{}{}, nil)
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
 	service := NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 	vexRules, err := transformer.CycloneDXVEXToRules(vexReport.Report, assetID, assetVersion.Name, vexReport.Source)
@@ -1603,7 +1603,7 @@ func TestParseVEXRulesInBOM_MultiplePathPatternProperties(t *testing.T) {
 			AssetVersionName: "v1.0",
 		},
 	}).Return([]models.DependencyVuln{}, nil)
-	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234", "CVE-2024-1234"}).Return(map[string]map[string]struct{}{}, nil)
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234", "CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
 	service := NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 	vexRules, err := transformer.CycloneDXVEXToRules(vexReport.Report, assetID, assetVersion.Name, vexReport.Source)

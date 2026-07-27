@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -152,7 +153,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()
 	defer tx.Rollback()
 
-	rules, format, err := s.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
+	rules, format, err := services.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
 
 	switch format {
 	case dtos.ExternalReferenceTypeCycloneDX:
@@ -224,7 +225,7 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name, externalURLs)
+	rules, valid, invalid := services.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name, externalURLs)
 
 	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
 		slog.Error("could not store vex external reference", "err", err)

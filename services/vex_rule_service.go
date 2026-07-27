@@ -297,20 +297,14 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 		return nil, nil
 	}
 	assetDeduplicationMap := make(map[string]bool)
-	assetTuples := []struct {
-		AssetID          string
-		AssetVersionName string
-	}{}
+	assetTuples := []models.AssetTuple{}
 
 	for _, rule := range rules {
 		assetIDString := rule.AssetID.String()
 		compositeKey := assetIDString + rule.AssetVersionName
 		if !assetDeduplicationMap[compositeKey] {
 			assetDeduplicationMap[compositeKey] = true
-			assetTuples = append(assetTuples, struct {
-				AssetID          string
-				AssetVersionName string
-			}{AssetID: assetIDString, AssetVersionName: rule.AssetVersionName})
+			assetTuples = append(assetTuples, models.AssetTuple{AssetID: assetIDString, AssetVersionName: rule.AssetVersionName})
 		}
 	}
 
@@ -543,12 +537,6 @@ func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Conte
 	for _, rule := range systemVEXRules {
 		cveKey := strings.ToLower(strings.TrimSpace(rule.CVEID))
 		if _, exists := existingCVEMap[cveKey]; !exists {
-			// Might SPAM logs
-			slog.Info("skipping system VEX rule because CVE does not exist in database yet",
-				"cveID", rule.CVEID,
-				"vexSource", rule.VexSource,
-				"ruleID", rule.ID,
-			)
 			continue
 		}
 		filteredRules = append(filteredRules, rule)

@@ -27,6 +27,9 @@ type cveReference struct {
 	Source string   `json:"source"`
 	Tags   []string `json:"tags"`
 }
+
+type CVEMap map[string]map[string]struct{}
+
 type CVE struct {
 	ID                    int64               `json:"id" gorm:"type:bigint;primaryKey;not null;"`
 	ContentHash           int64               `json:"contentHash" gorm:"type:bigint;not null;default:0;"`

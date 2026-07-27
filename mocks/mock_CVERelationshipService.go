@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,23 +40,23 @@ func (_m *CVERelationshipService) EXPECT() *CVERelationshipService_Expecter {
 }
 
 // CreateAliasRelationshipMapBatch provides a mock function for the type CVERelationshipService
-func (_mock *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Context, tx shared.DB, cveIDs []string) (map[string]map[string]struct{}, error) {
+func (_mock *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Context, tx shared.DB, cveIDs []string) (models.CVEMap, error) {
 	ret := _mock.Called(ctx, tx, cveIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAliasRelationshipMapBatch")
 	}
 
-	var r0 map[string]map[string]struct{}
+	var r0 models.CVEMap
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) (map[string]map[string]struct{}, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) (models.CVEMap, error)); ok {
 		return returnFunc(ctx, tx, cveIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) map[string]map[string]struct{}); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) models.CVEMap); ok {
 		r0 = returnFunc(ctx, tx, cveIDs)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]map[string]struct{})
+			r0 = ret.Get(0).(models.CVEMap)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
@@ -102,18 +103,18 @@ func (_c *CVERelationshipService_CreateAliasRelationshipMapBatch_Call) Run(run f
 	return _c
 }
 
-func (_c *CVERelationshipService_CreateAliasRelationshipMapBatch_Call) Return(stringToStringToVal map[string]map[string]struct{}, err error) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
-	_c.Call.Return(stringToStringToVal, err)
+func (_c *CVERelationshipService_CreateAliasRelationshipMapBatch_Call) Return(cVEMap models.CVEMap, err error) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
+	_c.Call.Return(cVEMap, err)
 	return _c
 }
 
-func (_c *CVERelationshipService_CreateAliasRelationshipMapBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveIDs []string) (map[string]map[string]struct{}, error)) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
+func (_c *CVERelationshipService_CreateAliasRelationshipMapBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveIDs []string) (models.CVEMap, error)) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // IsAlias provides a mock function for the type CVERelationshipService
-func (_mock *CVERelationshipService) IsAlias(cveSource string, cveTarget string, cveMap map[string]map[string]struct{}) bool {
+func (_mock *CVERelationshipService) IsAlias(cveSource string, cveTarget string, cveMap models.CVEMap) bool {
 	ret := _mock.Called(cveSource, cveTarget, cveMap)
 
 	if len(ret) == 0 {
@@ -121,7 +122,7 @@ func (_mock *CVERelationshipService) IsAlias(cveSource string, cveTarget string,
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(string, string, map[string]map[string]struct{}) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, models.CVEMap) bool); ok {
 		r0 = returnFunc(cveSource, cveTarget, cveMap)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -137,12 +138,12 @@ type CVERelationshipService_IsAlias_Call struct {
 // IsAlias is a helper method to define mock.On call
 //   - cveSource string
 //   - cveTarget string
-//   - cveMap map[string]map[string]struct{}
+//   - cveMap models.CVEMap
 func (_e *CVERelationshipService_Expecter) IsAlias(cveSource interface{}, cveTarget interface{}, cveMap interface{}) *CVERelationshipService_IsAlias_Call {
 	return &CVERelationshipService_IsAlias_Call{Call: _e.mock.On("IsAlias", cveSource, cveTarget, cveMap)}
 }
 
-func (_c *CVERelationshipService_IsAlias_Call) Run(run func(cveSource string, cveTarget string, cveMap map[string]map[string]struct{})) *CVERelationshipService_IsAlias_Call {
+func (_c *CVERelationshipService_IsAlias_Call) Run(run func(cveSource string, cveTarget string, cveMap models.CVEMap)) *CVERelationshipService_IsAlias_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -152,9 +153,9 @@ func (_c *CVERelationshipService_IsAlias_Call) Run(run func(cveSource string, cv
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 map[string]map[string]struct{}
+		var arg2 models.CVEMap
 		if args[2] != nil {
-			arg2 = args[2].(map[string]map[string]struct{})
+			arg2 = args[2].(models.CVEMap)
 		}
 		run(
 			arg0,
@@ -170,7 +171,7 @@ func (_c *CVERelationshipService_IsAlias_Call) Return(b bool) *CVERelationshipSe
 	return _c
 }
 
-func (_c *CVERelationshipService_IsAlias_Call) RunAndReturn(run func(cveSource string, cveTarget string, cveMap map[string]map[string]struct{}) bool) *CVERelationshipService_IsAlias_Call {
+func (_c *CVERelationshipService_IsAlias_Call) RunAndReturn(run func(cveSource string, cveTarget string, cveMap models.CVEMap) bool) *CVERelationshipService_IsAlias_Call {
 	_c.Call.Return(run)
 	return _c
 }

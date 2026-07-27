@@ -193,6 +193,9 @@ func (s *CrowdsourcedVexingService) RecommendSystemVEXRule(ctx shared.Context, t
 	validRules := utils.Filter(rules, func(rule models.SystemVEXRule) bool {
 		return dtos.PathPattern(rule.PathPattern).MatchesSuffix(dependencyPath)
 	})
+	if len(validRules) == 0 {
+		return models.SystemVEXRule{}, fmt.Errorf("no system VEX rules found for CVE: %s", cveID)
+	}
 	nonAliasDetected := false
 outer:
 	for i := range validRules {
@@ -202,9 +205,6 @@ outer:
 				break outer
 			}
 		}
-	}
-	if len(validRules) == 0 {
-		return models.SystemVEXRule{}, fmt.Errorf("no system VEX rules found for CVE: %s", cveID)
 	}
 	if len(validRules) > 1 && nonAliasDetected {
 		return models.SystemVEXRule{}, fmt.Errorf("multiple system VEX rules found for CVE: %s, cannot determine which one to recommend", cveID)

@@ -55,6 +55,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 		externalReferenceRepositoryMock := mocks.NewExternalReferenceRepository(t)
 		vexRuleServiceMock := mocks.NewVEXRuleService(t)
 		scanServiceMock := mocks.NewScanService(t)
+		fetchServiceMock := mocks.NewFetchService(t)
 
 		vexURL := "https://example.com/component.vex.json"
 
@@ -65,7 +66,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 
 		fetchedRules := []models.VEXRule{{}}
 		validRefs := []models.ExternalReference{{URL: vexURL, AssetID: asset.ID, AssetVersionName: "main"}}
-		scanServiceMock.EXPECT().FetchVexFromUpstream(mock.Anything, asset.ID, "main", mock.MatchedBy(func(urls []string) bool {
+		fetchServiceMock.EXPECT().FetchVexFromUpstream(mock.Anything, asset.ID, "main", mock.MatchedBy(func(urls []string) bool {
 			return len(urls) == 1 && urls[0] == vexURL
 		})).Return(fetchedRules, validRefs, nil)
 

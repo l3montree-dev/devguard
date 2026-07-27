@@ -32,5 +32,4 @@ CREATE TABLE IF NOT EXISTS public.system_vex_rules (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_vex_rule_cve ON public.system_vex_rules(cve_id);
 CREATE INDEX IF NOT EXISTS idx_vex_rules_composite ON public.system_vex_rules (cve_id, vex_source);

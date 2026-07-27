@@ -410,10 +410,7 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(
 	ctx context.Context,
 	tx *gorm.DB,
-	assetTuples []struct {
-		AssetID          string
-		AssetVersionName string
-	},
+	assetTuples []models.AssetTuple,
 ) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
 

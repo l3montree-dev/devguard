@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 )
@@ -27,13 +28,13 @@ Using empty structs to validate existence without using up too much space
 		CVE4: struct{}
 	}
 */
-func (s *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Context, tx shared.DB, cveIDs []string) (map[string]map[string]struct{}, error) {
+func (s *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Context, tx shared.DB, cveIDs []string) (models.CVEMap, error) {
 	cveRelationships, err := s.cveRelationshipRepository.FindCrossRelationshipsBatch(ctx, tx, cveIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	cveAliasMap := make(map[string]map[string]struct{})
+	cveAliasMap := make(models.CVEMap)
 
 	for _, rel := range cveRelationships {
 		if rel.RelationshipType != dtos.RelationshipTypeAlias {
@@ -59,7 +60,7 @@ func (s *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Con
 	return cveAliasMap, nil
 }
 
-func (s *CVERelationshipService) IsAlias(cveSource, cveTarget string, cveMap map[string]map[string]struct{}) bool {
+func (s *CVERelationshipService) IsAlias(cveSource, cveTarget string, cveMap models.CVEMap) bool {
 	_, ok := cveMap[cveSource][cveTarget]
 	return ok
 }

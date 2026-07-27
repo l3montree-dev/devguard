@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/transformer"
 )
 
@@ -24,7 +25,7 @@ func (runner *DaemonRunner) UpdateSystemVEXRulesFromOpenVEXSources(ctx context.C
 	slog.Info("fetching OpenVEX from static sources")
 	var results []*transformer.VexReportOpenVEX
 	for _, source := range staticOpenVEXSources {
-		reports, err := runner.scanService.FetchOpenVexFromGitHub(ctx, source, "main")
+		reports, err := services.FetchOpenVexFromGitHub(ctx, source, "main")
 		if err != nil {
 			slog.Error("failed to fetch OpenVEX report from static source", "source", source, "error", err)
 			continue

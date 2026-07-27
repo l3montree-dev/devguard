@@ -22,7 +22,7 @@ func (runner *DaemonRunner) ApplySystemVEXRules(ctx context.Context) error {
 		return err
 	}
 
-	if len(assetVersions) < 1 {
+	if len(assetVersions) == 0 {
 		slog.Info("No assetversions in database yet, skipping SystemVEXRule application")
 		return nil
 	}
