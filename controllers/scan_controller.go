@@ -78,7 +78,6 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body object true "CycloneDX VEX BOM"
-// @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
 // @Param X-Tag header string false "Tag flag"
 // @Param X-Asset-Default-Branch header string false "Default branch"

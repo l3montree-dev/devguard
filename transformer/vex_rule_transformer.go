@@ -46,6 +46,7 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 
 func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
+		Title:                   rule.Title,
 		CELExpression:           rule.CELExpression,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,

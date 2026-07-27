@@ -18,7 +18,7 @@ const (
 	//minVoterThreshold        = 4
 	//todo: we need to adjust the minVoterThreshold to 4 again
 	minVoterThreshold        = 1
-	minOrganizationAgeInDays = 30
+	minOrganizationAgeInDays = 15
 	minTrustscore            = 0.01
 	baseDiminishmentFactor   = 0.1
 )
@@ -113,7 +113,7 @@ func getVexRuleFromMatchingRules(vexRuleIdentity string, ruleIDtoIdentityMap map
 			continue
 		}
 		if aggregatedJustification != "" {
-			aggregatedJustification += " | "
+			aggregatedJustification += "; "
 		}
 		aggregatedJustification += rule.Justification
 	}

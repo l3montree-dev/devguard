@@ -84,7 +84,7 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 						return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
 					}
 
-					matches, err := PurlVersionMatches(purlObj, patternObj)
+					matches, err := PurlVersionMatches(patternObj, purlObj)
 					if err != nil {
 						return types.NewErr("matchesPurl: %v", err)
 					}

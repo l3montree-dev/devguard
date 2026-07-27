@@ -76,6 +76,35 @@ func TestEvalCELExpression(t *testing.T) {
 		assert.Equal(t, true, res)
 	})
 
+	t.Run("matchesPurl should treat the second argument as the constraint", func(t *testing.T) {
+		vuln := models.DependencyVuln{ComponentPurl: "pkg:npm/undici@6.26.4"}
+
+		tests := []struct {
+			pattern string
+			want    bool
+		}{
+			{"pkg:npm/undici@6.26.*", true},
+			{"pkg:npm/undici@6.26.4", true},
+			{"pkg:npm/undici@>=6.0.0", true},
+			{"pkg:npm/undici@6.25.*", false},
+			{"pkg:npm/other@6.26.*", false},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.pattern, func(t *testing.T) {
+				res, err := EvalRule(
+					t.Context(),
+					models.VEXRule{
+						CELExpression: `matchesPurl(vuln.componentPurl, "` + tt.pattern + `")`,
+					},
+					vuln,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, res)
+			})
+		}
+	})
+
 	t.Run("vuln should be provided as variable", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),

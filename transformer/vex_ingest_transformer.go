@@ -148,11 +148,12 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
 				rule := models.VEXRule{
+					Title:         vexrules.VexRuleTitle(vuln.ID, pp),
 					AssetID:       assetID,
 					VexSource:     source,
 					Justification: justification,
 					EventType:     eventType,
-					CELExpression: pp.ToCELExpression(),
+					CELExpression: vexrules.ToCELExpression(vuln.ID, pp),
 					CreatedByID:   "system", // system user
 				}
 				rule.SetCELExpression(rule.CELExpression)
@@ -182,11 +183,12 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 		}
 
 		rule := models.VEXRule{
+			Title:         vexrules.VexRuleTitle(vuln.ID, pattern),
 			AssetID:       assetID,
 			VexSource:     source,
 			Justification: justification,
 			EventType:     eventType,
-			CELExpression: pattern.ToCELExpression(),
+			CELExpression: vexrules.ToCELExpression(vuln.ID, pattern),
 			CreatedByID:   "system", // system user
 		}
 		rule.SetCELExpression(rule.CELExpression)
@@ -228,11 +230,12 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, source string) ([]models.VE
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
 			rule := models.VEXRule{
+				Title:         vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
 				AssetID:       assetID,
 				VexSource:     source,
 				Justification: justification,
 				EventType:     eventType,
-				CELExpression: vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}.ToCELExpression(),
+				CELExpression: vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
 				CreatedByID:   "system", // system user
 			}
 			rule.SetCELExpression(rule.CELExpression)

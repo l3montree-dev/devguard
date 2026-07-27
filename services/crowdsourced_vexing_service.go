@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
@@ -158,11 +158,7 @@ func (s *CrowdsourcedVexingService) recommend(requestCtx context.Context, vexCtx
 		return models.VEXRule{}, 0, err
 	}
 
-	rule, ok := utils.Find(vexCtx.vexRules, func(r models.VEXRule) bool { return r.ID == recommendedRule.ID })
-	if !ok {
-		return models.VEXRule{}, 0, fmt.Errorf("could not find vex rule - even though it HAS to exist")
-	}
-	return rule, confidence, nil
+	return recommendedRule, confidence, nil
 }
 
 func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error) {
@@ -197,12 +193,12 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 // once, fetching the shared VEX rule/project/organization/trust-score data
 // exactly once instead of once per vuln. Vulns without a recommendation are
 // simply omitted from the result map.
-func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[uuid.UUID]dtos.VexRuleRecommendation, error) {
+func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error) {
 	requestCtx, span := servicesTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingService.RecommendBatch")
 	defer span.End()
 	span.SetAttributes(attribute.Int("dependencyVulns.total", len(vulns)))
 
-	traceErr := func(err error) (map[uuid.UUID]dtos.VexRuleRecommendation, error) {
+	traceErr := func(err error) (map[string]dtos.VexRuleRecommendation, error) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
@@ -213,7 +209,7 @@ func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared
 		return traceErr(err)
 	}
 
-	recommendations := make(map[uuid.UUID]dtos.VexRuleRecommendation, len(vulns))
+	recommendations := make(map[string]dtos.VexRuleRecommendation, len(vulns))
 	for _, vuln := range vulns {
 		rule, confidence, err := s.recommend(requestCtx, vexCtx, vuln)
 		if err != nil {
@@ -222,7 +218,24 @@ func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared
 			}
 			return traceErr(err)
 		}
-		recommendations[vuln.ID] = transformer.VEXRuleToRecommendationDTO(rule, confidence)
+		id, err := vexrules.IdentityOfRule(models.VEXRule{
+			CELExpression:           rule.CELExpression,
+			MechanicalJustification: rule.MechanicalJustification,
+			EventType:               rule.EventType,
+		})
+		if err != nil {
+			slog.Warn("could not calculate identity of rule", "err", err)
+			continue
+		}
+
+		// check if the rule already matches a vuln
+		if r, ok := recommendations[id]; ok {
+			r.AppliesToAmountOfDependencyVulns++
+			recommendations[id] = r
+		} else {
+			recommendations[id] = transformer.VEXRuleToRecommendationDTO(rule, confidence)
+		}
+
 	}
 	span.SetAttributes(attribute.Int("recommendations.total", len(recommendations)))
 

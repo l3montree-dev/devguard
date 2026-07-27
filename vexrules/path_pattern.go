@@ -89,12 +89,16 @@ func (p PathPattern) matchesSuffix(path []string) bool {
 	return false
 }
 
-func (p PathPattern) ToCELExpression() string {
-	quoted := make([]string, len(p))
-	for i, elem := range p {
+func ToCELExpression(cveID string, pattern PathPattern) string {
+	quoted := make([]string, len(pattern))
+	for i, elem := range pattern {
 		quoted[i] = fmt.Sprintf("%q", elem)
 	}
-	return fmt.Sprintf("matchesPattern(vuln, [%s])", strings.Join(quoted, ", "))
+	return fmt.Sprintf("vuln.cveId == %s && matchesPattern(vuln, [%s])", fmt.Sprintf("%q", cveID), strings.Join(quoted, ", "))
+}
+
+func VexRuleTitle(cveID string, pattern PathPattern) string {
+	return fmt.Sprintf("%s not exploitable in %s", cveID, pattern[len(pattern)-1])
 }
 
 // elementMatches checks whether a single pattern element matches a single

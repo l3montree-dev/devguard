@@ -44,11 +44,13 @@ type VEXRuleDTO struct {
 }
 
 type VexRuleRecommendation struct {
-	CELExpression           string                      `json:"celExpression"`
-	Justification           string                      `json:"justification"`
-	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
-	EventType               VulnEventType               `json:"eventType"`
-	Confidence              float64                     `json:"confidence"`
+	Title                            string                      `json:"title"`
+	CELExpression                    string                      `json:"celExpression"`
+	Justification                    string                      `json:"justification"`
+	MechanicalJustification          MechanicalJustificationType `json:"mechanicalJustification"`
+	EventType                        VulnEventType               `json:"eventType"`
+	Confidence                       float64                     `json:"confidence"`
+	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
 }
 
 type TestVEXRulesRequest struct {
