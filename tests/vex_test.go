@@ -11,10 +11,10 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,7 +24,7 @@ import (
 // celFor builds a CEL expression that matches a specific CVE ID and path pattern,
 // mirroring how transformers build VEXRule.CELExpression.
 func celFor(cveID string, pattern []string) string {
-	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, dtos.PathPattern(pattern).ToCELExpression())
+	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, vexrules.PathPattern(pattern).ToCELExpression())
 }
 
 // TestVEXRuleServiceDelete tests the Delete method

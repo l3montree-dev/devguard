@@ -17,23 +17,16 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"reflect"
-	"sync"
 
-	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/common/types"
-	"github.com/google/cel-go/common/types/ref"
-	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/package-url/packageurl-go"
+	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 type VEXRuleService struct {
@@ -43,64 +36,6 @@ type VEXRuleService struct {
 }
 
 var _ shared.VEXRuleService = (*VEXRuleService)(nil)
-
-var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
-	return cel.NewEnv(
-		cel.Variable("vuln", cel.AnyType),
-		cel.Function("matchesPattern",
-			cel.Overload(
-				"matchesPattern_vuln_list",
-				[]*cel.Type{cel.DynType, cel.ListType(cel.StringType)},
-				cel.BoolType,
-				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
-					path, err := stringListField(lhs, "vulnerabilityPath")
-					if err != nil {
-						return types.NewErr("matchesPattern: invalid vuln.vulnerabilityPath: %v", err)
-					}
-					artifactPurls, err := stringListField(lhs, "artifactPurls")
-					if err != nil {
-						return types.NewErr("matchesPattern: invalid vuln.artifactPurls: %v", err)
-					}
-					pattern, err := toStringList(rhs)
-					if err != nil {
-						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
-					}
-					matches := dtos.PathPattern(pattern).Matches(path, artifactPurls)
-					return types.Bool(matches)
-				}),
-			),
-		),
-		cel.Function("matchesPurl",
-			cel.Overload("matchesPurl_string_string", []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
-				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
-					purl, ok := lhs.Value().(string)
-					if !ok {
-						return types.NewErr("matchesPurl: invalid purl argument: %v", lhs)
-					}
-					pattern, ok := rhs.Value().(string)
-					if !ok {
-						return types.NewErr("matchesPurl: invalid pattern argument: %v", rhs)
-					}
-					purlObj, err := packageurl.FromString(purl)
-					if err != nil {
-						return types.NewErr("matchesPurl: invalid purl: %v", err)
-					}
-					patternObj, err := packageurl.FromString(pattern)
-					if err != nil {
-						return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
-					}
-
-					matches, err := dtos.PurlVersionMatches(purlObj, patternObj)
-					if err != nil {
-						return types.NewErr("matchesPurl: %v", err)
-					}
-
-					return types.Bool(matches)
-				}),
-			),
-		),
-	)
-})
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
@@ -160,7 +95,7 @@ func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx s
 	// Filter rules to only those matching the vulnerability path pattern
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
-		match, err := s.EvalCELExpression(ctx, rule, vuln)
+		match, err := vexrules.EvalRule(ctx, rule, vuln)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", rule.ID, err)
 		}
@@ -444,78 +379,6 @@ func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.D
 	return rulesToAdd, rulesToRemove, nil
 }
 
-func toStringList(val ref.Val) ([]string, error) {
-	native, err := val.ConvertToNative(reflect.TypeOf([]string{}))
-	if err != nil {
-		return nil, err
-	}
-	return native.([]string), nil
-}
-
-func stringListField(mapVal ref.Val, key string) ([]string, error) {
-	mapper, ok := mapVal.(traits.Mapper)
-	if !ok {
-		return nil, fmt.Errorf("expected a map, got %s", mapVal.Type().TypeName())
-	}
-	fieldVal, found := mapper.Find(types.String(key))
-	if !found || fieldVal == nil {
-		return nil, nil
-	}
-	if types.IsError(fieldVal) {
-		return nil, fmt.Errorf("field %q: %v", key, fieldVal)
-	}
-	return toStringList(fieldVal)
-}
-
-func (s *VEXRuleService) EvalCELExpression(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
-	}
-
-	celEnv, err := vexRuleCelEnv()
-	if err != nil {
-		return false, fmt.Errorf("failed to create CEL environment: %w", err)
-	}
-
-	ast, iss := celEnv.Compile(rule.CELExpression)
-	if iss != nil && iss.Err() != nil {
-		return false, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
-	}
-
-	prg, err := celEnv.Program(ast)
-	if err != nil {
-		return false, fmt.Errorf("failed to build CEL program: %w", err)
-	}
-
-	m, err := json.Marshal(vuln)
-	if err != nil {
-		return false, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
-	}
-
-	var vulnMap map[string]any
-	if err := json.Unmarshal(m, &vulnMap); err != nil {
-		return false, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
-	}
-	// artifactPurls is derived (vuln.ArtifactPurls()), not a JSON field of
-	// DependencyVuln, so it has to be added to the map explicitly for
-	// matchesPattern(vuln, pattern) to see it.
-	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
-
-	out, _, err := prg.Eval(map[string]any{
-		"vuln": vulnMap,
-	})
-
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
-	}
-
-	result, ok := out.Value().(bool)
-	if !ok {
-		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
-	}
-	return result, nil
-}
-
 func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
 	result := make(map[string][]models.DependencyVuln)
 
@@ -533,7 +396,7 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 
 	for _, vuln := range vulns {
 		for _, rule := range celRules {
-			match, err := s.EvalCELExpression(ctx, rule, vuln)
+			match, err := vexrules.EvalRule(ctx, rule, vuln)
 			if err != nil {
 				slog.Error("failed to evaluate CEL expression for VEX rule", "ruleId", rule.ID, "error", err)
 				continue

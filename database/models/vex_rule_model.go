@@ -56,6 +56,9 @@ type VEXRule struct {
 	// When false, the rule exists but does not create events or modify vulnerability state.
 	// Rules are disabled when uploaded in ParanoidMode, requiring manual review/enabling.
 	Enabled bool `json:"enabled" gorm:"default:true;not null;"`
+
+	// this will be set, when the rule was recommended by the crowdsourced vexing algorithm.
+	WasRecommended bool `json:"recommendedRule" gorm:"default:false;not null;"`
 }
 
 func (VEXRule) TableName() string {

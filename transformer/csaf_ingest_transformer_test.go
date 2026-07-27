@@ -22,7 +22,7 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,8 +40,7 @@ func TestCSAFtoVexRules(t *testing.T) {
 	}
 
 	assetID := uuid.New()
-	assetVersionName := "1.0.0"
-	rules, err := CSAFVEXToRules(&advisory, assetID, assetVersionName, "test")
+	rules, err := CSAFVEXToRules(&advisory, assetID, "test")
 	if err != nil {
 		t.Fatalf("CSAFVEXToRules failed: %v", err)
 	}
@@ -57,11 +56,11 @@ func TestCSAFtoVexRules(t *testing.T) {
 	}
 
 	expectedExpressions := []string{
-		dtos.PathPattern{
+		vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
 		}.ToCELExpression(),
-		dtos.PathPattern{
+		vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",

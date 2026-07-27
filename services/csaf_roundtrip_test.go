@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +35,7 @@ import (
 // each reconstructed rule still matches the exact same DependencyVuln it was generated from.
 //
 // The CSAF product tree is always rooted at the artifact, so PathPattern carries an artifact
-// purl prefix that VulnerabilityPath itself never has (see dtos.PathPattern.MatchesSuffixForArtifacts
+// purl prefix that VulnerabilityPath itself never has (see vexrules.PathPattern.MatchesSuffixForArtifacts
 // and models.DependencyVuln.ArtifactPurls) - without stripping that prefix during matching, a
 // downloaded CSAF report re-uploaded to devguard would never match any of its own vulns.
 func TestAggregatedCSAFRoundTrip(t *testing.T) {
@@ -80,7 +81,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, advisory.Vulnerabilities, 2, "one CSAF vulnerability object per CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "main", "aggregated")
+	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "aggregated")
 	require.NoError(t, err)
 
 	// exactly the two false-positive paths become rules, each with its exact (non-wildcard) path,
@@ -90,15 +91,13 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 		assert.Equal(t, dtos.EventTypeFalsePositive, r.EventType)
 	}
 
-	vexRuleService := VEXRuleService{}
-
 	// The crucial roundtrip step: re-matching each rule's CEL expression against the exact
 	// DependencyVuln it was generated from must succeed, even though the rule's path pattern
 	// carries the artifact prefix that VulnerabilityPath itself never does.
 	for cveID, vuln := range map[string]models.DependencyVuln{"CVE-2024-0001": vulnA1, "CVE-2024-0002": vulnB1} {
 		var matched bool
 		for _, r := range rules {
-			match, err := vexRuleService.EvalCELExpression(context.Background(), r, vuln)
+			match, err := vexrules.EvalRule(context.Background(), r, vuln)
 			require.NoError(t, err)
 			if match {
 				matched = true
@@ -111,7 +110,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	// otherwise re-uploading the CSAF report would incorrectly resolve an open vuln too.
 	openA := mk("CVE-2024-0001", compA, pathA2, dtos.VulnStateOpen, false)
 	for _, r := range rules {
-		match, err := vexRuleService.EvalCELExpression(context.Background(), r, openA)
+		match, err := vexrules.EvalRule(context.Background(), r, openA)
 		require.NoError(t, err)
 		assert.False(t, match, "the open path must not match the false-positive path's rule")
 	}
@@ -175,7 +174,7 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, advisory.Vulnerabilities, 1, "one CSAF vulnerability object for the single CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "main", "test")
+	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "test")
 	require.NoError(t, err)
 
 	// each of the 4 distinct paths must round-trip into its own exact-path rule, each prefixed
@@ -186,15 +185,13 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 		assert.Equal(t, dtos.EventTypeFalsePositive, r.EventType)
 	}
 
-	vexRuleService := VEXRuleService{}
-
 	// Each reconstructed rule must match back onto exactly the vuln whose path it encodes,
 	// and none of the others - proving distinct paths through a shared component (opa)
 	// don't bleed into each other once the artifact prefix is stripped for matching.
 	for i, vuln := range vulns {
 		matchCount := 0
 		for _, r := range rules {
-			match, err := vexRuleService.EvalCELExpression(context.Background(), r, vuln)
+			match, err := vexrules.EvalRule(context.Background(), r, vuln)
 			require.NoError(t, err)
 			if match {
 				matchCount++

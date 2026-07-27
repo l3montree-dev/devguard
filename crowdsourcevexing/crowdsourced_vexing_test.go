@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +19,13 @@ const (
 	testAssessmentSecondary = string(dtos.VulnerableCodeNotPresent)
 )
 
+// uid deterministically derives a uuid.UUID from a human-readable test ID, so
+// tests can keep using readable strings like "org-0" while the production
+// code works with uuid.UUID.
+func uid(s string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(s))
+}
+
 func oldOrg() time.Time {
 	return time.Now().Add(-365 * 24 * time.Hour)
 }
@@ -27,7 +36,7 @@ func youngOrg() time.Time {
 
 func makeOrg(id string, trustscore float64, createdAt time.Time) Organization {
 	return Organization{
-		ID:         id,
+		ID:         uid(id),
 		Trustscore: trustscore,
 		CreatedAt:  createdAt,
 		CreatedBy:  "user1",
@@ -37,7 +46,7 @@ func makeOrg(id string, trustscore float64, createdAt time.Time) Organization {
 
 func makeOrgWithCreator(id string, trustscore float64, createdAt time.Time, creator string) Organization {
 	return Organization{
-		ID:         id,
+		ID:         uid(id),
 		Trustscore: trustscore,
 		CreatedAt:  createdAt,
 		CreatedBy:  creator,
@@ -46,33 +55,33 @@ func makeOrgWithCreator(id string, trustscore float64, createdAt time.Time, crea
 }
 
 func makeProject(id, orgID string, trustscore float64) Project {
-	return Project{ID: id, OrganizationID: orgID, Trustscore: trustscore}
+	return Project{ID: uid(id), OrganizationID: uid(orgID), Trustscore: trustscore}
 }
 
-func makeAsset(id, projectID string) Asset {
-	return Asset{ID: id, ProjectID: projectID}
+func makeAsset(id, projectID string) models.Asset {
+	return models.Asset{Model: models.Model{ID: uid(id)}, ProjectID: uid(projectID)}
 }
 
-// makeVexRule creates a VexRule for the given candidate ID (rules sharing the
+// makeVexRule creates a models.VEXRule for the given candidate ID (rules sharing the
 // same ID are treated as votes for the same recommendation).
-func makeVexRule(id, assetID, assessment string) VexRule {
-	return VexRule{
-		ID:            id,
-		CELExpression: "cel-expr-" + id,
-		AssetID:       assetID,
-		Assessment:    assessment,
-		Reasoning:     "test reasoning",
+func makeVexRule(id, assetID, assessment string) models.VEXRule {
+	return models.VEXRule{
+		ID:                      id,
+		CELExpression:           fmt.Sprintf("vuln.cveId == %q", id),
+		AssetID:                 uid(assetID),
+		MechanicalJustification: dtos.MechanicalJustificationType(assessment),
+		Justification:           "test reasoning",
 	}
 }
 
 // generateDistinctVoters creates n distinct org/project/asset chains plus
 // matching VexRules for the given candidate ID and assessment.
 // Each voter gets a unique creator to avoid diminishing-returns penalties.
-func generateDistinctVoters(n int, id, assessment string, trustscore float64, createdAt time.Time) ([]VexRule, []Organization, []Project, []Asset) {
-	var rules []VexRule
+func generateDistinctVoters(n int, id, assessment string, trustscore float64, createdAt time.Time) ([]models.VEXRule, []Organization, []Project, []models.Asset) {
+	var rules []models.VEXRule
 	var orgs []Organization
 	var projects []Project
-	var assets []Asset
+	var assets []models.Asset
 
 	for i := range n {
 		suffix := fmt.Sprintf("%d", i)
@@ -88,46 +97,53 @@ func generateDistinctVoters(n int, id, assessment string, trustscore float64, cr
 	return rules, orgs, projects, assets
 }
 
-// rekey adjusts IDs so entities from two generateDistinctVoters calls don't collide.
-func rekey(prefix string, rules []VexRule, orgs []Organization, projects []Project, assets []Asset) {
+// rekey derives fresh, related IDs (prefixed off the existing ones) so
+// entities from two generateDistinctVoters calls don't collide.
+func rekey(prefix string, rules []models.VEXRule, orgs []Organization, projects []Project, assets []models.Asset) {
 	for i := range orgs {
-		orgs[i].ID = prefix + orgs[i].ID
+		newOrgID := uid(prefix + orgs[i].ID.String())
+		newProjID := uid(prefix + projects[i].ID.String())
+		newAssetID := uid(prefix + assets[i].ID.String())
+
+		orgs[i].ID = newOrgID
 		orgs[i].CreatedBy = prefix + orgs[i].CreatedBy
-		projects[i].OrganizationID = orgs[i].ID
-		projects[i].ID = prefix + projects[i].ID
-		assets[i].ProjectID = projects[i].ID
-		assets[i].ID = prefix + assets[i].ID
-		rules[i].AssetID = assets[i].ID
+		projects[i].OrganizationID = newOrgID
+		projects[i].ID = newProjID
+		assets[i].ProjectID = newProjID
+		assets[i].ID = newAssetID
+		rules[i].AssetID = newAssetID
 	}
 }
 
 // merge concatenates slices from two voter sets.
 func merge(
-	r1, r2 []VexRule, o1, o2 []Organization, p1, p2 []Project, a1, a2 []Asset,
-) ([]VexRule, []Organization, []Project, []Asset) {
+	r1, r2 []models.VEXRule, o1, o2 []Organization, p1, p2 []Project, a1, a2 []models.Asset,
+) ([]models.VEXRule, []Organization, []Project, []models.Asset) {
 	return append(r1, r2...), append(o1, o2...), append(p1, p2...), append(a1, a2...)
 }
 
 // Helper function tests
 
 func TestFindVexRuleByID(t *testing.T) {
-	rules := []VexRule{
+	rules := []models.VEXRule{
 		makeVexRule("rule-1", "a1", testAssessmentPrimary),
 		makeVexRule("rule-2", "a2", testAssessmentSecondary),
 		makeVexRule("rule-3", "a3", testAssessmentSecondary),
 	}
 
-	found, ok := findVexRuleByID("rule-1", rules)
-	assert.True(t, ok)
-	assert.Equal(t, "a1", found.AssetID)
-	assert.Equal(t, testAssessmentPrimary, found.Assessment)
+	identityMap := map[string]string{"rule-1": "rule-1", "rule-2": "rule-2", "rule-3": "rule-3"}
 
-	found, ok = findVexRuleByID("rule-3", rules)
+	found, ok := getVexRuleFromMatchingRules("rule-1", identityMap, rules)
 	assert.True(t, ok)
-	assert.Equal(t, "a3", found.AssetID)
-	assert.Equal(t, testAssessmentSecondary, found.Assessment)
+	assert.Equal(t, uid("a1"), found.AssetID)
+	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), found.MechanicalJustification)
 
-	_, ok = findVexRuleByID("nonexistent", rules)
+	found, ok = getVexRuleFromMatchingRules("rule-3", identityMap, rules)
+	assert.True(t, ok)
+	assert.Equal(t, uid("a3"), found.AssetID)
+	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentSecondary), found.MechanicalJustification)
+
+	_, ok = getVexRuleFromMatchingRules("nonexistent", identityMap, rules)
 	assert.False(t, ok)
 }
 
@@ -150,7 +166,7 @@ func TestCrowdsourcedVexing_UniformVote(t *testing.T) {
 	result, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 	require.NoError(t, err)
 	assert.Equal(t, "rule-uniform", result.ID)
-	assert.Equal(t, testAssessmentPrimary, result.Assessment)
+	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
 }
 
 // Trust score behavior
@@ -187,10 +203,10 @@ func TestCrowdsourcedVexing_HigherTrustscoreWins(t *testing.T) {
 // If the organization trust score is used, the malicious rule should win the vote
 // This test assumes that TestCrowdsourcedVexing_HigherTrustscoreWins passed
 func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
-	var rules []VexRule
+	var rules []models.VEXRule
 	var orgs []Organization
 	var projects []Project
-	var assets []Asset
+	var assets []models.Asset
 
 	for range 5 {
 		orgs = append(orgs, makeOrgWithCreator("org-mal", 0.3, oldOrg(), "creator-mal"))
@@ -213,15 +229,15 @@ func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
 }
 
 func TestCrowdsourcedVexing_ProjectsOnly(t *testing.T) {
-	var rules []VexRule
+	var rules []models.VEXRule
 	var orgs []Organization
 	var projects []Project
-	var assets []Asset
+	var assets []models.Asset
 
-	var mRules []VexRule
+	var mRules []models.VEXRule
 	var mOrgs []Organization
 	var mProjects []Project
-	var mAssets []Asset
+	var mAssets []models.Asset
 
 	for i := range 5 {
 		s := fmt.Sprintf("%d", i)
@@ -318,7 +334,7 @@ func TestSecurity_MinVoterThreshold(t *testing.T) {
 	})
 
 	t.Run("zero voters returns error", func(t *testing.T) {
-		_, err := CrowdsourcedVexing([]VexRule{}, []Organization{}, []Project{}, []Asset{})
+		_, err := CrowdsourcedVexing([]models.VEXRule{}, []Organization{}, []Project{}, []models.Asset{})
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 }
@@ -330,21 +346,21 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		project := makeProject("replay-proj", "replay-org", 0.9)
 		asset := makeAsset("replay-asset", "replay-proj")
 
-		var rules []VexRule
+		var rules []models.VEXRule
 		for range 5 {
-			rules = append(rules, makeVexRule("rule-a", asset.ID, testAssessmentPrimary))
+			rules = append(rules, makeVexRule("rule-a", "replay-asset", testAssessmentPrimary))
 		}
 
-		_, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []Asset{asset})
+		_, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []models.Asset{asset})
 		assert.ErrorIs(t, err, ErrNoRecommendation, "5 duplicate votes from same org+project should count as 1 vote below threshold")
 	})
 
 	t.Run("same org different projects count separately", func(t *testing.T) {
 		org := makeOrg("shared-org", 0.8, oldOrg())
 
-		var rules []VexRule
+		var rules []models.VEXRule
 		var projects []Project
-		var assets []Asset
+		var assets []models.Asset
 		for i := range 5 {
 			s := fmt.Sprintf("%d", i)
 			projID := "diff-proj-" + s
@@ -356,7 +372,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 
 		result, err := CrowdsourcedVexing(rules, []Organization{org}, projects, assets)
 		require.NoError(t, err)
-		assert.Equal(t, testAssessmentPrimary, result.Assessment)
+		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
 	})
 }
 
@@ -399,7 +415,7 @@ func TestSecurity_TieBreaking(t *testing.T) {
 		allR, allO, allP, allA := merge(affR, fpR, affO, fpO, affP, fpP, affA, fpA)
 
 		_, err := CrowdsourcedVexing(allR, allO, allP, allA)
-		assert.ErrorIs(t, err, ErrNoRecommendation, "tie should return no VexRule")
+		assert.ErrorIs(t, err, ErrNoRecommendation, "tie should return no models.VEXRule")
 	})
 }
 
@@ -407,10 +423,10 @@ func TestSecurity_TieBreaking(t *testing.T) {
 func TestSecurity_DiminishingReturns(t *testing.T) {
 
 	t.Run("same creator multiple orgs diminished vs distinct creators", func(t *testing.T) {
-		var sameRules []VexRule
+		var sameRules []models.VEXRule
 		var sameOrgs []Organization
 		var sameProjs []Project
-		var sameAssets []Asset
+		var sameAssets []models.Asset
 		for i := range 100 {
 			s := fmt.Sprintf("%d", i)
 			sameOrgs = append(sameOrgs, makeOrgWithCreator("deep-same-org-"+s, 0.3, oldOrg(), "deep-single-user"))
@@ -451,7 +467,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 func TestEdgeCase_MissingEntities(t *testing.T) {
 	t.Run("missing assets", func(t *testing.T) {
 		rules, orgs, projects, _ := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing(rules, orgs, projects, []Asset{})
+		_, err := CrowdsourcedVexing(rules, orgs, projects, []models.Asset{})
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 
@@ -469,7 +485,7 @@ func TestEdgeCase_MissingEntities(t *testing.T) {
 
 	t.Run("no rules returns error", func(t *testing.T) {
 		_, orgs, projects, assets := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, err := CrowdsourcedVexing([]VexRule{}, orgs, projects, assets)
+		_, err := CrowdsourcedVexing([]models.VEXRule{}, orgs, projects, assets)
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 }
@@ -489,5 +505,5 @@ func TestEdgeCase_VerySmallTrustscores(t *testing.T) {
 
 	result, err := CrowdsourcedVexing(allR, allO, allP, allA)
 	require.NoError(t, err)
-	assert.Equal(t, testAssessmentSecondary, result.Assessment, "even very small positive trust should produce a result")
+	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentSecondary), result.MechanicalJustification, "even very small positive trust should produce a result")
 }

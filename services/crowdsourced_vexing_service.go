@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 type CrowdsourcedVexingService struct {
@@ -23,7 +24,7 @@ type CrowdsourcedVexingService struct {
 
 func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationMemberIDs []string) crowdsourcevexing.Organization {
 	return crowdsourcevexing.Organization{
-		ID:         org.ID.String(),
+		ID:         org.ID,
 		Trustscore: orgTrustscore,
 		CreatedAt:  org.CreatedAt,
 		CreatedBy:  ownerID,
@@ -33,27 +34,9 @@ func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationM
 
 func mapProject(project models.Project, projectTrustscore float64) crowdsourcevexing.Project {
 	return crowdsourcevexing.Project{
-		ID:             project.ID.String(),
-		OrganizationID: project.OrganizationID.String(),
+		ID:             project.ID,
+		OrganizationID: project.OrganizationID,
 		Trustscore:     projectTrustscore,
-	}
-}
-
-func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
-	return crowdsourcevexing.VexRule{
-		ID:            vexrule.ID,
-		CELExpression: vexrule.CELExpression,
-		AssetID:       vexrule.AssetID.String(),
-		Reasoning:     vexrule.Justification,
-		Assessment:    string(vexrule.MechanicalJustification),
-		UpdatedAt:     vexrule.UpdatedAt,
-	}
-}
-
-func mapAsset(asset models.Asset) crowdsourcevexing.Asset {
-	return crowdsourcevexing.Asset{
-		ID:        asset.ID.String(),
-		ProjectID: asset.ProjectID.String(),
 	}
 }
 
@@ -71,15 +54,11 @@ func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, or
 }
 
 func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (models.VEXRule, error) {
-	assetversion := shared.GetAssetVersion(ctx)
 	requestCtx := ctx.Request().Context()
 
 	vuln, err := s.dependencyVulnRepository.Read(requestCtx, tx, vulnID)
 	if err != nil {
 		return models.VEXRule{}, err
-	}
-	if vuln.AssetID != assetversion.AssetID || vuln.AssetVersionName != assetversion.Name {
-		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
 	}
 
 	vexRules, err := s.vexRuleRepository.All(requestCtx, tx)
@@ -90,7 +69,7 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	matchedRules := []models.VEXRule{}
 
 	for _, rule := range vexRules {
-		match, err := s.vexRuleService.EvalCELExpression(requestCtx, rule, vuln)
+		match, err := vexrules.EvalRule(requestCtx, rule, vuln)
 		if err != nil {
 			return models.VEXRule{}, err
 		}
@@ -146,12 +125,12 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 	}
 
 	recommendedRule, err := crowdsourcevexing.CrowdsourcedVexing(
-		utils.Map(matchedRules, mapVexRule),
+		matchedRules,
 		crowdSourceVexingOrgs,
 		utils.Map(projects, func(p models.Project) crowdsourcevexing.Project {
 			return mapProject(p, projectTrustScores[p.ID])
 		}),
-		utils.Map(vexRules, func(r models.VEXRule) crowdsourcevexing.Asset { return mapAsset(r.Asset) }),
+		utils.Map(vexRules, func(r models.VEXRule) models.Asset { return r.Asset }),
 	)
 	if err != nil {
 		return models.VEXRule{}, err

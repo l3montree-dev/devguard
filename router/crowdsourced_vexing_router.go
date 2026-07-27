@@ -25,12 +25,12 @@ type CrowdsourcedVexingRouter struct {
 }
 
 func NewCrowdsourcedVexingRouter(
-	assetVersionRouter AssetVersionRouter,
+	assetRouter AssetRouter,
 	crowdsourcedVexingController *controllers.CrowdsourcedVexingController,
 ) CrowdsourcedVexingRouter {
-	group := assetVersionRouter.Group.Group("/crowdsourced-vexing")
+	group := assetRouter.Group.Group("/crowdsourced-vexing")
 
 	group.GET("/recommendations/:dependencyVulnID/", crowdsourcedVexingController.Recommend)
-	group.GET("/recommendations/", crowdsourcedVexingController.RecommendForAssetVersion)
+	group.GET("/recommendations/", crowdsourcedVexingController.RecommendForAsset)
 	return CrowdsourcedVexingRouter{Group: group}
 }

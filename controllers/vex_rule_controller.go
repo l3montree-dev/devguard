@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 )
 
@@ -52,18 +53,6 @@ func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsServic
 
 		FireAndForgetSynchronizer: synchronizer,
 	}
-}
-
-type TestVEXRulesRequest struct {
-	ID            string   `json:"id" validate:"required"`
-	CelExpression []string `json:"celExpression" validate:"required"`
-}
-type CreateVEXRuleRequest struct {
-	Title                   string                           `json:"title"`
-	Justification           string                           `json:"justification" validate:"required"`
-	MechanicalJustification dtos.MechanicalJustificationType `json:"mechanicalJustification"`
-	CELExpression           string                           `json:"celExpression"`
-	EventType               dtos.VulnEventType               `json:"eventType"`
 }
 
 // @Summary List VEX rules for an asset
@@ -188,7 +177,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 	vulns := c.cachedVulns(ctx)
 	response := make(map[string]int)
 
-	var req TestVEXRulesRequest
+	var req dtos.TestVEXRulesRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
@@ -203,7 +192,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 
 	for _, vuln := range vulns {
 		for _, rule := range vexRules {
-			match, err := c.vexRuleService.EvalCELExpression(ctx.Request().Context(), rule, vuln)
+			match, err := vexrules.EvalRule(ctx.Request().Context(), rule, vuln)
 			if err != nil {
 				return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
 			}
@@ -232,7 +221,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	session := shared.GetSession(ctx)
 
-	var req CreateVEXRuleRequest
+	var req dtos.CreateVEXRuleRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
@@ -258,6 +247,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		CELExpression:           req.CELExpression,
 		CreatedByID:             session.GetActorName(),
 		Enabled:                 true, // Manual rules are always enabled
+		WasRecommended:          req.WasRecommended,
 	}
 
 	tx := c.vexRuleService.Begin(ctx.Request().Context())

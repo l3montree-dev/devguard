@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -16,7 +17,7 @@ import (
 // celFor builds a CEL expression that matches a specific CVE ID and path pattern,
 // mirroring how transformers build VEXRule.CELExpression for tests.
 func celFor(cveID string, pattern []string) string {
-	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, dtos.PathPattern(pattern).ToCELExpression())
+	return fmt.Sprintf("vuln.cveId == %q && %s", cveID, vexrules.PathPattern(pattern).ToCELExpression())
 }
 
 func TestCreateVulnEventFromVEXRule(t *testing.T) {
@@ -587,144 +588,4 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 
 	assert.NoError(t, err)
 	vexRuleRepo.AssertExpectations(t)
-}
-
-func TestEvalCELExpression(t *testing.T) {
-	t.Run("matchesPattern function should be define and work as expected", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
-			},
-			models.DependencyVuln{
-				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, true, res)
-	})
-
-	t.Run("vuln should be provided as variable", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
-			},
-			models.DependencyVuln{
-				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, true, res)
-
-		res, err = s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
-			},
-			models.DependencyVuln{
-				VulnerabilityPath: []string{"pkg:golang/lib@v1.0", "pkg:golang/other@v1.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, false, res)
-	})
-
-	t.Run("should be filterable by cve id, or other properties", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `vuln.cveId == "CVE-2024-1234"`,
-			},
-			models.DependencyVuln{
-				CVEID: "CVE-2024-1234",
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, true, res)
-	})
-
-	t.Run("matchesPattern should respect semver constraints", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@>=1.0.0,<2.0.0"])`,
-			},
-			models.DependencyVuln{
-				VulnerabilityPath: []string{"pkg:golang/lib@1.5.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, true, res)
-	})
-
-	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
-			},
-
-			models.DependencyVuln{
-				Artifacts: []models.Artifact{
-					{
-						ArtifactName: "pkg:/golang/github.com/l3montree-dev/devguard",
-					},
-				},
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "1.0.0",
-				},
-				VulnerabilityPath: []string{"pkg:golang/vulnlib@1.0.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, true, res)
-	})
-	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
-		s := VEXRuleService{}
-		res, err := s.EvalCELExpression(
-			t.Context(),
-			models.VEXRule{
-				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
-			},
-
-			models.DependencyVuln{
-				Artifacts: []models.Artifact{
-					{
-						ArtifactName: "pkg:/golang/github.com/l3montree-dev/devguard",
-					},
-				},
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "4.0.0",
-				},
-				VulnerabilityPath: []string{"pkg:golang/vulnlib@1.0.0"},
-			},
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, false, res)
-	})
-}
-
-func BenchmarkEvalCELExpression(b *testing.B) {
-	s := VEXRuleService{}
-	rule := models.VEXRule{
-		CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"]) && vuln.cveId == "CVE-2024-1234"`,
-	}
-	vuln := models.DependencyVuln{
-		CVEID:             "CVE-2024-1234",
-		VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-	}
-	ctx := b.Context()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if _, err := s.EvalCELExpression(ctx, rule, vuln); err != nil {
-			b.Fatal(err)
-		}
-	}
 }

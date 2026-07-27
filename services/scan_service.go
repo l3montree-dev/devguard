@@ -689,7 +689,7 @@ func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
 	format := s.sniffVexFormat(body)
 
 	switch format {
@@ -698,21 +698,21 @@ func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, asset
 		if err := json.Unmarshal(body, &advisory); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CSAF advisory: %w", err)
 		}
-		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, assetVersionName, source)
+		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeOpenVEX:
 		var doc vex.VEX
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as OpenVEX document: %w", err)
 		}
-		rules, err := transformer.OpenVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.OpenVEXToRules(&doc, assetID, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeCycloneDX:
 		var doc cyclonedx.BOM
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CycloneDX BOM: %w", err)
 		}
-		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, source)
 		return rules, format, err
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
@@ -722,7 +722,7 @@ func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, asset
 // FetchVexFromUpstream downloads VEX from the given external references and converts it into
 // VEX rules scoped to the given asset version. Both CSAF and CycloneDX are parsed to rules by
 // their respective transformers; the returned rules carry their VexSource (the reference URL).
-func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
 	rules := make([]models.VEXRule, 0)
 	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
@@ -762,7 +762,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 				})
 				return
 			}
-			vexRules, format, err := s.VexRulesFromDocument(body, assetID, assetVersionName, url)
+			vexRules, format, err := s.VexRulesFromDocument(body, assetID, url)
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
@@ -825,7 +825,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
-	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name,
+	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID,
 		utils.Map(vexRefs, func(ref models.ExternalReference) string { return ref.URL }))
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()

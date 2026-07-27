@@ -30,6 +30,7 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	}
 
 	dependencyVulnIDParsed, err := uuid.Parse(dependencyVulnID)
+
 	if err != nil {
 		return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
 	}
@@ -45,10 +46,10 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.VEXRuleToRecommendationDTO(rule))
 }
 
-func (c *CrowdsourcedVexingController) RecommendForAssetVersion(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
+func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
 
-	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx.Request().Context(), nil, nil, assetVersion.Name, assetVersion.AssetID)
+	vulns, err := c.dependencyVulnRepository.GetAllVulnsByAssetID(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "Could not fetch dependency vulns.").WithInternal(err)
 	}
