@@ -33,6 +33,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 type VEXRuleService struct {
@@ -47,7 +48,6 @@ var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return cel.NewEnv(
 		cel.Variable("vuln", cel.AnyType),
 		cel.Function("matchesPattern",
-
 			cel.Overload(
 				"matchesPattern_vuln_list",
 				[]*cel.Type{cel.DynType, cel.ListType(cel.StringType)},
@@ -66,6 +66,35 @@ var vexRuleCelEnv = sync.OnceValues(func() (*cel.Env, error) {
 						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
 					}
 					matches := dtos.PathPattern(pattern).Matches(path, artifactPurls)
+					return types.Bool(matches)
+				}),
+			),
+		),
+		cel.Function("matchesPurl",
+			cel.Overload("matchesPurl_string_string", []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
+					purl, ok := lhs.Value().(string)
+					if !ok {
+						return types.NewErr("matchesPurl: invalid purl argument: %v", lhs)
+					}
+					pattern, ok := rhs.Value().(string)
+					if !ok {
+						return types.NewErr("matchesPurl: invalid pattern argument: %v", rhs)
+					}
+					purlObj, err := packageurl.FromString(purl)
+					if err != nil {
+						return types.NewErr("matchesPurl: invalid purl: %v", err)
+					}
+					patternObj, err := packageurl.FromString(pattern)
+					if err != nil {
+						return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
+					}
+
+					matches, err := dtos.PurlVersionMatches(purlObj, patternObj)
+					if err != nil {
+						return types.NewErr("matchesPurl: %v", err)
+					}
+
 					return types.Bool(matches)
 				}),
 			),
