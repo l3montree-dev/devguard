@@ -214,7 +214,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Param body body CreateVEXRuleRequest true "Rule data"
+// @Param body body dtos.CreateVEXRuleRequest true "Rule data"
 // @Success 201 {object} dtos.VEXRuleDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
