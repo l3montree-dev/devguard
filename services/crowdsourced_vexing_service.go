@@ -70,27 +70,27 @@ type crowdsourcedVexingContext struct {
 	assets                []models.Asset
 }
 
-func (s *CrowdsourcedVexingService) loadCrowdsourcedVexingContext(requestCtx context.Context, tx shared.DB) (crowdsourcedVexingContext, error) {
-	vexRules, err := s.vexRuleRepository.All(requestCtx, tx)
+func (s *CrowdsourcedVexingService) loadCrowdsourcedVexingContext(ctx context.Context, tx shared.DB) (crowdsourcedVexingContext, error) {
+	vexRules, err := s.vexRuleRepository.All(ctx, tx)
 	if err != nil {
 		return crowdsourcedVexingContext{}, err
 	}
 
 	projectIDs := utils.Map(vexRules, func(r models.VEXRule) uuid.UUID { return r.Asset.ProjectID })
 
-	projects, err := s.projectRepository.GetByProjectIDs(requestCtx, tx, projectIDs)
+	projects, err := s.projectRepository.GetByProjectIDs(ctx, tx, projectIDs)
 	if err != nil {
 		return crowdsourcedVexingContext{}, err
 	}
 
 	orgIDs := utils.Map(projects, func(p models.Project) uuid.UUID { return p.OrganizationID })
 
-	orgs, err := s.organisationRepository.GetOrgByIDs(requestCtx, tx, orgIDs)
+	orgs, err := s.organisationRepository.GetOrgByIDs(ctx, tx, orgIDs)
 	if err != nil {
 		return crowdsourcedVexingContext{}, err
 	}
 
-	projectTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByProjectIDs(requestCtx, tx, projectIDs)
+	projectTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByProjectIDs(ctx, tx, projectIDs)
 	if err != nil {
 		return crowdsourcedVexingContext{}, err
 	}
@@ -99,7 +99,7 @@ func (s *CrowdsourcedVexingService) loadCrowdsourcedVexingContext(requestCtx con
 		projectTrustScores[*te.ProjectID] = te.TrustScore
 	}
 
-	orgTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByOrganizationIDs(requestCtx, tx, orgIDs)
+	orgTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByOrganizationIDs(ctx, tx, orgIDs)
 	if err != nil {
 		return crowdsourcedVexingContext{}, err
 	}
@@ -136,10 +136,10 @@ func (s *CrowdsourcedVexingService) loadCrowdsourcedVexingContext(requestCtx con
 // against an already-loaded crowdsourcedVexingContext. It performs no DB
 // access itself - callers evaluating multiple vulns should load the context
 // once and call this per vuln.
-func (s *CrowdsourcedVexingService) recommend(requestCtx context.Context, vexCtx crowdsourcedVexingContext, vuln models.DependencyVuln) (models.VEXRule, float64, error) {
+func (s *CrowdsourcedVexingService) recommend(ctx context.Context, vexCtx crowdsourcedVexingContext, vuln models.DependencyVuln) (models.VEXRule, float64, error) {
 	matchedRules := []models.VEXRule{}
 	for _, rule := range vexCtx.vexRules {
-		match, err := vexrules.EvalRule(requestCtx, rule, vuln)
+		match, err := vexrules.EvalRule(ctx, rule, vuln)
 		if err != nil {
 			return models.VEXRule{}, 0, err
 		}
