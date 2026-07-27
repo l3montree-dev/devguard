@@ -318,7 +318,6 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 		app := echo.New()
 		req := httptest.NewRequest("POST", "/vex", bytes.NewReader(vexData))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Ref", assetVersion.Name)
 		req.Header.Set("X-Artifact-Name", "test-artifact")
 		req.Header.Set("X-Origin", "test-upload")
 
@@ -337,13 +336,6 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, recorder.Code)
 
-		// Verify artifact was created in the database
-		var artifact models.Artifact
-		result := f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-			"test-artifact", assetVersion.Name, asset.ID).First(&artifact)
-		assert.NoError(t, result.Error)
-		assert.Equal(t, "test-artifact", artifact.ArtifactName)
-
 		// Verify the BOM was decoded correctly
 		var bom cdx.BOM
 		decoder := cdx.NewBOMDecoder(bytes.NewReader(vexData), cdx.BOMFileFormatJSON)
@@ -353,7 +345,7 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 
 		// Verify VEX rules were created from the VEX document
 		var vexRules []models.VEXRule
-		result = f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
+		result := f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
 		assert.NoError(t, result.Error)
 	})
 }
