@@ -2,13 +2,13 @@
 title: DevGuard-Scanner — Secure your software supply chain
 description: DevGuard Scanner is a CLI to generate, sign and upload SBOMs, SARIF reports and attestations to a DevGuard backend and secure your software supply chain.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner
 lang: en-US
 ignoreChecks: null
 ---

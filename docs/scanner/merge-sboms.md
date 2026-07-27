@@ -2,13 +2,13 @@
 title: DevGuard-Scanner merge-sboms — combine multiple SBOMs into one
 description: Merge multiple CycloneDX SBOMs from independently scanned components into a single combined SBOM ready to upload to DevGuard with devguard-scanner.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner merge-sboms
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner merge-sboms
 lang: en-US
 ignoreChecks: null
 ---

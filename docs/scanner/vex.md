@@ -2,13 +2,13 @@
 title: DevGuard-Scanner vex — Upload a VEX document
 description: Upload a CycloneDX VEX document to DevGuard with devguard-scanner vex to suppress non-exploitable CVEs so they no longer count against your risk score.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner vex
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner vex
 lang: en-US
 ignoreChecks: null
 ---

@@ -2,13 +2,13 @@
 title: DevGuard-Scanner intoto start — Snapshot pipeline step inputs
 description: Record the cryptographic hashes of all input files at the beginning of a pipeline step, to be paired with intoto stop into a signed in-toto link.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner intoto start
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner intoto start
 lang: en-US
 ignoreChecks: null
 ---

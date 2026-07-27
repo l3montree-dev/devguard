@@ -2,13 +2,13 @@
 title: DevGuard-Scanner secret-scanning — detect leaked secrets in source code
 description: Scan a repository or directory for accidentally committed secrets using gitleaks and upload the SARIF results to DevGuard with devguard-scanner.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner secret-scanning
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner secret-scanning
 lang: en-US
 ignoreChecks: null
 ---

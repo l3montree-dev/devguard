@@ -2,13 +2,13 @@
 title: DevGuard-Scanner inspect-devguard-token — Decode a DevGuard token
 description: Decode a DevGuard hex token with devguard-scanner and print its corresponding private and public keys in PEM and hex formats for debugging.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner inspect-devguard-token
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner inspect-devguard-token
 lang: en-US
 ignoreChecks: null
 ---

@@ -2,13 +2,13 @@
 title: DevGuard-Scanner intoto stop — Snapshot outputs and upload the link
 description: Record the cryptographic hashes of all output files at the end of a pipeline step, sign the in-toto link with the DevGuard token and upload it to DevGuard.
 seo:
-  robots: index,follow
-  og:
-    image: /og-image.png
-    type: article
-  schema:
-    type: TechArticle
-  keyword_primary: devguard-scanner intoto stop
+    robots: index,follow
+    og:
+        image: /og-image.png
+        type: article
+    schema:
+        type: TechArticle
+    keyword_primary: devguard-scanner intoto stop
 lang: en-US
 ignoreChecks: null
 ---
