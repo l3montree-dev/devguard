@@ -30,7 +30,7 @@ func NewCrowdsourcedVexingRouter(
 ) CrowdsourcedVexingRouter {
 	group := assetVersionRouter.Group.Group("/crowdsourced-vexing")
 
-	group.GET("/recommendations/:dependencyVulnID", crowdsourcedVexingController.Recommend)
+	group.GET("/recommendations/:dependencyVulnID/", crowdsourcedVexingController.Recommend)
 	group.GET("/recommendations/", crowdsourcedVexingController.RecommendForAssetVersion)
 	return CrowdsourcedVexingRouter{Group: group}
 }
